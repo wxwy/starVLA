@@ -210,8 +210,8 @@ detect_cuda_devices() {
 
     if [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]]; then
         IFS=',' read -ra devices <<< "${CUDA_VISIBLE_DEVICES}"
-    elif command -v nvidia-smi >/dev/null 2>&1; then
-        gpu_count="$(nvidia-smi --list-gpus 2>/dev/null | wc -l | tr -d ' ')"
+    else
+        gpu_count="$(python -c "import torch; print(torch.cuda.device_count())" 2>/dev/null)"
         if [[ -n "${gpu_count}" && "${gpu_count}" != "0" ]]; then
             for (( idx = 0; idx < gpu_count; ++idx )); do
                 devices+=("${idx}")

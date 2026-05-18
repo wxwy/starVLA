@@ -143,12 +143,19 @@ while IFS=, read -r idx mem_used; do
     if (( mem_used < GPU_MEM_THRESHOLD )); then
         FREE_GPUS+=("$idx")
     fi
-done < <(nvidia-smi --query-gpu=index,memory.used --format=csv,noheader)
+done < <(python -c "
+import torch
+for i in range(torch.cuda.device_count()):
+    free_mem = torch.cuda.get_device_properties(i).total_memory - torch.cuda.memory_allocated(i)
+    print(f'{i}, {torch.cuda.memory_allocated(i)//1024//1024}')" 2>/dev/null \
+    || nvidia-smi --query-gpu=index,memory.used --format=csv,noheader 2>/dev/null)
 
 if (( ${#FREE_GPUS[@]} < NUM_SERVERS )); then
     print_error "Need ${NUM_SERVERS} free GPUs but only found ${#FREE_GPUS[@]}: ${FREE_GPUS[*]}"
-    print_info "All GPU memory usage:"
-    nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        print_info "All GPU memory usage:"
+        nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv 2>/dev/null || true
+    fi
     exit 1
 fi
 

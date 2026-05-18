@@ -18,6 +18,7 @@ This guide walks you through the complete StarVLA workflow — from installation
 - [2. Prepare Training Data](#2-prepare-training-data)
 - [3. Prepare Pretrained Models](#3-prepare-pretrained-models)
 - [4. Understanding the Training Config](#4-understanding-the-training-config)
+- [5. Training Data Flow (conceptual)](dataflow.md)
 - [5. Understanding the Training Script](#5-understanding-the-training-script)
 - [6. Launch Training](#6-launch-training)
 - [7. Evaluate a Pretrained Checkpoint](#7-evaluate-a-pretrained-checkpoint)
@@ -35,9 +36,20 @@ conda create -n starVLA python=3.10 -y
 conda activate starVLA
 
 pip install -r requirements.txt
-pip install flash-attn --no-build-isolation
+pip install flash-attn==2.7.4.post1 --no-build-isolation
 pip install -e .
 ```
+
+> **wxwy note: flash-attn version pinned to 2.7.4.post1.**
+>
+> Rationale: Current environment is Python 3.10 + torch 2.6.0+cu124 + CUDA 12.4. Compared to source-compiling flash-attn 2.8.x, version 2.7.4.post1 can be installed directly with official pre-built wheels, avoiding long CUDA compilation time, OOM, GitHub download interruptions, etc. — more suitable for stable cloud server deployment of starVLA.
+>
+> Alternatively, download the pre-built wheel directly:
+> ```bash
+> wget -c "https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl"
+> pip install ./flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+> ```
+
 <details>
 <summary><b>⚠️ Common Issues</b></summary>
 
@@ -54,6 +66,16 @@ We have verified that `flash-attn==2.7.4.post1` works well with nvcc versions `1
 
 </details>
 
+<details>
+<summary><b>⚠️ flash-attn 2.7.4.post1 limitations vs 2.8.x (wxwy note)</b></summary>
+
+1. Does not include new or enhanced Hopper / Blackwell / FP8 / cute kernel support introduced in 2.8.x.
+2. Performance optimizations for newer architectures (H100, B100/B200, sm90/sm100) are inferior to 2.8.x.
+3. If future project work explicitly requires flash-attn 2.8.x new APIs or new kernels, re-evaluate upgrading.
+4. Minimal impact on current sm86/Ampere GPUs and starVLA training/inference scenarios — stability is prioritized over new features.
+
+</details>
+
 ---
 
 ## 1. Verify Your Installation
@@ -65,6 +87,58 @@ python starVLA/model/framework/VLM4A/QwenGR00T.py
 ```
 
 This requires [Qwen3-VL-4B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct) at `./playground/Pretrained_models/Qwen3-VL-4B-Instruct` (see [Step 3](#3-prepare-pretrained-models)). It should print the model architecture and run a forward pass on fake data without errors.
+
+### Verify Flash Attention
+
+The standalone `flash-attn` package is critical for training throughput. Run the bundled test to check import, CUDA kernel, and performance vs. PyTorch's built-in SDPA:
+
+```bash
+python docs_zh/test_flash_attn.py
+```
+
+This script checks three things:
+1. Whether `flash_attn` can be imported
+2. Whether `flash_attn_func` CUDA kernel runs correctly
+3. Performance benchmark: `flash_attn_func` vs. `F.scaled_dot_product_attention`
+
+**Expected sample output** (GPU: A100 / sm80, torch 2.6.0+cu124, flash_attn 2.7.4.post1):
+
+```
+============================================================
+PyTorch 信息
+============================================================
+torch version: 2.6.0+cu124
+cuda available: True
+cuda device: P1.gpu.medium
+compute capability: (8, 0)
+
+============================================================
+FlashAttention 导入检测
+============================================================
+flash_attn import: SUCCESS
+flash_attn version: 2.7.4.post1
+
+============================================================
+FlashAttention CUDA Kernel 检测
+============================================================
+flash_attn_func: SUCCESS
+output shape: torch.Size([2, 128, 8, 64])
+output dtype: torch.float16
+
+============================================================
+FlashAttention 性能对比
+============================================================
+SDPA backends: {'flash_sdp': True, 'mem_efficient': True, 'math': True}
+PyTorch SDPA  : 0.0155 sec (avg 0.309 ms/iter)
+flash_attn    : 0.0096 sec (avg 0.192 ms/iter)
+加速比        : 1.61x (flash_attn 更快)
+
+============================================================
+FlashAttention 安装正常
+============================================================
+```
+
+The key output is the **speedup ratio** (> 1.0x means flash_attn is faster than PyTorch's default SDPA path). If the ratio is ~1.0x, your PyTorch is likely already dispatching to its own flash-sdp backend under the hood.
 
 ---
 
@@ -146,22 +220,42 @@ See [Model Zoo](model_zoo.md) for all available base models and finetuned checkp
 
 ## 4. Understanding the Training Config
 
-The config YAML at [`examples/LIBERO/train_files/starvla_cotrain_libero.yaml`](../examples/LIBERO/train_files/starvla_cotrain_libero.yaml) defines the entire training setup. Here are the key sections:
+The full config is at [`examples/LIBERO/train_files/starvla_cotrain_libero.yaml`](../examples/LIBERO/train_files/starvla_cotrain_libero.yaml). Each parameter is explained below, matching the actual YAML structure.
+
+---
+
+### Top-level parameters
+
+```yaml
+run_id: starvla                   # Unique run identifier, used to name the output directory
+run_root_dir: playground/Checkpoints  # Root output directory for all runs
+seed: 42                          # Random seed for reproducibility
+wandb_entity: your_wandb_entity   # W&B entity name (team/username)
+wandb_project: llavavla           # W&B project name
+is_debug: false                   # Debug mode: when true, loads minimal data for fast validation
+version_id: "0.21"                # Config schema version, used by apply_config_compat for legacy format compat
+```
+
+---
 
 ### Framework
 
 ```yaml
 framework:
-  name: QwenGR00T                # which VLA architecture to use
+  name: QwenGR00T                # which VLA architecture to use (see table below)
   qwenvl:
-    base_vlm: ./playground/Pretrained_models/Qwen3-VL-4B-Instruct
-    attn_implementation: flash_attention_2
+    base_vlm: ./playground/Pretrained_models/Qwen3-VL-4B-Instruct  # pretrained VLM path
+    attn_implementation: flash_attention_2  # attention impl: flash_attention_2 (recommended) | sdpa | eager
+    vl_hidden_dim: 2048          # VLM hidden dim, passed to action head as cross-attention dim
   action_model:
-    action_dim: 7                # LIBERO: 7-DoF (xyz + rpy + gripper)
-    state_dim: 7
-    future_action_window_size: 7 # predict 7 future steps
-    action_horizon: 8            # total action chunk size
+    action_dim: 7                # action vector dim. LIBERO = 7 (x, y, z, roll, pitch, yaw, gripper)
+    state_dim: 7                 # proprioceptive state dim, typically equals action_dim
+    action_horizon: 8            # total action chunk length (current step + future steps)
 ```
+
+> **`action_horizon` vs `future_action_window_size`**: VLA action chunking predicts a sequence of `action_horizon` actions. Step 1 is the current action (executed immediately); steps 2–N are future actions (for temporal smoothness). Thus `future_action_window_size = action_horizon - 1 = 7`.
+>
+> The YAML only specifies `action_horizon: 8`. `future_action_window_size` is auto-derived by `apply_config_compat()` (`share_tools.py:465-477`) — no need to write it manually. If both are present and inconsistent, `action_horizon` takes precedence.
 
 StarVLA supports four framework variants — just change `framework.name`:
 
@@ -172,19 +266,40 @@ StarVLA supports four framework variants — just change `framework.name`:
 | StarVLA-π | `QwenPI` | Flow-matching diffusion action head |
 | StarVLA-GR00T | `QwenGR00T` | Dual-system: VLM (System 2) + Flow-matching (System 1) |
 
-### Datasets
+---
+
+### Datasets — VLM co-training data
 
 ```yaml
 datasets:
-  vlm_data:                       # VLM co-training data (improves generalization)
-    dataset_py: vlm_datasets
-    per_device_batch_size: 4
+  vlm_data:
+    dataset_py: vlm_datasets     # dataloader module (starVLA/dataloader/vlm_datasets.py)
+    dataformat: llava_json       # data format: llava_json = LLaVA-format JSON files
+    dataset_use: sharegpt4v_coco # VLM dataset name (registered in dataloader)
+    eval_dataset: sharegpt4v_coco # eval dataset name
+    data_flatten: false          # whether to flatten image tokens into the text sequence
+    base_interval: 2             # VLM data sampling interval: 1 VLM batch every 2 steps (interleaved with VLA)
+    max_pixels: 307200           # max image pixels (images larger than this are downscaled)
+    min_pixels: 784              # min image pixels (images smaller than this are upscaled), i.e. 28×28
+    model_max_length: 2048       # tokenizer max sequence length
+    model_type: qwen2.5vl        # VLM type, controls processor initialization
+    per_device_batch_size: 4     # per-GPU batch size for VLM data
+```
 
-  vla_data:                       # Robot action data
-    dataset_py: lerobot_datasets
-    data_root_dir: playground/Datasets/LEROBOT_LIBERO_DATA
-    data_mix: libero_all          # all 4 suites; use "libero_goal" for single suite
-    per_device_batch_size: 16
+### Datasets — VLA robot action data
+
+```yaml
+  vla_data:
+    dataset_py: lerobot_datasets # LeRobot-format dataloader
+    data_root_dir: playground/Datasets/LEROBOT_LIBERO_DATA  # dataset root directory
+    data_mix: libero_all         # dataset mixture: libero_all = all 4 suites | libero_goal = single suite
+    action_type: delta_qpos      # action type: delta_qpos = joint deltas | absolute_qpos = absolute positions
+    sequential_step_sampling: False  # whether to sample frames sequentially (False = random sampling)
+    CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."
+                                 # Chain-of-Thought prompt template, {instruction} replaced with task description
+    per_device_batch_size: 16    # per-GPU batch size for VLA data
+    load_all_data_for_training: true  # preload all data into memory at training start (faster training)
+    video_backend: torchvision_av # video decode backend: torchvision_av | decord (use former for av1 codec)
 ```
 
 The `data_mix` field selects which datasets to combine. These mixtures are defined in [`examples/LIBERO/train_files/data_registry/data_config.py`](../examples/LIBERO/train_files/data_registry/data_config.py):
@@ -203,21 +318,41 @@ DATASET_NAMED_MIXTURES = {
 }
 ```
 
+Each tuple is `(dataset_dir_name, sampling_weight, robot_type)`.
+
+---
 
 ### Trainer
 
 ```yaml
 trainer:
-  max_train_steps: 100000
-  save_interval: 10000            # save checkpoint every N steps
-  eval_interval: 100             # log eval metrics every N steps
+  max_train_steps: 100000         # maximum training steps
+  num_warmup_steps: 5000          # LR warmup steps
+  save_interval: 5000             # save checkpoint every N steps
+  eval_interval: 100              # log eval metrics to W&B every N steps
   learning_rate:
-    base: 2.5e-05                # default LR
-    qwen_vl_interface: 1.0e-05   # lower LR for VLM layers
-    action_model: 1.0e-04        # higher LR for action head
+    base: 2.5e-05                 # default LR (used for modules not listed below)
+    qwen_vl_interface: 1.0e-05    # VLM module LR (lower to protect pretrained knowledge)
+    action_model: 1.0e-04         # action head LR (higher for faster convergence on new module)
+  lr_scheduler_type: cosine_with_min_lr  # LR scheduler type (transformers get_scheduler)
+  scheduler_specific_kwargs:
+    min_lr: 1.0e-06               # minimum LR for cosine annealing
+  freeze_modules: 'qwen_vl_interface'  # comma-separated module names to freeze (VLM backbone frozen here)
   loss_scale:
-    vla: 1.0                     # action loss weight
-    vlm: 0.1                     # VLM co-training loss weight
+    vla: 1.0                      # action loss weight
+    vlm: 0.1                      # VLM co-training loss weight (auxiliary task, lower weight)
+  max_grad_norm: 1.0              # max norm for gradient clipping
+  weight_decay: 0.0               # weight decay (L2 regularization), disabled here
+  logging_frequency: 10           # print training logs to console every N steps
+  gradient_clipping: 1.0          # gradient clipping threshold (equivalent to max_grad_norm)
+  gradient_accumulation_steps: 4  # gradient accumulation steps (effective batch = per_device_batch × GPUs × this)
+  gradient_checkpointing: true    # enable gradient checkpointing (saves VRAM, slightly slower)
+
+  optimizer:
+    name: AdamW                   # optimizer name
+    betas: [0.9, 0.95]            # AdamW β parameters
+    eps: 1.0e-08                  # AdamW ε parameter (numerical stability)
+    weight_decay: 1.0e-08         # optimizer-level weight_decay (independent of trainer-level weight_decay)
 ```
 
 ---

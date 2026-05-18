@@ -45,6 +45,7 @@ sagemaker = [
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["starVLA", "starVLA.*", "deployment", "deployment.*"]
 exclude = [
     "tests",         # test directory
     "tests.*",
@@ -62,6 +63,18 @@ exclude = [
     "eval.*",
     "assets",        # assets directory
     "assets.*",
+    "build",         # build artifacts
+    "build.*",
+    "docs",          # documentation
+    "docs.*",
+    "docs_zh",       # Chinese documentation
+    "docs_zh.*",
+    "examples",      # example benchmarks and scripts
+    "examples.*",
+    "MEMORY",        # Claude Code memory directory
+    "MEMORY.*",
+    "exec_log",      # execution logs
+    "exec_log.*",
     "**bar**",           # bar directory
     "bar.*",
     ".vscode",       # VS Code configuration directory

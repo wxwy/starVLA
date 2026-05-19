@@ -49,7 +49,9 @@ num_processes=${NUM_PROCESSES:-$(python -c "import torch; print(torch.cuda.devic
 
 accelerate launch \
   --num_processes ${num_processes} \
+  --num_machines 1 \
   --mixed_precision bf16 \
+  --dynamo_backend no \
   starVLA/training/train_starvla.py \
   --config_yaml ${config_yaml} \
   --framework.name ${Framework_name} \

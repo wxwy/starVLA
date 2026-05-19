@@ -128,6 +128,59 @@ wandb.errors.errors.CommError: project not found
 
 ---
 
+## 7. 视频帧解码失败：Invalid data found when processing input
+
+**报错**：
+```
+Attempt 1/10 failed for index 54981: [Errno 1094995529] Invalid data found when processing input
+```
+
+**原因**：LIBERO 数据集中某个视频文件的特定帧损坏或格式不完整，`torchvision_av` 底层 FFmpeg 无法解码。Errno `1094995529` 即 FFmpeg 的 `AVERROR_INVALIDDATA`。
+
+**位置**：`starVLA/dataloader/gr00t_lerobot/datasets.py:2354-2355`，混合数据集 `__getitem__` 中 `get_step_data()` 读取视频帧时抛出。
+
+**影响**：无。代码有 10 次重试机制（`max_retries=10`，line 2326），失败后随机换 index 重新采样，训练正常继续。只有连续 10 次都命中损坏帧才会真正报错退出。
+
+**解决**：不需要处理。偶尔一两帧损坏是正常的数据噪声，不影响训练。如果频繁出现（如每几十步就报一次），检查数据集下载完整性：
+```bash
+# 验证 HuggingFace 下载
+huggingface-cli scan-cache --repo-type dataset IPEC-COMMUNITY/libero_spatial_no_noops_1.0.0_lerobot
+```
+
+---
+
+## 8. DataLoader worker 被 OOM Kill（checkpoint 保存时）
+
+**报错**：
+```
+RuntimeError: DataLoader worker (pid 3698) is killed by signal: Killed.
+```
+
+**调用栈**：
+```
+train_starvla.py:333 train() → _save_checkpoint()
+train_starvla.py:242 accelerator.get_state_dict(self.model)
+deepspeed/checkpoint/utils.py:59 clone_tensors_for_torch_save()
+```
+
+**原因**：checkpoint 保存时 `clone_tensors_for_torch_save` 把模型参数 + DeepSpeed 优化器状态从 GPU 拷到 CPU，内存瞬间飙升。同时 `num_workers=4` 各持有数据集副本（`load_all_data_for_training: true`），系统 RAM 耗尽触发 OOM Killer。
+
+**位置**：`starVLA/dataloader/__init__.py:48` — `num_workers=4`
+
+**解决**：减少 DataLoader worker 数：
+```python
+# __init__.py line 48
+num_workers=3,  # 原来是 4（或 2）
+```
+worker 减半 → 内存占用减半，对训练速度影响很小（I/O 不是瓶颈，GPU 是）。
+
+> 补充：如果仍偶尔 OOM，可进一步降到 `num_workers=1` 或在脚本中限制 Python 内存：
+> ```bash
+> export PYTHONMALLOC=malloc
+> ```
+
+---
+
 ## 通用建议
 
 1. **首次在新环境运行训练前**，建议先 `export WANDB_MODE=disabled` + `--is_debug True` 做 smoke test

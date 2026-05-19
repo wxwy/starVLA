@@ -60,7 +60,7 @@ accelerate launch \
   --trainer.vla_data.video_backend torchvision_av \
   --trainer.freeze_modules ${freeze_module_list} \
   --trainer.max_train_steps 80000 \
-  --trainer.save_interval 1000 \
+  --trainer.save_interval 250 \
   --trainer.logging_frequency 100 \
   --trainer.eval_interval 100 \
   --run_root_dir ${run_root_dir} \

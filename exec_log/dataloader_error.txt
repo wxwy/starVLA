@@ -1,0 +1,1461 @@
+
+
+➜  code cd starVLA
+➜  starVLA git:(starVLA_dev) source .venv/bin/activate
+(.venv) ➜  starVLA git:(starVLA_dev) proxy_on
+
+proxy on
+(.venv) ➜  starVLA git:(starVLA_dev) lip
+
+(.venv) ➜  starVLA git:(starVLA_dev) lip
+^C
+(.venv) ➜  starVLA git:(starVLA_dev) lip
+(.venv) ➜  starVLA git:(starVLA_dev) lip
+{
+  "ip": "104.234.4.82",
+  "city": "San Jose",
+  "region": "California",
+  "country": "US",
+  "loc": "37.3394,-121.8950",
+  "org": "AS53616 ASYMPTOTE NETWORK, LLC",
+  "postal": "95025",
+  "timezone": "America/Los_Angeles",
+  "readme": "https://ipinfo.io/missingauth"
+}#
+
+(.venv) ➜  starVLA git:(starVLA_dev) bash examples/LIBERO/train_files/run_libero_train.sh
+[2026-05-18 23:28:12,451] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (a
+uto detect)
+df: /root/.triton/autotune: No such file or directory
+[2026-05-18 23:31:59,666] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (a
+uto detect)
+05/18 [23:32:03] INFO     | >> x86_64-linux-gnu-gcc -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O
+2      spawn.py:77
+                          -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2
+-fPIC
+                          -c /tmp/tmphmpbvrjk/test.c -o /tmp/tmphmpbvrjk/test.o
+
+                 INFO     | >> x86_64-linux-gnu-gcc /tmp/tmphmpbvrjk/test.o -laio -o /tmp/tmphmpbvrjk/a.out
+       spawn.py:77
+05/18 [23:32:04] INFO     | >> x86_64-linux-gnu-gcc -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O
+2      spawn.py:77
+                          -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2
+-fPIC
+                          -c /tmp/tmpfk0pbvfp/test.c -o /tmp/tmpfk0pbvfp/test.o
+
+                 INFO     | >> x86_64-linux-gnu-gcc /tmp/tmpfk0pbvfp/test.o -L/usr/local/cuda
+       spawn.py:77
+                          -L/usr/local/cuda/lib64 -lcufile -o /tmp/tmpfk0pbvfp/a.out
+
+                 INFO     | >> x86_64-linux-gnu-gcc -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O
+2      spawn.py:77
+                          -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2
+-fPIC
+                          -c /tmp/tmpeq9et2yb/test.c -o /tmp/tmpeq9et2yb/test.o
+
+                 INFO     | >> x86_64-linux-gnu-gcc /tmp/tmpeq9et2yb/test.o -laio -o /tmp/tmpeq9et2yb/a.out
+       spawn.py:77
+[2026-05-18 23:32:15,269] [INFO] [comm.py:669:init_distributed] cdb=None
+[2026-05-18 23:32:15,269] [INFO] [comm.py:700:init_distributed] Initializing TorchBackend in DeepSpeed with
+backend nccl
+[W518 23:32:17.810797071 Utils.hpp:165] Warning: Environment variable NCCL_BLOCKING_WAIT is deprecated; use
+TORCH_NCCL_BLOCKING_WAIT instead (function operator())
+[W518 23:32:17.925291466 Utils.hpp:136] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecate
+d; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+Distributed environment: DEEPSPEED  Backend: nccl
+Num processes: 1
+Process index: 0
+Local process index: 0
+Device: cuda:0
+
+Mixed precision type: bf16
+ds_config: {'fp16': {'enabled': False}, 'bf16': {'enabled': True}, 'train_micro_batch_size_per_gpu': 'auto',
+ 'train_batch_size': 'auto', 'gradient_accumulation_steps': 1, 'zero_optimization': {'stage': 2, 'allgather_
+partitions': True, 'allgather_bucket_size': 500000000.0, 'reduce_scatter': True, 'reduce_bucket_size': 50000
+0000.0, 'overlap_comm': True, 'contiguous_gradients': True, 'cpu_offload': False}, 'gradient_clipping': 1.0,
+ 'steps_per_print': inf}
+
+05/18 [23:32:17] INFO     | >> VLA Training :: Warming Up                                                 tr
+ain_starvla.py:420
+                 INFO     | >> ✅ Configuration wrapped for access tracking                               tr
+ain_starvla.py:423
+Loading checkpoint shards: 100%|████████████████████████████████████████████████████████████████| 2/2 [00:38
+<00:00, 19.02s/it]
+Total number of DiT parameters:  157032448
+05/18 [23:33:08] INFO     | >> Creating VLA Dataset with Mixture `libero_all`                              t
+rain_starvla.py:70
+/gemini/code/starVLA/.venv/lib/python3.10/site-packages/albumentations/check_version.py:49: UserWarning: Err
+or fetching version info <urlopen error _ssl.c:990: The handshake operation timed out>
+  data = fetch_version_info()
+05/18 [23:33:51] INFO     | >>  Loaded mixtures from Behavior (data_config): ['BEHAVIOR_challenge']
+   registry.py:110
+                 INFO     | >>  Loaded data_config from DOMINO: ['robotwin']
+   registry.py:104
+                 INFO     | >>  Loaded embodiment_tags from DOMINO (data_config): []
+   registry.py:107
+                 INFO     | >>  Loaded mixtures from DOMINO (data_config): ['domino', 'domino_clean',
+   registry.py:110
+                          'domino_random', 'domino_cotrain']
+
+                 INFO     | >>  Loaded data_config from Franka: ['custom_robot_config',
+   registry.py:104
+                          'demo_sim_franka_delta_joints', 'SO101']
+
+                 INFO     | >>  Loaded embodiment_tags from Franka (data_config): []
+   registry.py:107
+                 INFO     | >>  Loaded mixtures from Franka (data_config): ['custom_dataset',
+   registry.py:110
+                          'custom_dataset_2', 'demo_sim_pick_place', 'SO101_pick']
+
+                 INFO     | >>  Loaded data_config from LIBERO: ['libero_franka']
+   registry.py:104
+                 INFO     | >>  Loaded embodiment_tags from LIBERO (data_config): []
+   registry.py:107
+                 INFO     | >>  Loaded mixtures from LIBERO (data_config): ['libero_all', 'libero_goal',
+   registry.py:110
+                          'multi_robot']
+
+                 INFO     | >>  Loaded data_config from RoboChallenge_table30v2: ['ur5_robochallenge',
+   registry.py:104
+                          'arx5_robochallenge', 'dosw1_robochallenge']
+
+                 INFO     | >>  Loaded embodiment_tags from RoboChallenge_table30v2 (data_config):
+   registry.py:107
+                          ['ur5_robochallenge', 'arx5_robochallenge', 'dosw1_robochallenge']
+
+                 INFO     | >>  Loaded mixtures from RoboChallenge_table30v2 (data_config):
+   registry.py:110
+                          ['robochallenge_table30v2_shred_paper', 'robochallenge_table30v2_ur5_all',
+
+                          'robochallenge_table30v2_arx5_all', 'robochallenge_table30v2_dosw1_all']
+
+                 INFO     | >>  Loaded data_config from Robocasa_365: ['panda_omron_robocasa365']
+   registry.py:104
+                 INFO     | >>  Loaded embodiment_tags from Robocasa_365 (data_config): []
+   registry.py:107
+                 INFO     | >>  Loaded mixtures from Robocasa_365 (data_config):
+   registry.py:110
+                          ['robocasa365_open_drawer_target_human', 'robocasa365_atomic_target_human_all',
+
+                          'robocasa365_composite_target_human_all', 'robocasa365_target_human_all']
+
+                 INFO     | >>  Loaded data_config from Robocasa_tabletop: ['fourier_gr1_arms_waist']
+   registry.py:104
+                 INFO     | >>  Loaded embodiment_tags from Robocasa_tabletop (data_config): []
+   registry.py:107
+                 INFO     | >>  Loaded mixtures from Robocasa_tabletop (data_config):
+   registry.py:110
+                          ['fourier_gr1_unified_1000']
+
+                 INFO     | >>  Loaded data_config from Robotwin: ['robotwin', 'robotwin50', 'arx_x5']
+   registry.py:104
+                 INFO     | >>  Loaded embodiment_tags from Robotwin (data_config): []
+   registry.py:107
+                 INFO     | >>  Loaded mixtures from Robotwin (data_config): ['robotwin_all',
+   registry.py:110
+                          'robotwin_all_50', 'robotwin', 'robotwin_task1', 'robotwin_task2', 'arx_x5']
+
+                 INFO     | >>  Loaded data_config from SimplerEnv: ['oxe_droid', 'oxe_bridge', 'oxe_rt1']
+   registry.py:104
+                 INFO     | >>  Loaded embodiment_tags from SimplerEnv (data_config): []
+   registry.py:107
+                 INFO     | >>  Loaded mixtures from SimplerEnv (data_config): ['bridge', 'bridge_rt_1']
+   registry.py:110
+                 INFO     | >>  Loaded data_config from VLA-Arena: ['vla_arena_franka']
+   registry.py:104
+                 INFO     | >>  Loaded embodiment_tags from VLA-Arena (data_config): []
+   registry.py:107
+                 INFO     | >>  Loaded mixtures from VLA-Arena (data_config): ['vla_arena_L0_S',
+   registry.py:110
+                          'vla_arena_L0_M', 'vla_arena_L0_L']
+
+[rank0]:[W518 23:33:51.558871883 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 0]  using GPU 0 to perfo
+rm barrier as devices used by this process are currently unknown. This can potentially cause a hang if this
+rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or ca
+ll init_process_group() with a device_id.
+Initialized dataset libero_object_no_noops_1.0.0_lerobot with EmbodimentTag.FRANKA
+Initialized dataset libero_goal_no_noops_1.0.0_lerobot with EmbodimentTag.FRANKA
+Initialized dataset libero_spatial_no_noops_1.0.0_lerobot with EmbodimentTag.FRANKA
+Initialized dataset libero_10_no_noops_1.0.0_lerobot with EmbodimentTag.FRANKA
+Dataset lengths: [ 66984  52042  52970 101469]
+Merged dataset statistics saved to: playground/Checkpoints/1229_libero4in1_qwen3oft/dataset_statistics.json
+Used action keys (reordered): ['x', 'y', 'z', 'roll', 'pitch', 'yaw', 'gripper']
+Used state keys (reordered): ['x', 'y', 'z', 'roll', 'pitch', 'yaw', 'pad', 'gripper']
+05/18 [23:33:55] INFO     | >> LR Group action_model: lr=0.0001, num_params=248                            t
+rain_starvla.py:92
+                 INFO     | >> 📝 Full config saved at                                                    tr
+ain_starvla.py:182
+                          playground/Checkpoints/1229_libero4in1_qwen3oft/config.full.yaml
+
+                 INFO     | >> 📊 Accessed config snapshot saved at                                       tr
+ain_starvla.py:187
+                          playground/Checkpoints/1229_libero4in1_qwen3oft/config.yaml
+
+Latest checkpoint found: ./playground/Checkpoints/1229_libero4in1_qwen3oft/checkpoints/steps_14000_pytorch_m
+odel.pt
+📦 loading checkpoint: ./playground/Checkpoints/1229_libero4in1_qwen3oft/checkpoints/steps_14000_pytorch_mod
+el.pt
+✅ loaded <full_model> model parameters
+05/18 [23:48:11] INFO     | >> Resuming training from checkpoint:                                         tr
+ain_starvla.py:203
+                          ./playground/Checkpoints/1229_libero4in1_qwen3oft/checkpoints/steps_14000_pytor
+
+                          ch_model.pt, steps: 14000
+
+                 INFO     | >> Adjusting LR scheduler for resume from step 14000                          tr
+ain_starvla.py:224
+                 INFO     | >> LR scheduler adjusted to step 14000, current LR: [9.662927132263607e-05]   tr
+ain_starvla.py:227
+##############################
+qwen_vl_interface
+📊 model parameter statistics:
+# Parameters (in millions): 4599.289 Total, 161.473 Trainable
+[2026-05-18 23:48:11,188] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed info: version=0.16.9, git-hash
+=unknown, git-branch=unknown
+[2026-05-18 23:48:11,189] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 1
+[2026-05-18 23:48:11,191] [WARNING] [config_utils.py:70:_process_deprecated_field] Config parameter cpu_offl
+oad is deprecated use offload_optimizer instead
+[2026-05-18 23:48:15,366] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
+[2026-05-18 23:48:15,371] [INFO] [logging.py:107:log_dist] [Rank 0] Using client Optimizer as basic optimize
+r
+[2026-05-18 23:48:15,371] [INFO] [logging.py:107:log_dist] [Rank 0] Removing param_group that has no 'params
+' in the basic Optimizer
+[2026-05-18 23:48:15,400] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Basic Optimizer = AdamW
+[2026-05-18 23:48:15,400] [INFO] [utils.py:59:is_zero_supported_optimizer] Checking ZeRO support for optimiz
+er=AdamW type=<class 'torch.optim.adamw.AdamW'>
+[2026-05-18 23:48:15,401] [INFO] [logging.py:107:log_dist] [Rank 0] Creating torch.bfloat16 ZeRO stage 2 opt
+imizer
+[2026-05-18 23:48:15,401] [INFO] [stage_1_and_2.py:150:__init__] Reduce bucket size 500000000
+[2026-05-18 23:48:15,401] [INFO] [stage_1_and_2.py:151:__init__] Allgather bucket size 500000000
+[2026-05-18 23:48:15,401] [INFO] [stage_1_and_2.py:152:__init__] CPU Offload: False
+[2026-05-18 23:48:15,401] [INFO] [stage_1_and_2.py:153:__init__] Round robin gradient partitioning: False
+[2026-05-18 23:48:17,021] [INFO] [utils.py:781:see_memory_usage] Before initializing optimizer states
+[2026-05-18 23:48:17,023] [INFO] [utils.py:782:see_memory_usage] MA 9.17 GB         Max_MA 9.47 GB         C
+A 9.47 GB         Max_CA 9 GB
+[2026-05-18 23:48:17,023] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 90.31 GB, perce
+nt = 17.9%
+[2026-05-18 23:48:17,274] [INFO] [utils.py:781:see_memory_usage] After initializing optimizer states
+[2026-05-18 23:48:17,275] [INFO] [utils.py:782:see_memory_usage] MA 9.17 GB         Max_MA 9.77 GB         C
+A 10.08 GB         Max_CA 10 GB
+[2026-05-18 23:48:17,275] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 90.44 GB, perce
+nt = 18.0%
+[2026-05-18 23:48:17,275] [INFO] [stage_1_and_2.py:557:__init__] optimizer state initialized
+[2026-05-18 23:48:17,453] [INFO] [utils.py:781:see_memory_usage] After initializing ZeRO optimizer
+[2026-05-18 23:48:17,454] [INFO] [utils.py:782:see_memory_usage] MA 9.17 GB         Max_MA 9.17 GB         C
+A 10.08 GB         Max_CA 10 GB
+[2026-05-18 23:48:17,454] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 90.55 GB, perce
+nt = 18.0%
+[2026-05-18 23:48:17,521] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Final Optimizer = DeepSpeedZer
+oOptimizer
+[2026-05-18 23:48:17,521] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed using configured LR scheduler
+= None
+[2026-05-18 23:48:17,521] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2026-05-18 23:48:17,521] [INFO] [logging.py:107:log_dist] [Rank 0] step=0, skipped=0, lr=[9.662927132263607
+e-05], mom=[(0.9, 0.95)]
+[2026-05-18 23:48:17,525] [INFO] [config.py:1003:print] DeepSpeedEngine configuration:
+[2026-05-18 23:48:17,526] [INFO] [config.py:1007:print]   activation_checkpointing_config  {
+    "partition_activations": false,
+    "contiguous_memory_optimization": false,
+    "cpu_checkpointing": false,
+    "number_checkpoints": null,
+    "synchronize_checkpoint_boundary": false,
+    "profile": false
+}
+[2026-05-18 23:48:17,526] [INFO] [config.py:1007:print]   aio_config ................... {'block_size': 1048
+576, 'queue_depth': 8, 'intra_op_parallelism': 1, 'single_submit': False, 'overlap_events': True, 'use_gds':
+ False}
+[2026-05-18 23:48:17,526] [INFO] [config.py:1007:print]   amp_enabled .................. False
+[2026-05-18 23:48:17,526] [INFO] [config.py:1007:print]   amp_params ................... False
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   autotuning_config ............ {
+    "enabled": false,
+    "start_step": null,
+    "end_step": null,
+    "metric_path": null,
+    "arg_mappings": null,
+    "metric": "throughput",
+    "model_info": null,
+    "results_dir": "autotuning_results",
+    "exps_dir": "autotuning_exps",
+    "overwrite": true,
+    "fast": true,
+    "start_profile_step": 3,
+    "end_profile_step": 5,
+    "tuner_type": "gridsearch",
+    "tuner_early_stopping": 5,
+    "tuner_num_trials": 50,
+    "model_info_path": null,
+    "mp_size": 1,
+    "max_train_batch_size": null,
+    "min_train_batch_size": 1,
+    "max_train_micro_batch_size_per_gpu": 1.024000e+03,
+    "min_train_micro_batch_size_per_gpu": 1,
+    "num_tuning_micro_batch_sizes": 3
+}
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   bfloat16_enabled ............. True
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   bfloat16_immediate_grad_update  True
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   checkpoint_parallel_write_pipeline  False
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   checkpoint_tag_validation_enabled  True
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   checkpoint_tag_validation_fail  False
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   comms_config ................. <deepspeed.comm.con
+fig.DeepSpeedCommsConfig object at 0x7f63f0e83910>
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   communication_data_type ...... None
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   compile_config ............... deepcompile=False f
+ree_activation=False offload_activation=False offload_opt_states=False double_buffer=True symmetric_memory=F
+alse debug_log=False offload_parameters=False sync_before_reduce=False sync_after_reduce=False sync_before_a
+llgather=False sync_after_allgather=False
+[2026-05-18 23:48:17,527] [INFO] [config.py:1007:print]   compression_config ........... {'weight_quantizati
+on': {'shared_parameters': {'enabled': False, 'quantizer_kernel': False, 'schedule_offset': 0, 'quantize_gro
+ups': 1, 'quantize_verbose': False, 'quantization_type': 'symmetric', 'quantize_weight_in_forward': False, '
+rounding': 'nearest', 'fp16_mixed_quantize': False, 'quantize_change_ratio': 0.001}, 'different_groups': {}}
+, 'activation_quantization': {'shared_parameters': {'enabled': False, 'quantization_type': 'symmetric', 'ran
+ge_calibration': 'dynamic', 'schedule_offset': 1000}, 'different_groups': {}}, 'sparse_pruning': {'shared_pa
+rameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'row_prunin
+g': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {
+}}, 'head_pruning': {'shared_parameters': {'enabled': False, 'method': 'topk', 'schedule_offset': 1000}, 'di
+fferent_groups': {}}, 'channel_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_
+offset': 1000}, 'different_groups': {}}, 'layer_reduction': {'enabled': False}}
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   curriculum_enabled_legacy .... False
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   curriculum_params_legacy ..... False
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   data_efficiency_config ....... {'enabled': False,
+'seed': 1234, 'data_sampling': {'enabled': False, 'num_epochs': 1000, 'num_workers': 0, 'pin_memory': False,
+ 'curriculum_learning': {'enabled': False}, 'dynamic_batching': {'enabled': False, 'lr_scaling_method': 'lin
+ear', 'min_batch_size': 1, 'max_batch_size': None, 'sequence_picking_order': 'dataloader', 'verbose': False}
+}, 'data_routing': {'enabled': False, 'random_ltd': {'enabled': False, 'layer_token_lr_schedule': {'enabled'
+: False}}}}
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   data_efficiency_enabled ...... False
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   dataloader_drop_last ......... False
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   disable_allgather ............ False
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   dump_state ................... False
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   dynamic_loss_scale_args ...... None
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   eigenvalue_enabled ........... False
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   eigenvalue_gas_boundary_resolution  1
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   eigenvalue_layer_num ......... 0
+[2026-05-18 23:48:17,528] [INFO] [config.py:1007:print]   eigenvalue_max_iter .......... 100
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   eigenvalue_stability ......... 1e-06
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   eigenvalue_tol ............... 0.01
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   eigenvalue_verbose ........... False
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   elasticity_enabled ........... False
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   flops_profiler_config ........ {
+    "enabled": false,
+    "recompute_fwd_factor": 0.0,
+    "profile_step": 1,
+    "module_depth": -1,
+    "top_modules": 1,
+    "detailed": true,
+    "output_file": null
+}
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   fp16_auto_cast ............... None
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   fp16_enabled ................. False
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   fp16_master_weights_and_gradients  False
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   global_rank .................. 0
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   grad_accum_dtype ............. None
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   gradient_accumulation_steps .. 1
+[2026-05-18 23:48:17,529] [INFO] [config.py:1007:print]   gradient_clipping ............ 1.0
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   gradient_predivide_factor .... 1.0
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   graph_harvesting ............. False
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   hybrid_engine ................ enabled=False max_o
+ut_tokens=512 inference_tp_size=1 release_inference_cache=False pin_parameters=True tp_gather_partition_size
+=8
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   initial_dynamic_scale ........ 1
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   load_universal_checkpoint .... False
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   loss_scale ................... 1.0
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   memory_breakdown ............. False
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   mics_hierarchial_params_gather  False
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   mics_shard_size .............. -1
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   monitor_config ............... tensorboard=TensorB
+oardConfig(enabled=False, output_path='', job_name='DeepSpeedJobName') comet=CometConfig(enabled=False, samp
+les_log_interval=100, project=None, workspace=None, api_key=None, experiment_name=None, experiment_key=None,
+ online=None, mode=None) wandb=WandbConfig(enabled=False, group=None, team=None, project='deepspeed') csv_mo
+nitor=CSVConfig(enabled=False, output_path='', job_name='DeepSpeedJobName')
+[2026-05-18 23:48:17,530] [INFO] [config.py:1007:print]   nebula_config ................ {
+    "enabled": false,
+    "persistent_storage_path": null,
+    "persistent_time_interval": 100,
+    "num_of_version_in_retention": 2,
+    "enable_nebula_load": true,
+    "load_path": null
+}
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   optimizer_legacy_fusion ...... False
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   optimizer_name ............... None
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   optimizer_params ............. None
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   pipeline ..................... {'stages': 'auto',
+'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0, 'pipe_partitioned': True, 'g
+rad_partitioned': True}
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   pld_enabled .................. False
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   pld_params ................... False
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   prescale_gradients ........... False
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   scheduler_name ............... None
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   scheduler_params ............. None
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   seq_parallel_communication_data_type  torch.float3
+2
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   sparse_attention ............. None
+[2026-05-18 23:48:17,531] [INFO] [config.py:1007:print]   sparse_gradients_enabled ..... False
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   steps_per_print .............. inf
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   tensor_parallel_config ....... dtype=torch.float16
+ autotp_size=0 tp_overlap_comm=False tensor_parallel=TPConfig(tp_size=1, tp_grain_size=1, mpu=None, tp_group
+=None) injection_policy_tuple=None keep_module_on_host=False replace_with_kernel_inject=False
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   timers_config ................ enabled=True synchr
+onized=True
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   train_batch_size ............. 32
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   train_micro_batch_size_per_gpu  32
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   use_data_before_expert_parallel_  False
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   use_node_local_storage ....... False
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   wall_clock_breakdown ......... False
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   weight_quantization_config ... None
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   world_size ................... 1
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   zero_allow_untested_optimizer  True
+[2026-05-18 23:48:17,532] [INFO] [config.py:1007:print]   zero_config .................. stage=2 contiguous_
+gradients=True reduce_scatter=True reduce_bucket_size=500000000 use_multi_rank_bucket_allreduce=True allgath
+er_partitions=True allgather_bucket_size=500000000 overlap_comm=True load_from_fp32_weights=True elastic_che
+ckpoint=False offload_param=None offload_optimizer=None sub_group_size=1000000000 cpu_offload_param=None cpu
+_offload_use_pin_memory=None prefetch_bucket_size=50000000 param_persistence_threshold=100000 model_persiste
+nce_threshold=9223372036854775807 max_live_parameters=1000000000 max_reuse_distance=1000000000 gather_16bit_
+weights_on_model_save=False module_granularity_threshold=0 use_all_reduce_for_fetch_params=False stage3_gath
+er_fp16_weights_on_model_save=False ignore_unused_parameters=True legacy_stage1=False round_robin_gradients=
+False zero_hpz_partition_size=1 zero_quantized_weights=False zero_quantized_nontrainable_weights=False zero_
+quantized_gradients=False zeropp_loco_param=None mics_shard_size=-1 mics_hierarchical_params_gather=False me
+mory_efficient_linear=True pipeline_loading_checkpoint=False override_module_apply=True log_trace_cache_warn
+ings=False
+[2026-05-18 23:48:17,533] [INFO] [config.py:1007:print]   zero_enabled ................. True
+[2026-05-18 23:48:17,533] [INFO] [config.py:1007:print]   zero_force_ds_cpu_optimizer .. True
+[2026-05-18 23:48:17,533] [INFO] [config.py:1007:print]   zero_optimization_stage ...... 2
+[2026-05-18 23:48:17,533] [INFO] [config.py:993:print_user_config]   json = {
+    "fp16": {
+        "enabled": false
+    },
+    "bf16": {
+        "enabled": true
+    },
+    "train_micro_batch_size_per_gpu": 32,
+    "train_batch_size": 32,
+    "gradient_accumulation_steps": 1,
+    "zero_optimization": {
+        "stage": 2,
+        "allgather_partitions": true,
+        "allgather_bucket_size": 5.000000e+08,
+        "reduce_scatter": true,
+        "reduce_bucket_size": 5.000000e+08,
+        "overlap_comm": true,
+        "contiguous_gradients": true,
+        "cpu_offload": false
+    },
+    "gradient_clipping": 1.0,
+    "steps_per_print": inf,
+    "zero_allow_untested_optimizer": true
+}
+wandb: (1) Create a W&B account
+wandb: (2) Use an existing W&B account
+wandb: (3) Don't visualize my results
+wandb: Enter your choice: ^[[B^[[B^[[B^H^H2^H
+wandb: WARNING Invalid choice
+wandb: Enter your choice: 2
+wandb: You chose 'Use an existing W&B account'
+wandb: Logging into https://api.wandb.ai. (Learn how to deploy a W&B server locally: https://wandb.me/wandb-
+server)
+wandb: Create a new API key at: https://wandb.ai/authorize?ref=models
+wandb: Store your API key securely and do not share it.
+wandb: Paste your API key and hit enter:
+wandb: No netrc file found, creating one.
+wandb: Appending key for api.wandb.ai to your netrc file: /root/.netrc
+wandb: Currently logged in as: silencewx (silencewx-harbin-institute-of-technology) to https://api.wandb.ai.
+ Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.27.0
+wandb: Run data is saved locally in playground/Checkpoints/1229_libero4in1_qwen3oft/wandb/wandb/run-20260518
+_235256-t88zj7zn
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run 1229_libero4in1_qwen3oft
+wandb: ⭐️ View project at https://wandb.ai/silencewx-harbin-institute-of-technology/starVLA_Libero
+wandb: 🚀 View run at https://wandb.ai/silencewx-harbin-institute-of-technology/starVLA_Libero/runs/t88zj7zn
+05/18 [23:53:16] INFO     | >> ***** Training Configuration *****                                         tr
+ain_starvla.py:362
+                 INFO     | >>   Total optimization steps = 80000                                         tr
+ain_starvla.py:363
+                 INFO     | >>   Per device batch size = 32                                               tr
+ain_starvla.py:364
+                 INFO     | >>   Gradient accumulation steps = 1                                          tr
+ain_starvla.py:365
+                 INFO     | >>   Total batch size = 32                                                    tr
+ain_starvla.py:366
+ 18%|███████▌                                   | 14100/80000 [05:56<48:21:05,  2.64s/it, data_times=0.111,
+model_times=2.515]05/18 [23:59:15] INFO     | >> Step 14100, Loss: {'action_dit_loss': 0.08175913244485855,
+'mse_score':    train_starvla.py:274
+                          0.0040761008858680725, 'timing/data': 0.11123976111412048, 'timing/model':
+
+                          2.51463083922863, 'learning_rate/action_model': 9.655486417489424e-05, 'epoch':
+
+                          1.11})
+
+ 18%|███████▋                                   | 14200/80000 [10:37<50:46:32,  2.78s/it, data_times=0.001,
+model_times=2.680]05/19 [00:03:55] INFO     | >> Step 14200, Loss: {'action_dit_loss': 0.08360496908426285,
+'mse_score':    train_starvla.py:274
+                          0.0038087040718112674, 'timing/data': 0.000860162079334259, 'timing/model':
+
+                          2.679693356156349, 'learning_rate/action_model': 9.647967527028027e-05,
+
+                          'epoch': 1.12})
+
+ 18%|███████▋                                   | 14300/80000 [15:19<51:39:15,  2.83s/it, data_times=0.049,
+model_times=2.806]05/19 [00:08:37] INFO     | >> Step 14300, Loss: {'action_dit_loss': 0.09097626060247421,
+'mse_score':    train_starvla.py:274
+                          0.003437958923833711, 'timing/data': 0.048720985651016235, 'timing/model':
+
+                          2.8063527047634125, 'learning_rate/action_model': 9.640370592805399e-05,
+
+                          'epoch': 1.13})
+
+ 18%|███████▋                                   | 14400/80000 [20:08<56:51:21,  3.12s/it, data_times=0.111,
+model_times=2.981]05/19 [00:13:26] INFO     | >> Step 14400, Loss: {'action_dit_loss': 0.07411442697048187,
+'mse_score':    train_starvla.py:274
+                          0.004890465310641697, 'timing/data': 0.11060959845781326, 'timing/model':
+
+                          2.981136254966259, 'learning_rate/action_model': 9.632695748116876e-05,
+
+                          'epoch': 1.14})
+
+ 18%|███████▊                                   | 14500/80000 [25:22<56:54:37,  3.13s/it, data_times=0.001,
+model_times=3.031]05/19 [00:18:40] INFO     | >> Step 14500, Loss: {'action_dit_loss': 0.07684675604104996,
+'mse_score':    train_starvla.py:274
+                          0.004036519144262586, 'timing/data': 0.000567220151424408, 'timing/model':
+
+                          3.031081900000572, 'learning_rate/action_model': 9.624943127624802e-05,
+
+                          'epoch': 1.14})
+
+ 18%|███████▊                                   | 14600/80000 [30:34<56:42:55,  3.12s/it, data_times=0.052,
+model_times=3.268]05/19 [00:23:52] INFO     | >> Step 14600, Loss: {'action_dit_loss': 0.08270392566919327,
+'mse_score':    train_starvla.py:274
+                          0.004450716078281403, 'timing/data': 0.052185557782649994, 'timing/model':
+
+                          3.2683583796024323, 'learning_rate/action_model': 9.617112867356178e-05,
+
+                          'epoch': 1.15})
+
+ 18%|███████▉                                   | 14700/80000 [35:44<54:52:53,  3.03s/it, data_times=0.039,
+model_times=3.042]05/19 [00:29:02] INFO     | >> Step 14700, Loss: {'action_dit_loss': 0.08562541753053665,
+'mse_score':    train_starvla.py:274
+                          0.0043751560151577, 'timing/data': 0.03941816836595535, 'timing/model':
+
+                          3.0419543758034706, 'learning_rate/action_model': 9.609205104700259e-05,
+
+                          'epoch': 1.16})
+
+ 18%|███████▉                                   | 14800/80000 [40:56<57:06:29,  3.15s/it, data_times=0.050,
+model_times=3.112]05/19 [00:34:14] INFO     | >> Step 14800, Loss: {'action_dit_loss': 0.07616560906171799,
+'mse_score':    train_starvla.py:274
+                          0.004126116367323058, 'timing/data': 0.04958895593881607, 'timing/model':
+
+                          3.1118980273604393, 'learning_rate/action_model': 9.60121997840616e-05,
+
+                          'epoch': 1.17})
+
+ 19%|████████                                   | 14900/80000 [46:09<53:11:31,  2.94s/it, data_times=0.001,
+model_times=2.919]05/19 [00:39:27] INFO     | >> Step 14900, Loss: {'action_dit_loss': 0.09835734218358994,
+'mse_score':    train_starvla.py:274
+                          0.004021659759538514, 'timing/data': 0.0008307918906211853, 'timing/model':
+
+                          2.9194726645946503, 'learning_rate/action_model': 9.593157628580404e-05,
+
+                          'epoch': 1.17})
+
+ 19%|████████                                   | 14937/80000 [48:05<58:11:04,  3.22s/it, data_times=0.045,
+model_times=3.165]Attempt 1/10 failed for index 30578: [Errno 1094995529] Invalid data found when processing
+ input
+Retrying with new sample...
+ 19%|████████                                   | 15000/80000 [51:18<56:13:35,  3.11s/it, data_times=0.046,
+model_times=3.228]05/19 [00:44:36] INFO     | >> Step 15000, Loss: {'action_dit_loss': 0.07331410050392151,
+'mse_score':    train_starvla.py:274
+                          0.004040731649313655, 'timing/data': 0.04634763300418854, 'timing/model':
+
+                          3.228087641298771, 'learning_rate/action_model': 9.585018196684484e-05,
+
+                          'epoch': 1.18})
+
+✅ Checkpoint saved at ./playground/Checkpoints/1229_libero4in1_qwen3oft/checkpoints/steps_15000
+05/19 [00:45:45] INFO     | >> 📊 Saving accessed configuration...                                        tr
+ain_starvla.py:258
+                 INFO     | >> ✅ Configuration files saved                                               tr
+ain_starvla.py:261
+ 19%|████████                                   | 15100/80000 [57:48<56:38:57,  3.14s/it, data_times=0.036,
+model_times=3.048]05/19 [00:51:06] INFO     | >> Step 15100, Loss: {'action_dit_loss': 0.07873642444610596,
+'mse_score':    train_starvla.py:274
+                          0.004098118149808475, 'timing/data': 0.03589892387390137, 'timing/model':
+
+                          3.0481610149145126, 'learning_rate/action_model': 9.576801825532364e-05,
+
+                          'epoch': 1.19})
+
+ 19%|███████▊                                 | 15200/80000 [1:02:58<57:10:19,  3.18s/it, data_times=0.098,
+model_times=3.090]05/19 [00:56:16] INFO     | >> Step 15200, Loss: {'action_dit_loss': 0.07481618225574493,
+'mse_score':    train_starvla.py:274
+                          0.004215015364544732, 'timing/data': 0.09761162102222443, 'timing/model':
+
+                          3.0896593928337097, 'learning_rate/action_model': 9.568508659287979e-05,
+
+                          'epoch': 1.2})
+
+ 19%|███████▊                                 | 15300/80000 [1:08:07<56:37:40,  3.15s/it, data_times=0.125,
+model_times=3.065]05/19 [01:01:25] INFO     | >> Step 15300, Loss: {'action_dit_loss': 0.07826343923807144,
+'mse_score':    train_starvla.py:274
+                          0.004391573369503021, 'timing/data': 0.12519850581884384, 'timing/model':
+
+                          3.0648014172911644, 'learning_rate/action_model': 9.56013884346271e-05,
+
+                          'epoch': 1.21})
+
+ 19%|███████▉                                 | 15392/80000 [1:12:55<55:30:52,  3.09s/it, data_times=0.001,
+model_times=2.978]Attempt 1/10 failed for index 45269: [Errno 1094995529] Invalid data found when processing
+ input
+Retrying with new sample...
+ 19%|███████▉                                 | 15400/80000 [1:13:21<58:53:17,  3.28s/it, data_times=0.001,
+model_times=3.237]05/19 [01:06:39] INFO     | >> Step 15400, Loss: {'action_dit_loss': 0.08482745289802551,
+'mse_score':    train_starvla.py:274
+                          0.0037851884428943905, 'timing/data': 0.0005865246057510376, 'timing/model':
+
+                          3.236717604100704, 'learning_rate/action_model': 9.551692524912822e-05,
+
+                          'epoch': 1.21})
+
+ 19%|███████▉                                 | 15500/80000 [1:18:34<57:48:26,  3.23s/it, data_times=0.038,
+model_times=3.231]05/19 [01:11:52] INFO     | >> Step 15500, Loss: {'action_dit_loss': 0.06351358443498611,
+'mse_score':    train_starvla.py:274
+                          0.003998896107077599, 'timing/data': 0.03753862529993057, 'timing/model':
+
+                          3.2310347706079483, 'learning_rate/action_model': 9.543169851836894e-05,
+
+                          'epoch': 1.22})
+
+ 20%|███████▉                                 | 15600/80000 [1:23:45<55:24:45,  3.10s/it, data_times=0.053,
+model_times=3.234]05/19 [01:17:03] INFO     | >> Step 15600, Loss: {'action_dit_loss': 0.06580562889575958,
+'mse_score':    train_starvla.py:274
+                          0.004092205581920487, 'timing/data': 0.0527690052986145, 'timing/model':
+
+                          3.233565464615822, 'learning_rate/action_model': 9.53457097377322e-05, 'epoch':
+
+                          1.23})
+
+ 20%|████████                                 | 15693/80000 [1:28:34<56:10:14,  3.14s/it, data_times=0.001,
+model_times=3.076]Attempt 1/10 failed for index 54981: [Errno 1094995529] Invalid data found when processing
+ input
+Retrying with new sample...
+ 20%|████████                                 | 15700/80000 [1:28:56<54:52:49,  3.07s/it, data_times=0.098,
+model_times=2.918]05/19 [01:22:14] INFO     | >> Step 15700, Loss: {'action_dit_loss': 0.08504365384578705,
+'mse_score':    train_starvla.py:274
+                          0.004332929317440305, 'timing/data': 0.09760578721761703, 'timing/model':
+
+                          2.918332241475582, 'learning_rate/action_model': 9.525896041597176e-05,
+
+                          'epoch': 1.24})
+
+ 20%|████████                                 | 15800/80000 [1:34:09<51:46:29,  2.90s/it, data_times=0.035,
+model_times=2.692]05/19 [01:27:26] INFO     | >> Step 15800, Loss: {'action_dit_loss': 0.07067480683326721,
+'mse_score':    train_starvla.py:274
+                          0.003292350098490715, 'timing/data': 0.03509493172168732, 'timing/model':
+
+                          2.691779538989067, 'learning_rate/action_model': 9.517145207518581e-05,
+
+                          'epoch': 1.25})
+
+ 20%|████████▏                                | 15900/80000 [1:39:19<54:15:32,  3.05s/it, data_times=0.051,
+model_times=3.040]05/19 [01:32:37] INFO     | >> Step 15900, Loss: {'action_dit_loss': 0.0771469846367836, '
+mse_score':     train_starvla.py:274
+                          0.0040722255195890155, 'timing/data': 0.05144495517015457, 'timing/model':
+
+                          3.0402560085058212, 'learning_rate/action_model': 9.508318625079029e-05,
+
+                          'epoch': 1.25})
+
+ 20%|████████▏                                | 16000/80000 [1:44:33<55:35:00,  3.13s/it, data_times=0.044,
+model_times=3.314]05/19 [01:37:51] INFO     | >> Step 16000, Loss: {'action_dit_loss': 0.06970393657684326,
+'mse_score':    train_starvla.py:274
+                          0.0040023427988801685, 'timing/data': 0.04413391649723053, 'timing/model':
+
+                          3.313650868833065, 'learning_rate/action_model': 9.499416449149182e-05,
+
+                          'epoch': 1.26})
+
+Traceback (most recent call last):
+  File "/gemini/code/starVLA/starVLA/training/train_starvla.py", line 477, in <module>
+    main(cfg)
+  File "/gemini/code/starVLA/starVLA/training/train_starvla.py", line 440, in main
+    trainer.train()
+  File "/gemini/code/starVLA/starVLA/training/train_starvla.py", line 333, in train
+    self._save_checkpoint()
+  File "/gemini/code/starVLA/starVLA/training/train_starvla.py", line 242, in _save_checkpoint
+    state_dict = self.accelerator.get_state_dict(self.model)
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/accelerate/accelerator.py", line 3495, in ge
+t_state_dict
+    state_dict = clone_tensors_for_torch_save(self.unwrap_model(model).state_dict())
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/deepspeed/checkpoint/utils.py", line 65, in
+clone_tensors_for_torch_save
+    return type(item)({k: clone_tensors_for_torch_save(v, device) for k, v in item.items()})
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/deepspeed/checkpoint/utils.py", line 65, in
+<dictcomp>
+    return type(item)({k: clone_tensors_for_torch_save(v, device) for k, v in item.items()})
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/deepspeed/checkpoint/utils.py", line 59, in
+clone_tensors_for_torch_save
+    return item.detach().to(device)
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/torch/utils/data/_utils/signal_handling.py",
+ line 73, in handler
+    _error_if_any_worker_fails()
+RuntimeError: DataLoader worker (pid 3698) is killed by signal: Killed.
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/gemini/code/starVLA/starVLA/training/train_starvla.py", line 477, in <module>
+[rank0]:     main(cfg)
+[rank0]:   File "/gemini/code/starVLA/starVLA/training/train_starvla.py", line 440, in main
+[rank0]:     trainer.train()
+[rank0]:   File "/gemini/code/starVLA/starVLA/training/train_starvla.py", line 333, in train
+[rank0]:     self._save_checkpoint()
+[rank0]:   File "/gemini/code/starVLA/starVLA/training/train_starvla.py", line 242, in _save_checkpoint
+[rank0]:     state_dict = self.accelerator.get_state_dict(self.model)
+[rank0]:   File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/accelerate/accelerator.py", line 34
+95, in get_state_dict
+[rank0]:     state_dict = clone_tensors_for_torch_save(self.unwrap_model(model).state_dict())
+[rank0]:   File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/deepspeed/checkpoint/utils.py", lin
+e 65, in clone_tensors_for_torch_save
+[rank0]:     return type(item)({k: clone_tensors_for_torch_save(v, device) for k, v in item.items()})
+[rank0]:   File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/deepspeed/checkpoint/utils.py", lin
+e 65, in <dictcomp>
+[rank0]:     return type(item)({k: clone_tensors_for_torch_save(v, device) for k, v in item.items()})
+[rank0]:   File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/deepspeed/checkpoint/utils.py", lin
+e 59, in clone_tensors_for_torch_save
+[rank0]:     return item.detach().to(device)
+[rank0]:   File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/torch/utils/data/_utils/signal_hand
+ling.py", line 73, in handler
+[rank0]:     _error_if_any_worker_fails()
+[rank0]: RuntimeError: DataLoader worker (pid 3698) is killed by signal: Killed.
+wandb:
+wandb: 🚀 View run 1229_libero4in1_qwen3oft at: https://wandb.ai/silencewx-harbin-institute-of-technology/st
+arVLA_Libero/runs/t88zj7zn
+[rank0]:[W519 02:05:06.324364256 ProcessGroupNCCL.cpp:1496] Warning: WARNING: destroy_process_group() was no
+t called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/s
+table/distributed.html#shutdown (function operator())
+E0519 02:05:50.371000 759 torch/distributed/elastic/multiprocessing/api.py:869] failed (exitcode: 1) local_r
+ank: 0 (pid: 1135) of binary: /gemini/code/starVLA/.venv/bin/python
+Traceback (most recent call last):
+  File "/gemini/code/starVLA/.venv/bin/accelerate", line 8, in <module>
+    sys.exit(main())
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/accelerate/commands/accelerate_cli.py", line
+ 48, in main
+    args.func(args)
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/accelerate/commands/launch.py", line 1177, i
+n launch_command
+    deepspeed_launcher(args)
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/accelerate/commands/launch.py", line 863, in
+ deepspeed_launcher
+    distrib_run.run(args)
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/torch/distributed/run.py", line 909, in run
+    elastic_launch(
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 138
+, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/gemini/code/starVLA/.venv/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 269
+, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError:
+============================================================
+starVLA/training/train_starvla.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-05-19_02:05:50
+  host      : gjob-dev-711598530816708608-taskrole1-0
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 1135)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+(.venv) ➜  starVLA git:(starVLA_dev) bash examples/LIBERO/train_files/run_libero_train.sh
+[2026-05-19 07:37:43,465] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (a
+uto detect)
+[2026-05-19 07:40:22,756] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (a
+uto detect)
+05/19 [07:40:25] INFO     | >> x86_64-linux-gnu-gcc                spawn.py:77
+                          -Wno-unused-result -Wsign-compare
+                          -DNDEBUG -g -fwrapv -O2 -Wall -g
+                          -fstack-protector-strong -Wformat
+                          -Werror=format-security -g -fwrapv -O2
+                          -fPIC -c /tmp/tmp1ouu6uk2/test.c -o
+                          /tmp/tmp1ouu6uk2/test.o
+                 INFO     | >> x86_64-linux-gnu-gcc                spawn.py:77
+                          /tmp/tmp1ouu6uk2/test.o -laio -o
+                          /tmp/tmp1ouu6uk2/a.out
+05/19 [07:40:26] INFO     | >> x86_64-linux-gnu-gcc                spawn.py:77
+                          -Wno-unused-result -Wsign-compare
+                          -DNDEBUG -g -fwrapv -O2 -Wall -g
+                          -fstack-protector-strong -Wformat
+                          -Werror=format-security -g -fwrapv -O2
+                          -fPIC -c /tmp/tmpes3k1v2h/test.c -o
+                          /tmp/tmpes3k1v2h/test.o
+                 INFO     | >> x86_64-linux-gnu-gcc                spawn.py:77
+                          /tmp/tmpes3k1v2h/test.o
+                          -L/usr/local/cuda
+                          -L/usr/local/cuda/lib64 -lcufile -o
+                          /tmp/tmpes3k1v2h/a.out
+                 INFO     | >> x86_64-linux-gnu-gcc                spawn.py:77
+                          -Wno-unused-result -Wsign-compare
+                          -DNDEBUG -g -fwrapv -O2 -Wall -g
+                          -fstack-protector-strong -Wformat
+                          -Werror=format-security -g -fwrapv -O2
+                          -fPIC -c /tmp/tmprne_wtw6/test.c -o
+                          /tmp/tmprne_wtw6/test.o
+                 INFO     | >> x86_64-linux-gnu-gcc                spawn.py:77
+                          /tmp/tmprne_wtw6/test.o -laio -o
+                          /tmp/tmprne_wtw6/a.out
+[2026-05-19 07:40:34,459] [INFO] [comm.py:669:init_distributed] cdb=None
+[2026-05-19 07:40:34,459] [INFO] [comm.py:700:init_distributed] Initializing TorchBackend in DeepSpeed with
+backend nccl
+[W519 07:40:35.233082436 Utils.hpp:165] Warning: Environment variable NCCL_BLOCKING_WAIT is deprecated; use
+TORCH_NCCL_BLOCKING_WAIT instead (function operator())
+[W519 07:40:35.234508056 Utils.hpp:136] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecate
+d; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+Distributed environment: DEEPSPEED  Backend: nccl
+Num processes: 1
+Process index: 0
+Local process index: 0
+Device: cuda:0
+
+Mixed precision type: bf16
+ds_config: {'fp16': {'enabled': False}, 'bf16': {'enabled': True}, 'train_micro_batch_size_per_gpu': 'auto',
+ 'train_batch_size': 'auto', 'gradient_accumulation_steps': 1, 'zero_optimization': {'stage': 2, 'allgather_
+partitions': True, 'allgather_bucket_size': 500000000.0, 'reduce_scatter': True, 'reduce_bucket_size': 50000
+0000.0, 'overlap_comm': True, 'contiguous_gradients': True, 'cpu_offload': False}, 'gradient_clipping': 1.0,
+ 'steps_per_print': inf}
+
+05/19 [07:40:36] INFO     | >> VLA Training :: Warming Up train_starvla.py:420
+                 INFO     | >> ✅ Configuration wrapped   train_starvla.py:423
+                          for access tracking
+Loading checkpoint shards: 100%|████████████████| 2/2 [00:29<00:00, 14.54s/it]
+Total number of DiT parameters:  157032448
+05/19 [07:41:15] INFO     | >> Creating VLA Dataset with   train_starvla.py:70
+                          Mixture `libero_all`
+/gemini/code/starVLA/.venv/lib/python3.10/site-packages/albumentations/__init__.py:13: UserWarning: A new ve
+rsion of Albumentations is available: 2.0.8 (you have 1.4.18). Upgrade using: pip install -U albumentations.
+ To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.
+  check_for_updates()
+05/19 [07:41:36] INFO     | >>  Loaded mixtures from Behavior  registry.py:110
+                          (data_config):
+                          ['BEHAVIOR_challenge']
+                 INFO     | >>  Loaded data_config from        registry.py:104
+                          DOMINO: ['robotwin']
+                 INFO     | >>  Loaded embodiment_tags from    registry.py:107
+                          DOMINO (data_config): []
+                 INFO     | >>  Loaded mixtures from DOMINO    registry.py:110
+                          (data_config): ['domino',
+                          'domino_clean', 'domino_random',
+                          'domino_cotrain']
+                 INFO     | >>  Loaded data_config from        registry.py:104
+                          Franka: ['custom_robot_config',
+                          'demo_sim_franka_delta_joints',
+                          'SO101']
+                 INFO     | >>  Loaded embodiment_tags from    registry.py:107
+                          Franka (data_config): []
+                 INFO     | >>  Loaded mixtures from Franka    registry.py:110
+                          (data_config): ['custom_dataset',
+                          'custom_dataset_2',
+                          'demo_sim_pick_place', 'SO101_pick']
+                 INFO     | >>  Loaded data_config from        registry.py:104
+                          LIBERO: ['libero_franka']
+                 INFO     | >>  Loaded embodiment_tags from    registry.py:107
+                          LIBERO (data_config): []
+                 INFO     | >>  Loaded mixtures from LIBERO    registry.py:110
+                          (data_config): ['libero_all',
+                          'libero_goal', 'multi_robot']
+                 INFO     | >>  Loaded data_config from        registry.py:104
+                          RoboChallenge_table30v2:
+                          ['ur5_robochallenge',
+                          'arx5_robochallenge',
+                          'dosw1_robochallenge']
+                 INFO     | >>  Loaded embodiment_tags from    registry.py:107
+                          RoboChallenge_table30v2
+                          (data_config): ['ur5_robochallenge',
+                          'arx5_robochallenge',
+                          'dosw1_robochallenge']
+                 INFO     | >>  Loaded mixtures from           registry.py:110
+                          RoboChallenge_table30v2
+                          (data_config):
+                          ['robochallenge_table30v2_shred_pape
+                          r',
+                          'robochallenge_table30v2_ur5_all',
+                          'robochallenge_table30v2_arx5_all',
+                          'robochallenge_table30v2_dosw1_all']
+                 INFO     | >>  Loaded data_config from        registry.py:104
+                          Robocasa_365:
+                          ['panda_omron_robocasa365']
+                 INFO     | >>  Loaded embodiment_tags from    registry.py:107
+                          Robocasa_365 (data_config): []
+                 INFO     | >>  Loaded mixtures from           registry.py:110
+                          Robocasa_365 (data_config):
+                          ['robocasa365_open_drawer_target_hum
+                          an',
+                          'robocasa365_atomic_target_human_all
+                          ',
+                          'robocasa365_composite_target_human_
+                          all',
+                          'robocasa365_target_human_all']
+                 INFO     | >>  Loaded data_config from        registry.py:104
+                          Robocasa_tabletop:
+                          ['fourier_gr1_arms_waist']
+                 INFO     | >>  Loaded embodiment_tags from    registry.py:107
+                          Robocasa_tabletop (data_config): []
+                 INFO     | >>  Loaded mixtures from           registry.py:110
+                          Robocasa_tabletop (data_config):
+                          ['fourier_gr1_unified_1000']
+                 INFO     | >>  Loaded data_config from        registry.py:104
+                          Robotwin: ['robotwin', 'robotwin50',
+                          'arx_x5']
+                 INFO     | >>  Loaded embodiment_tags from    registry.py:107
+                          Robotwin (data_config): []
+                 INFO     | >>  Loaded mixtures from Robotwin  registry.py:110
+                          (data_config): ['robotwin_all',
+                          'robotwin_all_50', 'robotwin',
+                          'robotwin_task1', 'robotwin_task2',
+                          'arx_x5']
+                 INFO     | >>  Loaded data_config from        registry.py:104
+                          SimplerEnv: ['oxe_droid',
+                          'oxe_bridge', 'oxe_rt1']
+                 INFO     | >>  Loaded embodiment_tags from    registry.py:107
+                          SimplerEnv (data_config): []
+                 INFO     | >>  Loaded mixtures from           registry.py:110
+                          SimplerEnv (data_config): ['bridge',
+                          'bridge_rt_1']
+                 INFO     | >>  Loaded data_config from        registry.py:104
+                          VLA-Arena: ['vla_arena_franka']
+                 INFO     | >>  Loaded embodiment_tags from    registry.py:107
+                          VLA-Arena (data_config): []
+                 INFO     | >>  Loaded mixtures from VLA-Arena registry.py:110
+                          (data_config): ['vla_arena_L0_S',
+                          'vla_arena_L0_M', 'vla_arena_L0_L']
+[rank0]:[W519 07:41:37.002400609 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 0]  using GPU 0 to perfo
+rm barrier as devices used by this process are currently unknown. This can potentially cause a hang if this
+rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or ca
+ll init_process_group() with a device_id.
+Initialized dataset libero_object_no_noops_1.0.0_lerobot with EmbodimentTag.FRANKA
+Initialized dataset libero_goal_no_noops_1.0.0_lerobot with EmbodimentTag.FRANKA
+Initialized dataset libero_spatial_no_noops_1.0.0_lerobot with EmbodimentTag.FRANKA
+Initialized dataset libero_10_no_noops_1.0.0_lerobot with EmbodimentTag.FRANKA
+Dataset lengths: [ 66984  52042  52970 101469]
+Merged dataset statistics saved to: playground/Checkpoints/1229_libero4in1_qwen3oft/dataset_statistics.json
+Used action keys (reordered): ['x', 'y', 'z', 'roll', 'pitch', 'yaw', 'gripper']
+Used state keys (reordered): ['x', 'y', 'z', 'roll', 'pitch', 'yaw', 'pad', 'gripper']
+05/19 [07:41:40] INFO     | >> LR Group action_model:      train_starvla.py:92
+                          lr=0.0001, num_params=248
+                 INFO     | >> 📝 Full config saved at    train_starvla.py:182
+                          playground/Checkpoints/1229_lib
+                          ero4in1_qwen3oft/config.full.ya
+                          ml
+                 INFO     | >> 📊 Accessed config         train_starvla.py:187
+                          snapshot saved at
+                          playground/Checkpoints/1229_lib
+                          ero4in1_qwen3oft/config.yaml
+Latest checkpoint found: ./playground/Checkpoints/1229_libero4in1_qwen3oft/checkpoints/steps_15000_pytorch_m
+odel.pt
+📦 loading checkpoint: ./playground/Checkpoints/1229_libero4in1_qwen3oft/checkpoints/steps_15000_pytorch_mod
+el.pt
+✅ loaded <full_model> model parameters
+05/19 [07:53:49] INFO     | >> Resuming training from     train_starvla.py:203
+                          checkpoint:
+                          ./playground/Checkpoints/1229_l
+                          ibero4in1_qwen3oft/checkpoints/
+                          steps_15000_pytorch_model.pt,
+                          steps: 15000
+05/19 [07:53:50] INFO     | >> Adjusting LR scheduler for train_starvla.py:224
+                          resume from step 15000
+                 INFO     | >> LR scheduler adjusted to   train_starvla.py:227
+                          step 15000, current LR:
+                          [9.585018196684484e-05]
+##############################
+qwen_vl_interface
+📊 model parameter statistics:
+# Parameters (in millions): 4599.289 Total, 161.473 Trainable
+[2026-05-19 07:53:50,073] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed info: version=0.16.9, git-hash
+=unknown, git-branch=unknown
+[2026-05-19 07:53:50,073] [INFO] [config.py:735:__init__] Config mesh_device None world_size = 1
+[2026-05-19 07:53:50,073] [WARNING] [config_utils.py:70:_process_deprecated_field] Config parameter cpu_offl
+oad is deprecated use offload_optimizer instead
+[2026-05-19 07:53:57,539] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
+[2026-05-19 07:53:57,547] [INFO] [logging.py:107:log_dist] [Rank 0] Using client Optimizer as basic optimize
+r
+[2026-05-19 07:53:57,548] [INFO] [logging.py:107:log_dist] [Rank 0] Removing param_group that has no 'params
+' in the basic Optimizer
+[2026-05-19 07:53:57,570] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Basic Optimizer = AdamW
+[2026-05-19 07:53:57,571] [INFO] [utils.py:59:is_zero_supported_optimizer] Checking ZeRO support for optimiz
+er=AdamW type=<class 'torch.optim.adamw.AdamW'>
+[2026-05-19 07:53:57,571] [INFO] [logging.py:107:log_dist] [Rank 0] Creating torch.bfloat16 ZeRO stage 2 opt
+imizer
+[2026-05-19 07:53:57,571] [INFO] [stage_1_and_2.py:150:__init__] Reduce bucket size 500000000
+[2026-05-19 07:53:57,571] [INFO] [stage_1_and_2.py:151:__init__] Allgather bucket size 500000000
+[2026-05-19 07:53:57,571] [INFO] [stage_1_and_2.py:152:__init__] CPU Offload: False
+[2026-05-19 07:53:57,571] [INFO] [stage_1_and_2.py:153:__init__] Round robin gradient partitioning: False
+[2026-05-19 07:54:00,564] [INFO] [utils.py:781:see_memory_usage] Before initializing optimizer states
+[2026-05-19 07:54:00,565] [INFO] [utils.py:782:see_memory_usage] MA 9.17 GB         Max_MA 9.47 GB         C
+A 9.47 GB         Max_CA 9 GB
+[2026-05-19 07:54:00,565] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 99.34 GB, perce
+nt = 19.7%
+[2026-05-19 07:54:00,803] [INFO] [utils.py:781:see_memory_usage] After initializing optimizer states
+[2026-05-19 07:54:00,803] [INFO] [utils.py:782:see_memory_usage] MA 9.17 GB         Max_MA 9.77 GB         C
+A 10.08 GB         Max_CA 10 GB
+[2026-05-19 07:54:00,803] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 99.35 GB, perce
+nt = 19.7%
+[2026-05-19 07:54:00,804] [INFO] [stage_1_and_2.py:557:__init__] optimizer state initialized
+[2026-05-19 07:54:00,984] [INFO] [utils.py:781:see_memory_usage] After initializing ZeRO optimizer
+[2026-05-19 07:54:00,985] [INFO] [utils.py:782:see_memory_usage] MA 9.17 GB         Max_MA 9.17 GB         C
+A 10.08 GB         Max_CA 10 GB
+[2026-05-19 07:54:00,985] [INFO] [utils.py:789:see_memory_usage] CPU Virtual Memory:  used = 99.35 GB, perce
+nt = 19.7%
+[2026-05-19 07:54:01,003] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed Final Optimizer = DeepSpeedZer
+oOptimizer
+[2026-05-19 07:54:01,003] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed using configured LR scheduler
+= None
+[2026-05-19 07:54:01,003] [INFO] [logging.py:107:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2026-05-19 07:54:01,003] [INFO] [logging.py:107:log_dist] [Rank 0] step=0, skipped=0, lr=[9.585018196684484
+e-05], mom=[(0.9, 0.95)]
+[2026-05-19 07:54:01,006] [INFO] [config.py:1003:print] DeepSpeedEngine configuration:
+[2026-05-19 07:54:01,006] [INFO] [config.py:1007:print]   activation_checkpointing_config  {
+    "partition_activations": false,
+    "contiguous_memory_optimization": false,
+    "cpu_checkpointing": false,
+    "number_checkpoints": null,
+    "synchronize_checkpoint_boundary": false,
+    "profile": false
+}
+[2026-05-19 07:54:01,006] [INFO] [config.py:1007:print]   aio_config ................... {'block_size': 1048
+576, 'queue_depth': 8, 'intra_op_parallelism': 1, 'single_submit': False, 'overlap_events': True, 'use_gds':
+ False}
+[2026-05-19 07:54:01,006] [INFO] [config.py:1007:print]   amp_enabled .................. False
+[2026-05-19 07:54:01,006] [INFO] [config.py:1007:print]   amp_params ................... False
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   autotuning_config ............ {
+    "enabled": false,
+    "start_step": null,
+    "end_step": null,
+    "metric_path": null,
+    "arg_mappings": null,
+    "metric": "throughput",
+    "model_info": null,
+    "results_dir": "autotuning_results",
+    "exps_dir": "autotuning_exps",
+    "overwrite": true,
+    "fast": true,
+    "start_profile_step": 3,
+    "end_profile_step": 5,
+    "tuner_type": "gridsearch",
+    "tuner_early_stopping": 5,
+    "tuner_num_trials": 50,
+    "model_info_path": null,
+    "mp_size": 1,
+    "max_train_batch_size": null,
+    "min_train_batch_size": 1,
+    "max_train_micro_batch_size_per_gpu": 1.024000e+03,
+    "min_train_micro_batch_size_per_gpu": 1,
+    "num_tuning_micro_batch_sizes": 3
+}
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   bfloat16_enabled ............. True
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   bfloat16_immediate_grad_update  True
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   checkpoint_parallel_write_pipeline  False
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   checkpoint_tag_validation_enabled  True
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   checkpoint_tag_validation_fail  False
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   comms_config ................. <deepspeed.comm.con
+fig.DeepSpeedCommsConfig object at 0x7f1ec50e6e30>
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   communication_data_type ...... None
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   compile_config ............... deepcompile=False f
+ree_activation=False offload_activation=False offload_opt_states=False double_buffer=True symmetric_memory=F
+alse debug_log=False offload_parameters=False sync_before_reduce=False sync_after_reduce=False sync_before_a
+llgather=False sync_after_allgather=False
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   compression_config ........... {'weight_quantizati
+on': {'shared_parameters': {'enabled': False, 'quantizer_kernel': False, 'schedule_offset': 0, 'quantize_gro
+ups': 1, 'quantize_verbose': False, 'quantization_type': 'symmetric', 'quantize_weight_in_forward': False, '
+rounding': 'nearest', 'fp16_mixed_quantize': False, 'quantize_change_ratio': 0.001}, 'different_groups': {}}
+, 'activation_quantization': {'shared_parameters': {'enabled': False, 'quantization_type': 'symmetric', 'ran
+ge_calibration': 'dynamic', 'schedule_offset': 1000}, 'different_groups': {}}, 'sparse_pruning': {'shared_pa
+rameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'row_prunin
+g': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {
+}}, 'head_pruning': {'shared_parameters': {'enabled': False, 'method': 'topk', 'schedule_offset': 1000}, 'di
+fferent_groups': {}}, 'channel_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_
+offset': 1000}, 'different_groups': {}}, 'layer_reduction': {'enabled': False}}
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   curriculum_enabled_legacy .... False
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   curriculum_params_legacy ..... False
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   data_efficiency_config ....... {'enabled': False,
+'seed': 1234, 'data_sampling': {'enabled': False, 'num_epochs': 1000, 'num_workers': 0, 'pin_memory': False,
+ 'curriculum_learning': {'enabled': False}, 'dynamic_batching': {'enabled': False, 'lr_scaling_method': 'lin
+ear', 'min_batch_size': 1, 'max_batch_size': None, 'sequence_picking_order': 'dataloader', 'verbose': False}
+}, 'data_routing': {'enabled': False, 'random_ltd': {'enabled': False, 'layer_token_lr_schedule': {'enabled'
+: False}}}}
+[2026-05-19 07:54:01,007] [INFO] [config.py:1007:print]   data_efficiency_enabled ...... False
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   dataloader_drop_last ......... False
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   disable_allgather ............ False
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   dump_state ................... False
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   dynamic_loss_scale_args ...... None
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   eigenvalue_enabled ........... False
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   eigenvalue_gas_boundary_resolution  1
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   eigenvalue_layer_num ......... 0
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   eigenvalue_max_iter .......... 100
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   eigenvalue_stability ......... 1e-06
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   eigenvalue_tol ............... 0.01
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   eigenvalue_verbose ........... False
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   elasticity_enabled ........... False
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   flops_profiler_config ........ {
+    "enabled": false,
+    "recompute_fwd_factor": 0.0,
+    "profile_step": 1,
+    "module_depth": -1,
+    "top_modules": 1,
+    "detailed": true,
+    "output_file": null
+}
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   fp16_auto_cast ............... None
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   fp16_enabled ................. False
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   fp16_master_weights_and_gradients  False
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   global_rank .................. 0
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   grad_accum_dtype ............. None
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   gradient_accumulation_steps .. 1
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   gradient_clipping ............ 1.0
+[2026-05-19 07:54:01,008] [INFO] [config.py:1007:print]   gradient_predivide_factor .... 1.0
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   graph_harvesting ............. False
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   hybrid_engine ................ enabled=False max_o
+ut_tokens=512 inference_tp_size=1 release_inference_cache=False pin_parameters=True tp_gather_partition_size
+=8
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   initial_dynamic_scale ........ 1
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   load_universal_checkpoint .... False
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   loss_scale ................... 1.0
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   memory_breakdown ............. False
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   mics_hierarchial_params_gather  False
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   mics_shard_size .............. -1
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   monitor_config ............... tensorboard=TensorB
+oardConfig(enabled=False, output_path='', job_name='DeepSpeedJobName') comet=CometConfig(enabled=False, samp
+les_log_interval=100, project=None, workspace=None, api_key=None, experiment_name=None, experiment_key=None,
+ online=None, mode=None) wandb=WandbConfig(enabled=False, group=None, team=None, project='deepspeed') csv_mo
+nitor=CSVConfig(enabled=False, output_path='', job_name='DeepSpeedJobName')
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   nebula_config ................ {
+    "enabled": false,
+    "persistent_storage_path": null,
+    "persistent_time_interval": 100,
+    "num_of_version_in_retention": 2,
+    "enable_nebula_load": true,
+    "load_path": null
+}
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   optimizer_legacy_fusion ...... False
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   optimizer_name ............... None
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   optimizer_params ............. None
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   pipeline ..................... {'stages': 'auto',
+'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0, 'pipe_partitioned': True, 'g
+rad_partitioned': True}
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   pld_enabled .................. False
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   pld_params ................... False
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   prescale_gradients ........... False
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   scheduler_name ............... None
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   scheduler_params ............. None
+[2026-05-19 07:54:01,009] [INFO] [config.py:1007:print]   seq_parallel_communication_data_type  torch.float3
+2
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   sparse_attention ............. None
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   sparse_gradients_enabled ..... False
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   steps_per_print .............. inf
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   tensor_parallel_config ....... dtype=torch.float16
+ autotp_size=0 tp_overlap_comm=False tensor_parallel=TPConfig(tp_size=1, tp_grain_size=1, mpu=None, tp_group
+=None) injection_policy_tuple=None keep_module_on_host=False replace_with_kernel_inject=False
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   timers_config ................ enabled=True synchr
+onized=True
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   train_batch_size ............. 32
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   train_micro_batch_size_per_gpu  32
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   use_data_before_expert_parallel_  False
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   use_node_local_storage ....... False
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   wall_clock_breakdown ......... False
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   weight_quantization_config ... None
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   world_size ................... 1
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   zero_allow_untested_optimizer  True
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   zero_config .................. stage=2 contiguous_
+gradients=True reduce_scatter=True reduce_bucket_size=500000000 use_multi_rank_bucket_allreduce=True allgath
+er_partitions=True allgather_bucket_size=500000000 overlap_comm=True load_from_fp32_weights=True elastic_che
+ckpoint=False offload_param=None offload_optimizer=None sub_group_size=1000000000 cpu_offload_param=None cpu
+_offload_use_pin_memory=None prefetch_bucket_size=50000000 param_persistence_threshold=100000 model_persiste
+nce_threshold=9223372036854775807 max_live_parameters=1000000000 max_reuse_distance=1000000000 gather_16bit_
+weights_on_model_save=False module_granularity_threshold=0 use_all_reduce_for_fetch_params=False stage3_gath
+er_fp16_weights_on_model_save=False ignore_unused_parameters=True legacy_stage1=False round_robin_gradients=
+False zero_hpz_partition_size=1 zero_quantized_weights=False zero_quantized_nontrainable_weights=False zero_
+quantized_gradients=False zeropp_loco_param=None mics_shard_size=-1 mics_hierarchical_params_gather=False me
+mory_efficient_linear=True pipeline_loading_checkpoint=False override_module_apply=True log_trace_cache_warn
+ings=False
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   zero_enabled ................. True
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   zero_force_ds_cpu_optimizer .. True
+[2026-05-19 07:54:01,010] [INFO] [config.py:1007:print]   zero_optimization_stage ...... 2
+[2026-05-19 07:54:01,010] [INFO] [config.py:993:print_user_config]   json = {
+    "fp16": {
+        "enabled": false
+    },
+    "bf16": {
+        "enabled": true
+    },
+    "train_micro_batch_size_per_gpu": 32,
+    "train_batch_size": 32,
+    "gradient_accumulation_steps": 1,
+    "zero_optimization": {
+        "stage": 2,
+        "allgather_partitions": true,
+        "allgather_bucket_size": 5.000000e+08,
+        "reduce_scatter": true,
+        "reduce_bucket_size": 5.000000e+08,
+        "overlap_comm": true,
+        "contiguous_gradients": true,
+        "cpu_offload": false
+    },
+    "gradient_clipping": 1.0,
+    "steps_per_print": inf,
+    "zero_allow_untested_optimizer": true
+}
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: silencewx (silencewx-harbin-institute-of-technology) to https://api.wandb.ai.
+ Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.27.0
+wandb: Run data is saved locally in playground/Checkpoints/1229_libero4in1_qwen3oft/wandb/wandb/run-20260519
+_075403-ehhrg76i
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run 1229_libero4in1_qwen3oft
+wandb: ⭐️ View project at https://wandb.ai/silencewx-harbin-institute-of-technology/starVLA_Libero
+wandb: 🚀 View run at https://wandb.ai/silencewx-harbin-institute-of-technology/starVLA_Libero/runs/ehhrg76i
+05/19 [07:54:25] INFO     | >> ***** Training             train_starvla.py:362
+                          Configuration *****
+                 INFO     | >>   Total optimization steps train_starvla.py:363
+                          = 80000
+                 INFO     | >>   Per device batch size =  train_starvla.py:364
+                          32
+                 INFO     | >>   Gradient accumulation    train_starvla.py:365
+                          steps = 1
+                 INFO     | >>   Total batch size = 32    train_starvla.py:366
+ 19%|▏| 15100/80000 [05:03<52:11:51,  2.90s/it, data_times=0.113, model_times=05/19 [07:59:30] INFO     | >>
+ Step 15100, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.07660821825265884,
+                          'mse_score':
+                          0.004025088623166084,
+                          'timing/data':
+                          0.11276625096797943,
+                          'timing/model':
+                          2.9420183897018433,
+                          'learning_rate/action_model':
+                          9.576801825532364e-05, 'epoch':
+                          1.19})
+ 19%|▏| 15200/80000 [09:46<51:21:50,  2.85s/it, data_times=0.001, model_times=05/19 [08:04:13] INFO     | >>
+ Step 15200, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.07395120710134506,
+                          'mse_score':
+                          0.003862596782190459,
+                          'timing/data':
+                          0.0005378350615501404,
+                          'timing/model':
+                          2.9970190450549126,
+                          'learning_rate/action_model':
+                          9.568508659287979e-05, 'epoch':
+                          1.2})
+ 19%|▏| 15300/80000 [14:33<52:03:05,  2.90s/it, data_times=0.053, model_times=05/19 [08:09:01] INFO     | >>
+ Step 15300, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.08010010421276093,
+                          'mse_score':
+                          0.0034428898777280536,
+                          'timing/data':
+                          0.05294385552406311,
+                          'timing/model':
+                          2.7869072556495667,
+                          'learning_rate/action_model':
+                          9.56013884346271e-05, 'epoch':
+                          1.21})
+ 19%|▏| 15400/80000 [19:22<50:29:24,  2.81s/it, data_times=0.053, model_times=05/19 [08:13:49] INFO     | >>
+ Step 15400, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.06767334043979645,
+                          'mse_score':
+                          0.004791906901768276,
+                          'timing/data':
+                          0.05257144570350647,
+                          'timing/model':
+                          2.774562828242779,
+                          'learning_rate/action_model':
+                          9.551692524912822e-05, 'epoch':
+                          1.21})
+ 19%|▏| 15500/80000 [24:07<49:51:22,  2.78s/it, data_times=0.084, model_times=05/19 [08:18:35] INFO     | >>
+ Step 15500, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.0667879730463028,
+                          'mse_score':
+                          0.003730358822005136,
+                          'timing/data':
+                          0.08427433669567108,
+                          'timing/model':
+                          2.781209982931614,
+                          'learning_rate/action_model':
+                          9.543169851836894e-05, 'epoch':
+                          1.22})
+ 20%|▏| 15600/80000 [28:50<48:21:05,  2.70s/it, data_times=0.001, model_times=05/19 [08:23:18] INFO     | >>
+ Step 15600, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.07141294330358505,
+                          'mse_score':
+                          0.004478408821991512,
+                          'timing/data':
+                          0.0006611794233322144,
+                          'timing/model':
+                          2.6967713683843613,
+                          'learning_rate/action_model':
+                          9.53457097377322e-05, 'epoch':
+                          1.23})
+ 20%|▏| 15700/80000 [33:36<50:53:57,  2.85s/it, data_times=0.037, model_times=05/19 [08:28:03] INFO     | >>
+ Step 15700, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.07662245631217957,
+                          'mse_score':
+                          0.00452900944011552,
+                          'timing/data':
+                          0.036985769867897034,
+                          'timing/model':
+                          2.8001440912485123,
+                          'learning_rate/action_model':
+                          9.525896041597176e-05, 'epoch':
+                          1.24})
+ 20%|▏| 15800/80000 [38:23<49:59:21,  2.80s/it, data_times=0.050, model_times=05/19 [08:32:51] INFO     | >>
+ Step 15800, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.06732478737831116,
+                          'mse_score':
+                          0.004528702369758061,
+                          'timing/data':
+                          0.050098054111003876,
+                          'timing/model':
+                          2.7484514862298965,
+                          'learning_rate/action_model':
+                          9.517145207518581e-05, 'epoch':
+                          1.25})
+ 20%|▏| 15900/80000 [43:15<51:39:31,  2.90s/it, data_times=0.095, model_times=05/19 [08:37:42] INFO     | >>
+ Step 15900, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.08888289332389832,
+                          'mse_score':
+                          0.0039266978523560935,
+                          'timing/data':
+                          0.09501132369041443,
+                          'timing/model':
+                          2.9385260492563248,
+                          'learning_rate/action_model':
+                          9.508318625079029e-05, 'epoch':
+                          1.25})
+ 20%|▏| 15937/80000 [45:04<50:36:46,  2.84s/it, data_times=0.048, model_times=Attempt 1/10 failed for index
+30578: [Errno 1094995529] Invalid data found when processing input
+Retrying with new sample...
+ 20%|▏| 16000/80000 [48:07<52:11:49,  2.94s/it, data_times=0.001, model_times=05/19 [08:42:34] INFO     | >>
+ Step 16000, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.07015945017337799,
+                          'mse_score':
+                          0.003989016371113914,
+                          'timing/data':
+                          0.0007388442754745483,
+                          'timing/model':
+                          2.908306635916233,
+                          'learning_rate/action_model':
+                          9.499416449149182e-05, 'epoch':
+                          1.26})
+✅ Checkpoint saved at ./playground/Checkpoints/1229_libero4in1_qwen3oft/checkpoints/steps_16000
+05/19 [08:43:18] INFO     | >> 📊 Saving accessed         train_starvla.py:258
+                          configuration...
+                 INFO     | >> ✅ Configuration files     train_starvla.py:261
+                          saved
+ 20%|▏| 16100/80000 [53:29<52:12:11,  2.94s/it, data_times=0.045, model_times=05/19 [08:47:56] INFO     | >>
+ Step 16100, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.07464507967233658,
+                          'mse_score':
+                          0.003965192341378757,
+                          'timing/data':
+                          0.04542341083288193,
+                          'timing/model':
+                          2.7928489446640015,
+                          'learning_rate/action_model':
+                          9.490438835926067e-05, 'epoch':
+                          1.27})
+ 20%|▏| 16200/80000 [58:21<50:10:40,  2.83s/it, data_times=0.045, model_times=05/19 [08:52:48] INFO     | >>
+ Step 16200, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.07732602953910828,
+                          'mse_score':
+                          0.004052796268037387,
+                          'timing/data':
+                          0.045042604207992554,
+                          'timing/model':
+                          2.6824498251080513,
+                          'learning_rate/action_model':
+                          9.481385942930324e-05, 'epoch':
+                          1.28})
+ 20%|▏| 16300/80000 [1:03:14<53:32:30,  3.03s/it, data_times=0.045, model_time05/19 [08:57:42] INFO     | >>
+ Step 16300, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.07568159699440002,
+                          'mse_score':
+                          0.0039756447076797485,
+                          'timing/data':
+                          0.04501357674598694,
+                          'timing/model':
+                          2.7146674171090126,
+                          'learning_rate/action_model':
+                          9.472257929003451e-05, 'epoch':
+                          1.29})
+ 20%|▏| 16392/80000 [1:07:44<55:07:55,  3.12s/it, data_times=0.047, model_timeAttempt 1/10 failed for index
+45269: [Errno 1094995529] Invalid data found when processing input
+Retrying with new sample...
+ 20%|▏| 16400/80000 [1:08:06<48:53:41,  2.77s/it, data_times=0.044, model_time05/19 [09:02:33] INFO     | >>
+ Step 16400, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.0860273540019989,
+                          'mse_score':
+                          0.0037074812820979525,
+                          'timing/data':
+                          0.043986499309539795,
+                          'timing/model':
+                          2.6101838499307632,
+                          'learning_rate/action_model':
+                          9.463054954305014e-05, 'epoch':
+                          1.29})
+ 21%|▏| 16500/80000 [1:12:55<49:45:23,  2.82s/it, data_times=0.056, model_time05/19 [09:07:22] INFO     | >>
+ Step 16500, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.06921952217817307,
+                          'mse_score':
+                          0.0039240119180509025,
+                          'timing/data':
+                          0.05579841881990433,
+                          'timing/model':
+                          2.60815616697073,
+                          'learning_rate/action_model':
+                          9.453777180309831e-05, 'epoch':
+                          1.3})
+ 21%|▏| 16600/80000 [1:17:41<50:56:38,  2.89s/it, data_times=0.037, model_time05/19 [09:12:08] INFO     | >>
+ Step 16600, Loss:          train_starvla.py:274
+                          {'action_dit_loss':
+                          0.06458952277898788,
+                          'mse_score':
+                          0.004161522324596133,
+                          'timing/data':
+                          0.03746403753757477,
+                          'timing/model':
+                          2.646273083984852,
+                          'learning_rate/action_model':
+                          9.444424769805147e-05, 'epoch':
+                          1.31})
+ 21%|▏| 16693/80000 [1:22:09<53:25:18,  3.04s/it, data_times=0.045, model_timeAttempt 1/10 failed for index
+54981: [Errno 1094995529] Invalid data found when processing input
+Retrying with new sample...
+ 21%|▏| 16700/80000 [1:22:29<50:41:18,  2.88s/it, data_times=0.046, model_time05/19 [09:16:56] INFO     | >>
+ Step 16700, Loss: {'action_dit_loss':                    train_starvla.py:274
+                          0.0867483913898468, 'mse_score': 0.0041713754513434,
+                          'timing/data': 0.04616691172122955, 'timing/model':
+                          2.7189662754535675, 'learning_rate/action_model':
+                          9.434997886887776e-05, 'epoch': 1.32})
+ 21%|▏| 16800/80000 [1:27:30<53:32:55,  3.05s/it, data_times=0.041, model_time05/19 [09:21:58] INFO     | >>
+ Step 16800, Loss: {'action_dit_loss':                    train_starvla.py:274
+                          0.07064851373434067, 'mse_score': 0.003255203366279602,
+                          'timing/data': 0.041472502052783966, 'timing/model':
+                          2.876494102180004, 'learning_rate/action_model':
+                          9.425496696961218e-05, 'epoch': 1.32})
+ 21%|▏| 16857/80000 [1:30:13<48:18:36,  2.75s/it, data_times=0.048, model_time

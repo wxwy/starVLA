@@ -223,8 +223,8 @@ DiT-B 结构
 | 项目 | 值 |
 |------|-----|
 | 启动时间 | 2026-05-17 20:35 |
-| 当前步数 | 8000 / 80000 (10.0%) |
-| 当前 epoch | ~0.32（估算，基于 W&B step-epoch 曲线） |
+| 当前步数 | 19000 / 80000 (23.75%) |
+| 当前 epoch | ~2.05（混合 batch：前 3000 步 batch=16，后 16000 步 batch=32） |
 | 框架 | StarVLA-GR00T (QwenGR00T) |
 | 基础 VLM | Qwen3-VL-4B-Instruct |
 | 动作模型 | DiT-B (16层, 768 inner_dim, 2560 cross_attn, ~165M 参数) |
@@ -234,19 +234,25 @@ DiT-B 结构
 
 ## 训练过程
 
-### 阶段 1：初始运行（5.17 20:35 — 5.18 02:05）
+### 阶段 1：第一轮训练（5.17 20:35 — 5.18 02:05）
 
-初始运行，per_device_batch_size=16，gradient_accumulation_steps=4。由于 DeepSpeed 覆盖 gradient_accumulation_steps=1，实际有效 batch=16。训练到 3000 步后因显存或中断停止。
+per_device_batch_size=16，gradient_accumulation_steps=4。由于 DeepSpeed 覆盖 gradient_accumulation_steps=1，实际有效 batch=16。训练到 3000 步后因显存或中断停止。
 
-### 阶段 2：恢复与优化（5.18 08:55 — 进行中）
+### 阶段 2：第二轮训练 — 恢复失败（5.18 08:55）
+
+尝试 resume，但 `--trainer.is_resume True` 因 shell 续行符位置错误未生效，从 0 重新开始。此时仍为 batch=16（尚未修改配置）。覆盖了第一轮的 steps_1000 checkpoint 后停止。
+
+### 阶段 3：第三轮训练 — 恢复成功并切换 batch=32（5.18 09:45 — 进行中）
 
 | 日期 | 事件 |
 |------|------|
-| 5.18 08:55 | 尝试 resume，但 `--trainer.is_resume True` 因 shell 续行符位置错误未生效，从 0 重新开始覆盖 steps_1000 |
-| 5.18 09:45 | 修复续行符位置，正确从 steps_3000 resume |
+| 5.18 09:45 | 修复续行符位置，正确从 steps_3000 resume（仍为 batch=16） |
 | 5.18 10:00 | 优化 batch 配置：per_device_batch_size 16→32。gradient_accumulation_steps 保持被 DeepSpeed 覆盖为 1，实际有效 batch=32 |
 | 5.18 10:34 | 到达 steps_5000，训练进行中 |
 | 5.18  | 到达 steps_8000，训练进行中 |
+| 5.19  | 到达 steps_19000，训练进行中 |
+
+> **batch size 历史**：前两轮（阶段 1 和阶段 2）使用 batch=16，第三轮（阶段 3）10:00 起切换为 batch=32。
 
 ### resume 踩坑记录
 
@@ -340,7 +346,7 @@ datasets:
 | 每分钟步数 | ~40 steps/min |
 | 每步有效样本 | 32（DeepSpeed 覆盖 grad_accum=1） |
 | 单实例耗时 | ~47 ms |
-| 剩余 75000 步预计 | ~31 小时 |
+| 剩余 61000 步预计 | ~25 小时 |
 
 ### W&B Step-Epoch 曲线分析
 
@@ -352,11 +358,10 @@ Epoch 计算公式（`train_starvla.py:272`）：`epoch = completed_steps / len(
 |--------|-----|----------|
 | 每样本 action 帧数 | 8 | `Libero4in1DataConfig.action_indices = range(8)` |
 | len(dataloader) @ batch=16 | 17,092 | 273,465 / 16 |
-| step=5000 epoch @ batch=16 | 0.293 | 5000 / 17,092（若全程 batch=16） |
 | len(dataloader) @ batch=32 | 8,546 | 273,465 / 32 |
-| step=5000 epoch @ batch=32 | 0.585 | 5000 / 8,546（若全程 batch=32） |
-| 混合情景 epoch | 0.409 | (3000×16 + 2000×32) / 273,465 |
-| 80,000 步覆盖 epoch | 4.7~9.4 | 取决于 batch size |
+| step=5000 epoch（混合 batch） | 0.409 | (3000×16 + 2000×32) / 273,465 |
+| step=19000 epoch（混合 batch） | 2.05 | (3000×16 + 16000×32) / 273,465 |
+| 80,000 步 epoch（混合 batch） | 8.97 | (3000×16 + 77000×32) / 273,465 |
 
 ## 学习率曲线
 

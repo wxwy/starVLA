@@ -38,8 +38,12 @@ from starVLA.model.framework.share_tools import apply_config_compat
 from starVLA.training.trainer_utils.config_tracker import AccessTrackedConfig, wrap_config
 from starVLA.training.trainer_utils.trainer_tools import TrainerUtils, build_param_lr_groups, setup_optimizer_and_scheduler, normalize_dotlist_args
 
-deepspeed_plugin = DeepSpeedPlugin()
-accelerator = Accelerator(deepspeed_plugin=deepspeed_plugin)
+num_gpus = torch.cuda.device_count()
+if num_gpus > 1:
+    deepspeed_plugin = DeepSpeedPlugin(hf_ds_config="starVLA/config/deepseeds/deepspeed_zero2.yaml")
+    accelerator = Accelerator(deepspeed_plugin=deepspeed_plugin)
+else:
+    accelerator = Accelerator(mixed_precision="bf16")
 accelerator.print(accelerator.state)
 
 # Sane Defaults

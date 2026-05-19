@@ -181,6 +181,54 @@ worker 减半 → 内存占用减半，对训练速度影响很小（I/O 不是�
 
 ---
 
+## 9. gradient_accumulation_steps 被 DeepSpeed 劫持，YAML 设置无效
+
+**现象**：`starvla_cotrain_libero.yaml` 中设了 `gradient_accumulation_steps: 2`，但训练日志显示：
+```
+Gradient accumulation steps = 1
+```
+
+**原因**：`accelerator.gradient_accumulation_steps` 的值来源有三层，优先级混乱：
+
+| 优先级 | 来源 | 说明 |
+|--------|------|------|
+| 1（最高） | `ds_config.json` | DeepSpeed ZeRO 配置文件硬编码 `gradient_accumulation_steps: 1`，当 `Accelerator(deepspeed_plugin=...)` 时直接覆盖所有其他设置 |
+| 2 | YAML `trainer.gradient_accumulation_steps` | **被无视** — Accelerate+DeepSpeed 模式下不读取此值 |
+| 3 | Accelerate 默认值 | 1 |
+
+此外，单卡场景其实不需要 DeepSpeed，但原代码 `train_starvla.py:41-42` 无条件创建 `DeepSpeedPlugin()`，导致单卡也被迫走 DeepSpeed 逻辑，同时引入了上述问题。
+
+**解决**（已修复）：
+
+1. `train_starvla.py:41-46` — 按 GPU 数量决定是否启用 DeepSpeed：
+```python
+num_gpus = torch.cuda.device_count()
+if num_gpus > 1:
+    deepspeed_plugin = DeepSpeedPlugin(hf_ds_config="starVLA/config/deepseeds/deepspeed_zero2.yaml")
+    accelerator = Accelerator(deepspeed_plugin=deepspeed_plugin)
+else:
+    accelerator = Accelerator(mixed_precision="bf16")
+```
+   - 单卡 → 无 DeepSpeed，`gradient_accumulation_steps` 默认 1，有效 batch = `per_device_batch_size`
+   - 多卡 → 走 DeepSpeed，配置从 `deepspeed_zero2.yaml` → `ds_config.json` 读取
+
+2. `run_libero_train.sh` — 去掉 `--config_file`（不再需要，Python 自行处理）：
+```bash
+# 改前
+accelerate launch \
+  --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml \
+  --num_processes ${num_processes} \
+
+# 改后
+accelerate launch \
+  --num_processes ${num_processes} \
+  --mixed_precision bf16 \
+```
+
+> **注意**：单卡时 `gradient_accumulation_steps` 始终为 1，通过 `per_device_batch_size` 直接控制有效 batch。多卡时如需修改，改 `ds_config.json` 中的 `gradient_accumulation_steps`。
+
+---
+
 ## 通用建议
 
 1. **首次在新环境运行训练前**，建议先 `export WANDB_MODE=disabled` + `--is_debug True` 做 smoke test

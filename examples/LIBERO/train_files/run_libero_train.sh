@@ -48,8 +48,8 @@ cp $0 ${output_dir}/
 num_processes=${NUM_PROCESSES:-$(python -c "import torch; print(torch.cuda.device_count())" 2>/dev/null)}
 
 accelerate launch \
-  --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml \
   --num_processes ${num_processes} \
+  --mixed_precision bf16 \
   starVLA/training/train_starvla.py \
   --config_yaml ${config_yaml} \
   --framework.name ${Framework_name} \

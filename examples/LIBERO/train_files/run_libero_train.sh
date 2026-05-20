@@ -33,6 +33,8 @@ libero_data_root=playground/Datasets/LEROBOT_LIBERO_DATA
 data_mix=libero_all
 run_root_dir=./playground/Checkpoints
 run_id=1229_libero4in1_qwen3oft
+enable_local_checkpoint_staging=True
+local_checkpoint_root=/tmp/nvme/starvla_ckpt
 # === End of environment variable configuration ===
 ###########################################################################################
 
@@ -41,6 +43,9 @@ run_id=1229_libero4in1_qwen3oft
 
 output_dir=${run_root_dir}/${run_id}
 mkdir -p ${output_dir}
+if [ "${enable_local_checkpoint_staging}" = "True" ] || [ "${enable_local_checkpoint_staging}" = "true" ]; then
+  mkdir -p ${local_checkpoint_root}
+fi
 # mv this script to the output dir
 cp $0 ${output_dir}/
 
@@ -65,6 +70,8 @@ accelerate launch \
   --trainer.save_interval 250 \
   --trainer.logging_frequency 100 \
   --trainer.eval_interval 100 \
+  --trainer.enable_local_checkpoint_staging ${enable_local_checkpoint_staging} \
+  --trainer.local_checkpoint_root ${local_checkpoint_root} \
   --run_root_dir ${run_root_dir} \
   --run_id ${run_id} \
   --wandb_project starVLA_Libero \

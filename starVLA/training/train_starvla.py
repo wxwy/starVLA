@@ -14,6 +14,9 @@ Conventions:
 import argparse
 import json
 import os
+import shutil
+import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Tuple
@@ -24,7 +27,9 @@ import torch
 import torch.distributed as dist
 import wandb
 from accelerate import Accelerator, DeepSpeedPlugin
+from accelerate.checkpointing import load_accelerator_state, load_custom_state
 from accelerate.logging import get_logger
+from accelerate.utils import DeepSpeedSchedulerWrapper, DistributedType, MODEL_NAME, RNG_STATE_NAME, SAMPLER_NAME, SCALER_NAME, SCHEDULER_NAME
 from accelerate.utils import set_seed
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
@@ -120,16 +125,43 @@ class VLATrainer(TrainerUtils):
 
         self.completed_steps = 0
         self.total_batch_size = self._calculate_total_batch_size()
+        self.resume_requires_training_state = False
+        self.network_output_dir = Path(self.config.output_dir)
+        self.network_checkpoint_dir = self.network_output_dir / "checkpoints"
+        self.enable_local_checkpoint_staging = getattr(self.config.trainer, "enable_local_checkpoint_staging", True)
+        local_checkpoint_root = (
+            getattr(self.config.trainer, "local_checkpoint_root", None)
+            or getattr(self.config.trainer, "temp_checkpoint_root", None)
+        )
+        self.local_checkpoint_root = (
+            Path(local_checkpoint_root).expanduser()
+            if self.enable_local_checkpoint_staging and local_checkpoint_root
+            else None
+        )
+        self.local_output_dir = (
+            self.network_output_dir if self.local_checkpoint_root is None else self.local_checkpoint_root / self.config.run_id
+        )
+        self.local_checkpoint_dir = self.local_output_dir / "checkpoints"
+        self.helper_artifact_names = (
+            "config.full.yaml",
+            "config.yaml",
+            "dataset_statistics.json",
+            "summary.jsonl",
+        )
+        self.sync_log_path = self.network_output_dir / "checkpoint_sync.log"
 
     def prepare_training(self):
         rank = dist.get_rank() if dist.is_initialized() else 0
         seed = self.config.seed + rank if hasattr(self.config, "seed") else rank + 3047
         set_seed(seed)
 
+        self._setup_checkpoint_storage()
+
         # Save config snapshots upfront so that even if a later setup step
         # (ckpt load / DeepSpeed init / dataloader build) crashes, the
         # produced run dir is still introspectable / from_pretrained-able.
         self._save_initial_configs()
+        self._sync_helper_artifacts_to_local()
 
         self._init_checkpointing()
         self._adjust_lr_scheduler_for_resume()
@@ -148,6 +180,9 @@ class VLATrainer(TrainerUtils):
             self.optimizer,
             self.vla_train_dataloader,
         )
+
+        if self.resume_requires_training_state and self.resume_from_checkpoint:
+            self._load_checkpoint(self.resume_from_checkpoint)
 
         self._init_wandb()
 
@@ -175,25 +210,24 @@ class VLATrainer(TrainerUtils):
         if not self.accelerator.is_main_process:
             return
 
-        output_dir = Path(self.config.output_dir)
-
         # 1. Save config.full.yaml — the complete merged config (all parameters)
         if isinstance(self.config, AccessTrackedConfig):
             full_cfg = self.config.unwrap()
         else:
             full_cfg = self.config
-        full_yaml_path = output_dir / "config.full.yaml"
-        OmegaConf.save(full_cfg, full_yaml_path, resolve=True)
-        logger.info(f"📝 Full config saved at {full_yaml_path}")
+        for output_dir in self._all_output_dirs():
+            full_yaml_path = output_dir / "config.full.yaml"
+            OmegaConf.save(full_cfg, full_yaml_path, resolve=True)
+            logger.info(f"📝 Full config saved at {full_yaml_path}")
 
-        # 2. Save config.yaml — accessed-only snapshot (will be updated at checkpoints)
-        if isinstance(self.config, AccessTrackedConfig):
-            self.config.save_accessed_config(output_dir / "config.yaml", use_original_values=False)
-            logger.info(f"📊 Accessed config snapshot saved at {output_dir / 'config.yaml'}")
+            # 2. Save config.yaml — accessed-only snapshot (will be updated at checkpoints)
+            if isinstance(self.config, AccessTrackedConfig):
+                self.config.save_accessed_config(output_dir / "config.yaml", use_original_values=False)
+                logger.info(f"📊 Accessed config snapshot saved at {output_dir / 'config.yaml'}")
 
     def _init_checkpointing(self):
         """Initialize checkpoint directory and handle checkpoint loading."""
-        self.checkpoint_dir = os.path.join(self.config.output_dir, "checkpoints")
+        self.checkpoint_dir = str(self.local_checkpoint_dir)
         os.makedirs(self.checkpoint_dir, exist_ok=True)
 
         pretrained_checkpoint = getattr(self.config.trainer, "pretrained_checkpoint", None)
@@ -204,7 +238,10 @@ class VLATrainer(TrainerUtils):
             resume_from_checkpoint, self.completed_steps = self._get_latest_checkpoint(self.checkpoint_dir)
             if resume_from_checkpoint:
                 self.resume_from_checkpoint = resume_from_checkpoint
-                self.model = self.load_pretrained_backbones(self.model, self.resume_from_checkpoint, reload_modules=None)
+                if os.path.isdir(self.resume_from_checkpoint):
+                    self.resume_requires_training_state = True
+                else:
+                    self.model = self.load_pretrained_backbones(self.model, self.resume_from_checkpoint, reload_modules=None)
                 logger.info(
                     f"Resuming training from checkpoint: {self.resume_from_checkpoint}, steps: {self.completed_steps}"
                 )
@@ -225,6 +262,8 @@ class VLATrainer(TrainerUtils):
 
     def _adjust_lr_scheduler_for_resume(self):
         """Adjust LR scheduler state after resuming from non-zero steps."""
+        if self.resume_requires_training_state:
+            return
         if self.completed_steps > 0:
             logger.info(f"Adjusting LR scheduler for resume from step {self.completed_steps}")
             for _ in range(self.completed_steps):
@@ -235,35 +274,113 @@ class VLATrainer(TrainerUtils):
 
     def _load_checkpoint(self, checkpoint_path):
         """Load checkpoint."""
-        self.accelerator.load_state(checkpoint_path)
+        checkpoint_path = Path(checkpoint_path)
+
+        if self.accelerator.distributed_type != DistributedType.DEEPSPEED or not checkpoint_path.is_dir():
+            self.accelerator.load_state(str(checkpoint_path))
+            self.accelerator.print(f"Resumed from checkpoint: {checkpoint_path}")
+            return
+
+        checkpoint_parts = self._inspect_directory_checkpoint(checkpoint_path)
+        total_stages = 2 + int(checkpoint_parts["custom_count"] > 0)
+
+        if self.accelerator.is_main_process:
+            logger.info(f"目录式 checkpoint 顶层内容: {checkpoint_parts['entries']}")
+            logger.info(
+                "目录式 checkpoint 检测结果: "
+                f"deepspeed_tag={checkpoint_parts['deepspeed_tag']}, "
+                f"scheduler_files={checkpoint_parts['scheduler_files']}, "
+                f"sampler_files={checkpoint_parts['sampler_files']}, "
+                f"rng_files={checkpoint_parts['rng_files']}, "
+                f"custom_count={checkpoint_parts['custom_count']}"
+            )
+
+        for hook in self.accelerator._load_model_state_pre_hook.values():
+            hook([], str(checkpoint_path))
+
+        logger.info(f"[1/{total_stages}] 开始加载 DeepSpeed 模型/优化器状态: {checkpoint_path}")
+        load_path, _ = self.model.load_checkpoint(
+            str(checkpoint_path),
+            checkpoint_parts["deepspeed_tag"],
+            load_module_strict=True,
+            load_optimizer_states=True,
+            load_lr_scheduler_states=True,
+        )
+        if load_path is None:
+            raise RuntimeError(f"DeepSpeed checkpoint load failed: {checkpoint_path}")
+        logger.info(f"[1/{total_stages}] DeepSpeed 模型/优化器状态加载完成: {load_path}")
+
+        logger.info(f"[2/{total_stages}] 开始加载 scheduler / dataloader / RNG 状态")
+        schedulers = [scheduler for scheduler in self.accelerator._schedulers if not isinstance(scheduler, DeepSpeedSchedulerWrapper)]
+        override_attributes = load_accelerator_state(
+            str(checkpoint_path),
+            [],
+            [],
+            schedulers,
+            self.accelerator._dataloaders,
+            self.accelerator.state.process_index,
+            self.accelerator.scaler,
+            "cpu",
+        )
+        if "step" in override_attributes:
+            self.accelerator.step = override_attributes["step"]
+        logger.info(
+            f"[2/{total_stages}] scheduler / dataloader / RNG 状态加载完成"
+        )
+
+        if checkpoint_parts["custom_count"] > 0:
+            logger.info(f"[3/{total_stages}] 开始加载 {checkpoint_parts['custom_count']} 个自定义状态")
+            for index, obj in enumerate(self.accelerator._custom_objects):
+                load_custom_state(obj, str(checkpoint_path), index)
+            logger.info(f"[3/{total_stages}] 自定义状态加载完成")
+
         self.accelerator.print(f"Resumed from checkpoint: {checkpoint_path}")
+
+    @staticmethod
+    def _inspect_directory_checkpoint(checkpoint_path: Path) -> dict:
+        entries = sorted(path.name for path in checkpoint_path.iterdir())
+        latest_file = checkpoint_path / "latest"
+        deepspeed_tag = MODEL_NAME
+        if latest_file.exists():
+            deepspeed_tag = latest_file.read_text().strip() or MODEL_NAME
+
+        scheduler_files = [name for name in entries if name.startswith(SCHEDULER_NAME)]
+        sampler_files = [name for name in entries if name.startswith(SAMPLER_NAME) or name.startswith("dl_state_dict")]
+        rng_files = [name for name in entries if name.startswith(RNG_STATE_NAME)]
+        custom_files = [name for name in entries if name.startswith("custom_checkpoint_")]
+
+        return {
+            "entries": entries,
+            "deepspeed_tag": deepspeed_tag,
+            "scheduler_files": scheduler_files,
+            "sampler_files": sampler_files,
+            "rng_files": rng_files,
+            "custom_count": len(custom_files),
+        }
 
     def _save_checkpoint(self):
         """Save current training state."""
-        if self.accelerator.is_main_process:
-            save_format = getattr(self.config.trainer, "save_format", "pt")
-            checkpoint_path = os.path.join(self.checkpoint_dir, f"steps_{self.completed_steps}")
+        save_format = getattr(self.config.trainer, "save_format", "pt")
+        checkpoint_path = self.local_checkpoint_dir / f"steps_{self.completed_steps}"
+
+        if self.accelerator.distributed_type == DistributedType.DEEPSPEED:
+            self.accelerator.save_state(output_dir=str(checkpoint_path), safe_serialization=(save_format == "safetensors"))
+        elif self.accelerator.is_main_process and save_format == "safetensors":
+            from safetensors.torch import save_file
 
             state_dict = self.accelerator.get_state_dict(self.model)
-            if save_format == "safetensors":
-                from safetensors.torch import save_file
+            save_file(state_dict, str(checkpoint_path) + "_model.safetensors")
+        elif self.accelerator.is_main_process and save_format == "pt":
+            state_dict = self.accelerator.get_state_dict(self.model)
+            torch.save(state_dict, str(checkpoint_path) + "_pytorch_model.pt")
+        elif save_format not in {"pt", "safetensors"}:
+            raise ValueError(f"Unsupported save_format `{save_format}`. Expected `pt` or `safetensors`.")
 
-                save_file(state_dict, checkpoint_path + "_model.safetensors")
-            elif save_format == "pt":
-                torch.save(state_dict, checkpoint_path + "_pytorch_model.pt")
-            else:
-                raise ValueError(f"Unsupported save_format `{save_format}`. Expected `pt` or `safetensors`.")
-
-            summary_data = {"steps": self.completed_steps}
-            with open(os.path.join(self.config.output_dir, "summary.jsonl"), "a") as f:
-                f.write(json.dumps(summary_data) + "\n")
+        if self.accelerator.is_main_process:
+            self._append_summary_entry({"steps": self.completed_steps})
+            self._sync_accessed_config_snapshots()
             self.accelerator.print(f"✅ Checkpoint saved at {checkpoint_path}")
-
-            if isinstance(self.config, AccessTrackedConfig):
-                logger.info("📊 Saving accessed configuration...")
-                output_dir = Path(self.config.output_dir)
-                self.config.save_accessed_config(output_dir / "config.yaml", use_original_values=False)
-                logger.info("✅ Configuration files saved")
+            self._enqueue_checkpoint_sync(checkpoint_path)
 
         self.accelerator.wait_for_everyone()
 
@@ -401,25 +518,129 @@ class VLATrainer(TrainerUtils):
 
     def _finalize_training(self):
         """Training end processing."""
-        if self.accelerator.is_main_process:
-            save_format = getattr(self.config.trainer, "save_format", "pt")
-            final_checkpoint = os.path.join(self.config.output_dir, "final_model")
-            os.makedirs(final_checkpoint, exist_ok=True)
-            state_dict = self.accelerator.get_state_dict(self.model)
-            if save_format == "safetensors":
-                from safetensors.torch import save_file
+        save_format = getattr(self.config.trainer, "save_format", "pt")
+        final_checkpoint = self.local_output_dir / "final_model"
+        os.makedirs(final_checkpoint, exist_ok=True)
 
-                save_file(state_dict, os.path.join(final_checkpoint, "model.safetensors"))
-            elif save_format == "pt":
-                torch.save(state_dict, os.path.join(final_checkpoint, "pytorch_model.pt"))
-            else:
-                raise ValueError(f"Unsupported save_format `{save_format}`. Expected `pt` or `safetensors`.")
+        if self.accelerator.distributed_type == DistributedType.DEEPSPEED:
+            self.accelerator.save_state(output_dir=str(final_checkpoint), safe_serialization=(save_format == "safetensors"))
+        elif self.accelerator.is_main_process and save_format == "safetensors":
+            from safetensors.torch import save_file
+
+            state_dict = self.accelerator.get_state_dict(self.model)
+            save_file(state_dict, str(final_checkpoint / "model.safetensors"))
+        elif self.accelerator.is_main_process and save_format == "pt":
+            state_dict = self.accelerator.get_state_dict(self.model)
+            torch.save(state_dict, str(final_checkpoint / "pytorch_model.pt"))
+        elif save_format not in {"pt", "safetensors"}:
+            raise ValueError(f"Unsupported save_format `{save_format}`. Expected `pt` or `safetensors`.")
+
+        if self.accelerator.is_main_process:
             logger.info(f"Training complete. Final model saved at {final_checkpoint}")
+            self._enqueue_checkpoint_sync(final_checkpoint)
 
         if self.accelerator.is_main_process:
             wandb.finish()
 
         self.accelerator.wait_for_everyone()
+
+    def _all_output_dirs(self):
+        if self.local_output_dir == self.network_output_dir:
+            return [self.network_output_dir]
+        return [self.network_output_dir, self.local_output_dir]
+
+    def _setup_checkpoint_storage(self):
+        if self.local_output_dir == self.network_output_dir:
+            return
+
+        self.local_output_dir.mkdir(parents=True, exist_ok=True)
+        self.local_checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+        if self.accelerator.is_main_process:
+            if any(self.local_checkpoint_dir.iterdir()):
+                logger.info(f"本地 checkpoint 工作目录已存在内容，直接复用: {self.local_checkpoint_dir}")
+            else:
+                logger.info(f"本地 checkpoint 工作目录为空，开始从网络盘引导: {self.local_output_dir}")
+                if self.network_checkpoint_dir.exists():
+                    latest_checkpoint, _ = self._get_latest_checkpoint(str(self.network_checkpoint_dir))
+                    if latest_checkpoint:
+                        self._copy_path(Path(latest_checkpoint), self.local_checkpoint_dir / Path(latest_checkpoint).name)
+                        logger.info(f"已复制最新 checkpoint 到本地: {latest_checkpoint}")
+
+                self._copy_helper_artifacts(self.network_output_dir, self.local_output_dir)
+        self.accelerator.wait_for_everyone()
+
+    def _sync_helper_artifacts_to_local(self):
+        if self.local_output_dir == self.network_output_dir or not self.accelerator.is_main_process:
+            return
+        self._copy_helper_artifacts(self.network_output_dir, self.local_output_dir)
+
+    def _copy_helper_artifacts(self, src_dir: Path, dst_dir: Path):
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        for artifact_name in self.helper_artifact_names:
+            src_path = src_dir / artifact_name
+            dst_path = dst_dir / artifact_name
+            if src_path.exists():
+                shutil.copy2(src_path, dst_path)
+
+    @staticmethod
+    def _copy_path(src_path: Path, dst_path: Path):
+        if src_path.is_dir():
+            shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
+        else:
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_path, dst_path)
+
+    def _append_summary_entry(self, summary_data: dict):
+        for output_dir in self._all_output_dirs():
+            with open(output_dir / "summary.jsonl", "a") as f:
+                f.write(json.dumps(summary_data) + "\n")
+
+    def _sync_accessed_config_snapshots(self):
+        if not isinstance(self.config, AccessTrackedConfig):
+            return
+        logger.info("📊 Saving accessed configuration...")
+        for output_dir in self._all_output_dirs():
+            self.config.save_accessed_config(output_dir / "config.yaml", use_original_values=False)
+        logger.info("✅ Configuration files saved")
+
+    def _enqueue_checkpoint_sync(self, local_path: Path):
+        if self.local_output_dir == self.network_output_dir:
+            return
+
+        target_path = self.network_output_dir / local_path.relative_to(self.local_output_dir)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        sync_script = r"""
+import shutil
+import sys
+import time
+from pathlib import Path
+
+src = Path(sys.argv[1])
+dst = Path(sys.argv[2])
+tmp = dst.parent / f".{dst.name}.sync_tmp_{int(time.time() * 1e9)}"
+
+if src.is_dir():
+    shutil.copytree(src, tmp, dirs_exist_ok=True)
+else:
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, tmp)
+
+if dst.exists():
+    stale = dst.parent / f"{dst.name}.stale_{int(time.time())}"
+    dst.rename(stale)
+
+tmp.rename(dst)
+"""
+        log_file = open(self.sync_log_path, "a")
+        subprocess.Popen(
+            [sys.executable, "-c", sync_script, str(local_path), str(target_path)],
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        log_file.close()
+        logger.info(f"已启动后台同步: {local_path} -> {target_path}")
 
 
 def main(cfg) -> None:

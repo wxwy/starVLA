@@ -8,6 +8,7 @@ endpoints (e.g., JSONL local logs, Weights & Biases).
 from typing import Tuple
 import re
 import json
+import gc
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -265,7 +266,12 @@ class TrainerUtils:
 
                 checkpoint = load_file(checkpoint_path)
             else:
-                checkpoint = torch.load(checkpoint_path, map_location="cpu")
+                checkpoint = torch.load(
+                    checkpoint_path,
+                    map_location="cpu",
+                    weights_only=True,
+                    mmap=True,
+                )
         except Exception as e:
             raise RuntimeError(f"❌ loading checkpoint failed: {e}")
 
@@ -298,6 +304,9 @@ class TrainerUtils:
                 loaded_modules = ["<full_model>"]
             except Exception as e:
                 raise RuntimeError(f"❌ loading full model failed: {e}")
+            finally:
+                del checkpoint
+                gc.collect()
         return model
 
     @staticmethod
@@ -505,30 +514,27 @@ class TrainerUtils:
             self.accelerator.print(f"No checkpoint directory found at {checkpoint_dir}")
             return None, 0
 
-        # Find all checkpoints matching the naming convention, supports .pt and .safetensors
-        checkpoints = [
-            f for f in os.listdir(checkpoint_dir) 
-            if re.match(r"steps_(\d+)_(?:pytorch_model\.pt|model\.safetensors)$", f)
-            and os.path.isfile(os.path.join(checkpoint_dir, f))  # ensure it is a file
-        ]
+        checkpoint_entries = []
+        for entry in os.listdir(checkpoint_dir):
+            entry_path = os.path.join(checkpoint_dir, entry)
+            file_match = re.match(r"steps_(\d+)_(?:pytorch_model\.pt|model\.safetensors)$", entry)
+            dir_match = re.match(r"steps_(\d+)$", entry)
 
-        if not checkpoints:
+            if file_match and os.path.isfile(entry_path):
+                checkpoint_entries.append((entry, int(file_match.group(1))))
+            elif dir_match and os.path.isdir(entry_path):
+                if _is_complete_deepspeed_checkpoint_dir(entry_path):
+                    checkpoint_entries.append((entry, int(dir_match.group(1))))
+                else:
+                    self.accelerator.print(f"Skipping incomplete DeepSpeed checkpoint directory: {entry_path}")
+
+        if not checkpoint_entries:
             self.accelerator.print(f"No checkpoints found in {checkpoint_dir}")
             return None, 0
 
-        # Extract step numbers and sort
-        try:
-            checkpoints_with_steps = [
-                (ckpt, int(re.search(r"steps_(\d+)_(?:pytorch_model\.pt|model\.safetensors)$", ckpt).group(1)))
-                for ckpt in checkpoints
-            ]
-        except AttributeError as e:
-            self.accelerator.print(f"Error parsing checkpoint filenames: {e}")
-            return None, 0
-
         # Sort by step number and get the latest checkpoint
-        checkpoints_with_steps.sort(key=lambda x: x[1])
-        latest_checkpoint, completed_steps = checkpoints_with_steps[-1]
+        checkpoint_entries.sort(key=lambda x: x[1])
+        latest_checkpoint, completed_steps = checkpoint_entries[-1]
 
         latest_checkpoint_path = os.path.join(checkpoint_dir, latest_checkpoint)
         self.accelerator.print(f"Latest checkpoint found: {latest_checkpoint_path}")
@@ -545,3 +551,17 @@ def is_main_process():
 def _is_safetensors_path(path):
     """Check if a path refers to a safetensors file."""
     return str(path).endswith(".safetensors")
+
+
+def _is_complete_deepspeed_checkpoint_dir(path):
+    """Check whether a DeepSpeed checkpoint directory contains the minimum files required for resume-training."""
+    if not os.path.isdir(path):
+        return False
+
+    latest_file = os.path.join(path, "latest")
+    model_file = os.path.join(path, "pytorch_model", "mp_rank_00_model_states.pt")
+    optim_file = os.path.join(path, "pytorch_model", "bf16_zero_pp_rank_0_mp_rank_00_optim_states.pt")
+    rng_file = os.path.join(path, "random_states_0.pkl")
+
+    required_files = [latest_file, model_file, optim_file, rng_file]
+    return all(os.path.isfile(file_path) for file_path in required_files)

@@ -35,10 +35,11 @@ run_root_dir=./playground/Checkpoints
 run_id=1229_libero4in1_qwen3oft
 enable_local_checkpoint_staging=True
 local_checkpoint_root=/tmp/nvme/starvla_ckpt
-local_checkpoint_keep_count=2
+local_checkpoint_keep_count=1
+gradient_accumulation_steps=2
 save_checkpoint_as_directory=True
 save_with_training_state=False
-checkpoint_max_shard_size=5GB
+checkpoint_max_shard_size=4GB
 # === End of environment variable configuration ===
 ###########################################################################################
 
@@ -66,13 +67,14 @@ fi
 accelerate launch \
   --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml \
   --num_processes ${num_processes} \
+  --gradient_accumulation_steps ${gradient_accumulation_steps} \
   starVLA/training/train_starvla.py \
   --config_yaml ${config_yaml} \
   --framework.name ${Framework_name} \
   --framework.qwenvl.base_vlm ${base_vlm} \
   --datasets.vla_data.data_root_dir ${libero_data_root}\
   --datasets.vla_data.data_mix ${data_mix} \
-  --datasets.vla_data.per_device_batch_size 32 \
+  --datasets.vla_data.per_device_batch_size 16 \
   --trainer.vla_data.video_backend torchvision_av \
   --trainer.freeze_modules ${freeze_module_list} \
   --trainer.max_train_steps 80000 \

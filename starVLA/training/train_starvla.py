@@ -240,8 +240,7 @@ def process_task(task):
     keep_local_count = max(int(task.get("keep_local_count", 1)), 0)
 
     def prune_local_versions(current_src):
-        if keep_local_count <= 0:
-            return
+        retained_after_sync = max(keep_local_count - 1, 0)
         checkpoint_dir = current_src.parent
         pattern = re.compile(r"steps_(\d+)$")
         entries = []
@@ -253,7 +252,7 @@ def process_task(task):
             if trainer_state.is_file():
                 entries.append((int(match.group(1)), entry))
         entries.sort(key=lambda x: x[0])
-        keep_names = {entry.name for _, entry in entries[-keep_local_count:]}
+        keep_names = {entry.name for _, entry in entries[-retained_after_sync:]} if retained_after_sync > 0 else set()
         for _, entry in entries:
             if entry.name in keep_names:
                 continue
@@ -786,7 +785,14 @@ class VLATrainer(TrainerUtils):
             weights_only=False,
             mmap=True,
         )
-        self.optimizer.load_state_dict(optimizer_state)
+        if self.accelerator.distributed_type == DistributedType.DEEPSPEED and hasattr(self.optimizer, "optimizer"):
+            self.optimizer.optimizer.load_state_dict(
+                [optimizer_state],
+                load_optimizer_states=True,
+                load_from_fp32_weights=False,
+            )
+        else:
+            self.optimizer.load_state_dict(optimizer_state)
         del optimizer_state
         logger.info(f"[1/{total_stages}] lightweight optimizer 状态加载完成")
 

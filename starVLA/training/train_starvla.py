@@ -129,6 +129,25 @@ def _get_checkpoint_status_view(checkpoint_dir: Path):
     return latest_any, latest_complete
 
 
+def _list_complete_checkpoint_entries(checkpoint_dir: Path):
+    if not checkpoint_dir.exists():
+        return []
+
+    checkpoint_entries = []
+    for entry in checkpoint_dir.iterdir():
+        file_match = re.match(r"steps_(\d+)_(?:pytorch_model\.pt|model\.safetensors)$", entry.name)
+        dir_match = re.match(r"steps_(\d+)$", entry.name)
+
+        if file_match and entry.is_file():
+            checkpoint_entries.append({"path": entry, "step": int(file_match.group(1)), "complete": True})
+        elif dir_match and entry.is_dir():
+            if _is_complete_deepspeed_checkpoint_dir(entry) or _is_complete_lightweight_training_checkpoint_dir(entry):
+                checkpoint_entries.append({"path": entry, "step": int(dir_match.group(1)), "complete": True})
+
+    checkpoint_entries.sort(key=lambda x: x["step"])
+    return checkpoint_entries
+
+
 def _copy_path_for_stage(src_path: Path, dst_path: Path):
     if src_path.is_dir():
         shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
@@ -159,6 +178,15 @@ def _remove_other_checkpoint_entries_for_stage(checkpoint_dir: Path, keep_names:
             path.unlink(missing_ok=True)
 
 
+def _prune_checkpoint_entries_for_stage(checkpoint_dir: Path, keep_count: int, extra_keep_names: set[str] | None = None):
+    extra_keep_names = extra_keep_names or set()
+    keep_count = max(int(keep_count), 0)
+    complete_entries = _list_complete_checkpoint_entries(checkpoint_dir)
+    keep_names = {entry["path"].name for entry in complete_entries[-keep_count:]} if keep_count > 0 else set()
+    keep_names.update(extra_keep_names)
+    _remove_other_checkpoint_entries_for_stage(checkpoint_dir, keep_names)
+
+
 def _copy_helper_artifacts_for_stage(src_dir: Path, dst_dir: Path, helper_artifact_names: tuple[str, ...]):
     dst_dir.mkdir(parents=True, exist_ok=True)
     for artifact_name in helper_artifact_names:
@@ -168,52 +196,139 @@ def _copy_helper_artifacts_for_stage(src_dir: Path, dst_dir: Path, helper_artifa
             shutil.copy2(src_path, dst_path)
 
 
-def _launch_background_checkpoint_sync(src: Path, dst: Path, log_path: Path, cleanup_src: bool, marker_path: Path | None = None):
+def _launch_background_checkpoint_sync(
+    src: Path,
+    dst: Path,
+    log_path: Path,
+    cleanup_src: bool,
+    marker_path: Path | None = None,
+    queue_dir: Path | None = None,
+    keep_local_count: int = 1,
+):
     dst.parent.mkdir(parents=True, exist_ok=True)
+    queue_dir = queue_dir or (log_path.parent / ".checkpoint_sync_queue")
+    queue_dir.mkdir(parents=True, exist_ok=True)
+
+    task_path = queue_dir / f"{int(time.time() * 1e9)}_{src.name}.json"
+    task_payload = {
+        "src": str(src),
+        "dst": str(dst),
+        "cleanup_src": cleanup_src,
+        "marker": "" if marker_path is None else str(marker_path),
+        "keep_local_count": int(keep_local_count),
+    }
+    task_path.write_text(json.dumps(task_payload, ensure_ascii=False), encoding="utf-8")
+
     sync_script = r"""
+import json
+import os
+import re
 import shutil
 import sys
 import time
 from pathlib import Path
 
-src = Path(sys.argv[1])
-dst = Path(sys.argv[2])
-cleanup_src = sys.argv[3] == "1"
-marker = Path(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else None
-tmp = dst.parent / f".{dst.name}.sync_tmp_{int(time.time() * 1e9)}"
+queue_dir = Path(sys.argv[1])
+lock_dir = Path(sys.argv[2])
+log_path = Path(sys.argv[3])
 
-if src.is_dir():
-    shutil.copytree(src, tmp, dirs_exist_ok=True)
-else:
-    tmp.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, tmp)
+def process_task(task):
+    src = Path(task["src"])
+    dst = Path(task["dst"])
+    cleanup_src = bool(task["cleanup_src"])
+    marker = Path(task["marker"]) if task.get("marker") else None
+    keep_local_count = max(int(task.get("keep_local_count", 1)), 0)
 
-if dst.exists():
-    stale = dst.parent / f"{dst.name}.stale_{int(time.time())}"
-    dst.rename(stale)
+    def prune_local_versions(current_src):
+        if keep_local_count <= 0:
+            return
+        checkpoint_dir = current_src.parent
+        pattern = re.compile(r"steps_(\d+)$")
+        entries = []
+        for entry in checkpoint_dir.iterdir():
+            match = pattern.match(entry.name)
+            if not match or not entry.is_dir():
+                continue
+            trainer_state = entry / "trainer_state.json"
+            if trainer_state.is_file():
+                entries.append((int(match.group(1)), entry))
+        entries.sort(key=lambda x: x[0])
+        keep_names = {entry.name for _, entry in entries[-keep_local_count:]}
+        for _, entry in entries:
+            if entry.name in keep_names:
+                continue
+            shutil.rmtree(entry, ignore_errors=True)
 
-tmp.rename(dst)
+    if not src.exists():
+        if marker is not None:
+            marker.unlink(missing_ok=True)
+        return
 
-if cleanup_src and src.exists():
+    tmp = dst.parent / f".{dst.name}.sync_tmp_{int(time.time() * 1e9)}"
     if src.is_dir():
-        shutil.rmtree(src, ignore_errors=True)
+        shutil.copytree(src, tmp, dirs_exist_ok=True)
     else:
-        src.unlink(missing_ok=True)
+        tmp.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, tmp)
 
-if marker is not None:
-    marker.unlink(missing_ok=True)
+    if dst.exists():
+        stale = dst.parent / f"{dst.name}.stale_{int(time.time())}"
+        dst.rename(stale)
+
+    tmp.rename(dst)
+
+    if cleanup_src and src.exists():
+        if src.is_dir():
+            shutil.rmtree(src, ignore_errors=True)
+        else:
+            src.unlink(missing_ok=True)
+    elif src.exists() and src.is_dir():
+        prune_local_versions(src)
+
+    if marker is not None:
+        marker.unlink(missing_ok=True)
+
+def lock_is_stale():
+    pid_file = lock_dir / "pid"
+    if not pid_file.exists():
+        return True
+    try:
+        pid = int(pid_file.read_text().strip())
+    except Exception:
+        return True
+    try:
+        os.kill(pid, 0)
+        return False
+    except OSError:
+        return True
+
+try:
+    lock_dir.mkdir()
+except FileExistsError:
+    if lock_is_stale():
+        shutil.rmtree(lock_dir, ignore_errors=True)
+        lock_dir.mkdir()
+    else:
+        sys.exit(0)
+
+try:
+    (lock_dir / "pid").write_text(str(os.getpid()), encoding="utf-8")
+    while True:
+        task_files = sorted(queue_dir.glob("*.json"))
+        if not task_files:
+            break
+        task_file = task_files[0]
+        with open(task_file, "r", encoding="utf-8") as f:
+            task = json.load(f)
+        process_task(task)
+        task_file.unlink(missing_ok=True)
+finally:
+    shutil.rmtree(lock_dir, ignore_errors=True)
 """
+    lock_dir = queue_dir / ".worker.lock"
     log_file = open(log_path, "a")
     subprocess.Popen(
-        [
-            sys.executable,
-            "-c",
-            sync_script,
-            str(src),
-            str(dst),
-            "1" if cleanup_src else "0",
-            "" if marker_path is None else str(marker_path),
-        ],
+        [sys.executable, "-c", sync_script, str(queue_dir), str(lock_dir), str(log_path)],
         stdout=log_file,
         stderr=subprocess.STDOUT,
         start_new_session=True,
@@ -270,7 +385,7 @@ def _stage_local_checkpoint_storage(cfg):
                     f"启动阶段后台检查发现本地最新 checkpoint 不完整，回退到本地最近完整版本: "
                     f"{local_latest_any['path']} -> {local_latest_complete['path']}"
                 )
-                _remove_other_checkpoint_entries_for_stage(local_checkpoint_dir, {local_latest_complete["path"].name})
+                _prune_checkpoint_entries_for_stage(local_checkpoint_dir, 1, {local_latest_complete["path"].name})
             else:
                 logger.warning(f"启动阶段后台检查发现本地最新 checkpoint 不完整，且无完整本地版本可回退: {local_latest_any['path']}")
                 _clear_checkpoint_entries_for_stage(local_checkpoint_dir)
@@ -280,7 +395,7 @@ def _stage_local_checkpoint_storage(cfg):
         network_latest_entry = network_latest_complete
 
         if local_latest_entry is not None:
-            _remove_other_checkpoint_entries_for_stage(local_checkpoint_dir, {local_latest_entry["path"].name})
+            _prune_checkpoint_entries_for_stage(local_checkpoint_dir, 1, {local_latest_entry["path"].name})
 
         if (
             local_latest_entry is not None
@@ -304,6 +419,8 @@ def _stage_local_checkpoint_storage(cfg):
                 network_output_dir / "checkpoint_sync.log",
                 cleanup_src=False,
                 marker_path=inflight_marker_path,
+                queue_dir=network_output_dir / ".checkpoint_sync_queue",
+                keep_local_count=1,
             )
             return
 
@@ -317,7 +434,7 @@ def _stage_local_checkpoint_storage(cfg):
                 logger.info(f"启动阶段后台复制最新 checkpoint 完成: {network_latest_checkpoint}")
             else:
                 logger.info(f"启动阶段后台检查确认本地已是最新 checkpoint: {local_latest_entry['path']}")
-                _remove_other_checkpoint_entries_for_stage(local_checkpoint_dir, {network_latest_name})
+                _prune_checkpoint_entries_for_stage(local_checkpoint_dir, 1, {network_latest_name})
         else:
             _clear_checkpoint_entries_for_stage(local_checkpoint_dir)
 
@@ -458,6 +575,7 @@ class VLATrainer(TrainerUtils):
         self.save_with_training_state = getattr(self.config.trainer, "save_with_training_state", False)
         self.save_checkpoint_as_directory = getattr(self.config.trainer, "save_checkpoint_as_directory", True)
         self.checkpoint_max_shard_size = getattr(self.config.trainer, "checkpoint_max_shard_size", "5GB")
+        self.local_checkpoint_keep_count = max(int(getattr(self.config.trainer, "local_checkpoint_keep_count", 1)), 1)
 
     def prepare_training(self):
         rank = dist.get_rank() if dist.is_initialized() else 0
@@ -928,7 +1046,7 @@ class VLATrainer(TrainerUtils):
                         f"本地临时路径最新 checkpoint 不完整，回退到本地最近完整版本: "
                         f"{local_latest_any['path']} -> {local_latest_complete['path']}"
                     )
-                    self._remove_other_checkpoint_entries(self.local_checkpoint_dir, {local_latest_complete["path"].name})
+                    self._prune_checkpoint_entries(self.local_checkpoint_dir, 1, {local_latest_complete["path"].name})
                 else:
                     logger.warning(f"本地临时路径最新 checkpoint 不完整，且无完整本地版本可回退: {local_latest_any['path']}")
                     self._clear_checkpoint_entries(self.local_checkpoint_dir)
@@ -938,7 +1056,7 @@ class VLATrainer(TrainerUtils):
             network_latest_entry = network_latest_complete
 
             if local_latest_entry is not None:
-                self._remove_other_checkpoint_entries(self.local_checkpoint_dir, {local_latest_entry["path"].name})
+                self._prune_checkpoint_entries(self.local_checkpoint_dir, 1, {local_latest_entry["path"].name})
 
             if (
                 local_latest_entry is not None
@@ -963,7 +1081,7 @@ class VLATrainer(TrainerUtils):
                     logger.info(f"已复制最新 checkpoint 到本地: {network_latest_checkpoint}")
                 else:
                     logger.info(f"本地临时路径已存在最新 checkpoint，直接复用: {local_latest_entry['path']}")
-                    self._remove_other_checkpoint_entries(self.local_checkpoint_dir, {network_latest_name})
+                    self._prune_checkpoint_entries(self.local_checkpoint_dir, 1, {network_latest_name})
 
                 self.local_resume_checkpoint_paths_for_cleanup = [
                     path for path in self.local_checkpoint_dir.iterdir() if path.name == network_latest_name
@@ -1023,6 +1141,15 @@ class VLATrainer(TrainerUtils):
             else:
                 path.unlink(missing_ok=True)
 
+    @staticmethod
+    def _prune_checkpoint_entries(checkpoint_dir: Path, keep_count: int, extra_keep_names: set[str] | None = None):
+        extra_keep_names = extra_keep_names or set()
+        keep_count = max(int(keep_count), 0)
+        complete_entries = _list_complete_checkpoint_entries(checkpoint_dir)
+        keep_names = {entry["path"].name for entry in complete_entries[-keep_count:]} if keep_count > 0 else set()
+        keep_names.update(extra_keep_names)
+        VLATrainer._remove_other_checkpoint_entries(checkpoint_dir, keep_names)
+
     def _append_summary_entry(self, summary_data: dict):
         for output_dir in self._all_output_dirs():
             with open(output_dir / "summary.jsonl", "a") as f:
@@ -1059,43 +1186,14 @@ class VLATrainer(TrainerUtils):
             return
 
         target_path = self.network_output_dir / local_path.relative_to(self.local_output_dir)
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        sync_script = r"""
-import shutil
-import sys
-import time
-from pathlib import Path
-
-src = Path(sys.argv[1])
-dst = Path(sys.argv[2])
-tmp = dst.parent / f".{dst.name}.sync_tmp_{int(time.time() * 1e9)}"
-
-if src.is_dir():
-    shutil.copytree(src, tmp, dirs_exist_ok=True)
-else:
-    tmp.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, tmp)
-
-if dst.exists():
-    stale = dst.parent / f"{dst.name}.stale_{int(time.time())}"
-    dst.rename(stale)
-
-tmp.rename(dst)
-
-if src.exists():
-    if src.is_dir():
-        shutil.rmtree(src, ignore_errors=True)
-    else:
-        src.unlink(missing_ok=True)
-"""
-        log_file = open(self.sync_log_path, "a")
-        subprocess.Popen(
-            [sys.executable, "-c", sync_script, str(local_path), str(target_path)],
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
+        _launch_background_checkpoint_sync(
+            local_path,
+            target_path,
+            self.sync_log_path,
+            cleanup_src=False,
+            queue_dir=self.network_output_dir / ".checkpoint_sync_queue",
+            keep_local_count=self.local_checkpoint_keep_count,
         )
-        log_file.close()
         logger.info(f"已启动后台同步: {local_path} -> {target_path}")
 
     def _estimate_checkpoint_bytes(self) -> int:
@@ -1119,6 +1217,15 @@ if src.exists():
 
         return 12 * 1024 * 1024 * 1024
 
+    def _estimate_retained_checkpoint_bytes(self) -> int:
+        keep_existing = max(self.local_checkpoint_keep_count - 1, 0)
+        if keep_existing == 0:
+            return 0
+
+        complete_entries = _list_complete_checkpoint_entries(self.local_checkpoint_dir)
+        retained_entries = complete_entries[-keep_existing:]
+        return sum(self._path_size_bytes(entry["path"]) for entry in retained_entries)
+
     def _ensure_local_checkpoint_capacity(self, checkpoint_path: Path):
         if self.local_output_dir == self.network_output_dir:
             return
@@ -1126,14 +1233,16 @@ if src.exists():
             return
 
         required_bytes = int(self._estimate_checkpoint_bytes() * 1.10)
+        retained_bytes = self._estimate_retained_checkpoint_bytes()
         available_bytes = shutil.disk_usage(self.local_output_dir).free
         target_exists_bytes = self._path_size_bytes(checkpoint_path)
 
-        if available_bytes + target_exists_bytes < required_bytes:
+        if available_bytes + target_exists_bytes < required_bytes + retained_bytes:
             raise RuntimeError(
                 "Insufficient local checkpoint space before save: "
                 f"available={available_bytes / 1024**3:.2f} GiB, "
                 f"required≈{required_bytes / 1024**3:.2f} GiB, "
+                f"retained≈{retained_bytes / 1024**3:.2f} GiB, "
                 f"checkpoint_path={checkpoint_path}"
             )
 
@@ -1145,6 +1254,9 @@ if src.exists():
         if self.local_resume_cleanup_started:
             return
         if not self.local_resume_checkpoint_paths_for_cleanup:
+            return
+        if self.local_checkpoint_keep_count > 1:
+            self.local_resume_cleanup_started = True
             return
         if STARTUP_SYNC_INFLIGHT_MARKER is not None and STARTUP_SYNC_INFLIGHT_MARKER.exists():
             logger.info(f"启动阶段本地 checkpoint 补同步尚未完成，暂不清理本地启动 checkpoint: {STARTUP_SYNC_INFLIGHT_MARKER}")

@@ -76,3 +76,18 @@
 - `eval_libero.sh` 默认 `CKPT` 对齐到 `playground/trained_model/.../steps_23000`
 - `eval_libero.sh` 对结果目录的推导同时兼容旧的 `/checkpoints/steps_xxx` 路径和新的 `trained_model/.../steps_xxx` 路径
 - `eval_libero.sh` 本身不直接加载模型权重；真正的 checkpoint 解析和权重加载仍由 `run_policy_server.sh` 启动的 policy server 负责
+- `safetensors` 分片写入前会再次确保目标目录存在，避免保存过程中因目录缺失触发 `SavetensorError: I/O error: No such file or directory`
+- 针对 2 卡 24G / 64G 内存机器，`run_libero_train.sh` 已调整为：
+  - `per_device_batch_size=8`
+  - `gradient_accumulation_steps=2`
+  - `num_processes=2`
+  - `num_workers=4`
+- 临时 checkpoint 存储扩容到约 100G 后，`local_checkpoint_keep_count` 调整为 `2`，表示本地临时路径在同步完成后可保留 1 份旧版本作为缓冲
+- 对应全局 batch 为 `8 x 2 x 2 = 32`
+- 启动阶段本地 checkpoint 最新性检查/复制逻辑已前移到 `main()` 刚完成配置归一化之后，早于 `setup_directories()`、模型构建和数据集初始化
+- 记录遗留问题：LIBERO 数据集构建/初始化链路仍偏慢，主要热点在 `LeRobotSingleDataset._get_metadata()`、`_load_or_compute_statistics()`、`_get_all_steps()` 和 `LeRobotMixtureDataset.update_metadata()`；后续应加阶段计时日志量化
+- 2 卡 ZeRO2 恢复轻量 checkpoint 时，旧版单文件 `optimizer.pt` 会导致 rank1 在 DeepSpeed `state_dict_list[dp_rank]` 处越界
+- 轻量训练态 optimizer 保存已改为 per-rank 分片：`optimizer_rank_00000.pt`、`optimizer_rank_00001.pt` 等，并在 `trainer_state.json` 记录 `optimizer_format=rank_sharded` 与 `optimizer_world_size`
+- 轻量训练态恢复只在 `optimizer_format=rank_sharded` 且保存时 `optimizer_world_size` 与当前一致时恢复 optimizer
+- 旧版单文件 `optimizer.pt` 只在当前 `world_size=1` 时恢复；多卡场景下会跳过 optimizer 状态，继续恢复模型、scheduler 与 step，避免伪造 rank 分片造成错误恢复
+- 现有 `steps_26000/optimizer.pt` 曾在本地临时路径和网络 checkpoint 路径下复制出 2 份 rank 文件，但由于 `trainer_state.json` 未声明 `rank_sharded`，当前加载逻辑不会把这些文件当作可靠 ZeRO2 optimizer 分片

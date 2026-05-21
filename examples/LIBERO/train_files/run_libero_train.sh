@@ -35,13 +35,14 @@ run_root_dir=./playground/Checkpoints
 run_id=1229_libero4in1_qwen3oft
 enable_local_checkpoint_staging=True
 local_checkpoint_root=/tmp/nvme/starvla_ckpt
-local_checkpoint_keep_count=1
+local_checkpoint_keep_count=2
 gradient_accumulation_steps=2
+num_processes=2
 save_checkpoint_as_directory=True
 save_with_training_state=False
 checkpoint_max_shard_size=4GB
 save_format=safetensors
-num_workers=0
+num_workers=4
 # === End of environment variable configuration ===
 ###########################################################################################
 
@@ -59,11 +60,6 @@ cp $0 ${output_dir}/
 
 if [ -n "${NUM_PROCESSES}" ]; then
   num_processes=${NUM_PROCESSES}
-else
-  num_processes=$(python -c "import torch; print(torch.cuda.device_count())" 2>/dev/null)
-  if [ -z "${num_processes}" ] || [ "${num_processes}" -le 0 ] 2>/dev/null; then
-    num_processes=1
-  fi
 fi
 
 accelerate launch \
@@ -76,7 +72,7 @@ accelerate launch \
   --framework.qwenvl.base_vlm ${base_vlm} \
   --datasets.vla_data.data_root_dir ${libero_data_root}\
   --datasets.vla_data.data_mix ${data_mix} \
-  --datasets.vla_data.per_device_batch_size 16 \
+  --datasets.vla_data.per_device_batch_size 8 \
   --datasets.vla_data.num_workers ${num_workers} \
   --trainer.vla_data.video_backend torchvision_av \
   --trainer.freeze_modules ${freeze_module_list} \

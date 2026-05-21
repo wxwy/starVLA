@@ -598,11 +598,17 @@ def _is_complete_model_checkpoint_dir(path):
 def _is_complete_lightweight_training_checkpoint_dir(path):
     """Check whether a lightweight training checkpoint contains model weights plus optimizer/scheduler state."""
     required_files = (
-        os.path.join(path, "optimizer.pt"),
         os.path.join(path, "scheduler.pt"),
         os.path.join(path, "trainer_state.json"),
     )
-    return _is_complete_model_checkpoint_dir(path) and all(os.path.isfile(file_path) for file_path in required_files)
+    has_optimizer = os.path.isfile(os.path.join(path, "optimizer.pt")) or any(
+        re.match(r"optimizer_rank_\d+\.pt$", name) for name in os.listdir(path)
+    )
+    return (
+        _is_complete_model_checkpoint_dir(path)
+        and has_optimizer
+        and all(os.path.isfile(file_path) for file_path in required_files)
+    )
 
 
 def _is_complete_deepspeed_checkpoint_dir(path):

@@ -101,6 +101,7 @@ def _tensor_num_bytes(tensor: torch.Tensor) -> int:
 
 
 def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str, max_shard_size) -> None:
+    checkpoint_path.mkdir(parents=True, exist_ok=True)
     max_shard_bytes = _parse_shard_size_to_bytes(max_shard_size)
     shard_entries = []
     shard_state = {}
@@ -118,10 +119,12 @@ def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str,
             from safetensors.torch import save_file
 
             shard_name = f"model-{shard_idx:05d}.safetensors"
+            checkpoint_path.mkdir(parents=True, exist_ok=True)
             save_file(shard_state, str(checkpoint_path / shard_name))
             index_name = "model.safetensors.index.json"
         else:
             shard_name = f"pytorch_model-{shard_idx:05d}.bin"
+            checkpoint_path.mkdir(parents=True, exist_ok=True)
             torch.save(shard_state, checkpoint_path / shard_name)
             index_name = "pytorch_model.bin.index.json"
 
@@ -167,6 +170,7 @@ def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str,
         },
         "weight_map": weight_map,
     }
+    checkpoint_path.mkdir(parents=True, exist_ok=True)
     with open(checkpoint_path / index_name, "w", encoding="utf-8") as f:
         json.dump(index_payload, f, ensure_ascii=False, indent=2)
     gc.collect()
@@ -894,23 +898,36 @@ class VLATrainer(TrainerUtils):
     def _load_lightweight_training_state(self, checkpoint_path):
         checkpoint_path = Path(checkpoint_path)
         total_stages = 2
+        with open(checkpoint_path / "trainer_state.json", "r", encoding="utf-8") as f:
+            trainer_state = json.load(f)
 
-        logger.info(f"[1/{total_stages}] 开始加载 lightweight optimizer 状态: {checkpoint_path / 'optimizer.pt'}")
-        optimizer_state = torch.load(
-            checkpoint_path / "optimizer.pt",
-            map_location="cpu",
-            weights_only=False,
-            mmap=True,
-        )
-        if self.accelerator.distributed_type == DistributedType.DEEPSPEED and hasattr(self.optimizer, "optimizer"):
-            self.optimizer.optimizer.load_state_dict(
-                [optimizer_state],
-                load_optimizer_states=True,
-                load_from_fp32_weights=False,
+        logger.info(f"[1/{total_stages}] 开始加载 lightweight optimizer 状态")
+        optimizer_state_path = self._get_lightweight_optimizer_state_path(checkpoint_path, trainer_state)
+        if optimizer_state_path is None:
+            logger.warning(
+                "跳过 lightweight optimizer 状态恢复：checkpoint 的 optimizer 分片与当前 world_size 不兼容，"
+                "将使用新初始化的 optimizer 状态继续训练。"
             )
         else:
-            self.optimizer.load_state_dict(optimizer_state)
-        del optimizer_state
+            logger.info(f"[1/{total_stages}] lightweight optimizer 状态文件: {optimizer_state_path}")
+            optimizer_state = torch.load(
+                optimizer_state_path,
+                map_location="cpu",
+                weights_only=False,
+                mmap=True,
+            )
+            if self.accelerator.distributed_type == DistributedType.DEEPSPEED and hasattr(self.optimizer, "optimizer"):
+                world_size = self.accelerator.num_processes
+                state_dict_list = [None] * world_size
+                state_dict_list[self.accelerator.process_index] = optimizer_state
+                self.optimizer.optimizer.load_state_dict(
+                    state_dict_list,
+                    load_optimizer_states=True,
+                    load_from_fp32_weights=False,
+                )
+            else:
+                self.optimizer.load_state_dict(optimizer_state)
+            del optimizer_state
         logger.info(f"[1/{total_stages}] lightweight optimizer 状态加载完成")
 
         logger.info(f"[2/{total_stages}] 开始加载 lightweight scheduler / trainer 状态")
@@ -923,14 +940,44 @@ class VLATrainer(TrainerUtils):
         self.lr_scheduler.load_state_dict(scheduler_state)
         del scheduler_state
 
-        with open(checkpoint_path / "trainer_state.json", "r", encoding="utf-8") as f:
-            trainer_state = json.load(f)
         self.completed_steps = int(trainer_state.get("completed_steps", self.completed_steps))
         del trainer_state
         gc.collect()
         logger.info(f"[2/{total_stages}] lightweight scheduler / trainer 状态加载完成")
 
         self.accelerator.print(f"Resumed lightweight training state from checkpoint: {checkpoint_path}")
+
+    def _get_lightweight_optimizer_state_path(self, checkpoint_path: Path, trainer_state: dict) -> Path | None:
+        rank = self.accelerator.process_index
+        rank_state_path = checkpoint_path / f"optimizer_rank_{rank:05d}.pt"
+        optimizer_format = trainer_state.get("optimizer_format")
+        saved_world_size = trainer_state.get("optimizer_world_size")
+        current_world_size = self.accelerator.num_processes
+
+        if optimizer_format == "rank_sharded":
+            if int(saved_world_size) != current_world_size:
+                logger.warning(
+                    f"lightweight optimizer world_size 不匹配: saved={saved_world_size}, current={current_world_size}"
+                )
+                return None
+            if not rank_state_path.exists():
+                raise FileNotFoundError(
+                    f"Missing lightweight optimizer state for rank {rank}: {rank_state_path}"
+                )
+            return rank_state_path
+
+        legacy_state_path = checkpoint_path / "optimizer.pt"
+        if legacy_state_path.exists():
+            if self.accelerator.distributed_type == DistributedType.DEEPSPEED and current_world_size != 1:
+                logger.warning(
+                    f"旧版单文件 optimizer.pt 只能可靠恢复到 world_size=1，当前 world_size={current_world_size}"
+                )
+                return None
+            return legacy_state_path
+
+        raise FileNotFoundError(
+            f"Missing lightweight optimizer state for rank {rank}: {rank_state_path}"
+        )
 
     @staticmethod
     def _inspect_directory_checkpoint(checkpoint_path: Path) -> dict:
@@ -962,7 +1009,7 @@ class VLATrainer(TrainerUtils):
 
         if self.accelerator.distributed_type == DistributedType.DEEPSPEED and self.save_with_training_state:
             self.accelerator.save_state(output_dir=str(checkpoint_path), safe_serialization=(save_format == "safetensors"))
-        elif self.accelerator.is_main_process and self.save_checkpoint_as_directory:
+        elif self.save_checkpoint_as_directory:
             self._save_lightweight_directory_checkpoint(checkpoint_path, save_format)
         elif self.accelerator.is_main_process and save_format == "safetensors":
             from safetensors.torch import save_file
@@ -978,6 +1025,8 @@ class VLATrainer(TrainerUtils):
             gc.collect()
         elif save_format not in {"pt", "safetensors"}:
             raise ValueError(f"Unsupported save_format `{save_format}`. Expected `pt` or `safetensors`.")
+
+        self.accelerator.wait_for_everyone()
 
         if self.accelerator.is_main_process:
             self._append_summary_entry({"steps": self.completed_steps})
@@ -1129,7 +1178,7 @@ class VLATrainer(TrainerUtils):
 
         if self.accelerator.distributed_type == DistributedType.DEEPSPEED and self.save_with_training_state:
             self.accelerator.save_state(output_dir=str(final_checkpoint), safe_serialization=(save_format == "safetensors"))
-        elif self.accelerator.is_main_process and self.save_checkpoint_as_directory:
+        elif self.save_checkpoint_as_directory:
             self._save_lightweight_directory_checkpoint(final_checkpoint, save_format)
         elif self.accelerator.is_main_process and save_format == "safetensors":
             from safetensors.torch import save_file
@@ -1145,6 +1194,8 @@ class VLATrainer(TrainerUtils):
             gc.collect()
         elif save_format not in {"pt", "safetensors"}:
             raise ValueError(f"Unsupported save_format `{save_format}`. Expected `pt` or `safetensors`.")
+
+        self.accelerator.wait_for_everyone()
 
         if self.accelerator.is_main_process:
             logger.info(f"Training complete. Final model saved at {final_checkpoint}")
@@ -1290,28 +1341,40 @@ class VLATrainer(TrainerUtils):
 
     def _save_lightweight_directory_checkpoint(self, checkpoint_path: Path, save_format: str):
         checkpoint_path.mkdir(parents=True, exist_ok=True)
-        bare_model = self.accelerator.unwrap_model(self.model)
-        _streaming_save_model_shards(bare_model, checkpoint_path, save_format, self.checkpoint_max_shard_size)
-        gc.collect()
-        optimizer_state = self.optimizer.state_dict()
-        torch.save(optimizer_state, checkpoint_path / "optimizer.pt")
+        if self.accelerator.is_main_process:
+            bare_model = self.accelerator.unwrap_model(self.model)
+            _streaming_save_model_shards(bare_model, checkpoint_path, save_format, self.checkpoint_max_shard_size)
+            gc.collect()
+
+            scheduler_state = self.lr_scheduler.state_dict()
+            torch.save(scheduler_state, checkpoint_path / "scheduler.pt")
+            del scheduler_state
+            gc.collect()
+
+            trainer_state = {
+                "completed_steps": self.completed_steps,
+                "save_format": save_format,
+                "checkpoint_type": "lightweight_training",
+                "optimizer_format": "rank_sharded",
+                "optimizer_world_size": self.accelerator.num_processes,
+            }
+            with open(checkpoint_path / "trainer_state.json", "w", encoding="utf-8") as f:
+                json.dump(trainer_state, f, ensure_ascii=False, indent=2)
+            del trainer_state
+            gc.collect()
+
+        self.accelerator.wait_for_everyone()
+
+        optimizer = self.optimizer.optimizer if (
+            self.accelerator.distributed_type == DistributedType.DEEPSPEED and hasattr(self.optimizer, "optimizer")
+        ) else self.optimizer
+        optimizer_state = optimizer.state_dict()
+        optimizer_state_path = checkpoint_path / f"optimizer_rank_{self.accelerator.process_index:05d}.pt"
+        torch.save(optimizer_state, optimizer_state_path)
         del optimizer_state
         gc.collect()
 
-        scheduler_state = self.lr_scheduler.state_dict()
-        torch.save(scheduler_state, checkpoint_path / "scheduler.pt")
-        del scheduler_state
-        gc.collect()
-
-        trainer_state = {
-            "completed_steps": self.completed_steps,
-            "save_format": save_format,
-            "checkpoint_type": "lightweight_training",
-        }
-        with open(checkpoint_path / "trainer_state.json", "w", encoding="utf-8") as f:
-            json.dump(trainer_state, f, ensure_ascii=False, indent=2)
-        del trainer_state
-        gc.collect()
+        self.accelerator.wait_for_everyone()
 
     def _sync_accessed_config_snapshots(self):
         if not isinstance(self.config, AccessTrackedConfig):
@@ -1442,8 +1505,8 @@ def main(cfg) -> None:
     cfg = wrap_config(cfg)
     logger.info("✅ Configuration wrapped for access tracking")
 
-    output_dir = setup_directories(cfg=cfg)
     _launch_startup_checkpoint_stage(cfg)
+    output_dir = setup_directories(cfg=cfg)
     vla = build_framework(cfg)
     vla_train_dataloader = prepare_data(cfg=cfg, accelerator=accelerator, output_dir=output_dir)
     optimizer, lr_scheduler = setup_optimizer_and_scheduler(model=vla, cfg=cfg)

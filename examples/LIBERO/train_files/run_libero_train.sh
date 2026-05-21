@@ -35,6 +35,9 @@ run_root_dir=./playground/Checkpoints
 run_id=1229_libero4in1_qwen3oft
 enable_local_checkpoint_staging=True
 local_checkpoint_root=/tmp/nvme/starvla_ckpt
+save_checkpoint_as_directory=True
+save_with_training_state=False
+checkpoint_max_shard_size=5GB
 # === End of environment variable configuration ===
 ###########################################################################################
 
@@ -50,13 +53,18 @@ fi
 cp $0 ${output_dir}/
 
 
-num_processes=${NUM_PROCESSES:-$(python -c "import torch; print(torch.cuda.device_count())" 2>/dev/null)}
+if [ -n "${NUM_PROCESSES}" ]; then
+  num_processes=${NUM_PROCESSES}
+else
+  num_processes=$(python -c "import torch; print(torch.cuda.device_count())" 2>/dev/null)
+  if [ -z "${num_processes}" ] || [ "${num_processes}" -le 0 ] 2>/dev/null; then
+    num_processes=1
+  fi
+fi
 
 accelerate launch \
+  --config_file starVLA/config/deepseeds/deepspeed_zero2.yaml \
   --num_processes ${num_processes} \
-  --num_machines 1 \
-  --mixed_precision bf16 \
-  --dynamo_backend no \
   starVLA/training/train_starvla.py \
   --config_yaml ${config_yaml} \
   --framework.name ${Framework_name} \
@@ -72,6 +80,9 @@ accelerate launch \
   --trainer.eval_interval 100 \
   --trainer.enable_local_checkpoint_staging ${enable_local_checkpoint_staging} \
   --trainer.local_checkpoint_root ${local_checkpoint_root} \
+  --trainer.save_checkpoint_as_directory ${save_checkpoint_as_directory} \
+  --trainer.save_with_training_state ${save_with_training_state} \
+  --trainer.checkpoint_max_shard_size ${checkpoint_max_shard_size} \
   --run_root_dir ${run_root_dir} \
   --run_id ${run_id} \
   --wandb_project starVLA_Libero \

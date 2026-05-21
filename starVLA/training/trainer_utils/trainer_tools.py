@@ -13,6 +13,7 @@ import numpy as np
 import torch
 import torch.distributed as dist
 from transformers import get_scheduler
+from accelerate.utils.modeling import load_checkpoint_in_model
 
 from accelerate.logging import get_logger
 
@@ -226,7 +227,7 @@ class TrainerUtils:
                     continue
 
         # accelerator.wait_for_everyone()  # synchronize when distributed training
-        if dist.get_rank == 0:
+        if (not dist.is_initialized()) or dist.get_rank() == 0:
             print(f"🔒 Frozen modules with re pattern: {frozen}")
         return model
 
@@ -236,7 +237,7 @@ class TrainerUtils:
         print the total number of parameters and trainable parameters of the model
         :param model: PyTorch model instance
         """
-        if dist.get_rank() != 0:
+        if dist.is_initialized() and dist.get_rank() != 0:
             return
         print("📊 model parameter statistics:")
         num_params = sum(p.numel() for p in model.parameters())
@@ -258,7 +259,22 @@ class TrainerUtils:
         """
         if not checkpoint_path:
             return []
-        if dist.get_rank() == 0:
+        if os.path.isdir(checkpoint_path):
+            if reload_modules:
+                resolved_checkpoint_path = _get_model_checkpoint_file_from_dir(checkpoint_path)
+                if resolved_checkpoint_path is None:
+                    raise RuntimeError(f"❌ unsupported checkpoint directory format: {checkpoint_path}")
+                checkpoint_path = resolved_checkpoint_path
+            else:
+                try:
+                    load_checkpoint_in_model(model, checkpoint_path, device_map=None, offload_state_dict=True, strict=False)
+                    if (not dist.is_initialized()) or dist.get_rank() == 0:
+                        print("✅ loaded <full_model> model parameters")
+                    gc.collect()
+                    return model
+                except Exception as e:
+                    raise RuntimeError(f"❌ loading sharded checkpoint failed: {e}")
+        if (not dist.is_initialized()) or dist.get_rank() == 0:
             print(f"📦 loading checkpoint: {checkpoint_path}")
         try:
             if _is_safetensors_path(checkpoint_path):
@@ -289,7 +305,7 @@ class TrainerUtils:
                     sub_state_dict = {k[len(prefix) :]: v for k, v in checkpoint.items() if k.startswith(prefix)}
                     if sub_state_dict:
                         module.load_state_dict(sub_state_dict, strict=True)
-                        if dist.get_rank() == 0:
+                        if (not dist.is_initialized()) or dist.get_rank() == 0:
                             print(f"✅ parameters loaded to module '{path}'")
                         loaded_modules.append(path)
                     else:
@@ -299,7 +315,7 @@ class TrainerUtils:
         else:  # full load
             try:
                 model.load_state_dict(checkpoint, strict=False)
-                if dist.get_rank() == 0:
+                if (not dist.is_initialized()) or dist.get_rank() == 0:
                     print("✅ loaded <full_model> model parameters")
                 loaded_modules = ["<full_model>"]
             except Exception as e:
@@ -525,8 +541,10 @@ class TrainerUtils:
             elif dir_match and os.path.isdir(entry_path):
                 if _is_complete_deepspeed_checkpoint_dir(entry_path):
                     checkpoint_entries.append((entry, int(dir_match.group(1))))
+                elif _is_complete_lightweight_training_checkpoint_dir(entry_path):
+                    checkpoint_entries.append((entry, int(dir_match.group(1))))
                 else:
-                    self.accelerator.print(f"Skipping incomplete DeepSpeed checkpoint directory: {entry_path}")
+                    self.accelerator.print(f"Skipping incomplete checkpoint directory: {entry_path}")
 
         if not checkpoint_entries:
             self.accelerator.print(f"No checkpoints found in {checkpoint_dir}")
@@ -551,6 +569,38 @@ def is_main_process():
 def _is_safetensors_path(path):
     """Check if a path refers to a safetensors file."""
     return str(path).endswith(".safetensors")
+
+
+def _get_model_checkpoint_file_from_dir(path):
+    """Resolve the model weight file from a lightweight checkpoint directory."""
+    if not os.path.isdir(path):
+        return None
+
+    candidate_names = ("pytorch_model.pt", "model.safetensors", "pytorch_model.bin")
+    for candidate_name in candidate_names:
+        candidate_path = os.path.join(path, candidate_name)
+        if os.path.isfile(candidate_path):
+            return candidate_path
+    return None
+
+
+def _is_complete_model_checkpoint_dir(path):
+    """Check whether a lightweight model checkpoint directory contains model weights or a shard index."""
+    if _get_model_checkpoint_file_from_dir(path) is not None:
+        return True
+
+    index_names = ("model.safetensors.index.json", "pytorch_model.bin.index.json")
+    return any(os.path.isfile(os.path.join(path, index_name)) for index_name in index_names)
+
+
+def _is_complete_lightweight_training_checkpoint_dir(path):
+    """Check whether a lightweight training checkpoint contains model weights plus optimizer/scheduler state."""
+    required_files = (
+        os.path.join(path, "optimizer.pt"),
+        os.path.join(path, "scheduler.pt"),
+        os.path.join(path, "trainer_state.json"),
+    )
+    return _is_complete_model_checkpoint_dir(path) and all(os.path.isfile(file_path) for file_path in required_files)
 
 
 def _is_complete_deepspeed_checkpoint_dir(path):

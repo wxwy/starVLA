@@ -12,7 +12,9 @@ Conventions:
 
 # Standard Library
 import argparse
+import gc
 import json
+import math
 import os
 import re
 import shutil
@@ -66,6 +68,108 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # Initialize logger
 logger = get_logger(__name__)
+
+
+def _parse_shard_size_to_bytes(raw_size) -> int:
+    if isinstance(raw_size, int):
+        return raw_size
+    if isinstance(raw_size, str):
+        size = raw_size.strip().upper()
+        units = {
+            "KB": 1024,
+            "MB": 1024**2,
+            "GB": 1024**3,
+            "TB": 1024**4,
+        }
+        for unit, multiplier in units.items():
+            if size.endswith(unit):
+                return int(float(size[: -len(unit)].strip()) * multiplier)
+        if size.isdigit():
+            return int(size)
+    raise ValueError(f"Unsupported checkpoint shard size: {raw_size}")
+
+
+def _iter_model_state_tensors(model):
+    for name, param in model.named_parameters():
+        yield name, param
+    for name, buffer in model.named_buffers():
+        yield name, buffer
+
+
+def _tensor_num_bytes(tensor: torch.Tensor) -> int:
+    return tensor.numel() * tensor.element_size()
+
+
+def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str, max_shard_size) -> None:
+    max_shard_bytes = _parse_shard_size_to_bytes(max_shard_size)
+    shard_entries = []
+    shard_state = {}
+    shard_weight_names = []
+    shard_bytes = 0
+    total_size = 0
+
+    def flush_shard():
+        nonlocal shard_state, shard_weight_names, shard_bytes
+        if not shard_state:
+            return
+
+        shard_idx = len(shard_entries) + 1
+        if save_format == "safetensors":
+            from safetensors.torch import save_file
+
+            shard_name = f"model-{shard_idx:05d}.safetensors"
+            save_file(shard_state, str(checkpoint_path / shard_name))
+            index_name = "model.safetensors.index.json"
+        else:
+            shard_name = f"pytorch_model-{shard_idx:05d}.bin"
+            torch.save(shard_state, checkpoint_path / shard_name)
+            index_name = "pytorch_model.bin.index.json"
+
+        shard_entries.append(
+            {
+                "filename": shard_name,
+                "weight_names": list(shard_weight_names),
+            }
+        )
+        shard_state.clear()
+        shard_weight_names.clear()
+        shard_bytes = 0
+        gc.collect()
+        return index_name
+
+    index_name = None
+    bare_model = model
+    for name, tensor in _iter_model_state_tensors(bare_model):
+        cpu_tensor = tensor.detach().to("cpu", copy=True).contiguous()
+        tensor_bytes = _tensor_num_bytes(cpu_tensor)
+
+        if shard_state and shard_bytes + tensor_bytes > max_shard_bytes:
+            index_name = flush_shard()
+
+        shard_state[name] = cpu_tensor
+        shard_weight_names.append(name)
+        shard_bytes += tensor_bytes
+        total_size += tensor_bytes
+
+    index_name = flush_shard() or index_name
+
+    if index_name is None:
+        raise RuntimeError(f"No tensors were saved for checkpoint: {checkpoint_path}")
+
+    weight_map = {}
+    for entry in shard_entries:
+        for weight_name in entry["weight_names"]:
+            weight_map[weight_name] = entry["filename"]
+
+    index_payload = {
+        "metadata": {
+            "total_size": total_size,
+        },
+        "weight_map": weight_map,
+    }
+    with open(checkpoint_path / index_name, "w", encoding="utf-8") as f:
+        json.dump(index_payload, f, ensure_ascii=False, indent=2)
+    gc.collect()
 
 
 def _get_latest_checkpoint_entry(checkpoint_dir: Path):
@@ -809,6 +913,8 @@ class VLATrainer(TrainerUtils):
         with open(checkpoint_path / "trainer_state.json", "r", encoding="utf-8") as f:
             trainer_state = json.load(f)
         self.completed_steps = int(trainer_state.get("completed_steps", self.completed_steps))
+        del trainer_state
+        gc.collect()
         logger.info(f"[2/{total_stages}] lightweight scheduler / trainer 状态加载完成")
 
         self.accelerator.print(f"Resumed lightweight training state from checkpoint: {checkpoint_path}")
@@ -837,7 +943,7 @@ class VLATrainer(TrainerUtils):
 
     def _save_checkpoint(self):
         """Save current training state."""
-        save_format = getattr(self.config.trainer, "save_format", "pt")
+        save_format = getattr(self.config.trainer, "save_format", "safetensors")
         checkpoint_path = self.local_checkpoint_dir / f"steps_{self.completed_steps}"
         self._ensure_local_checkpoint_capacity(checkpoint_path)
 
@@ -850,9 +956,13 @@ class VLATrainer(TrainerUtils):
 
             state_dict = self.accelerator.get_state_dict(self.model)
             save_file(state_dict, str(checkpoint_path) + "_model.safetensors")
+            del state_dict
+            gc.collect()
         elif self.accelerator.is_main_process and save_format == "pt":
             state_dict = self.accelerator.get_state_dict(self.model)
             torch.save(state_dict, str(checkpoint_path) + "_pytorch_model.pt")
+            del state_dict
+            gc.collect()
         elif save_format not in {"pt", "safetensors"}:
             raise ValueError(f"Unsupported save_format `{save_format}`. Expected `pt` or `safetensors`.")
 
@@ -999,7 +1109,7 @@ class VLATrainer(TrainerUtils):
 
     def _finalize_training(self):
         """Training end processing."""
-        save_format = getattr(self.config.trainer, "save_format", "pt")
+        save_format = getattr(self.config.trainer, "save_format", "safetensors")
         final_checkpoint = self.local_output_dir / "final_model"
         self._ensure_local_checkpoint_capacity(final_checkpoint)
         os.makedirs(final_checkpoint, exist_ok=True)
@@ -1013,9 +1123,13 @@ class VLATrainer(TrainerUtils):
 
             state_dict = self.accelerator.get_state_dict(self.model)
             save_file(state_dict, str(final_checkpoint / "model.safetensors"))
+            del state_dict
+            gc.collect()
         elif self.accelerator.is_main_process and save_format == "pt":
             state_dict = self.accelerator.get_state_dict(self.model)
             torch.save(state_dict, str(final_checkpoint / "pytorch_model.pt"))
+            del state_dict
+            gc.collect()
         elif save_format not in {"pt", "safetensors"}:
             raise ValueError(f"Unsupported save_format `{save_format}`. Expected `pt` or `safetensors`.")
 
@@ -1163,14 +1277,19 @@ class VLATrainer(TrainerUtils):
 
     def _save_lightweight_directory_checkpoint(self, checkpoint_path: Path, save_format: str):
         checkpoint_path.mkdir(parents=True, exist_ok=True)
-        self.accelerator.save_model(
-            self.model,
-            str(checkpoint_path),
-            max_shard_size=self.checkpoint_max_shard_size,
-            safe_serialization=(save_format == "safetensors"),
-        )
-        torch.save(self.optimizer.state_dict(), checkpoint_path / "optimizer.pt")
-        torch.save(self.lr_scheduler.state_dict(), checkpoint_path / "scheduler.pt")
+        bare_model = self.accelerator.unwrap_model(self.model)
+        _streaming_save_model_shards(bare_model, checkpoint_path, save_format, self.checkpoint_max_shard_size)
+        gc.collect()
+        optimizer_state = self.optimizer.state_dict()
+        torch.save(optimizer_state, checkpoint_path / "optimizer.pt")
+        del optimizer_state
+        gc.collect()
+
+        scheduler_state = self.lr_scheduler.state_dict()
+        torch.save(scheduler_state, checkpoint_path / "scheduler.pt")
+        del scheduler_state
+        gc.collect()
+
         trainer_state = {
             "completed_steps": self.completed_steps,
             "save_format": save_format,
@@ -1178,6 +1297,8 @@ class VLATrainer(TrainerUtils):
         }
         with open(checkpoint_path / "trainer_state.json", "w", encoding="utf-8") as f:
             json.dump(trainer_state, f, ensure_ascii=False, indent=2)
+        del trainer_state
+        gc.collect()
 
     def _sync_accessed_config_snapshots(self):
         if not isinstance(self.config, AccessTrackedConfig):

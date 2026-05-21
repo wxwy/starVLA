@@ -40,6 +40,8 @@ gradient_accumulation_steps=2
 save_checkpoint_as_directory=True
 save_with_training_state=False
 checkpoint_max_shard_size=4GB
+save_format=safetensors
+num_workers=0
 # === End of environment variable configuration ===
 ###########################################################################################
 
@@ -75,10 +77,11 @@ accelerate launch \
   --datasets.vla_data.data_root_dir ${libero_data_root}\
   --datasets.vla_data.data_mix ${data_mix} \
   --datasets.vla_data.per_device_batch_size 16 \
+  --datasets.vla_data.num_workers ${num_workers} \
   --trainer.vla_data.video_backend torchvision_av \
   --trainer.freeze_modules ${freeze_module_list} \
   --trainer.max_train_steps 80000 \
-  --trainer.save_interval 250 \
+  --trainer.save_interval 500 \
   --trainer.logging_frequency 100 \
   --trainer.eval_interval 100 \
   --trainer.enable_local_checkpoint_staging ${enable_local_checkpoint_staging} \
@@ -87,6 +90,7 @@ accelerate launch \
   --trainer.save_checkpoint_as_directory ${save_checkpoint_as_directory} \
   --trainer.save_with_training_state ${save_with_training_state} \
   --trainer.checkpoint_max_shard_size ${checkpoint_max_shard_size} \
+  --trainer.save_format ${save_format} \
   --run_root_dir ${run_root_dir} \
   --run_id ${run_id} \
   --wandb_project starVLA_Libero \

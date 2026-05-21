@@ -53,3 +53,15 @@
 - 对齐 `local_checkpoint_keep_count` 的真实语义：该值表示“本地临时路径最多可占用的 checkpoint 配额数”
 - 后台同步完成后的本地保留数改为 `max(local_checkpoint_keep_count - 1, 0)`，与保存前空间预检逻辑一致
 - 因此当 `local_checkpoint_keep_count=1` 时，同步完成后本地应清空；当 `=2` 时，同步完成后本地保留 1 份最新 checkpoint
+- 定位到一次 checkpoint 保存报错 `DataLoader worker ... killed by signal: Killed` 的直接根因是 cgroup OOM：`accelerator.save_model()` 内部会在 CPU 侧克隆模型 state_dict，峰值期间 dataloader worker 被系统先杀掉
+- `starVLA/dataloader/__init__.py` 中 VLA dataloader 的 `num_workers` 改为可配置，默认回落到 `0`
+- `run_libero_train.sh` 显式传入 `--datasets.vla_data.num_workers 0`，优先降低 checkpoint 保存期的 CPU 内存压力
+- `run_libero_train.sh` 中 `save_interval` 从 `250` 调整为 `500`，降低 checkpoint 保存频率
+- `train_starvla.py` 中补充了轻量训练态加载/保存路径下的 `del + gc.collect()`：
+  - 加载后回收 `trainer_state`
+  - 单文件保存后回收 `state_dict`
+  - 轻量目录式保存后回收 `optimizer_state`、`scheduler_state`、`trainer_state`
+- 轻量目录式模型保存不再调用 `accelerator.save_model()`；改为按参数/缓冲区逐个搬到 CPU、按 shard 流式写盘并生成 index 文件
+- 目标是绕开 `accelerator.get_state_dict()` / `clone_tensors_for_torch_save()` 带来的整份模型 `state_dict` CPU 克隆峰值
+- `train_starvla.py` 中未显式配置时的默认 `save_format` 改为 `safetensors`
+- `run_libero_train.sh` 显式传入 `--trainer.save_format safetensors`，使轻量目录式默认产出 `model-xxxxx.safetensors` 与 `model.safetensors.index.json`

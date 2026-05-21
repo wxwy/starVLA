@@ -13,9 +13,13 @@ import numpy as np
 import torch
 import torch.distributed as dist
 from transformers import get_scheduler
-from accelerate.utils.modeling import load_checkpoint_in_model
 
 from accelerate.logging import get_logger
+from starVLA.model.framework.share_tools import (
+    _is_safetensors_path as _shared_is_safetensors_path,
+    _resolve_model_checkpoint_from_dir as _shared_resolve_model_checkpoint_from_dir,
+    load_model_weights as _shared_load_model_weights,
+)
 
 logger = get_logger(__name__)
 
@@ -248,7 +252,7 @@ class TrainerUtils:
         return num_params, num_trainable_params
 
     @staticmethod
-    def load_pretrained_backbones(model, checkpoint_path=None, reload_modules=None):
+    def load_pretrained_backbones(model, checkpoint_path=None, reload_modules=None, preferred_format=None):
         """
         load checkpoint:
         - if reload_modules is set, load by path part
@@ -260,14 +264,16 @@ class TrainerUtils:
         if not checkpoint_path:
             return []
         if os.path.isdir(checkpoint_path):
+            resolved_checkpoint = _resolve_model_checkpoint_from_dir(checkpoint_path, preferred_format=preferred_format)
+            if resolved_checkpoint is None:
+                raise RuntimeError(f"❌ unsupported checkpoint directory format: {checkpoint_path}")
             if reload_modules:
-                resolved_checkpoint_path = _get_model_checkpoint_file_from_dir(checkpoint_path)
-                if resolved_checkpoint_path is None:
-                    raise RuntimeError(f"❌ unsupported checkpoint directory format: {checkpoint_path}")
-                checkpoint_path = resolved_checkpoint_path
+                if resolved_checkpoint["kind"] != "single_file":
+                    raise RuntimeError(f"❌ partial module reload does not support sharded checkpoint directory: {checkpoint_path}")
+                checkpoint_path = resolved_checkpoint["path"]
             else:
                 try:
-                    load_checkpoint_in_model(model, checkpoint_path, device_map=None, offload_state_dict=True, strict=False)
+                    _shared_load_model_weights(model, checkpoint_path, preferred_format=preferred_format, strict=False)
                     if (not dist.is_initialized()) or dist.get_rank() == 0:
                         print("✅ loaded <full_model> model parameters")
                     gc.collect()
@@ -568,29 +574,25 @@ def is_main_process():
 
 def _is_safetensors_path(path):
     """Check if a path refers to a safetensors file."""
-    return str(path).endswith(".safetensors")
+    return _shared_is_safetensors_path(path)
 
 
-def _get_model_checkpoint_file_from_dir(path):
+def _resolve_model_checkpoint_from_dir(path, preferred_format=None):
+    """Resolve checkpoint artifacts through the shared framework loader helper."""
+    return _shared_resolve_model_checkpoint_from_dir(path, preferred_format=preferred_format)
+
+
+def _get_model_checkpoint_file_from_dir(path, preferred_format=None):
     """Resolve the model weight file from a lightweight checkpoint directory."""
-    if not os.path.isdir(path):
+    resolved = _resolve_model_checkpoint_from_dir(path, preferred_format=preferred_format)
+    if resolved is None or resolved["kind"] != "single_file":
         return None
-
-    candidate_names = ("pytorch_model.pt", "model.safetensors", "pytorch_model.bin")
-    for candidate_name in candidate_names:
-        candidate_path = os.path.join(path, candidate_name)
-        if os.path.isfile(candidate_path):
-            return candidate_path
-    return None
+    return resolved["path"]
 
 
 def _is_complete_model_checkpoint_dir(path):
     """Check whether a lightweight model checkpoint directory contains model weights or a shard index."""
-    if _get_model_checkpoint_file_from_dir(path) is not None:
-        return True
-
-    index_names = ("model.safetensors.index.json", "pytorch_model.bin.index.json")
-    return any(os.path.isfile(os.path.join(path, index_name)) for index_name in index_names)
+    return _resolve_model_checkpoint_from_dir(path) is not None
 
 
 def _is_complete_lightweight_training_checkpoint_dir(path):

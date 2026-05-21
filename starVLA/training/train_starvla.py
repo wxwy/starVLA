@@ -780,10 +780,18 @@ class VLATrainer(TrainerUtils):
                 ):
                     self.resume_requires_lightweight_state = True
                     self.model = self.load_pretrained_backbones(
-                        self.model, self.resume_from_checkpoint, reload_modules=None
+                        self.model,
+                        self.resume_from_checkpoint,
+                        reload_modules=None,
+                        preferred_format=getattr(self.config.trainer, "save_format", "safetensors"),
                     )
                 else:
-                    self.model = self.load_pretrained_backbones(self.model, self.resume_from_checkpoint, reload_modules=None)
+                    self.model = self.load_pretrained_backbones(
+                        self.model,
+                        self.resume_from_checkpoint,
+                        reload_modules=None,
+                        preferred_format=getattr(self.config.trainer, "save_format", "safetensors"),
+                    )
                 logger.info(
                     f"Resuming training from checkpoint: {self.resume_from_checkpoint}, steps: {self.completed_steps}"
                 )
@@ -794,7 +802,12 @@ class VLATrainer(TrainerUtils):
 
         if pretrained_checkpoint:
             reload_modules = getattr(self.config.trainer, "reload_modules", None)
-            self.model = self.load_pretrained_backbones(self.model, pretrained_checkpoint, reload_modules=reload_modules)
+            self.model = self.load_pretrained_backbones(
+                self.model,
+                pretrained_checkpoint,
+                reload_modules=reload_modules,
+                preferred_format=getattr(self.config.trainer, "save_format", "safetensors"),
+            )
             self.completed_steps = 0
             self.resume_from_checkpoint = pretrained_checkpoint
             logger.info(f"Loaded pretrained checkpoint: {pretrained_checkpoint}, steps: {self.completed_steps}")

@@ -7,6 +7,7 @@ Shared configuration / utility helpers for framework components:
 """
 
 import functools
+import gc
 import inspect
 import json
 import os
@@ -15,11 +16,162 @@ from types import SimpleNamespace
 from typing import Any
 
 from omegaconf import OmegaConf
+import torch
+from accelerate.utils.modeling import load_checkpoint_in_model
 
 from starVLA.training.trainer_utils import initialize_overwatch
 
 # Initialize Overwatch =>> Wraps `logging.Logger`
 overwatch = initialize_overwatch(__name__)
+
+
+def _resolve_inference_checkpoint_path(pretrained_checkpoint):
+    checkpoint_path = Path(pretrained_checkpoint)
+
+    if checkpoint_path.is_file():
+        return checkpoint_path, checkpoint_path.parents[1]
+
+    if checkpoint_path.is_dir():
+        safetensors_index = checkpoint_path / "model.safetensors.index.json"
+        bin_index = checkpoint_path / "pytorch_model.bin.index.json"
+        single_file_candidates = (
+            checkpoint_path / "model.safetensors",
+            checkpoint_path / "pytorch_model.bin",
+            checkpoint_path / "pytorch_model.pt",
+        )
+
+        if safetensors_index.exists():
+            return checkpoint_path, checkpoint_path.parents[1]
+        if bin_index.exists():
+            return checkpoint_path, checkpoint_path.parents[1]
+        for candidate in single_file_candidates:
+            if candidate.exists():
+                return candidate, checkpoint_path.parents[1]
+
+    overwatch.error(f"❌ Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
+    raise FileNotFoundError(f"Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
+
+
+def _resolve_inference_run_files(pretrained_checkpoint):
+    checkpoint_pt, run_dir = _resolve_inference_checkpoint_path(pretrained_checkpoint)
+
+    search_dirs = []
+    if checkpoint_pt.is_dir():
+        search_dirs.append(checkpoint_pt)
+    search_dirs.append(run_dir)
+
+    for candidate_dir in search_dirs:
+        config_yaml = candidate_dir / "config.yaml"
+        dataset_statistics_json = candidate_dir / "dataset_statistics.json"
+        if config_yaml.exists() and dataset_statistics_json.exists():
+            return checkpoint_pt, candidate_dir, config_yaml, dataset_statistics_json
+
+    raise FileNotFoundError(
+        f"Missing `config.yaml` or `dataset_statistics.json` for checkpoint `{pretrained_checkpoint}`. "
+        f"Searched in: {[str(path) for path in search_dirs]}"
+    )
+
+
+def _is_safetensors_path(path) -> bool:
+    return str(path).endswith(".safetensors")
+
+
+def _resolve_model_checkpoint_from_dir(path, preferred_format=None):
+    checkpoint_path = Path(path)
+    if not checkpoint_path.is_dir():
+        return None
+
+    def single_file_candidates(fmt):
+        if fmt == "safetensors":
+            return ("model.safetensors",)
+        if fmt == "pt":
+            return ("pytorch_model.bin", "pytorch_model.pt")
+        return ()
+
+    def index_file_candidate(fmt):
+        if fmt == "safetensors":
+            return "model.safetensors.index.json"
+        if fmt == "pt":
+            return "pytorch_model.bin.index.json"
+        return None
+
+    def has_complete_index(index_path: Path):
+        if not index_path.is_file():
+            return False
+        try:
+            with open(index_path, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+            weight_map = payload.get("weight_map", {})
+            if not weight_map:
+                return False
+            shard_names = set(weight_map.values())
+            return all((checkpoint_path / shard_name).is_file() for shard_name in shard_names)
+        except Exception:
+            return False
+
+    formats = []
+    if preferred_format in {"pt", "safetensors"}:
+        formats.append(preferred_format)
+    for fallback_format in ("safetensors", "pt"):
+        if fallback_format not in formats:
+            formats.append(fallback_format)
+
+    for fmt in formats:
+        for candidate_name in single_file_candidates(fmt):
+            candidate_path = checkpoint_path / candidate_name
+            if candidate_path.is_file():
+                return {"path": candidate_path, "format": fmt, "kind": "single_file"}
+
+        index_name = index_file_candidate(fmt)
+        if index_name is not None and has_complete_index(checkpoint_path / index_name):
+            return {"path": checkpoint_path, "format": fmt, "kind": "sharded_dir"}
+
+    return None
+
+
+def _resolve_model_checkpoint_artifact(pretrained_checkpoint, preferred_format=None):
+    checkpoint_path = Path(pretrained_checkpoint)
+    if checkpoint_path.is_dir():
+        resolved = _resolve_model_checkpoint_from_dir(checkpoint_path, preferred_format=preferred_format)
+        if resolved is None:
+            overwatch.error(f"❌ unsupported checkpoint directory format: {pretrained_checkpoint}")
+            raise FileNotFoundError(f"Unsupported checkpoint directory format: {pretrained_checkpoint}")
+        return resolved
+
+    if checkpoint_path.is_file():
+        fmt = "safetensors" if _is_safetensors_path(checkpoint_path) else "pt"
+        return {"path": checkpoint_path, "format": fmt, "kind": "single_file"}
+
+    overwatch.error(f"❌ Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
+    raise FileNotFoundError(f"Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
+
+
+def load_model_weights(model, pretrained_checkpoint, preferred_format=None, strict=False):
+    resolved = _resolve_model_checkpoint_artifact(pretrained_checkpoint, preferred_format=preferred_format)
+    checkpoint_path = resolved["path"]
+
+    if resolved["kind"] == "sharded_dir":
+        load_checkpoint_in_model(model, str(checkpoint_path), device_map=None, offload_state_dict=True, strict=strict)
+        gc.collect()
+        return model
+
+    if _is_safetensors_path(checkpoint_path):
+        from safetensors.torch import load_file
+
+        checkpoint = load_file(str(checkpoint_path))
+    else:
+        checkpoint = torch.load(
+            checkpoint_path,
+            map_location="cpu",
+            weights_only=True,
+            mmap=True,
+        )
+    try:
+        model.load_state_dict(checkpoint, strict=strict)
+    finally:
+        del checkpoint
+        gc.collect()
+    return model
 
 
 class NamespaceWithGet(SimpleNamespace):
@@ -317,40 +469,31 @@ def read_model_config(pretrained_checkpoint):
         FileNotFoundError: If checkpoint or required JSON files are missing.
         AssertionError: If file suffix or structure invalid.
     """
-    if os.path.isfile(pretrained_checkpoint):
-        overwatch.info(f"Loading from local checkpoint path `{(checkpoint_pt := Path(pretrained_checkpoint))}`")
+    checkpoint_pt, run_dir, _, dataset_statistics_json = _resolve_inference_run_files(pretrained_checkpoint)
+    overwatch.info(f"Loading from local checkpoint path `{checkpoint_pt}`")
 
-        # [Validate] Checkpoint Path should look like
-        # `.../<RUN_ID>/checkpoints/<CHECKPOINT_PATH>.pt|.safetensors`
-        assert checkpoint_pt.suffix in {".pt", ".safetensors"}
-        run_dir = checkpoint_pt.parents[1]
+    # Get paths for `config.json`, `dataset_statistics.json` and pretrained checkpoint
+    config_json = run_dir / "config.json"
+    assert config_json.exists(), f"Missing `config.json` for `{run_dir = }`"
 
-        # Get paths for `config.json`, `dataset_statistics.json` and pretrained checkpoint
-        config_json, dataset_statistics_json = run_dir / "config.json", run_dir / "dataset_statistics.json"
-        assert config_json.exists(), f"Missing `config.json` for `{run_dir = }`"
-        assert dataset_statistics_json.exists(), f"Missing `dataset_statistics.json` for `{run_dir = }`"
+    # Otherwise =>> try looking for a match on `model_id_or_path` on the HF Hub (`model_id_or_path`)
+    # Load VLA Config (and corresponding base VLM `ModelConfig`) from `config.json`
+    with open(config_json, "r") as f:
+        global_cfg = json.load(f)
 
-        # Otherwise =>> try looking for a match on `model_id_or_path` on the HF Hub (`model_id_or_path`)
-        # Load VLA Config (and corresponding base VLM `ModelConfig`) from `config.json`
-        with open(config_json, "r") as f:
-            global_cfg = json.load(f)
+    # Normalise legacy / pre-v0.21 configs to current schema (idempotent;
+    # also ensures `past_action_window_size`, `action_horizon`,
+    # `future_action_window_size`, etc. are all present for downstream code).
+    try:
+        _oc = OmegaConf.create(global_cfg)
+        apply_config_compat(_oc)
+        global_cfg = OmegaConf.to_container(_oc, resolve=True)
+    except Exception as e:
+        overwatch.warning(f"apply_config_compat failed on `{config_json}`: {e}")
 
-        # Normalise legacy / pre-v0.21 configs to current schema (idempotent;
-        # also ensures `past_action_window_size`, `action_horizon`,
-        # `future_action_window_size`, etc. are all present for downstream code).
-        try:
-            _oc = OmegaConf.create(global_cfg)
-            apply_config_compat(_oc)
-            global_cfg = OmegaConf.to_container(_oc, resolve=True)
-        except Exception as e:
-            overwatch.warning(f"apply_config_compat failed on `{config_json}`: {e}")
-
-        # Load Dataset Statistics for Action Denormalization
-        with open(dataset_statistics_json, "r") as f:
-            norm_stats = json.load(f)
-    else:
-        overwatch.error(f"❌ Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
-        raise FileNotFoundError(f"Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
+    # Load Dataset Statistics for Action Denormalization
+    with open(dataset_statistics_json, "r") as f:
+        norm_stats = json.load(f)
     return global_cfg, norm_stats
 
 
@@ -366,36 +509,24 @@ def read_mode_config(pretrained_checkpoint):
             vla_cfg (dict)
             norm_stats (dict)
     """
-    if os.path.isfile(pretrained_checkpoint):
-        overwatch.info(f"Loading from local checkpoint path `{(checkpoint_pt := Path(pretrained_checkpoint))}`")
+    checkpoint_pt, run_dir, config_yaml, dataset_statistics_json = _resolve_inference_run_files(pretrained_checkpoint)
+    overwatch.info(f"Loading from local checkpoint path `{checkpoint_pt}`")
 
-        # [Validate] Checkpoint Path should look like
-        # `.../<RUN_ID>/checkpoints/<CHECKPOINT_PATH>.pt|.safetensors`
-        assert checkpoint_pt.suffix in {".pt", ".safetensors"}
-        run_dir = checkpoint_pt.parents[1]
+    # Get paths for `config.json`, `dataset_statistics.json` and pretrained checkpoint
+    # Otherwise =>> try looking for a match on `model_id_or_path` on the HF Hub (`model_id_or_path`)
+    # Load VLA Config (and corresponding base VLM `ModelConfig`) from `config.json`
+    try:
+        ocfg = OmegaConf.load(str(config_yaml))
+        # Normalise legacy / pre-v0.21 configs to current schema (idempotent).
+        apply_config_compat(ocfg)
+        global_cfg = OmegaConf.to_container(ocfg, resolve=True)
+    except Exception as e:
+        overwatch.error(f"❌ Failed to load YAML config `{config_yaml}`: {e}")
+        raise
 
-        # Get paths for `config.json`, `dataset_statistics.json` and pretrained checkpoint
-        config_yaml, dataset_statistics_json = run_dir / "config.yaml", run_dir / "dataset_statistics.json"
-        assert config_yaml.exists(), f"Missing `config.yaml` for `{run_dir = }`"
-        assert dataset_statistics_json.exists(), f"Missing `dataset_statistics.json` for `{run_dir = }`"
-
-        # Otherwise =>> try looking for a match on `model_id_or_path` on the HF Hub (`model_id_or_path`)
-        # Load VLA Config (and corresponding base VLM `ModelConfig`) from `config.json`
-        try:
-            ocfg = OmegaConf.load(str(config_yaml))
-            # Normalise legacy / pre-v0.21 configs to current schema (idempotent).
-            apply_config_compat(ocfg)
-            global_cfg = OmegaConf.to_container(ocfg, resolve=True)
-        except Exception as e:
-            overwatch.error(f"❌ Failed to load YAML config `{config_yaml}`: {e}")
-            raise
-
-        # Load Dataset Statistics for Action Denormalization
-        with open(dataset_statistics_json, "r") as f:
-            norm_stats = json.load(f)
-    else:
-        overwatch.error(f"❌ Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
-        raise FileNotFoundError(f"Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
+    # Load Dataset Statistics for Action Denormalization
+    with open(dataset_statistics_json, "r") as f:
+        norm_stats = json.load(f)
     return global_cfg, norm_stats
 
 

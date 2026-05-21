@@ -65,3 +65,14 @@
 - 目标是绕开 `accelerator.get_state_dict()` / `clone_tensors_for_torch_save()` 带来的整份模型 `state_dict` CPU 克隆峰值
 - `train_starvla.py` 中未显式配置时的默认 `save_format` 改为 `safetensors`
 - `run_libero_train.sh` 显式传入 `--trainer.save_format safetensors`，使轻量目录式默认产出 `model-xxxxx.safetensors` 与 `model.safetensors.index.json`
+- 目录 checkpoint 读取逻辑改为“优先按 `preferred_format` 探测，缺失时再回退到其他格式”
+- 对分片 index 会校验其 `weight_map` 中引用的 shard 文件是否真实存在，避免因为目录中残留了另一种格式的 index 文件而误读
+- 训练侧 `TrainerUtils.load_pretrained_backbones()` 与推理侧 `baseframework.from_pretrained()` 现在统一调用 `share_tools.py` 中的共享模型权重加载入口
+- 共享入口负责：
+  - 单文件 / 目录式 / 分片目录 checkpoint 解析
+  - 指定格式优先、缺失回退
+  - 分片目录加载与单文件加载
+- `examples/LIBERO/eval_files/eval_libero.sh` 已改为当前仓库相对路径启动，不再硬编码作者机器路径
+- `eval_libero.sh` 默认 `CKPT` 对齐到 `playground/trained_model/.../steps_23000`
+- `eval_libero.sh` 对结果目录的推导同时兼容旧的 `/checkpoints/steps_xxx` 路径和新的 `trained_model/.../steps_xxx` 路径
+- `eval_libero.sh` 本身不直接加载模型权重；真正的 checkpoint 解析和权重加载仍由 `run_policy_server.sh` 启动的 policy server 负责

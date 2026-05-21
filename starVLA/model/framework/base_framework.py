@@ -15,7 +15,11 @@ import numpy as np
 import torch
 from transformers import PretrainedConfig, PreTrainedModel
 
-from starVLA.model.framework.share_tools import dict_to_namespace, read_mode_config
+from starVLA.model.framework.share_tools import (
+    dict_to_namespace,
+    read_mode_config,
+    load_model_weights,
+)
 from starVLA.model.tools import FRAMEWORK_REGISTRY, FrameworkTools, auto_get_trainable_modules
 from starVLA.training.trainer_utils import initialize_overwatch
 
@@ -229,7 +233,6 @@ class baseframework(PreTrainedModel):
             RuntimeError: If state_dict key mismatch occurs under strict=True.
             FileNotFoundError: If underlying files are missing (surfaced earlier).
         """
-        pretrained_checkpoint = Path(pretrained_checkpoint)
         model_config, norm_stats = read_mode_config(pretrained_checkpoint)  # read config and norm_stats
 
         config = dict_to_namespace(model_config)
@@ -239,31 +242,13 @@ class baseframework(PreTrainedModel):
         FrameworkModel = build_framework(cfg=model_config)
         # set for action un-norm
         FrameworkModel.norm_stats = norm_stats
-        # Load from Checkpoint (Custom --> should load both *projector* and *llm* weights)
-        if pretrained_checkpoint.suffix == ".safetensors":
-            from safetensors.torch import load_file
-
-            model_state_dict = load_file(str(pretrained_checkpoint))
-        else:
-            model_state_dict = torch.load(pretrained_checkpoint, map_location="cpu")
-        # logger.info(f"Loading model weights from `{pretrained_checkpoint}`")
-        model_keys = set(FrameworkModel.state_dict().keys())
-        checkpoint_keys = set(model_state_dict.keys())
+        # Load from checkpoint through the shared loader used by training.
         try:
-            FrameworkModel.load_state_dict(model_state_dict, strict=True)
+            load_model_weights(FrameworkModel, pretrained_checkpoint, strict=True)
         except RuntimeError as e:
-            # must keep all keys matched
-            common_keys = model_keys.intersection(checkpoint_keys)
-            missing_keys = model_keys - common_keys
-            unexpected_keys = checkpoint_keys - common_keys
-            if missing_keys:
-                logger.warning(f"Missing keys in state_dict: {missing_keys}")
-            if unexpected_keys:
-                logger.warning(f"Unexpected keys in state_dict: {unexpected_keys}")
-
-            raise e
+            logger.warning(f"Strict checkpoint load failed for `{pretrained_checkpoint}`: {e}")
+            raise
 
         # **ensure model is on GPU**
         FrameworkModel = FrameworkModel
         return FrameworkModel
-

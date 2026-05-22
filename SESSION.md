@@ -99,3 +99,13 @@
 - 训练循环已改为仅在 `accelerator.sync_gradients=True` 的真实 optimizer update 步执行 eval、日志和 checkpoint 保存，避免同一个 step 重复保存
 - `examples/LIBERO/train_files/starvla_cotrain_libero.yaml` 中显式添加 `datasets.vla_data.num_workers: 8`
 - `run_libero_train.sh` 默认 `num_workers` 同步调整为 `8`，CLI override 仍会传入 `--datasets.vla_data.num_workers`
+- W&B 初始化改为使用稳定 run id：默认由 `run_id` 归一化得到 `wandb.init(id=..., resume="allow")`
+- 后续同一 `run_id` 的训练重启会续写同一个 W&B run，避免每次重启在网站上生成新的碎片 run
+- 已确认当前本地历史 W&B run 目录有 30 个；历史碎片不会因代码修改自动合并，若需要网站全局视图，需单独解析历史日志并上传为一个新 W&B run
+- 已将历史碎片 W&B 日志解析去重后上传为 clean 合并 run：`1229_libero4in1_qwen3oft_merged_history_clean`
+- 合并 run 包含原始记录 466 条，去重后 264 个 step，范围 `100..43200`
+- 本地导出文件：`playground/Checkpoints/1229_libero4in1_qwen3oft/wandb_merged_history_clean.csv` 与 `.jsonl`
+- 定位到 `Attempt ... Cannot allocate memory` 的直接失败点在 DataLoader worker 内部 PyAV / `torchvision.io.VideoReader` 打开视频 codec context
+- 当前 2 卡配置下 `num_workers=8` 等价于 16 个 worker，PyTorch 默认 `prefetch_factor=2` 会放大到最多 32 个预取 batch，视频解码并发过高
+- `starVLA/dataloader/__init__.py` 增加 `datasets.vla_data.prefetch_factor` 配置透传
+- LIBERO 启动脚本与 yaml 默认调整为 `num_workers=5`、`prefetch_factor=2`，2 卡并发预取峰值为 10 个 worker / 20 个 batch

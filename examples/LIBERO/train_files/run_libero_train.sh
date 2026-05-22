@@ -42,7 +42,8 @@ save_checkpoint_as_directory=True
 save_with_training_state=False
 checkpoint_max_shard_size=4GB
 save_format=safetensors
-num_workers=8
+num_workers=5
+prefetch_factor=2
 # === End of environment variable configuration ===
 ###########################################################################################
 
@@ -74,6 +75,7 @@ accelerate launch \
   --datasets.vla_data.data_mix ${data_mix} \
   --datasets.vla_data.per_device_batch_size 8 \
   --datasets.vla_data.num_workers ${num_workers} \
+  --datasets.vla_data.prefetch_factor ${prefetch_factor} \
   --trainer.vla_data.video_backend torchvision_av \
   --trainer.freeze_modules ${freeze_module_list} \
   --trainer.max_train_steps 80000 \

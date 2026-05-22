@@ -109,3 +109,5 @@
 - 当前 2 卡配置下 `num_workers=8` 等价于 16 个 worker，PyTorch 默认 `prefetch_factor=2` 会放大到最多 32 个预取 batch，视频解码并发过高
 - `starVLA/dataloader/__init__.py` 增加 `datasets.vla_data.prefetch_factor` 配置透传
 - LIBERO 启动脚本与 yaml 默认调整为 `num_workers=5`、`prefetch_factor=2`，2 卡并发预取峰值为 10 个 worker / 20 个 batch
+- 推理侧 checkpoint 辅助文件解析增强：`_resolve_inference_run_files()` 现在按 checkpoint 目录、直接父目录、旧训练 run 目录，以及 symlink resolve 后的对应目录查找 `config.yaml` 和 `dataset_statistics.json`
+- 该逻辑兼容 `.../Checkpoints/run/checkpoints/steps_xxx` 与 `.../trained_model/name/steps_xxx` 两种布局

@@ -58,9 +58,30 @@ def _resolve_inference_run_files(pretrained_checkpoint):
     search_dirs = []
     if checkpoint_pt.is_dir():
         search_dirs.append(checkpoint_pt)
+    search_dirs.append(checkpoint_pt.parent)
     search_dirs.append(run_dir)
 
+    try:
+        resolved_checkpoint_pt = checkpoint_pt.resolve()
+        if resolved_checkpoint_pt.is_dir():
+            search_dirs.append(resolved_checkpoint_pt)
+        search_dirs.append(resolved_checkpoint_pt.parent)
+        if len(resolved_checkpoint_pt.parents) > 1:
+            search_dirs.append(resolved_checkpoint_pt.parents[1])
+    except Exception:
+        pass
+
+    deduped_search_dirs = []
+    seen = set()
     for candidate_dir in search_dirs:
+        candidate_dir = Path(candidate_dir)
+        key = str(candidate_dir)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped_search_dirs.append(candidate_dir)
+
+    for candidate_dir in deduped_search_dirs:
         config_yaml = candidate_dir / "config.yaml"
         dataset_statistics_json = candidate_dir / "dataset_statistics.json"
         if config_yaml.exists() and dataset_statistics_json.exists():
@@ -68,7 +89,7 @@ def _resolve_inference_run_files(pretrained_checkpoint):
 
     raise FileNotFoundError(
         f"Missing `config.yaml` or `dataset_statistics.json` for checkpoint `{pretrained_checkpoint}`. "
-        f"Searched in: {[str(path) for path in search_dirs]}"
+        f"Searched in: {[str(path) for path in deduped_search_dirs]}"
     )
 
 

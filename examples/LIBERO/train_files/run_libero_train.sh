@@ -42,7 +42,7 @@ save_checkpoint_as_directory=True
 save_with_training_state=False
 checkpoint_max_shard_size=4GB
 save_format=safetensors
-num_workers=5
+num_workers=4
 prefetch_factor=2
 # === End of environment variable configuration ===
 ###########################################################################################

@@ -39,7 +39,7 @@ datasets:
     sequential_step_sampling: False
     CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."
     per_device_batch_size: 16
-    num_workers: 5
+    num_workers: 4
     prefetch_factor: 2
     load_all_data_for_training: true
     video_backend: torchvision_av

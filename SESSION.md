@@ -91,3 +91,11 @@
 - 轻量训练态恢复只在 `optimizer_format=rank_sharded` 且保存时 `optimizer_world_size` 与当前一致时恢复 optimizer
 - 旧版单文件 `optimizer.pt` 只在当前 `world_size=1` 时恢复；多卡场景下会跳过 optimizer 状态，继续恢复模型、scheduler 与 step，避免伪造 rank 分片造成错误恢复
 - 现有 `steps_26000/optimizer.pt` 曾在本地临时路径和网络 checkpoint 路径下复制出 2 份 rank 文件，但由于 `trainer_state.json` 未声明 `rank_sharded`，当前加载逻辑不会把这些文件当作可靠 ZeRO2 optimizer 分片
+- 2 卡 ZeRO2 + `gradient_accumulation_steps=2` 下，`accelerator.accumulate()` 默认会在非同步步进入 DeepSpeed `no_sync()`，触发 `no_sync context manager is incompatible with gradient partitioning logic of ZeRO stage 2`
+- `Accelerator` 初始化改为显式使用 `GradientAccumulationPlugin(sync_each_batch=True)`，并从 `ACCELERATE_GRADIENT_ACCUMULATION_STEPS` 读取累积步数；保留累积步数语义，同时避免 ZeRO2 下进入 `no_sync`
+- 发现网络 checkpoint 目录几乎每个 step 都留下 `steps_xxx.stale_*`，原因是后台同步在目标目录已存在时永久保留旧目录
+- 后台同步逻辑改为：源目录与目标目录文件名/大小一致时直接跳过；确需替换时只在替换期间临时保留旧目录，替换成功后删除该临时旧目录，避免后续继续堆积 `.stale_*`
+- 继续定位 `.stale_*` 大量产生的直接触发点：gradient accumulation 下非同步 micro-batch 不会递增 `completed_steps`，但原训练循环仍会执行 eval/log/save，导致同一个 `steps_xxx` 在下一次 micro-batch 被再次保存和同步
+- 训练循环已改为仅在 `accelerator.sync_gradients=True` 的真实 optimizer update 步执行 eval、日志和 checkpoint 保存，避免同一个 step 重复保存
+- `examples/LIBERO/train_files/starvla_cotrain_libero.yaml` 中显式添加 `datasets.vla_data.num_workers: 8`
+- `run_libero_train.sh` 默认 `num_workers` 同步调整为 `8`，CLI override 仍会传入 `--datasets.vla_data.num_workers`

@@ -33,7 +33,16 @@ import wandb
 from accelerate import Accelerator, DeepSpeedPlugin
 from accelerate.checkpointing import load_accelerator_state, load_custom_state
 from accelerate.logging import get_logger
-from accelerate.utils import DeepSpeedSchedulerWrapper, DistributedType, MODEL_NAME, RNG_STATE_NAME, SAMPLER_NAME, SCALER_NAME, SCHEDULER_NAME
+from accelerate.utils import (
+    DeepSpeedSchedulerWrapper,
+    DistributedType,
+    GradientAccumulationPlugin,
+    MODEL_NAME,
+    RNG_STATE_NAME,
+    SAMPLER_NAME,
+    SCALER_NAME,
+    SCHEDULER_NAME,
+)
 from accelerate.utils import set_seed
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
@@ -55,7 +64,14 @@ from starVLA.training.trainer_utils.trainer_tools import (
 )
 
 deepspeed_plugin = DeepSpeedPlugin()
-accelerator = Accelerator(deepspeed_plugin=deepspeed_plugin)
+gradient_accumulation_plugin = GradientAccumulationPlugin(
+    num_steps=int(os.environ.get("ACCELERATE_GRADIENT_ACCUMULATION_STEPS", "1")),
+    sync_each_batch=True,
+)
+accelerator = Accelerator(
+    deepspeed_plugin=deepspeed_plugin,
+    gradient_accumulation_plugin=gradient_accumulation_plugin,
+)
 accelerator.print(accelerator.state)
 
 STARTUP_CHECKPOINT_STAGE_THREAD = None
@@ -347,6 +363,20 @@ def process_task(task):
     marker = Path(task["marker"]) if task.get("marker") else None
     keep_local_count = max(int(task.get("keep_local_count", 1)), 0)
 
+    def file_signature(path):
+        if not path.exists():
+            return None
+        if path.is_file():
+            return {path.name: path.stat().st_size}
+        signature = {}
+        for file_path in path.rglob("*"):
+            if file_path.is_file():
+                signature[str(file_path.relative_to(path))] = file_path.stat().st_size
+        return signature
+
+    def paths_match(src_path, dst_path):
+        return file_signature(src_path) == file_signature(dst_path)
+
     def prune_local_versions(current_src):
         retained_after_sync = max(keep_local_count - 1, 0)
         checkpoint_dir = current_src.parent
@@ -371,6 +401,22 @@ def process_task(task):
             marker.unlink(missing_ok=True)
         return
 
+    def cleanup_after_sync():
+        if cleanup_src and src.exists():
+            if src.is_dir():
+                shutil.rmtree(src, ignore_errors=True)
+            else:
+                src.unlink(missing_ok=True)
+        elif src.exists() and src.is_dir():
+            prune_local_versions(src)
+
+        if marker is not None:
+            marker.unlink(missing_ok=True)
+
+    if dst.exists() and paths_match(src, dst):
+        cleanup_after_sync()
+        return
+
     tmp = dst.parent / f".{dst.name}.sync_tmp_{int(time.time() * 1e9)}"
     if src.is_dir():
         shutil.copytree(src, tmp, dirs_exist_ok=True)
@@ -378,22 +424,19 @@ def process_task(task):
         tmp.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, tmp)
 
+    stale = None
     if dst.exists():
         stale = dst.parent / f"{dst.name}.stale_{int(time.time())}"
         dst.rename(stale)
 
     tmp.rename(dst)
-
-    if cleanup_src and src.exists():
-        if src.is_dir():
-            shutil.rmtree(src, ignore_errors=True)
+    if stale is not None and stale.exists():
+        if stale.is_dir():
+            shutil.rmtree(stale, ignore_errors=True)
         else:
-            src.unlink(missing_ok=True)
-    elif src.exists() and src.is_dir():
-        prune_local_versions(src)
+            stale.unlink(missing_ok=True)
 
-    if marker is not None:
-        marker.unlink(missing_ok=True)
+    cleanup_after_sync()
 
 def lock_is_stale():
     pid_file = lock_dir / "pid"
@@ -1097,14 +1140,19 @@ class VLATrainer(TrainerUtils):
                     }
                 )
 
-            if self.completed_steps % self.config.trainer.eval_interval == 0:
+            if self.accelerator.sync_gradients and self.completed_steps % self.config.trainer.eval_interval == 0:
                 step_metrics = self.eval_action_model(step_metrics)
 
             step_metrics["timing/data"] = t_end_data - t_start_data
             step_metrics["timing/model"] = t_end_model - t_start_model
-            self._log_metrics(step_metrics)
+            if self.accelerator.sync_gradients:
+                self._log_metrics(step_metrics)
 
-            if self.completed_steps % self.config.trainer.save_interval == 0 and self.completed_steps > 0:
+            if (
+                self.accelerator.sync_gradients
+                and self.completed_steps % self.config.trainer.save_interval == 0
+                and self.completed_steps > 0
+            ):
                 self._save_checkpoint()
 
             if self.completed_steps >= self.config.trainer.max_train_steps:

@@ -234,6 +234,7 @@ DiT-B 结构
 | 最终保留 checkpoint | `1000/2000/5000/10000/15000/20000/40000/70000/80000` |
 
 ![alt text](wandb.png)
+
 ## 训练过程
 
 ### 阶段 1：第一轮训练（5.17 20:35 — 5.18 02:05）
@@ -462,7 +463,7 @@ Resume 后 LR scheduler 通过 `_adjust_lr_scheduler_for_resume()` 追赶 3000 �
 | `steps_80000` | D | 轻量目录式分片目录 | `357/500` | `71.4%` | overall 次优，但部分长尾任务更强 |
 
 部分测评结果视频：
-[![视频演示](图片封面链接)](https://b23.tv/m3N8Rjk)
+<iframe src="//player.bilibili.com/player.html?isOutside=true&aid=116633897081850&bvid=BV1FJGx6zEyi&cid=38598477232&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
 
 ### 关键结论
 

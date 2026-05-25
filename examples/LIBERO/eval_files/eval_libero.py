@@ -8,8 +8,23 @@ import time
 
 import imageio
 import numpy as np
+import torch
 import tqdm
 import tyro
+
+
+_ORIG_TORCH_LOAD = torch.load
+
+
+def _torch_load_compat(*args, **kwargs):
+    # LIBERO init_states are trusted pickle files rather than pure model weights.
+    if "weights_only" not in kwargs:
+        kwargs["weights_only"] = False
+    return _ORIG_TORCH_LOAD(*args, **kwargs)
+
+
+torch.load = _torch_load_compat
+
 from libero.libero import benchmark, get_libero_path
 from libero.libero.envs import OffScreenRenderEnv
 

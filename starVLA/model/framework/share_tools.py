@@ -11,6 +11,7 @@ import gc
 import inspect
 import json
 import os
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -29,9 +30,15 @@ def _resolve_inference_checkpoint_path(pretrained_checkpoint):
     checkpoint_path = Path(pretrained_checkpoint)
 
     if checkpoint_path.is_file():
+        if checkpoint_path.name.endswith("_model_states.pt") and checkpoint_path.parent.name == "pytorch_model":
+            return checkpoint_path, checkpoint_path.parents[3]
         return checkpoint_path, checkpoint_path.parents[1]
 
     if checkpoint_path.is_dir():
+        deepspeed_model_state = _resolve_deepspeed_model_state_file(checkpoint_path)
+        if deepspeed_model_state is not None:
+            return deepspeed_model_state, checkpoint_path.parents[1]
+
         safetensors_index = checkpoint_path / "model.safetensors.index.json"
         bin_index = checkpoint_path / "pytorch_model.bin.index.json"
         single_file_candidates = (
@@ -102,6 +109,10 @@ def _resolve_model_checkpoint_from_dir(path, preferred_format=None):
     if not checkpoint_path.is_dir():
         return None
 
+    deepspeed_model_state = _resolve_deepspeed_model_state_file(checkpoint_path)
+    if deepspeed_model_state is not None:
+        return {"path": deepspeed_model_state, "format": "pt", "kind": "deepspeed_model_states"}
+
     def single_file_candidates(fmt):
         if fmt == "safetensors":
             return ("model.safetensors",)
@@ -150,6 +161,49 @@ def _resolve_model_checkpoint_from_dir(path, preferred_format=None):
     return None
 
 
+def _is_complete_deepspeed_checkpoint_dir(path) -> bool:
+    checkpoint_path = Path(path)
+    if not checkpoint_path.is_dir():
+        return False
+
+    latest_file = checkpoint_path / "latest"
+    if not latest_file.is_file():
+        return False
+
+    try:
+        deepspeed_tag = latest_file.read_text().strip() or "pytorch_model"
+    except Exception:
+        return False
+
+    tag_dir = checkpoint_path / deepspeed_tag
+    model_file = tag_dir / "mp_rank_00_model_states.pt"
+    optim_pattern = re.compile(r".*_optim_states\.pt$")
+    rng_pattern = re.compile(r"random_states_\d+\.pkl$")
+
+    if not model_file.is_file():
+        return False
+
+    try:
+        tag_entries = [entry.name for entry in tag_dir.iterdir()]
+        root_entries = [entry.name for entry in checkpoint_path.iterdir()]
+    except Exception:
+        return False
+
+    has_optim = any(optim_pattern.match(name) for name in tag_entries)
+    has_rng = any(rng_pattern.match(name) for name in root_entries)
+    return has_optim and has_rng
+
+
+def _resolve_deepspeed_model_state_file(checkpoint_dir: Path) -> Path | None:
+    if not _is_complete_deepspeed_checkpoint_dir(checkpoint_dir):
+        return None
+    tag = (checkpoint_dir / "latest").read_text().strip() or "pytorch_model"
+    model_state_path = checkpoint_dir / tag / "mp_rank_00_model_states.pt"
+    if model_state_path.is_file():
+        return model_state_path
+    return None
+
+
 def _resolve_model_checkpoint_artifact(pretrained_checkpoint, preferred_format=None):
     checkpoint_path = Path(pretrained_checkpoint)
     if checkpoint_path.is_dir():
@@ -160,6 +214,8 @@ def _resolve_model_checkpoint_artifact(pretrained_checkpoint, preferred_format=N
         return resolved
 
     if checkpoint_path.is_file():
+        if checkpoint_path.name.endswith("_model_states.pt") and checkpoint_path.parent.name == "pytorch_model":
+            return {"path": checkpoint_path, "format": "pt", "kind": "deepspeed_model_states"}
         fmt = "safetensors" if _is_safetensors_path(checkpoint_path) else "pt"
         return {"path": checkpoint_path, "format": fmt, "kind": "single_file"}
 
@@ -167,12 +223,78 @@ def _resolve_model_checkpoint_artifact(pretrained_checkpoint, preferred_format=N
     raise FileNotFoundError(f"Pretrained checkpoint `{pretrained_checkpoint}` does not exist.")
 
 
+def _collect_checkpoint_keys_from_index(checkpoint_dir: Path) -> set[str]:
+    index_candidates = (
+        checkpoint_dir / "model.safetensors.index.json",
+        checkpoint_dir / "pytorch_model.bin.index.json",
+    )
+    for index_path in index_candidates:
+        if not index_path.is_file():
+            continue
+        with open(index_path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        weight_map = payload.get("weight_map", {})
+        if weight_map:
+            return set(weight_map.keys())
+    return set()
+
+
+def _filter_strict_key_mismatches(model_keys: set[str], checkpoint_keys: set[str]) -> tuple[list[str], list[str]]:
+    missing_keys = set(model_keys - checkpoint_keys)
+    unexpected_keys = set(checkpoint_keys - model_keys)
+
+    # HF/Qwen-style safetensors checkpoints may omit tied lm_head weights and
+    # still keep non-persistent rotary caches in the serialized weight map.
+    for missing_key in list(missing_keys):
+        if not missing_key.endswith(".lm_head.weight"):
+            continue
+        embed_key = missing_key.replace(".lm_head.weight", ".model.language_model.embed_tokens.weight")
+        if embed_key in checkpoint_keys:
+            missing_keys.remove(missing_key)
+
+    unexpected_keys = {
+        key for key in unexpected_keys if not key.endswith(".rotary_emb.inv_freq") and not key.endswith(".rotary_pos_emb.inv_freq")
+    }
+
+    return sorted(missing_keys), sorted(unexpected_keys)
+
+
 def load_model_weights(model, pretrained_checkpoint, preferred_format=None, strict=False):
     resolved = _resolve_model_checkpoint_artifact(pretrained_checkpoint, preferred_format=preferred_format)
     checkpoint_path = resolved["path"]
 
+    if resolved["kind"] == "deepspeed_model_states":
+        checkpoint = torch.load(
+            checkpoint_path,
+            map_location="cpu",
+            weights_only=False,
+            mmap=True,
+        )
+        try:
+            if isinstance(checkpoint, dict) and "module" in checkpoint and isinstance(checkpoint["module"], dict):
+                checkpoint = checkpoint["module"]
+            model.load_state_dict(checkpoint, strict=strict)
+        finally:
+            del checkpoint
+            gc.collect()
+        return model
+
     if resolved["kind"] == "sharded_dir":
-        load_checkpoint_in_model(model, str(checkpoint_path), device_map=None, offload_state_dict=True, strict=strict)
+        if strict:
+            model_keys = set(model.state_dict().keys())
+            checkpoint_keys = _collect_checkpoint_keys_from_index(Path(checkpoint_path))
+            missing_keys, unexpected_keys = _filter_strict_key_mismatches(model_keys, checkpoint_keys)
+            if missing_keys or unexpected_keys:
+                raise RuntimeError(
+                    f"Error(s) in loading state_dict for {type(model).__name__}:\n\t"
+                    f"Missing key(s) in state_dict: {missing_keys}\n\t"
+                    f"Unexpected key(s) in state_dict: {unexpected_keys}"
+                )
+
+        # accelerate loads sharded checkpoints one shard at a time; using
+        # strict=True here would incorrectly treat parameters from later shards
+        # as missing during the current shard load.
+        load_checkpoint_in_model(model, str(checkpoint_path), device_map=None, offload_state_dict=True, strict=False)
         gc.collect()
         return model
 

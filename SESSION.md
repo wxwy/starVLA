@@ -1,5 +1,138 @@
 # Session Log
 
+## 2026-05-24 — LIBERO eval 适配 checkpoints 目录下单文件 pt
+
+- 确认早期 checkpoint 不是目录，而是直接位于 `playground/trained_model/starVLA_QwenGR00T_libero4in1_qwen3_dit/checkpoints/` 下的单文件：
+  - `steps_1000_pytorch_model.pt`
+  - `steps_2000_pytorch_model.pt`
+  - `steps_5000_pytorch_model.pt`
+  - `steps_10000_pytorch_model.pt`
+  - `steps_15000_pytorch_model.pt`
+- 已对 `examples/LIBERO/eval_files/run_policy_server.sh` 和 `examples/LIBERO/eval_files/eval_libero.sh` 做最小适配：
+  - 当未显式传入 `CKPT` 时，优先选择 `checkpoints/steps_<step>_pytorch_model.pt`
+  - 其次回退到旧式 DeepSpeed `checkpoints/steps_<step>/pytorch_model/mp_rank_00_model_states.pt`
+  - 最后再回退到 `checkpoints/steps_<step>` 目录
+- `eval_libero.sh` 同时补充了这类单文件 checkpoint 的结果目录命名逻辑，输出目录会稳定落到 `playground/eval_results/<task_suite>/steps_<step>`
+- 两个脚本都已通过 `bash -n` 语法检查
+
+## 2026-05-24 — LIBERO `libero_goal` 早期阶段评测结果补齐
+
+- 已基于 `playground/eval_results/libero_goal/steps_1000`、`steps_2000`、`steps_5000`、`steps_10000`、`steps_15000`、`steps_20000_pytorch_model_mp_rank_00_model_states.pt`、`starVLA_QwenGR00T_libero4in1_qwen3_dit_steps_40000` 目录中的 rollout 视频文件名，按 `success/failure` 统计各阶段整体和分任务成功率
+- 已将 `steps_2000`、`steps_5000`、`steps_10000`、`steps_15000` 的整体结果、分任务表格和阶段分析补入 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md`
+- 当前 `libero_goal` overall success rate 时间线：
+  - `steps_1000`: `0.0%`
+  - `steps_2000`: `1.0%`
+  - `steps_5000`: `4.4%`
+  - `steps_10000`: `33.4%`
+  - `steps_15000`: `36.4%`
+  - `steps_20000`: `46.0%`
+  - `steps_40000`: `36.8%`
+- 已在训练日志中补充阶段趋势总结：第一次明显跃迁出现在 `steps_10000`，当前已统计阶段 overall 最优 checkpoint 是 `steps_20000`
+
+## 2026-05-25 — LIBERO `libero_goal` 补测 `steps_70000/80000`
+
+- 已基于以下结果目录统计 `steps_70000/80000` 的整体和分任务成功率：
+  - `playground/eval_results/libero_goal/starVLA_QwenGR00T_libero4in1_qwen3_dit_checkpoints_steps_70000`
+  - `playground/eval_results/libero_goal/starVLA_QwenGR00T_libero4in1_qwen3_dit_checkpoints_steps_80000`
+- 统计结果：
+  - `steps_70000`: `370/500 = 74.0%`
+  - `steps_80000`: `357/500 = 71.4%`
+- 关键结论：
+  - `steps_70000` 是当前 `libero_goal` overall 最优 checkpoint
+  - `steps_80000` 虽然 overall 略低，但在 `open_the_middle_drawer_of_the_cabinet`、`put_the_cream_cheese_in_the_bowl`、`put_the_wine_bottle_on_the_rack` 等长尾任务上优于 `steps_70000`
+- 已将 `steps_70000`、`steps_80000` 的表格、分析，以及 `70000 vs 80000` 对比和更新后的阶段趋势总结补入 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md`
+
+## 2026-05-25 — 仿真评测记录按训练联动框架重构
+
+- 已重写 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md` 中的“仿真评测记录”部分，不再按 checkpoint 逐段叙述
+- 新结构改为：
+  - `评测设置`
+  - `训练阶段与恢复连续性`
+  - `Checkpoint 总览`
+  - `关键结论`
+  - `任务演化总表`
+  - `训练-测评联动分析`
+  - `任务类型分析`
+  - `Checkpoint 选择建议`
+  - `附录：各 checkpoint 详细结果`
+- 新框架已显式纳入：
+  - 单卡到 2 卡训练切换
+  - batch size / effective batch 变化
+  - warmup / cosine scheduler 区间
+  - 2 卡切换时 optimizer 丢失导致的恢复不连续风险
+  - `steps_40000/70000/80000` 的 `rank_sharded` optimizer 恢复稳定阶段
+- 当前仿真分析的核心判断已调整为：
+  - `steps_20000 -> steps_40000` 的变化不能只按 step 增长解释
+  - `steps_70000` 是 overall 最优 checkpoint
+  - `steps_80000` 是长尾任务对照 checkpoint
+
+## 2026-05-25 — 实验概况与训练过程更新到 `80000 step`
+
+- 已同步更新 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md` 中以下部分，使其与当前最终训练状态一致：
+  - `实验概况`
+  - `训练过程`
+  - `训练配置`
+  - `性能优化记录`
+  - `W&B Step-Epoch 曲线分析`
+  - `已知问题`
+- 主要修正：
+  - 将“当前步数 `19000 / 80000`”改为“训练完成步数 `80000 / 80000`”
+  - 将训练过程重写为单卡早期、单卡连续训练、2 卡切换、2 卡稳定训练四/五个阶段
+  - 显式写入“切到 2 卡时发生 optimizer 丢失 / 恢复不连续”
+  - 将训练配置中的 `save_interval` 更新为 `500`
+  - 将 `datasets.vla_data.per_device_batch_size` 更新为最终稳定阶段使用的 `8`
+  - 将单卡历史吞吐表标注为历史测算，避免与后期 2 卡阶段混淆
+
+## 2026-05-25 — 增补 LIBERO SOTA 对齐与不足分析
+
+- 已在 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md` 末尾新增 `对齐当前 LIBERO SOTA 与不足分析`
+- 内容包括：
+  - `LIBERO-Goal` 单套件与公开方法的可比性边界
+  - 与 `TraceVLA / OpenVLA / PixelVLA` 的目标成功率对齐
+  - 当前结果的主要不足：评测范围、长尾任务、训练协议可比性、鲁棒性评测缺失
+  - 下一步建议：补齐 `Spatial/Object/Long`、定向补长尾、固定训练协议、增加鲁棒性评测
+- 当前在日志中的结论：
+  - `steps_70000=74.0%` 已接近已发表强基线 `TraceVLA=75.1%`
+  - 但距离更前沿公开结果 `PixelVLA=85.8%` 仍有明显差距
+  - 目前还不能声称“对齐完整 LIBERO SOTA”
+
+## 2026-05-23 — LIBERO eval 环境缺包定位
+
+- `tmux` 会话 `sim` 当前稳定复现报错：`ModuleNotFoundError: No module named 'robosuite'`
+- 直接原因不是 `eval_libero.py` 路径错误，而是 `.libero` 虚拟环境只安装了 `libero` editable 包本体，没有安装 `LIBERO/requirements.txt` 中声明的运行依赖
+- 证据：
+  - `.libero` 中 `pip show libero` 显示 editable project 指向 `/gemini/code/starVLA/LIBERO`
+  - `LIBERO/setup.py` 中 `install_requires=[]`，因此 `pip install -e LIBERO` 不会自动带上依赖
+  - 当前 `.libero` 缺失的关键包包括：`robosuite`、`bddl`、`robomimic`、`hydra-core`、`easydict`、`transformers`、`opencv-python`、`einops`、`thop`、`future`、`gym`、`cloudpickle`
+- 已修正 `examples/LIBERO/eval_files/install_libero.sh`：
+  - 改为使用仓库内 `.libero` 虚拟环境
+  - 改为基于仓库相对路径定位 `LIBERO`
+  - 安装顺序改为先 `python -m pip install -r requirements.txt`，再 `python -m pip install -e .`
+  - 验证步骤增加 `robosuite`、`bddl` 导入检查
+- 当前 `sim` 会话尚未恢复；仍需在允许联网安装依赖的前提下重新执行安装脚本或等价安装命令
+
+## 2026-05-23 — LIBERO eval 输出路径只读
+
+- `tmux` 会话 `sim` 在依赖补齐后继续运行到评测入口，但 `eval_libero.py` 创建视频输出目录时失败
+- 直接报错：`OSError: [Errno 30] Read-only file system: '/gemini/code/starVLA/playground/trained_model/.../results'`
+- 根因：`examples/LIBERO/eval_files/eval_libero.sh` 默认把 `video_out_path` 写到 checkpoint 所在的 `playground/trained_model/.../results`，该路径在当前环境只读
+- 已做最小修复：将 `video_out_path` 改为仓库内可写路径 `playground/eval_results/${task_suite_name}/${folder_name}`
+
+## 2026-05-23 — LIBERO init_states 与 PyTorch 2.6 兼容
+
+- `tmux` 会话 `sim` 在修复输出路径后继续报错：`_pickle.UnpicklingError: Weights only load failed`
+- 根因：PyTorch `2.6.0` 将 `torch.load` 的默认 `weights_only` 从 `False` 改为 `True`，而 LIBERO 的 `init_states` 文件是可信任的普通 pickle 数据，不是纯模型权重
+- 已做最小修复：在 `examples/LIBERO/eval_files/eval_libero.py` 导入 `libero` 前为 `torch.load` 补兼容包装；当调用方未显式传入 `weights_only` 时，默认按 `False` 处理，兼容 LIBERO 的 `init_states` 旧格式文件
+- 已重新拉起 `tmux sim` 验证：当前评测已进入真实 rollout 阶段，日志显示 `Task: open the middle drawer of the cabinet`，并已完成多个 episode
+
+## 2026-05-22 — policy 推理加载分片 checkpoint 误报 missing keys
+
+- `tmux` 会话 `policy` 的报错不是 `tmux` 故障，而是 `deployment/model_server/server_policy.py` 在加载 `steps_40000` 时失败
+- 根因一：`starVLA/model/framework/share_tools.py` 对分片目录调用 `accelerate.load_checkpoint_in_model(..., strict=True)`，而当前 `accelerate` 会对每个 shard 单独执行 `model.load_state_dict(..., strict=True)`，把“尚未加载到当前 shard 的参数”误判成 `Missing key(s)`
+- 修复：分片目录在共享加载入口里先根据 `*.index.json` 做完整 key 校验，再用 `strict=False` 逐 shard 实际加载，避免分片级误报
+- 根因二：误报消掉后，暴露出 HF/Qwen safetensors 的兼容差异：`lm_head.weight` 作为 tied weight 未单独落盘，`rotary*_inv_freq` 作为非持久/缓存 buffer 出现在 index 中
+- 修复：严格 key 校验里过滤上述已知无害差异，保留其它真实 missing/unexpected keys 的报错能力
+
 ## 2026-05-17 — 项目初始化
 
 - 创建 CLAUDE.md、AGENTS.md、SESSION.md、TODO.md、MEMORY/

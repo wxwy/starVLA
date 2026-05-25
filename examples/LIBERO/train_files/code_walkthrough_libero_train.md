@@ -813,3 +813,233 @@ if is_resume:
 | 调整保存频率 | shell 脚本 | `--trainer.save_interval` |
 | resume 训练 | shell 脚本 | `--trainer.is_resume True`（必须在续行符链中） |
 | 切换 action 类型 | YAML `datasets.vla_data` | `action_type: delta_qpos` / `absolute_qpos` |
+
+---
+
+## 十一、LIBERO 评测流程
+
+> 训练完成后，通过 `examples/LIBERO/eval_files/` 下的脚本在 LIBERO 仿真环境中评测模型。评测采用**客户端-服务端架构**：服务端加载 checkpoint 并提供推理 API，客户端通过 websocket 调用模型并在 LIBERO 环境中执行动作。
+
+### 11.1 评测整体调用链
+
+```
+eval_libero.sh
+  ├─ 1. 解析 checkpoint 路径（支持单文件 .pt / 轻量目录 / DeepSpeed 目录）
+  ├─ 2. 设置 LIBERO_HOME / PYTHONPATH / MUJOCO_GL=egl
+  ├─ 3. 启动推理服务（policy_server，监听 websocket）
+  └─ 4. eval_libero.py
+       ├─ benchmark.get_benchmark_dict()["libero_goal"]() → 加载任务集
+       ├─ OffScreenRenderEnv → 创建无头仿真环境
+       ├─ ModelClient → 连接推理服务 (websocket)
+       └─ 循环：task → episode → step
+            ├─ env.set_init_state() → 设置固定初始状态
+            ├─ 前 10 步 dummy action（等待物体稳定）
+            ├─ 观测 → ModelClient.step() → 模型推理 → 动作
+            ├─ env.step(action) → obs, reward, done, info
+            └─ done=True → 统计成功/失败，保存视频
+```
+
+### 11.2 eval_libero.sh 启动脚本
+
+`examples/LIBERO/eval_files/eval_libero.sh` 做三件事：
+
+1. **解析 checkpoint**：自动识别三种 checkpoint 形态
+   - 单文件：`steps_N_pytorch_model.pt`
+   - 轻量目录：`steps_N/`（含 `model.safetensors.index.json`）
+   - DeepSpeed 目录：`steps_N/pytorch_model/...`
+
+2. **环境配置**
+   - `LIBERO_HOME`：LIBERO 库安装路径
+   - `PYTHONPATH`：让 eval 脚本找到 LIBERO 工具，也让 LIBERO 找到 websocket 客户端
+   - `MUJOCO_GL=egl` / `PYOPENGL_PLATFORM=egl`：无头渲染（无需显示器）
+
+3. **调用 eval_libero.py**
+
+```bash
+python ./examples/LIBERO/eval_files/eval_libero.py \
+    --args.pretrained-path ${CKPT} \
+    --args.host 127.0.0.1 \
+    --args.port 6694 \
+    --args.task-suite-name libero_goal \
+    --args.num-trials-per-task 50 \
+    --args.video-out-path ${output_dir}
+```
+
+### 11.3 LIBERO 任务集与环境接口
+
+`eval_libero.py:84-104`：
+
+```python
+# 1. 加载任务集
+benchmark_dict = benchmark.get_benchmark_dict()
+task_suite = benchmark_dict["libero_goal"]()
+num_tasks = task_suite.n_tasks   # libero_goal = 10 个任务
+
+# 2. 获取任务描述与初始状态
+task = task_suite.get_task(task_id)
+initial_states = task_suite.get_task_init_states(task_id)   # [N, state_dim]
+
+# 3. 创建环境
+env, task_description = _get_libero_env(task, resolution=256, seed=7)
+
+# _get_libero_env 内部：
+#   OffScreenRenderEnv(
+#       bddl_file_name=task_bddl_file,   # BDDL 任务定义文件
+#       camera_heights=256,
+#       camera_widths=256,
+#   )
+```
+
+**关键设计**：LIBERO 评测使用**固定初始状态**（`set_init_state`），而非随机初始化。这意味着同一 checkpoint 多次评测应该得到相同结果（只要 seed 固定）。
+
+### 11.4 单 episode 执行循环
+
+`eval_libero.py:130-226`：
+
+```python
+for episode_idx in range(args.num_trials_per_task):   # 每任务 50 个 episode
+    env.reset()
+    obs = env.set_init_state(initial_states[episode_idx])
+
+    while t < max_steps + num_steps_wait:
+        # 前 10 步 dummy action，等待物体落稳
+        if t < num_steps_wait:
+            obs, reward, done, info = env.step(DUMMY_ACTION)
+            continue
+
+        # 1. 观测预处理
+        img = np.ascontiguousarray(obs["agentview_image"][::-1, ::-1])      # 旋转 180°
+        wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
+        state = np.concatenate([
+            obs["robot0_eef_pos"],           # [3] 末端执行器位置
+            _quat2axisangle(obs["robot0_eef_quat"]),  # [3] 轴角
+            obs["robot0_gripper_qpos"],      # [1] 夹爪位置
+        ])  # = [7]
+
+        # 2. 构造模型输入
+        example_dict = {
+            "image": [img, wrist_img],       # List[np.ndarray], 双视角
+            "lang": task_description,        # str, 如 "put the bowl on the plate"
+        }
+
+        # 3. 调用模型推理
+        response = client_model.step(example=example_dict, step=step)
+
+        # 4. 解析动作并执行
+        raw_action = response["raw_action"]   # dict: world_vector, rotation_delta, open_gripper
+        delta_action = np.concatenate([
+            raw_action["world_vector"],      # [3] xyz 增量
+            raw_action["rotation_delta"],    # [3] rpy 增量
+            _binarize_gripper_open(raw_action["open_gripper"]),  # [1] 夹爪开关
+        ])  # = [7]
+
+        obs, reward, done, info = env.step(delta_action.tolist())
+        if done:
+            task_successes += 1
+            break
+```
+
+**图像预处理**：`[::-1, ::-1]` 表示水平和垂直翻转（旋转 180°）。这是因为 LIBERO 训练数据在预处理时也做了同样的旋转，评测必须保持一致的坐标系。
+
+### 11.5 ModelClient：推理服务客户端
+
+`model2libero_interface.py` 封装了与推理服务的通信，核心职责：
+
+```python
+class ModelClient:
+    def __init__(self, host, port, ...):
+        # 1. websocket 连接推理服务
+        self.client = WebsocketClientPolicy(host, port)
+        # 2. 握手获取模型元信息
+        meta = self.client.get_server_metadata()
+        self.action_chunk_size = int(meta["action_chunk_size"])   # 通常 = 8
+
+    def step(self, example: dict, step: int) -> dict:
+        # Action Chunking：每隔 action_chunk_size 步才调用一次推理
+        if step % self.action_chunk_size == 0 or self.raw_actions is None:
+            response = self.client.predict_action({
+                "examples": [example],
+                "use_ddim": True,
+                "num_ddim_steps": 10,
+            })
+            self.raw_actions = response["data"]["actions"][0]   # [8, 7]
+
+        # 从 chunk 中取出当前步对应动作
+        raw_action = self.raw_actions[step % self.action_chunk_size]
+        return {
+            "raw_action": {
+                "world_vector": raw_action[:3],
+                "rotation_delta": raw_action[3:6],
+                "open_gripper": raw_action[6:7],
+            }
+        }
+```
+
+**Action Chunking（动作块缓存）**：
+- 模型每次推理输出 `action_horizon=8` 步动作序列
+- `ModelClient` 每 8 步才发送一次 websocket 请求，中间 7 步直接从缓存中取
+- 这大幅减少了推理开销（50 episode × 300 step 只需要约 50 × 300/8 ≈ 1875 次推理调用）
+
+**Action Ensemble（动作平滑）**：
+- 当 `action_ensemble=True` 时，使用 `AdaptiveEnsembler` 对重叠窗口的动作做加权平均
+- 这消除了 chunk 边界处的动作跳变，使机械臂运动更平滑
+
+### 11.6 推理服务侧简要流程
+
+服务端（`deployment/model_server/` 下）加载 checkpoint 后：
+
+```python
+# 1. 加载模型
+model = Qwen_GR00T.from_pretrained(checkpoint_path)
+
+# 2. 接收客户端请求
+examples = [{"image": [img], "lang": instruction}]
+
+# 3. 模型推理
+output = model.predict_action(examples=examples, use_ddim=True, num_ddim_steps=10)
+#    ├─ build_qwenvl_inputs() → tokenize
+#    ├─ qwen_vl_interface() → hidden_states [B, L, 2560]
+#    └─ action_model.predict_action() → 4 步 Euler ODE 去噪 → [B, 8, 7]
+
+# 4. 反归一化（unnormalization）
+#    模型输出是 normalized action，服务端根据 dataset_statistics.json 做反归一化
+#    转换为物理意义上的 delta_qpos
+
+# 5. 返回客户端
+{"data": {"actions": [B, 8, 7]}}
+```
+
+### 11.7 评测结果统计
+
+评测完成后，结果通过两个口径统计：
+
+1. **日志输出**：`eval_libero.py` 实时打印每任务成功率
+2. **视频文件名**：`rollout_{task}_episode{N}_{success|failure}.mp4`
+   - 直接数 `success` 文件名数量即可得到成功率
+
+```python
+# 保存视频
+imageio.mimwrite(
+    f"rollout_{task_segment}_episode{episode_idx}_{suffix}.mp4",
+    replay_images,   # 列表，每帧为 np.ndarray [H, W, 3]
+    fps=10,
+)
+```
+
+### 11.8 评测速查表
+
+| 项目 | 值 |
+|------|-----|
+| 任务集 | `libero_goal`（10 任务）、`libero_spatial`（10）、`libero_object`（10）、`libero_10`（10）、`libero_90`（90） |
+| 每任务 episode | 50 |
+| 图像分辨率 | 256×256 |
+| 视角 | agentview（第三人称）+ wrist（手腕） |
+| 最大步数 | `libero_goal=300`、`libero_spatial=220`、`libero_object=280` |
+| 等待步数 | 10（dummy action，等物体落稳） |
+| 动作格式 | delta_qpos（xyz + rpy + gripper） |
+| 动作块长度 | 8（`action_chunk_size=8`） |
+| 推理去噪步数 | 10（`num_ddim_steps=10`，评测时比训练更精细） |
+| 夹爪处理 | 二值化：`1=open, -1=close` |
+| 初始状态 | 固定（`set_init_state`），非随机 |
+| 渲染后端 | EGL（无头，无需显示器） |
+| 视频保存 | `playground/eval_results/{task_suite}/{ckpt_name}/` |

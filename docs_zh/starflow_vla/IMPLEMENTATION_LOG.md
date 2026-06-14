@@ -782,3 +782,44 @@ Stage A 1×A100 40G lightweight validation；本任务只做配置新增、YAML 
 
 ### Next
 进入 P0-M7：新增 future_tokens 消融配置；真实 forward/backward 仍依赖 LIBERO 数据目录准备完成。
+
+## Record P0-M7
+
+### Task ID
+P0-M7
+
+### Goal
+新增 `future_tokens + cross-DiT` 消融配置，覆盖 `num_target_vision_tokens=0/8/16/32/64` 的配置级入口。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做配置新增、YAML 解析、兼容层检查和 monkeypatch build dry-run，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `configs/starflow_vla/stage3_future_token_ablation.yaml`
+- Modified: `MODULE_MAPPING.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Not modified: `starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py`
+- Not modified: `starVLA/model/modules/action_model/GR00T_ActionHeader.py`
+- Not modified: `starVLA/model/framework/VLM4A/QwenPI_v3.py`
+
+### Checks
+- `.venv/bin/python - <<'PY' ... derive and assert 0/8/16/32/64 ablation variants ... PY`
+- `.venv/bin/python - <<'PY' ... apply_config_compat stage3 config ... PY`
+- `.venv/bin/python - <<'PY' ... monkeypatch Qwen_PI_v3.__init__ and build_framework(stage3 cfg) ... PY`
+
+### Findings
+- Stage3 配置解析通过，默认 `num_target_vision_tokens=32`。
+- `ablation.num_target_vision_tokens_values` 覆盖 `[0, 8, 16, 32, 64]`。
+- 5 组 token 数均可在内存中派生为 OmegaConf 配置并序列化。
+- `ablation.adapter_mode=future_token_cross_dit`。
+- `apply_config_compat()` 后 Stage3 配置保持 `StarFlowVLA + LayerwiseFM + action_dim=7`。
+- `build_framework(stage3 cfg)` 在 monkeypatch `Qwen_PI_v3.__init__` 的 dry-run 下通过，不触发真实模型加载。
+- `describe_starflow_mapping()` 返回 `adapter_mode=future_token_cross_dit` 与默认 `num_target_vision_tokens=32`。
+- 由于 `playground/Datasets/LEROBOT_LIBERO_DATA` 不存在，未运行 5 组真实 forward、single batch overfit 或训练。
+
+### Not Run
+未运行真实模型加载、LIBERO batch schema、forward/backward、loss finite、single batch overfit、checkpoint 保存/加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M9：在 checkpoint 旁路保存 `starflow_mapping.json` 的工具级接入；真实 checkpoint save/load 仍需数据与训练闭环可用后复验。

@@ -49,9 +49,13 @@
 | P0-M6 | docs | `MODULE_MAPPING.md` | modified | 同步 H2 baseline P0-M6 状态 |
 | P0-M6 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 | P0-M6 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M6 配置级实施记录 |
+| P0-M7 | config | `configs/starflow_vla/stage3_future_token_ablation.yaml` | added | 新增 future_tokens `0/8/16/32/64` 消融配置 |
+| P0-M7 | docs | `MODULE_MAPPING.md` | modified | 同步 future token ablation 配置状态 |
+| P0-M7 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M7 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M7 配置级实施记录 |
 
 ## Source Code Patches
-`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置。
+`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置。
 
 本阶段不修改 `QwenPI_v3.py`、`LayerwiseFM_ActionHeader.py` 或 `GR00T_ActionHeader.py` 主体逻辑。
 

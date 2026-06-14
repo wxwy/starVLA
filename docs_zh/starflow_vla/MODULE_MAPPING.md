@@ -13,6 +13,7 @@
 | Flow Matching action head | `LayerwiseFM_ActionHeader.py` | DOC-M9 静态审计确认 P0 默认路径仍可用 |
 | H2 baseline | `MLP_ActionHeader.py`、`QwenOFT.py` | P0-M6 已新增 `stage2_mlp_baseline.yaml` 并完成配置级 dry-run；VLA_AdapterHeader 对照待后续扩展 |
 | Action token / future token route | `future_tokens + cross-DiT` | DOC-M9 静态审计确认 LayerwiseFM / GR00T 均保留 `future_tokens` |
+| future token ablation | `configs/starflow_vla/stage3_future_token_ablation.yaml` | P0-M7 已新增 `0/8/16/32/64` 配置级消融入口；真实 forward/overfit 待数据可用后复验 |
 | State default path | QwenPI_v3 state-to-instruction | DOC-M9 静态审计确认 P0 默认路径保留 |
 | Explicit FlowCondition runtime | 可选 dataclass / wrapper | P2，不阻断 P0 |
 | PerceiverAdapter | 可选 token compressor | P2，不阻断 P0 |

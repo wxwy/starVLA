@@ -10,6 +10,20 @@
 - `.venv` 中未安装 `pytest`，P0-M4 改用标准库 `unittest` 跑通 4 个用例
 - 当前未跟踪目录：`.libero/`、`LIBERO/`，不应误提交
 
+## 2026-06-14 — StarFlow-VLA P0-M5 至 P0-M9
+
+- 已完成 P0-M5 配置级产物：`configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml`
+- 已完成 P0-M8 可跳过数据 smoke：`tests/test_starflow_libero_batch.py`
+- 已完成 P0-M6 配置级产物：`configs/starflow_vla/stage2_mlp_baseline.yaml`
+- 已完成 P0-M7 配置级产物：`configs/starflow_vla/stage3_future_token_ablation.yaml`
+- 已完成 P0-M9 工具级产物：`save_starflow_checkpoint_mapping()` 与 `tests/test_starflow_checkpoint_mapping.py`
+- 提交：`362dc38 Add StarFlow-VLA stage1 smoke config`
+- 提交：`e253189 Add StarFlow-VLA LIBERO batch smoke test`
+- 提交：`74a7d2a Add StarFlow-VLA MLP baseline config`
+- 提交：`f641a3e Add StarFlow-VLA future token ablation config`
+- 提交：`10331d7 Add StarFlow-VLA checkpoint mapping sidecar`
+- 当前阻塞：`playground/Datasets/LEROBOT_LIBERO_DATA` 不存在，无法运行真实 LIBERO batch schema、forward/backward、single batch overfit、训练、checkpoint save/load 或 eval smoke
+
 ## 2026-06-14 — StarFlow-VLA 模型路径规则
 
 - 本地模型入口统一放在 `playground/Pretrained_models/`

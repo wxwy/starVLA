@@ -63,11 +63,19 @@
 | P0-M10 | test | `tests/test_starflow_eval_preflight.py` | added | 新增 eval shell 语法和 P0 checkpoint mapping 前置检查 |
 | P0-M10 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 | P0-M10 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M10 preflight 实施记录 |
+| P0-M11 | docs | `EXPERIMENT_MATRIX.md` | added | 新增 P0 配置、测试、阻塞状态矩阵 |
+| P0-M11 | test | `tests/test_starflow_docs_governance.py` | added | 新增文档治理测试 |
+| P0-M11 | docs | `README.md` | modified | 将实验矩阵加入文档索引 |
+| P0-M11 | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 `EXPERIMENT_MATRIX.md` 已存在 |
+| P0-M11 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M11 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M11 文档治理记录 |
 
 ## Source Code Patches
-`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight。
+`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight；`P0-M11` 新增实验矩阵和文档治理测试。
 
 本阶段不修改 `QwenPI_v3.py`、`LayerwiseFM_ActionHeader.py` 或 `GR00T_ActionHeader.py` 主体逻辑。
+
+当前未对 StarVLA 原始主体文件做需要 `STARFLOW_PATCH_BEGIN / END` 标记的 inline patch。
 
 ## Not Run
 未运行 StarFlowVLA 代码测试、真实模型加载、训练、评测或部署。

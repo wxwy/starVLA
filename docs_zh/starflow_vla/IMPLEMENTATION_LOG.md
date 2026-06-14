@@ -900,3 +900,39 @@ Stage A 1×A100 40G lightweight validation；本任务只做 shell 语法检查�
 
 ### Next
 进入 P0-M11：做文档与 patch 管理收口；真实 P0-M10 需要先完成 P0-M5 训练并产生 checkpoint。
+
+## Record P0-M11
+
+### Task ID
+P0-M11
+
+### Goal
+完成 StarFlow-VLA P0 文档与 patch 管理收口，确保新增配置、测试、文档和主要代码产物可审计。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做文档治理和标准库 unittest，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md`
+- Added: `tests/test_starflow_docs_governance.py`
+- Modified: `README.md`
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+
+### Checks
+- `python -m py_compile tests/test_starflow_docs_governance.py`
+- `.venv/bin/python -m unittest tests.test_starflow_docs_governance -v`
+- `find docs_zh/starflow_vla -maxdepth 1 -type f | sort`
+
+### Findings
+- `EXPERIMENT_MATRIX.md` 已新增，记录 P0-M5 / M6 / M7 / M8 / M9 / M10 的配置、测试和阻塞状态。
+- `README.md` 已将 `EXPERIMENT_MATRIX.md` 加入索引，不再列为待补全文档。
+- 文档治理测试确认核心文档存在、README 链接可解析、`PATCH_MANIFEST.md` 覆盖当前主要 StarFlow-VLA 产物。
+- 当前未对 StarVLA 原始主体文件做需要 `STARFLOW_PATCH_BEGIN / END` 标记的 inline patch。
+
+### Not Run
+未运行真实模型加载、LIBERO batch schema、forward/backward、loss finite、single batch overfit、checkpoint 保存/加载、policy server、LIBERO rollout、训练、评测、部署或 VGGT 接入。
+
+### Next
+P0 Stage A 配置、文档、registry、mapping 和 preflight 工作已收口；继续 P0 Stage B 前需要准备 `playground/Datasets/LEROBOT_LIBERO_DATA` 并产生 P0 checkpoint。

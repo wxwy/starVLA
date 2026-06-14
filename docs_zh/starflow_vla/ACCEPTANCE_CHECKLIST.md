@@ -38,7 +38,7 @@
 - [ ] eval report 包含 checkpoint hash、config hash、data version、starflow_mapping。
 - [x] `MODULE_MAPPING.md` exists。
 - [x] `PATCH_MANIFEST.md` exists。
-- [ ] `EXPERIMENT_MATRIX.md` exists。
+- [x] `EXPERIMENT_MATRIX.md` exists。
 - [ ] no Perceiver / FlowCondition runtime / 14D mask blocking P0。
 
 ## P1 验收清单：增强项，不阻断 P0

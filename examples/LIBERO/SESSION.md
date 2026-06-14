@@ -24,6 +24,14 @@
 - 提交：`10331d7 Add StarFlow-VLA checkpoint mapping sidecar`
 - 当前阻塞：`playground/Datasets/LEROBOT_LIBERO_DATA` 不存在，无法运行真实 LIBERO batch schema、forward/backward、single batch overfit、训练、checkpoint save/load 或 eval smoke
 
+## 2026-06-14 — StarFlow-VLA P0-M10 / P0-M11
+
+- 已完成 P0-M10 preflight：新增 `docs_zh/starflow_vla/EVAL_SMOKE.md` 与 `tests/test_starflow_eval_preflight.py`
+- 已完成 P0-M11 文档治理：新增 `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md` 与 `tests/test_starflow_docs_governance.py`
+- P0-M10 只完成 shell 语法和 checkpoint/mapping 前置检查；未启动 policy server 或 LIBERO rollout
+- P0-M11 文档治理测试已通过：README 链接、核心文档存在性、patch manifest 主要产物覆盖
+- 当前仍需准备 `playground/Datasets/LEROBOT_LIBERO_DATA` 和 P0 checkpoint，才能进入真实 Stage B 验证
+
 ## 2026-06-14 — StarFlow-VLA 模型路径规则
 
 - 本地模型入口统一放在 `playground/Pretrained_models/`

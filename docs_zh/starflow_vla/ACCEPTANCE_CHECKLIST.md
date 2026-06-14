@@ -15,9 +15,9 @@
 - [x] QwenPI_v3 reuse documented。
 - [x] StarFlowVLA 不复制 QwenPI_v3 主体 forward / predict_action。
 - [ ] QwenPI_v3 baseline 仍可运行。
-- [ ] LayerwiseFM 7DoF single batch forward/backward pass。
-- [ ] loss finite。
-- [ ] single batch overfit pass。
+- [x] LayerwiseFM 7DoF single batch forward/backward pass。
+- [x] loss finite。
+- [x] single batch overfit pass。
 - [x] `action_dim=7` 为 P0 默认配置。
 - [x] 不强制启用 `max_action_dim=14 + action_mask`。
 - [x] LIBERO minimal batch schema pass。
@@ -88,7 +88,7 @@
 - [ ] 不在 P0 中要求显式 FlowCondition runtime dataclass。
 - [ ] 不在 P0 中要求 14D action_mask。
 - [ ] 不把 H2 写回 “ActionTokenAdapter vs MLPAdapter” 的抽象口径。
-- [ ] 不运行长训练作为 P0 smoke 的前置条件。
+- [x] 不运行长训练作为 P0 smoke 的前置条件。
 - [ ] 不删除或重命名 StarVLA 现有文件。
 - [ ] 不把 VGGT 写入 P0/P1 必选验收项。
 - [ ] 不声称已完成 VGGT 接入、训练、评测或指标，除非有真实 Implementation Record。

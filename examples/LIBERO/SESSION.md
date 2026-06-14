@@ -313,3 +313,10 @@
 - 已复制 `examples/LIBERO/train_files/modality.json` 到数据集 `meta/modality.json`
 - 已确认当前 LIBERO registry 使用 7D action 与 8D state，state keys 包含 `x,y,z,roll,pitch,yaw,pad,gripper`
 - `.venv/bin/python -m unittest tests.test_starflow_libero_batch -v` 已通过，真实 batch 含 image / lang / state / action
+
+## 2026-06-14 — StarFlow-VLA P0 Stage B forward/backward 与单 batch overfit smoke
+
+- 已使用 `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml`、本地 `Qwen3-VL-4B-Instruct` symlink 和真实 `libero_goal` batch 构建 `StarFlowVLA`
+- 已冻结 `qwen_vl_interface`，执行单 batch forward/backward，`action_loss` 为有限值且可训练参数获得梯度
+- 已在同一真实 batch 上优化 action head / projectors 6 步，loss 从 `1.79121411` 降至 `0.10281464`
+- 未运行完整训练循环、checkpoint 保存/加载、LIBERO rollout、评测或部署

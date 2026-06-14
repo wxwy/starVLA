@@ -8,7 +8,7 @@
 
 | ID | 配置 | 目标 | 当前状态 | 阻塞 |
 | --- | --- | --- | --- | --- |
-| P0-M5-Stage1 | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` | StarFlowVLA + QwenPI_v3 native + LayerwiseFM 7DoF action / 8D state | 配置解析、`apply_config_compat()`、monkeypatch `build_framework()` dry-run 通过；LIBERO batch schema 通过 | 未运行真实 forward / overfit |
+| P0-M5-Stage1 | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` | StarFlowVLA + QwenPI_v3 native + LayerwiseFM 7DoF action / 8D state | 配置解析、`apply_config_compat()`、monkeypatch `build_framework()` dry-run 通过；LIBERO batch schema、真实 forward/backward、loss finite、single batch overfit 前置验证通过 | 未运行完整训练 / checkpoint save-load |
 | P0-M6-MLP | `configs/starflow_vla/stage2_mlp_baseline.yaml` | QwenOFT + MLP 7DoF action / 8D state baseline | 配置解析、`apply_config_compat()`、monkeypatch `build_framework()` dry-run 通过 | 未运行真实 baseline overfit |
 | P0-M7-FutureTokens | `configs/starflow_vla/stage3_future_token_ablation.yaml` | `num_target_vision_tokens=0/8/16/32/64` 消融 | 5 组配置级派生与默认 dry-run 通过 | 未运行真实 forward / overfit |
 | P0-M8-LIBERO-Batch | `tests/test_starflow_libero_batch.py` | LIBERO batch schema smoke | 真实 `libero_goal` batch 通过；action=7D，state=8D | 无 |
@@ -25,4 +25,4 @@
 
 ## Not Run
 
-未运行真实模型加载、forward/backward、loss finite、single batch overfit、checkpoint 保存/加载、policy server、LIBERO rollout、训练、评测或部署。
+未运行 checkpoint 保存/加载、policy server、LIBERO rollout、完整训练、评测或部署。

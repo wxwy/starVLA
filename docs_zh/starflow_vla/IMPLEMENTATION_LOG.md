@@ -1042,3 +1042,41 @@ Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务�
 
 ### Next
 进入 P0-M9/P0-M10 Stage B：生成最小 checkpoint 并复验 checkpoint sidecar / eval preflight；如需真实 LIBERO rollout，先确认可用 checkpoint 与 LIBERO 仿真依赖。
+
+## Record P0-M9-STAGEB
+
+### Task ID
+P0-M9-STAGEB
+
+### Goal
+生成 StarFlowVLA Stage1 smoke checkpoint，复验 checkpoint sidecar、helper 文件、`load_model_weights()` 加载路径与 LIBERO eval preflight。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务手动保存 smoke checkpoint，不启动完整训练循环，不运行 policy server、LIBERO rollout 或部署。
+
+### Files Changed
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `EXPERIMENT_MATRIX.md`
+- Modified: `EVAL_SMOKE.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Modified: `examples/LIBERO/SESSION.md`
+- Data/checkpoint side effects: created `playground/Checkpoints/starflow_vla_stage1_qwenpi_v3_native/checkpoints/steps_1`
+
+### Checks
+- `.venv/bin/python - <<'PY' ... PY`：基于真实 batch 执行 1 个 optimizer step，并保存 smoke checkpoint。
+- `.venv/bin/python - <<'PY' ... PY`：补写 `steps_1/starflow_mapping.json`，复制 `config.yaml`、`config.full.yaml`、`dataset_statistics.json`。
+- `.venv/bin/python -m unittest tests.test_starflow_eval_preflight -v`：2 个用例通过。
+- `.venv/bin/python - <<'PY' ... PY`：重新构建 `StarFlowVLA` 并执行 `load_model_weights(model, steps_1, preferred_format="pt", strict=True)`，通过。
+
+### Findings
+- `steps_1` 包含 3 个 `pytorch_model-*.bin` 分片、`pytorch_model.bin.index.json`、`optimizer_rank_00000.pt`、`scheduler.pt`、`trainer_state.json`、`starflow_mapping.json`、`config.yaml`、`config.full.yaml`、`dataset_statistics.json`。
+- checkpoint load smoke 通过；加载时仅报告 rotary buffer 未使用的兼容警告。
+- eval preflight 已从 checkpoint 缺失 skip 变为通过。
+- 本阶段未修改 `starVLA/model/` 源码。
+
+### Not Run
+未运行 resume 100 step、完整训练循环、policy server、LIBERO rollout、success_rate 统计、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M6 / P0-M7 Stage B 对照 smoke；如要进入真实 LIBERO rollout，需要确认 `.libero` 环境和 LIBERO 仿真依赖可用。

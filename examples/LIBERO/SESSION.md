@@ -320,3 +320,11 @@
 - 已冻结 `qwen_vl_interface`，执行单 batch forward/backward，`action_loss` 为有限值且可训练参数获得梯度
 - 已在同一真实 batch 上优化 action head / projectors 6 步，loss 从 `1.79121411` 降至 `0.10281464`
 - 未运行完整训练循环、checkpoint 保存/加载、LIBERO rollout、评测或部署
+
+## 2026-06-15 — StarFlow-VLA P0 smoke checkpoint 与 eval preflight
+
+- 已创建 `playground/Checkpoints/starflow_vla_stage1_qwenpi_v3_native/checkpoints/steps_1`
+- `steps_1` 包含模型分片、optimizer、scheduler、trainer_state、config、dataset_statistics 和 `starflow_mapping.json`
+- `.venv/bin/python -m unittest tests.test_starflow_eval_preflight -v` 已通过，checkpoint mapping 检查不再 skip
+- 已用 `load_model_weights(..., strict=True)` 复验 `steps_1` 可加载；仅出现 rotary buffer 未使用的兼容警告
+- 未运行 resume 100 step、policy server、LIBERO rollout、success_rate 统计或部署

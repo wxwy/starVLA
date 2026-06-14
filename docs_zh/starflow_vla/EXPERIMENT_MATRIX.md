@@ -12,8 +12,8 @@
 | P0-M6-MLP | `configs/starflow_vla/stage2_mlp_baseline.yaml` | QwenOFT + MLP 7DoF action / 8D state baseline | 配置解析、`apply_config_compat()`、monkeypatch `build_framework()` dry-run 通过 | 未运行真实 baseline overfit |
 | P0-M7-FutureTokens | `configs/starflow_vla/stage3_future_token_ablation.yaml` | `num_target_vision_tokens=0/8/16/32/64` 消融 | 5 组配置级派生与默认 dry-run 通过 | 未运行真实 forward / overfit |
 | P0-M8-LIBERO-Batch | `tests/test_starflow_libero_batch.py` | LIBERO batch schema smoke | 真实 `libero_goal` batch 通过；action=7D，state=8D | 无 |
-| P0-M9-Mapping | `tests/test_starflow_checkpoint_mapping.py` | checkpoint sidecar `starflow_mapping.json` | unittest 通过 | 真实 checkpoint save/load 待 P0-M5 训练产物 |
-| P0-M10-Eval | `tests/test_starflow_eval_preflight.py` | LIBERO eval smoke preflight | shell 语法检查通过，checkpoint 检查 skip | 缺少 P0 checkpoint 与 LIBERO 数据 |
+| P0-M9-Mapping | `tests/test_starflow_checkpoint_mapping.py` | checkpoint sidecar `starflow_mapping.json` | unittest 通过；`steps_1` smoke checkpoint 已保存 mapping；`load_model_weights(..., strict=True)` 通过 | 未运行 resume 100 step |
+| P0-M10-Eval | `tests/test_starflow_eval_preflight.py` | LIBERO eval smoke preflight | shell 语法检查通过；checkpoint mapping preflight 通过 | 未运行 policy server / LIBERO rollout |
 
 ## Commands
 
@@ -25,4 +25,4 @@
 
 ## Not Run
 
-未运行 checkpoint 保存/加载、policy server、LIBERO rollout、完整训练、评测或部署。
+未运行 resume 100 step、policy server、LIBERO rollout、完整训练、评测或部署。

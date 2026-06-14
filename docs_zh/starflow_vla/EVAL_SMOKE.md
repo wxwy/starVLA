@@ -2,7 +2,7 @@
 
 ## Scope
 
-本文件记录 P0-M10 的 LIBERO eval smoke 前置条件、命令和当前状态。当前不记录成功率或失败类别结果，因为尚未产生 P0 checkpoint，且 `playground/Datasets/LEROBOT_LIBERO_DATA` 不存在。
+本文件记录 P0-M10 的 LIBERO eval smoke 前置条件、命令和当前状态。当前不记录成功率或失败类别结果，因为尚未运行 policy server 或 LIBERO rollout。
 
 ## Required Inputs
 
@@ -38,6 +38,7 @@ bash examples/LIBERO/eval_files/eval_libero.sh
 ## Current Status
 
 - Eval shell scripts pass `bash -n`.
-- `tests/test_starflow_eval_preflight.py` 可运行。
-- P0 checkpoint 目录当前不存在，因此 checkpoint / mapping / eval 真实检查会 skip。
+- `tests/test_starflow_eval_preflight.py` 已通过，checkpoint mapping 检查不再 skip。
+- P0 smoke checkpoint 当前为 `playground/Checkpoints/starflow_vla_stage1_qwenpi_v3_native/checkpoints/steps_1`。
+- `steps_1/starflow_mapping.json` 已存在。
 - 未运行 policy server、LIBERO rollout 或成功率统计。

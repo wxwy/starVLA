@@ -32,7 +32,8 @@
 - [ ] checkpoint 包含 model / optimizer / scaler / config / starflow_mapping。
 - [ ] resume 后 100 step 内 loss 偏差 <1%。
 - [x] `patch_manifest_hash` 可记录。
-- [ ] LIBERO eval smoke pass。
+- [x] LIBERO eval preflight pass。
+- [ ] LIBERO rollout eval smoke pass。
 - [ ] eval report 输出 success_rate。
 - [ ] eval report 输出 failure category。
 - [ ] eval report 包含 checkpoint hash、config hash、data version、starflow_mapping。

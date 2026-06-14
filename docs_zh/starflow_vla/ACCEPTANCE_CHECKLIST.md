@@ -23,7 +23,7 @@
 - [x] LIBERO minimal batch schema pass。
 - [x] batch 含 image / instruction / state / action。
 - [x] MLP/OFT/VLA_AdapterHeader baseline dry-run pass。
-- [ ] MLP/OFT/VLA_AdapterHeader baseline single batch overfit pass。
+- [x] MLP/OFT/VLA_AdapterHeader baseline single batch overfit pass。
 - [x] future_tokens ablation configs `0/8/16/32/64` pass。
 - [ ] `num_target_vision_tokens` 写入日志。
 - [x] `adapter_mode=future_token_cross_dit` 写入 manifest。

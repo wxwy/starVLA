@@ -328,3 +328,10 @@
 - `.venv/bin/python -m unittest tests.test_starflow_eval_preflight -v` 已通过，checkpoint mapping 检查不再 skip
 - 已用 `load_model_weights(..., strict=True)` 复验 `steps_1` 可加载；仅出现 rotary buffer 未使用的兼容警告
 - 未运行 resume 100 step、policy server、LIBERO rollout、success_rate 统计或部署
+
+## 2026-06-15 — StarFlow-VLA P0 MLP baseline Stage B smoke
+
+- 已使用 `configs/starflow_vla/stage2_mlp_baseline.yaml`、本地 `Qwen3-VL-4B-Instruct` symlink 和真实 `libero_goal` batch 构建 `QwenOFT`
+- 已冻结 `qwen_vl_interface`，执行 MLP baseline 单 batch forward/backward 与 6 步 overfit smoke
+- 同一真实 batch 上 loss 从 `0.87645137` 降至 `0.48976591`
+- 未保存 baseline checkpoint，未运行完整训练循环、LIBERO rollout、评测或部署

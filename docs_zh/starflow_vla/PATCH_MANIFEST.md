@@ -88,9 +88,13 @@
 | P0-M9-STAGEB | docs | `EVAL_SMOKE.md` | modified | 更新 checkpoint 与 mapping 当前状态 |
 | P0-M9-STAGEB | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 checkpoint/eval preflight 实施记录 |
 | P0-M9-STAGEB | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M6-STAGEB | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 MLP baseline single batch overfit 前置验证通过 |
+| P0-M6-STAGEB | docs | `EXPERIMENT_MATRIX.md` | modified | 更新 MLP baseline Stage B smoke 状态 |
+| P0-M6-STAGEB | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 MLP baseline Stage B smoke 实施记录 |
+| P0-M6-STAGEB | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 
 ## Source Code Patches
-`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF action / 8D state smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight；`P0-M11` 新增实验矩阵和文档治理测试；`P0-M8-DATA` 对齐真实 LIBERO registry 的 8D state schema；`P0-M5-STAGEB` 记录真实 Stage1 smoke 验证结果；`P0-M9-STAGEB` 记录 smoke checkpoint save/load 与 eval preflight。
+`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF action / 8D state smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight；`P0-M11` 新增实验矩阵和文档治理测试；`P0-M8-DATA` 对齐真实 LIBERO registry 的 8D state schema；`P0-M5-STAGEB` 记录真实 Stage1 smoke 验证结果；`P0-M9-STAGEB` 记录 smoke checkpoint save/load 与 eval preflight；`P0-M6-STAGEB` 记录 MLP baseline Stage B smoke 验证结果。
 
 本阶段不修改 `QwenPI_v3.py`、`LayerwiseFM_ActionHeader.py` 或 `GR00T_ActionHeader.py` 主体逻辑。
 

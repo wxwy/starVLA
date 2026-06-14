@@ -1080,3 +1080,36 @@ Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务�
 
 ### Next
 进入 P0-M6 / P0-M7 Stage B 对照 smoke；如要进入真实 LIBERO rollout，需要确认 `.libero` 环境和 LIBERO 仿真依赖可用。
+
+## Record P0-M6-STAGEB
+
+### Task ID
+P0-M6-STAGEB
+
+### Goal
+在真实 Qwen3-VL 本地模型与真实 LIBERO `libero_goal` batch 上复验 QwenOFT + MLP baseline 最小 forward/backward、loss finite 与 single batch overfit 前置门禁。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务只运行单 batch smoke，不保存 baseline checkpoint，不运行完整训练、评测或部署。
+
+### Files Changed
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `EXPERIMENT_MATRIX.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Modified: `examples/LIBERO/SESSION.md`
+
+### Checks
+- `.venv/bin/python - <<'PY' ... PY`：加载 `configs/starflow_vla/stage2_mlp_baseline.yaml`，取真实 LIBERO batch，构建 `QwenOFT`，冻结 `qwen_vl_interface`，优化 MLP action head 6 步。
+
+### Findings
+- 真实 batch shape：action `(8, 7)`，state `(1, 8)`。
+- forward/backward smoke 通过，`action_loss` 为有限值。
+- single batch overfit 前置验证通过，同一 batch 上 loss 从 `0.87645137` 降至 `0.48976591`。
+- 本阶段未修改 `starVLA/model/` 源码。
+
+### Not Run
+未保存 baseline checkpoint，未运行完整训练循环、policy server、LIBERO rollout、success_rate 统计、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M7 Stage B：复验 future token `num_target_vision_tokens=0/8/16/32/64` 的真实 forward / single batch smoke。

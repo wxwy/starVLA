@@ -705,3 +705,39 @@ Stage A 1×A100 40G lightweight validation；本任务只做配置新增、YAML 
 
 ### Next
 进入 P0-M8：补 LIBERO 数据目录可用性检查与 batch schema smoke；若 `playground/Datasets/LEROBOT_LIBERO_DATA` 仍缺失，则只记录阻塞并等待数据准备。
+
+## Record P0-M8
+
+### Task ID
+P0-M8
+
+### Goal
+新增 LIBERO 最小 batch schema smoke 测试，数据可用时检查 `image/lang/state/action`、7DoF action 和 NaN/Inf。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做数据目录可用性检查和可跳过的 unittest，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `tests/test_starflow_libero_batch.py`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Not modified: `starVLA/dataloader/`
+- Not modified: `starVLA/model/framework/VLM4A/QwenPI_v3.py`
+- Not modified: `starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py`
+
+### Checks
+- `python -m py_compile tests/test_starflow_libero_batch.py`
+- `.venv/bin/python -m unittest tests.test_starflow_libero_batch -v`
+
+### Findings
+- `tests/test_starflow_libero_batch.py` 语法检查通过。
+- `.venv` 下 unittest 运行成功，但 1 个用例被显式 skip。
+- skip 原因：`playground/Datasets/LEROBOT_LIBERO_DATA` 不存在。
+- 测试逻辑在数据目录存在时才导入 dataloader 并构建一个 batch，检查 `image/lang/state/action`、`action_dim=7`、`state_dim=7`、NaN/Inf。
+- 当前不能标记 `LIBERO minimal batch schema pass` 或 `batch 含 image / instruction / state / action` 为通过，因为未读取真实数据。
+
+### Not Run
+未运行真实 LIBERO batch 读取、真实模型加载、forward/backward、loss finite、single batch overfit、checkpoint 保存/加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+准备或挂载 `playground/Datasets/LEROBOT_LIBERO_DATA` 后，重新运行 `.venv/bin/python -m unittest tests.test_starflow_libero_batch -v`；通过后再进入真实 P0-M5 forward/backward smoke。

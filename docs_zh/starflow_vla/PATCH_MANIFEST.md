@@ -14,9 +14,14 @@
 | DOC-M6 | docs | `PATCH_MANIFEST.md` | added | patch manifest 初始骨架 |
 | DOC-M6 | docs | `MODULE_MAPPING.md` | added | StarVLA-native 映射骨架 |
 | DOC-M6 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M0/P0-M1 文档记录 |
+| DOC-M8 | docs | `README.md` | modified | 将已补全文档改为索引链接 |
+| DOC-M8 | docs | `BASELINE_VERSION.md` | modified | 记录官方合并后的当前基线状态 |
+| DOC-M8 | docs | `UPSTREAM_COMPATIBILITY.md` | modified | 更新 P0-M2 前 compatibility audit 范围 |
+| DOC-M8 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| DOC-M8 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加官方合并后的文档同步记录 |
 
 ## Source Code Patches
-None.
+本 manifest 只记录 StarFlow-VLA 文档侧 patch。当前仓库分支包含 fork 与官方 `starVLA_dev` 合并后的项目代码变更，但本次 DOC-M8 不新增 StarFlowVLA 源码实现。
 
 ## Not Run
 未运行 StarFlowVLA 代码测试、真实模型加载、训练、评测或部署。

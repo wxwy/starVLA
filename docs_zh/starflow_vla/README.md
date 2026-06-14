@@ -21,9 +21,12 @@
 
 ## 可选补全文档
 
-- BASELINE_VERSION.md：StarVLA 基线版本记录
-- UPSTREAM_COMPATIBILITY.md：上游兼容策略
-- MODULE_MAPPING.md：抽象设计到 StarVLA-native 实现映射
-- PATCH_MANIFEST.md：patch 记录
+- [BASELINE_VERSION.md](./BASELINE_VERSION.md)：StarVLA 基线版本记录
+- [UPSTREAM_COMPATIBILITY.md](./UPSTREAM_COMPATIBILITY.md)：上游兼容策略
+- [MODULE_MAPPING.md](./MODULE_MAPPING.md)：抽象设计到 StarVLA-native 实现映射
+- [PATCH_MANIFEST.md](./PATCH_MANIFEST.md)：patch 记录
+- [DESIGN_FREEZE_CHECK.md](./DESIGN_FREEZE_CHECK.md)：设计冻结检查
+
+## 待补全文档
+
 - EXPERIMENT_MATRIX.md：实验矩阵
-- DESIGN_FREEZE_CHECK.md：设计冻结检查

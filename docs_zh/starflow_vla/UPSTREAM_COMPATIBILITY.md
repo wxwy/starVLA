@@ -23,7 +23,15 @@ P0-M1
 | Checkpoint save/load | 训练入口与共享加载工具 | `starflow_mapping` 后续写入 |
 
 ## Current Status
-当前工作区已切换到设计文档锚点 `42170b2a4df3877ccf6581948e2198d37c363c7f`，详见 `BASELINE_VERSION.md`。进入 P0-M2 前建议先从该 commit 创建专用实现分支，并继续保持上游兼容审计要求。
+当前工作区位于 `merge-official-starvla-dev`，已合并官方 `starVLA_dev` 最新 `cdf5434438f4449cff85e3588956f7706a5c9cc3`，同时保留 fork 中已有 LIBERO 训练、checkpoint、eval 与文档资产，详见 `BASELINE_VERSION.md`。
+
+进入 P0-M2 前必须先完成 compatibility audit，重点检查：
+
+- `FRAMEWORK_REGISTRY` 与 `build_framework(cfg)` 是否仍保持 P0 所需入口能力。
+- `QwenPI_v3.py` 在官方合并后是否仍适合被 `StarFlowVLA` 继承或委托。
+- `LayerwiseFM_ActionHeader.py` / `GR00T_ActionHeader.py` 的 `future_tokens`、state handling 与 Euler solver 接口是否与设计一致。
+- fork 保留的 checkpoint loader、lightweight checkpoint、safetensors 分片和 resume 逻辑是否与官方新增训练逻辑兼容。
+- `starVLA/dataloader/__init__.py` 中官方新增的 balance 参数与 fork 保留的 `num_workers` / `prefetch_factor` 配置是否可共同使用。
 
 ## Not Run
 未运行 StarFlowVLA 代码测试、真实模型加载、训练、评测或部署。

@@ -450,3 +450,44 @@ Stage A 1×A100 40G lightweight validation；本任务只做 git 基线定位与
 
 ### Next
 从 `42170b2a4df3877ccf6581948e2198d37c363c7f` 创建 P0 实现分支后，再进入 P0-M2 / P0-M3。
+
+## Record DOC-M8
+
+### Task ID
+DOC-M8
+
+### Goal
+在 fork 合并官方 `starVLA_dev` 后，同步更新 `docs_zh/starflow_vla` 的文档索引、基线版本记录、上游兼容策略和 patch manifest。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做文档整理，不加载模型，不运行训练、评测或部署。
+
+### Files Changed
+- Modified: `README.md`
+- Modified: `BASELINE_VERSION.md`
+- Modified: `UPSTREAM_COMPATIBILITY.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Source code changes: none in this DOC-M8 task
+
+### Checks
+- `git rev-parse --abbrev-ref HEAD`
+- `git log -1 --format='%H%n%h %ci %s'`
+- `git log -1 --format='%H%n%h %ci %s' starvla-official/starVLA_dev`
+- `git log -1 --format='%H%n%h %ci %s' origin/merge-official-starvla-dev`
+- `find docs_zh/starflow_vla -maxdepth 1 -type f | sort`
+- `rg -n "^version =|version_id" pyproject.toml examples/LIBERO/train_files/starvla_cotrain_libero.yaml`
+
+### Findings
+- 当前分支为 `merge-official-starvla-dev`。
+- 当前 HEAD 为 `5d94274a2e6131a5dbbc49546fc662d2ccbe5117`。
+- 官方 `starvla-official/starVLA_dev` HEAD 为 `cdf5434438f4449cff85e3588956f7706a5c9cc3`。
+- 官方合并提交为 `9a8f5057888faf45eab62fddb97a0e9b84c44a90`。
+- `pyproject.toml` 版本仍为 `1.0.1`，LIBERO 示例配置 `version_id: "0.21"`。
+- `docs_zh/starflow_vla` 下已有 14 个文档文件。
+
+### Not Run
+未运行 StarFlowVLA 代码测试、真实模型加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M2 前先做 compatibility audit，重点检查 framework registry、QwenPI_v3、LayerwiseFM/GR00T、checkpoint loader 和 dataloader 合并后的接口状态。

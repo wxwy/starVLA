@@ -1,7 +1,7 @@
 # StarFlow-VLA 模块映射
 
 ## Scope
-本文件是 P0-M3 前置映射骨架，仅记录设计抽象到 StarVLA-native 实现路径的计划映射。当前未实现 `StarFlowVLA` framework，未新增 `starflow_mapping.json` runtime 写入。
+本文件记录设计抽象到 StarVLA-native 实现路径的 P0 映射。当前已新增 `StarFlowVLA` framework facade 与 `starflow_mapping` schema / 旁路保存工具；checkpoint 自动写入留到 P0-M9。
 
 ## P0 Mapping Draft
 | 设计抽象 | StarVLA-native 映射 | P0 状态 |
@@ -17,7 +17,7 @@
 | Explicit FlowCondition runtime | 可选 dataclass / wrapper | P2，不阻断 P0 |
 | PerceiverAdapter | 可选 token compressor | P2，不阻断 P0 |
 | 7/14DoF action mask | `max_action_dim=14 + action_mask + masked loss` | P1，不阻断 P0 |
-| starflow_mapping manifest | `StarFlowVLA.describe_starflow_mapping()` / `starflow_mapping.json` | P0-M2 已提供运行时 mapping 方法；checkpoint 写入待 P0-M3 |
+| starflow_mapping manifest | `starVLA/model/modules/starflow_vla/mapping.py` | P0-M3 已新增 schema 构造与 `starflow_mapping.json` 旁路保存工具；checkpoint 自动写入待 P0-M9 |
 
 ## Boundary
 P0 验收不以新增同名抽象类为标准，而以 StarVLA-native 路线是否可注册、可配置、可 dry-run、可追踪为标准。

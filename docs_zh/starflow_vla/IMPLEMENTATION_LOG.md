@@ -578,3 +578,45 @@ Stage A 1×A100 40G lightweight validation；本任务只做 registry / import /
 
 ### Next
 进入 P0-M3：新增 `starflow_mapping` manifest 写入路径或 mapping schema，并继续避免修改 QwenPI_v3 / LayerwiseFM / GR00T 主体逻辑。
+
+## Record P0-M3
+
+### Task ID
+P0-M3
+
+### Goal
+新增 `starflow_mapping` manifest schema 与旁路 JSON 保存工具，使 StarFlow-VLA P0 路线可追踪且不侵入 checkpoint 主流程。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做 schema 构造、JSON 保存、registry import 和静态语法检查，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `starVLA/model/modules/starflow_vla/__init__.py`
+- Added: `starVLA/model/modules/starflow_vla/mapping.py`
+- Modified: `starVLA/model/framework/VLM4A/StarFlowVLA.py`
+- Modified: `MODULE_MAPPING.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Not modified: `starVLA/model/framework/VLM4A/QwenPI_v3.py`
+- Not modified: `starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py`
+- Not modified: `starVLA/model/modules/action_model/GR00T_ActionHeader.py`
+
+### Checks
+- `python -m py_compile starVLA/model/modules/starflow_vla/__init__.py starVLA/model/modules/starflow_vla/mapping.py starVLA/model/framework/VLM4A/StarFlowVLA.py`
+- `.venv/bin/python - <<'PY' ... build_starflow_mapping / save_starflow_mapping JSON round-trip ... PY`
+- `.venv/bin/python - <<'PY' ... AST inspect StarFlowVLA mapping delegation / method ownership ... PY`
+- `.venv/bin/python - <<'PY' ... import StarFlowVLA and inspect registry/subclass/method ownership ... PY`
+- `rg -n "def forward|def predict_action|FRAMEWORK_REGISTRY.register|build_starflow_mapping|save_starflow_mapping|schema_version" starVLA/model/framework/VLM4A/StarFlowVLA.py starVLA/model/modules/starflow_vla`
+
+### Findings
+- `mapping.py` 不依赖 torch，可独立构造可 JSON 序列化的 P0 mapping。
+- `save_starflow_mapping()` 可将 mapping 写为 `starflow_mapping.json`，供 checkpoint 旁路追踪使用。
+- `StarFlowVLA.describe_starflow_mapping()` 已改为委托 `build_starflow_mapping(self.config)`，避免 facade 与 schema 字段漂移。
+- `StarFlowVLA` 仍继承 `Qwen_PI_v3`，未定义自己的 `forward()` 或 `predict_action()`。
+- `.venv` 下 registry import 级复验通过；该检查触发 torch 导入，按用户说明等待约 5 分钟完成。
+
+### Not Run
+未运行真实模型加载、checkpoint 保存/加载、forward/backward、single batch overfit、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M4：做 QwenPI_v3 reuse smoke；优先保持 monkeypatch / 单 batch 级验证，不复制或重写 QwenPI_v3 主体逻辑。

@@ -19,6 +19,10 @@
 | DOC-M8 | docs | `UPSTREAM_COMPATIBILITY.md` | modified | 更新 P0-M2 前 compatibility audit 范围 |
 | DOC-M8 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 | DOC-M8 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加官方合并后的文档同步记录 |
+| DOC-M9 | docs | `UPSTREAM_COMPATIBILITY.md` | modified | 追加 P0-M2 前 compatibility audit 结论 |
+| DOC-M9 | docs | `MODULE_MAPPING.md` | modified | 同步 DOC-M9 静态审计后的映射状态 |
+| DOC-M9 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| DOC-M9 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 compatibility audit 实施记录 |
 
 ## Source Code Patches
 本 manifest 只记录 StarFlow-VLA 文档侧 patch。当前仓库分支包含 fork 与官方 `starVLA_dev` 合并后的项目代码变更，但本次 DOC-M8 不新增 StarFlowVLA 源码实现。

@@ -491,3 +491,47 @@ Stage A 1×A100 40G lightweight validation；本任务只做文档整理，不�
 
 ### Next
 进入 P0-M2 前先做 compatibility audit，重点检查 framework registry、QwenPI_v3、LayerwiseFM/GR00T、checkpoint loader 和 dataloader 合并后的接口状态。
+
+## Record DOC-M9
+
+### Task ID
+DOC-M9
+
+### Goal
+完成 P0-M2 前 compatibility audit，确认官方合并后 StarFlow-VLA 的 framework registry、QwenPI_v3、LayerwiseFM/GR00T、checkpoint loader 和 dataloader 前置接口状态。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做静态阅读、语法检查和文档记录，不加载模型，不运行训练、评测或部署。
+
+### Files Changed
+- Modified: `UPSTREAM_COMPATIBILITY.md`
+- Modified: `MODULE_MAPPING.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Source code changes: none
+
+### Checks
+- `git status --short --untracked-files=normal`
+- `sed -n '1,260p' starVLA/model/framework/base_framework.py`
+- `rg -n "FRAMEWORK_REGISTRY|def build_framework|register\\(" starVLA/model/framework -S`
+- `sed -n '1,260p' starVLA/dataloader/__init__.py`
+- `rg -n "load_model_weights|_resolve_model_checkpoint|lightweight|checkpoint|safetensors|deepspeed" starVLA/model/framework/share_tools.py starVLA/training/train_starvla.py starVLA/training/trainer_utils/trainer_tools.py`
+- `sed -n '1,620p' starVLA/model/framework/VLM4A/QwenPI_v3.py`
+- `rg -n "num_target_vision_tokens|future_tokens|state_encoder|predict_action|forward\\(|action_model|action_dim|num_inference_timesteps|Euler|euler|cross" starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py starVLA/model/modules/action_model/GR00T_ActionHeader.py`
+- `python -m py_compile starVLA/model/framework/base_framework.py starVLA/model/framework/VLM4A/QwenPI_v3.py starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py starVLA/model/modules/action_model/GR00T_ActionHeader.py starVLA/model/framework/share_tools.py starVLA/training/train_starvla.py starVLA/training/trainer_utils/trainer_tools.py starVLA/dataloader/__init__.py`
+
+### Findings
+- `FRAMEWORK_REGISTRY` 与 `build_framework(cfg)` 仍按 `cfg.framework.name` 构建，并自动导入 framework module。
+- 当前未注册 `StarFlowVLA`，符合 P0-M2 的新增任务边界。
+- `QwenPI_v3` 仍注册为 `QwenPI_v3`，并保留 `qwen_vl_interface`、`project_layers`、`action_model`、`forward()`、`predict_action()` 和 state-to-instruction 路径。
+- `LayerwiseFM_ActionHeader.py` 仍保留 `future_tokens`、`num_target_vision_tokens`、`state_encoder`、layer-wise cross-attention 和 Euler `predict_action()`。
+- `GR00T_ActionHeader.py` 仍保留 `future_tokens`、`state_encoder` 和 Euler `predict_action()`。
+- checkpoint loader 仍保留单文件、目录、DeepSpeed、safetensors 分片和 lightweight training checkpoint 解析逻辑。
+- dataloader 合并后同时保留官方 balance 参数和 fork 的 `num_workers` / `prefetch_factor` 配置。
+- 静态语法检查通过。
+
+### Not Run
+未运行 StarFlowVLA 代码测试、真实模型加载、checkpoint 加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M2：新增 `StarFlowVLA` framework facade 入口，先做 registry / import / config parse 级验证，不复制 QwenPI_v3 主体逻辑。

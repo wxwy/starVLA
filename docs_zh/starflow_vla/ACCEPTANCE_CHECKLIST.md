@@ -2,18 +2,18 @@
 
 版本：V0.1  
 日期：2026-06-14  
-说明：本清单用于后续实现验收。本次任务未实现代码。
+说明：本清单用于 StarFlow-VLA P0/P1/P2 实施验收。
 
 ## P0 验收清单：最小闭环门禁
 
-- [ ] V4.6.2 设计冻结检查通过。
-- [ ] StarVLA baseline version 已记录：branch、commit、package version、config schema、审计日期。
-- [ ] `docs/starflow_vla/BASELINE_VERSION.md` exists。
-- [ ] `docs/starflow_vla/UPSTREAM_COMPATIBILITY.md` exists。
-- [ ] StarFlowVLA framework registry build pass。
-- [ ] `framework.name=StarFlowVLA` 可被 config 调用。
-- [ ] QwenPI_v3 reuse documented。
-- [ ] StarFlowVLA 不复制 QwenPI_v3 主体 forward / predict_action。
+- [x] V4.6.2 设计冻结检查通过。
+- [x] StarVLA baseline version 已记录：branch、commit、package version、config schema、审计日期。
+- [x] `docs_zh/starflow_vla/BASELINE_VERSION.md` exists。
+- [x] `docs_zh/starflow_vla/UPSTREAM_COMPATIBILITY.md` exists。
+- [x] StarFlowVLA framework registry build pass。
+- [x] `framework.name=StarFlowVLA` 可被 config 调用。
+- [x] QwenPI_v3 reuse documented。
+- [x] StarFlowVLA 不复制 QwenPI_v3 主体 forward / predict_action。
 - [ ] QwenPI_v3 baseline 仍可运行。
 - [ ] LayerwiseFM 7DoF single batch forward/backward pass。
 - [ ] loss finite。
@@ -28,7 +28,7 @@
 - [ ] `num_target_vision_tokens` 写入日志。
 - [ ] `adapter_mode=future_token_cross_dit` 写入 manifest。
 - [ ] `starflow_mapping.json` saved in checkpoint 或 checkpoint 旁路目录。
-- [ ] `starflow_mapping.json` 可 JSON 序列化。
+- [x] `starflow_mapping.json` 可 JSON 序列化。
 - [ ] checkpoint 包含 model / optimizer / scaler / config / starflow_mapping。
 - [ ] resume 后 100 step 内 loss 偏差 <1%。
 - [ ] `patch_manifest_hash` 可记录。
@@ -36,8 +36,8 @@
 - [ ] eval report 输出 success_rate。
 - [ ] eval report 输出 failure category。
 - [ ] eval report 包含 checkpoint hash、config hash、data version、starflow_mapping。
-- [ ] `MODULE_MAPPING.md` exists。
-- [ ] `PATCH_MANIFEST.md` exists。
+- [x] `MODULE_MAPPING.md` exists。
+- [x] `PATCH_MANIFEST.md` exists。
 - [ ] `EXPERIMENT_MATRIX.md` exists。
 - [ ] no Perceiver / FlowCondition runtime / 14D mask blocking P0。
 

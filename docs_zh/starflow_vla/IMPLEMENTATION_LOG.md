@@ -620,3 +620,43 @@ Stage A 1×A100 40G lightweight validation；本任务只做 schema 构造、JSO
 
 ### Next
 进入 P0-M4：做 QwenPI_v3 reuse smoke；优先保持 monkeypatch / 单 batch 级验证，不复制或重写 QwenPI_v3 主体逻辑。
+
+## Record P0-M4
+
+### Task ID
+P0-M4
+
+### Goal
+验证 `StarFlowVLA` 真实复用 `QwenPI_v3` 的主路径，避免复制 QwenPI_v3 主体构建、`forward()` 或 `predict_action()`。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做 monkeypatch reuse smoke 和标准库 unittest，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `tests/test_starflow_vla_reuse.py`
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Not modified: `starVLA/model/framework/VLM4A/QwenPI_v3.py`
+- Not modified: `starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py`
+- Not modified: `starVLA/model/modules/action_model/GR00T_ActionHeader.py`
+
+### Checks
+- `python -m py_compile tests/test_starflow_vla_reuse.py`
+- `.venv/bin/python -m pytest tests/test_starflow_vla_reuse.py -q`
+- `.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v`
+
+### Findings
+- `.venv` 中未安装 `pytest`，因此目标 pytest 命令未运行成功，未新增依赖。
+- 使用标准库 `unittest` 跑同一测试文件，4 个用例通过。
+- 测试确认 `StarFlowVLA` 继承 `Qwen_PI_v3`。
+- 测试确认 `StarFlowVLA` 未定义自己的 `forward()` 或 `predict_action()`，方法对象来自 `Qwen_PI_v3`。
+- 测试通过 monkeypatch `Qwen_PI_v3.__init__` 验证 `build_framework(cfg)` 构建 `StarFlowVLA` 时只走一次 QwenPI_v3 初始化路径，不触发真实模型加载。
+- 测试确认 state-to-instruction 默认路径可在 `StarFlowVLA` 实例上复用。
+- 测试确认 `describe_starflow_mapping()` 返回 P0 mapping 关键字段。
+
+### Not Run
+未运行真实模型加载、QwenPI_v3 baseline 真实构建、checkpoint 保存/加载、forward/backward、single batch overfit、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M5 / P0-M8 前，先确认是否已有 LIBERO small split 数据与本地模型权重；若缺失，则只能继续做 config / batch schema 级 smoke。

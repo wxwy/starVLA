@@ -535,3 +535,46 @@ Stage A 1×A100 40G lightweight validation；本任务只做静态阅读、语�
 
 ### Next
 进入 P0-M2：新增 `StarFlowVLA` framework facade 入口，先做 registry / import / config parse 级验证，不复制 QwenPI_v3 主体逻辑。
+
+## Record P0-M2
+
+### Task ID
+P0-M2
+
+### Goal
+新增 `StarFlowVLA` framework facade 入口，使 `FRAMEWORK_REGISTRY` 可找到 `StarFlowVLA`，并保持 StarVLA-native 继承复用路线。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做 registry / import / monkeypatch dry-run 和静态语法检查，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `starVLA/model/framework/VLM4A/StarFlowVLA.py`
+- Modified: `MODULE_MAPPING.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Not modified: `starVLA/model/framework/VLM4A/QwenPI_v3.py`
+- Not modified: `starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py`
+- Not modified: `starVLA/model/modules/action_model/GR00T_ActionHeader.py`
+
+### Checks
+- `python -m py_compile starVLA/model/framework/VLM4A/StarFlowVLA.py`
+- `.venv/bin/python - <<'PY' ... AST inspect StarFlowVLA registry decorator / inheritance / method ownership ... PY`
+- `.venv/bin/python - <<'PY' ... import StarFlowVLA and inspect registry/subclass/method ownership ... PY`
+- `.venv/bin/python - <<'PY' ... monkeypatch StarFlowVLA.__init__ and build_framework(cfg) ... PY`
+- `rg -n "def forward|def predict_action|FRAMEWORK_REGISTRY.register|describe_starflow_mapping" starVLA/model/framework/VLM4A/StarFlowVLA.py`
+
+### Findings
+- `StarFlowVLA.py` 语法检查通过。
+- AST 检查确认 `StarFlowVLA` 使用 `FRAMEWORK_REGISTRY.register("StarFlowVLA")`。
+- `.venv` 下 import 级检查通过，`FRAMEWORK_REGISTRY["StarFlowVLA"]` 指向 `StarFlowVLA`。
+- `StarFlowVLA` 继承 `Qwen_PI_v3`。
+- `StarFlowVLA` 未定义自己的 `forward()` 或 `predict_action()`，因此不会复制 QwenPI_v3 主体逻辑。
+- `build_framework(cfg)` 可在 monkeypatch `__init__` 的 dry-run 下通过 `framework.name=StarFlowVLA` 构建 facade 实例。
+- `describe_starflow_mapping()` 提供可序列化 mapping 元数据，checkpoint 写入留到 P0-M3。
+- 默认 Python 缺少 `torch` / `omegaconf`；按用户说明改用 `.venv` 并等待 torch 导入完成后，registry 与 build dry-run 均通过。
+
+### Not Run
+未运行真实模型加载、checkpoint 加载、forward/backward、single batch overfit、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M3：新增 `starflow_mapping` manifest 写入路径或 mapping schema，并继续避免修改 QwenPI_v3 / LayerwiseFM / GR00T 主体逻辑。

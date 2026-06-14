@@ -6,7 +6,7 @@
 ## P0 Mapping Draft
 | 设计抽象 | StarVLA-native 映射 | P0 状态 |
 | --- | --- | --- |
-| StarFlowVLA framework | `starVLA/model/framework/VLM4A/StarFlowVLA.py` | 待 P0-M2 新增 |
+| StarFlowVLA framework | `starVLA/model/framework/VLM4A/StarFlowVLA.py` | P0-M2 已新增 facade 入口 |
 | Base framework | `QwenPI_v3` | DOC-M9 静态审计确认可继承或委托复用 |
 | VLM backbone | Qwen3-VL via `get_vlm_model(config=...)` | DOC-M9 静态审计确认保留现有路径 |
 | Projection layers | `QwenPI_v3.project_layers` | DOC-M9 静态审计确认保留现有路径 |
@@ -17,7 +17,7 @@
 | Explicit FlowCondition runtime | 可选 dataclass / wrapper | P2，不阻断 P0 |
 | PerceiverAdapter | 可选 token compressor | P2，不阻断 P0 |
 | 7/14DoF action mask | `max_action_dim=14 + action_mask + masked loss` | P1，不阻断 P0 |
-| starflow_mapping manifest | `starflow_mapping.json` | 待 P0-M3 |
+| starflow_mapping manifest | `StarFlowVLA.describe_starflow_mapping()` / `starflow_mapping.json` | P0-M2 已提供运行时 mapping 方法；checkpoint 写入待 P0-M3 |
 
 ## Boundary
 P0 验收不以新增同名抽象类为标准，而以 StarVLA-native 路线是否可注册、可配置、可 dry-run、可追踪为标准。

@@ -77,3 +77,26 @@ def save_starflow_mapping(path: str | Path, mapping: dict[str, Any]) -> Path:
         encoding="utf-8",
     )
     return output_path
+
+
+def save_starflow_checkpoint_mapping(
+    checkpoint_path: str | Path,
+    config: Any = None,
+    *,
+    patch_manifest_hash: str | None = None,
+    starvla_commit: str | None = None,
+    config_schema: str | None = None,
+) -> Path:
+    """在 checkpoint 目录或单文件 checkpoint 旁保存 StarFlow-VLA 映射。"""
+    checkpoint_path = Path(checkpoint_path)
+    mapping = build_starflow_mapping(
+        config,
+        patch_manifest_hash=patch_manifest_hash,
+        starvla_commit=starvla_commit,
+        config_schema=config_schema,
+    )
+    if checkpoint_path.suffix:
+        output_path = checkpoint_path.with_name(f"{checkpoint_path.name}.starflow_mapping.json")
+    else:
+        output_path = checkpoint_path / "starflow_mapping.json"
+    return save_starflow_mapping(output_path, mapping)

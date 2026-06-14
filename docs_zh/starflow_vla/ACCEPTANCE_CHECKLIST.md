@@ -27,11 +27,11 @@
 - [ ] future_tokens ablation configs `0/8/16/32/64` pass。
 - [ ] `num_target_vision_tokens` 写入日志。
 - [ ] `adapter_mode=future_token_cross_dit` 写入 manifest。
-- [ ] `starflow_mapping.json` saved in checkpoint 或 checkpoint 旁路目录。
+- [x] `starflow_mapping.json` saved in checkpoint 或 checkpoint 旁路目录。
 - [x] `starflow_mapping.json` 可 JSON 序列化。
 - [ ] checkpoint 包含 model / optimizer / scaler / config / starflow_mapping。
 - [ ] resume 后 100 step 内 loss 偏差 <1%。
-- [ ] `patch_manifest_hash` 可记录。
+- [x] `patch_manifest_hash` 可记录。
 - [ ] LIBERO eval smoke pass。
 - [ ] eval report 输出 success_rate。
 - [ ] eval report 输出 failure category。

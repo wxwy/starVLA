@@ -823,3 +823,42 @@ Stage A 1×A100 40G lightweight validation；本任务只做配置新增、YAML 
 
 ### Next
 进入 P0-M9：在 checkpoint 旁路保存 `starflow_mapping.json` 的工具级接入；真实 checkpoint save/load 仍需数据与训练闭环可用后复验。
+
+## Record P0-M9
+
+### Task ID
+P0-M9
+
+### Goal
+新增 checkpoint 旁路 `starflow_mapping` 保存工具，使目录 checkpoint 和单文件 checkpoint 都可记录 StarFlow-VLA manifest。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做工具函数和标准库 unittest，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Modified: `starVLA/model/modules/starflow_vla/__init__.py`
+- Modified: `starVLA/model/modules/starflow_vla/mapping.py`
+- Added: `tests/test_starflow_checkpoint_mapping.py`
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Not modified: `starVLA/training/train_starvla.py`
+- Not modified: `starVLA/training/train_starvla_cotrain.py`
+
+### Checks
+- `python -m py_compile starVLA/model/modules/starflow_vla/__init__.py starVLA/model/modules/starflow_vla/mapping.py tests/test_starflow_checkpoint_mapping.py`
+- `.venv/bin/python -m unittest tests.test_starflow_checkpoint_mapping -v`
+
+### Findings
+- 新增 `save_starflow_checkpoint_mapping()`，可从 config 构造 mapping 并保存 checkpoint sidecar JSON。
+- 目录 checkpoint 会写入 `<checkpoint_dir>/starflow_mapping.json`。
+- 单文件 checkpoint 会写入 `<checkpoint_file>.starflow_mapping.json`。
+- sidecar JSON 可记录 `patch_manifest_hash`、`starvla_commit` 和 `config_schema`。
+- unittest 2 个用例通过。
+- 当前未改训练主循环，避免在真实训练闭环未完成前侵入复杂 checkpoint 保存路径。
+
+### Not Run
+未运行真实 checkpoint 保存/加载、resume 100 step、真实模型加载、LIBERO batch schema、forward/backward、loss finite、single batch overfit、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M10 前需要真实 P0-M5 训练产物；当前仍受 `playground/Datasets/LEROBOT_LIBERO_DATA` 缺失阻塞。

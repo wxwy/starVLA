@@ -936,3 +936,36 @@ Stage A 1×A100 40G lightweight validation；本任务只做文档治理和标�
 
 ### Next
 P0 Stage A 配置、文档、registry、mapping 和 preflight 工作已收口；继续 P0 Stage B 前需要准备 `playground/Datasets/LEROBOT_LIBERO_DATA` 并产生 P0 checkpoint。
+
+## Record P0-M7a
+
+### Task ID
+P0-M7a
+
+### Goal
+补充 future token 规划槽位变量的轻量 mapping 测试，覆盖 `num_target_vision_tokens=0/8/16/32/64`。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做配置与 mapping 检查，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `tests/test_starflow_future_token_variants.py`
+- Modified: `tests/test_starflow_docs_governance.py`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+
+### Checks
+- `python -m py_compile tests/test_starflow_future_token_variants.py tests/test_starflow_docs_governance.py`
+- `.venv/bin/python -m unittest tests.test_starflow_future_token_variants -v`
+- `.venv/bin/python -m unittest tests.test_starflow_docs_governance -v`
+
+### Findings
+- 5 组 `num_target_vision_tokens` 均可生成 `starflow_mapping`。
+- mapping 保持 `adapter_mode=future_token_cross_dit`、`state_mode=discretized_instruction`、`action_head=LayerwiseFM`。
+- 测试为轻量配置与 mapping 测试，不触发 framework 全量导入或真实模型加载。
+
+### Not Run
+未运行真实模型加载、forward/backward、loss finite、single batch overfit、训练、评测、部署或 VGGT 接入。
+
+### Next
+按用户要求继续准备缺失的 LIBERO 数据，下载目标目录为 `playground/Datasets/LEROBOT_LIBERO_DATA`。

@@ -31,6 +31,7 @@ TRACKED_ARTIFACTS = [
     "tests/test_starflow_checkpoint_mapping.py",
     "tests/test_starflow_eval_preflight.py",
     "tests/test_starflow_docs_governance.py",
+    "tests/test_starflow_future_token_variants.py",
 ]
 
 

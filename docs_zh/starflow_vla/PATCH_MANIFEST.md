@@ -69,6 +69,9 @@
 | P0-M11 | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 `EXPERIMENT_MATRIX.md` 已存在 |
 | P0-M11 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 | P0-M11 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M11 文档治理记录 |
+| P0-M7a | test | `tests/test_starflow_future_token_variants.py` | added | 新增 future token 5 组 mapping 变体轻量测试 |
+| P0-M7a | test | `tests/test_starflow_docs_governance.py` | modified | 将 future token 变体测试纳入 manifest 覆盖检查 |
+| P0-M7a | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 
 ## Source Code Patches
 `P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight；`P0-M11` 新增实验矩阵和文档治理测试。

@@ -33,8 +33,8 @@
 - [ ] resume 后 100 step 内 loss 偏差 <1%。
 - [x] `patch_manifest_hash` 可记录。
 - [x] LIBERO eval preflight pass。
-- [ ] LIBERO rollout eval smoke pass。
-- [ ] eval report 输出 success_rate。
+- [x] LIBERO rollout eval smoke pass。
+- [x] eval report 输出 success_rate。
 - [ ] eval report 输出 failure category。
 - [ ] eval report 包含 checkpoint hash、config hash、data version、starflow_mapping。
 - [x] `MODULE_MAPPING.md` exists。

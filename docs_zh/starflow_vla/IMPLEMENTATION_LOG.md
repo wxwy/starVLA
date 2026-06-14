@@ -1146,3 +1146,41 @@ Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务�
 
 ### Next
 P0 Stage B 的真实 batch、Stage1、MLP baseline、future token、checkpoint sidecar 和 eval preflight 已完成；后续进入可选 resume 100 step 或真实 LIBERO rollout 前需确认运行预算。
+
+## Record P0-M10-STAGEB
+
+### Task ID
+P0-M10-STAGEB
+
+### Goal
+使用 Stage1 smoke checkpoint 执行最小 LIBERO rollout smoke，确认 policy server、LIBERO 环境和 eval 客户端可连通。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；policy server 使用仓库 `.venv`；LIBERO eval 使用 `.libero`；本任务只运行 `libero_goal` 的 1 task × 1 trial smoke，不运行完整 LIBERO suite。
+
+### Files Changed
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `EXPERIMENT_MATRIX.md`
+- Modified: `EVAL_SMOKE.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Modified: `examples/LIBERO/SESSION.md`
+- Environment side effects: `.libero/bin/python -m pip install -e LIBERO`
+- Eval side effects: generated `playground/eval_results/libero_goal/starflow_vla_stage1_smoke_steps_1/rollout_open_the_middle_drawer_of_the_cabinet_episode0_failure.mp4`
+
+### Checks
+- `RUN_DIR=$PWD/playground/Checkpoints/starflow_vla_stage1_qwenpi_v3_native CKPT_STEP=1 STARVLA_PYTHON=$PWD/.venv/bin/python PORT=6694 USE_BF16=1 bash examples/LIBERO/eval_files/run_policy_server.sh`
+- `LIBERO_HOME=$PWD/LIBERO LIBERO_CONFIG_PATH=$PWD/LIBERO/libero PYTHONPATH=$PWD/LIBERO:$PWD MUJOCO_GL=egl PYOPENGL_PLATFORM=egl .libero/bin/python examples/LIBERO/eval_files/eval_libero.py --args.pretrained-path $PWD/playground/Checkpoints/starflow_vla_stage1_qwenpi_v3_native/checkpoints/steps_1 --args.host 127.0.0.1 --args.port 6694 --args.task-suite-name libero_goal --args.num-trials-per-task 1 --args.max-tasks 1 --args.video-out-path $PWD/playground/eval_results/libero_goal/starflow_vla_stage1_smoke_steps_1`
+
+### Findings
+- policy server 成功加载 `steps_1`，识别 `action_chunk_size=8`、`default_unnorm_key=franka`、7D action keys 和 8D state keys。
+- LIBERO eval 客户端成功连接 policy server。
+- 最小 rollout smoke 完成 1 episode，输出 `Total success rate: 0.0` 与 `Total episodes: 1`。
+- 生成 failure rollout 视频；该结果来自 smoke checkpoint，不代表训练后性能。
+- eval 退出阶段出现 EGL / `libGLU.so.0` 清理期警告，但 eval 进程退出码为 0。
+
+### Not Run
+未运行完整 LIBERO suite、failure taxonomy、checkpoint/config hash report、多 seed 评测、完整训练、部署或 VGGT 接入。
+
+### Next
+P0 主线 smoke 已覆盖到最小 rollout；剩余可选项为 resume 100 step、完整 LIBERO suite 与正式报告。

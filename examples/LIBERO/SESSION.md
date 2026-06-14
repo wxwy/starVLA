@@ -342,3 +342,12 @@
 - 五组均完成真实 forward/backward、loss finite 与 3 步 single batch overfit smoke
 - `num_target_vision_tokens=0` 边界通过，未触发构建或 forward blocker
 - 未保存 5 组 ablation checkpoint，未运行完整训练循环、LIBERO rollout、评测或部署
+
+## 2026-06-15 — StarFlow-VLA P0 最小 LIBERO rollout smoke
+
+- 已用 `.venv` 启动 policy server，checkpoint 为 `playground/Checkpoints/starflow_vla_stage1_qwenpi_v3_native/checkpoints/steps_1`
+- 已用 `.libero` 运行 `libero_goal` 的 `max_tasks=1`、`num_trials_per_task=1` eval smoke
+- eval 客户端成功连接 server，完成 1 episode，输出 `Total success rate: 0.0`
+- 生成 `playground/eval_results/libero_goal/starflow_vla_stage1_smoke_steps_1/rollout_open_the_middle_drawer_of_the_cabinet_episode0_failure.mp4`
+- 退出阶段有 EGL / `libGLU.so.0` 清理期警告，但 eval 进程退出码为 0
+- 未运行完整 LIBERO suite、failure taxonomy、多 seed 评测或正式性能报告

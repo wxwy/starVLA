@@ -351,3 +351,10 @@
 - 生成 `playground/eval_results/libero_goal/starflow_vla_stage1_smoke_steps_1/rollout_open_the_middle_drawer_of_the_cabinet_episode0_failure.mp4`
 - 退出阶段有 EGL / `libGLU.so.0` 清理期警告，但 eval 进程退出码为 0
 - 未运行完整 LIBERO suite、failure taxonomy、多 seed 评测或正式性能报告
+
+## 2026-06-15 — StarFlow-VLA P0 QwenPI_v3 baseline compatibility smoke
+
+- 已将 `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` 临时设为 `framework.name=QwenPI_v3`
+- 已使用真实 `libero_goal` batch 执行 QwenPI_v3 baseline forward/backward smoke
+- `action_loss` 为有限值，反传后可训练参数获得梯度
+- 未运行 baseline overfit、checkpoint 保存/加载、完整训练、LIBERO rollout 或评测

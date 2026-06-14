@@ -1184,3 +1184,35 @@ Stage B 1×A100 40G target smoke validation；policy server 使用仓库 `.venv`
 
 ### Next
 P0 主线 smoke 已覆盖到最小 rollout；剩余可选项为 resume 100 step、完整 LIBERO suite 与正式报告。
+
+## Record P0-M4-STAGEB
+
+### Task ID
+P0-M4-STAGEB
+
+### Goal
+复验 QwenPI_v3 baseline 在真实 LIBERO batch 上仍可执行 forward/backward，确保 StarFlowVLA facade 没有破坏基线入口。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务只运行单 batch baseline smoke，不保存 baseline checkpoint，不运行完整训练、评测或部署。
+
+### Files Changed
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `EXPERIMENT_MATRIX.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Modified: `examples/LIBERO/SESSION.md`
+
+### Checks
+- `.venv/bin/python - <<'PY' ... PY`：加载 `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml`，将 `framework.name` 临时设为 `QwenPI_v3`，取真实 LIBERO batch，冻结 `qwen_vl_interface`，执行 forward/backward。
+
+### Findings
+- 真实 batch shape：action `(8, 7)`，state `(1, 8)`。
+- QwenPI_v3 baseline forward/backward smoke 通过，`action_loss` 为有限值，反传后可训练参数获得梯度。
+- 本阶段未修改 `starVLA/model/` 源码。
+
+### Not Run
+未运行 QwenPI_v3 baseline overfit、checkpoint 保存/加载、完整训练、LIBERO rollout、success_rate 统计、评测、部署或 VGGT 接入。
+
+### Next
+P0 主线 smoke 已覆盖到最小 rollout；剩余可选项为 resume 100 step、完整 LIBERO suite 与正式报告。

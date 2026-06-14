@@ -14,7 +14,7 @@
 - [x] `framework.name=StarFlowVLA` 可被 config 调用。
 - [x] QwenPI_v3 reuse documented。
 - [x] StarFlowVLA 不复制 QwenPI_v3 主体 forward / predict_action。
-- [ ] QwenPI_v3 baseline 仍可运行。
+- [x] QwenPI_v3 baseline 仍可运行。
 - [x] LayerwiseFM 7DoF single batch forward/backward pass。
 - [x] loss finite。
 - [x] single batch overfit pass。

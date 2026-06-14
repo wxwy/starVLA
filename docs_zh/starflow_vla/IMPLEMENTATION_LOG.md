@@ -1113,3 +1113,36 @@ Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务�
 
 ### Next
 进入 P0-M7 Stage B：复验 future token `num_target_vision_tokens=0/8/16/32/64` 的真实 forward / single batch smoke。
+
+## Record P0-M7-STAGEB
+
+### Task ID
+P0-M7-STAGEB
+
+### Goal
+在真实 Qwen3-VL 本地模型与真实 LIBERO `libero_goal` batch 上复验 future token `num_target_vision_tokens=0/8/16/32/64` 五组最小 forward/backward、loss finite 与 single batch overfit 前置门禁。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务只运行单 batch smoke，不保存 5 组 checkpoint，不运行完整训练、评测或部署。
+
+### Files Changed
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `EXPERIMENT_MATRIX.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Modified: `examples/LIBERO/SESSION.md`
+
+### Checks
+- `.venv/bin/python - <<'PY' ... PY`：加载 `configs/starflow_vla/stage3_future_token_ablation.yaml`，取真实 LIBERO batch，分别构建 `num_target_vision_tokens=0/8/16/32/64` 的 `StarFlowVLA`，冻结 `qwen_vl_interface`，每组优化 action head / projectors 3 步。
+
+### Findings
+- 真实 batch shape：action `(8, 7)`，state `(1, 8)`。
+- 五组 `num_target_vision_tokens=0/8/16/32/64` 均完成 forward/backward，`action_loss` 均为有限值。
+- 五组 single batch overfit 前置验证均通过，且 `num_target_vision_tokens=0` 边界未失败。
+- 本阶段未修改 `starVLA/model/` 源码。
+
+### Not Run
+未保存 5 组 ablation checkpoint，未运行完整训练循环、policy server、LIBERO rollout、success_rate 统计、评测、部署或 VGGT 接入。
+
+### Next
+P0 Stage B 的真实 batch、Stage1、MLP baseline、future token、checkpoint sidecar 和 eval preflight 已完成；后续进入可选 resume 100 step 或真实 LIBERO rollout 前需确认运行预算。

@@ -335,3 +335,10 @@
 - 已冻结 `qwen_vl_interface`，执行 MLP baseline 单 batch forward/backward 与 6 步 overfit smoke
 - 同一真实 batch 上 loss 从 `0.87645137` 降至 `0.48976591`
 - 未保存 baseline checkpoint，未运行完整训练循环、LIBERO rollout、评测或部署
+
+## 2026-06-15 — StarFlow-VLA P0 future token Stage B smoke
+
+- 已使用 `configs/starflow_vla/stage3_future_token_ablation.yaml` 和真实 `libero_goal` batch 复验 `num_target_vision_tokens=0/8/16/32/64`
+- 五组均完成真实 forward/backward、loss finite 与 3 步 single batch overfit smoke
+- `num_target_vision_tokens=0` 边界通过，未触发构建或 forward blocker
+- 未保存 5 组 ablation checkpoint，未运行完整训练循环、LIBERO rollout、评测或部署

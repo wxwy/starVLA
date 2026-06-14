@@ -18,6 +18,7 @@ class StarFlowLIBEROBatchTest(unittest.TestCase):
 
         self.assertEqual(cfg.framework.name, "StarFlowVLA")
         self.assertEqual(cfg.framework.action_model.action_dim, 7)
+        self.assertEqual(cfg.framework.action_model.state_dim, 8)
         self.assertTrue(cfg.datasets.vla_data.include_state)
         self.assertEqual(cfg.datasets.vla_data.data_mix, "libero_goal")
 
@@ -39,8 +40,8 @@ class StarFlowLIBEROBatchTest(unittest.TestCase):
 
         action = np.asarray(sample["action"])
         state = np.asarray(sample["state"])
-        self.assertEqual(action.shape[-1], 7)
-        self.assertEqual(state.shape[-1], 7)
+        self.assertEqual(action.shape[-1], cfg.framework.action_model.action_dim)
+        self.assertEqual(state.shape[-1], cfg.framework.action_model.state_dim)
         self.assertTrue(np.isfinite(action).all())
         self.assertTrue(np.isfinite(state).all())
 

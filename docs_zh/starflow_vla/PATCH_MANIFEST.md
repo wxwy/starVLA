@@ -72,13 +72,20 @@
 | P0-M7a | test | `tests/test_starflow_future_token_variants.py` | added | 新增 future token 5 组 mapping 变体轻量测试 |
 | P0-M7a | test | `tests/test_starflow_docs_governance.py` | modified | 将 future token 变体测试纳入 manifest 覆盖检查 |
 | P0-M7a | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M8-DATA | config | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` | modified | 对齐 LIBERO registry，P0 使用 7D action / 8D state |
+| P0-M8-DATA | config | `configs/starflow_vla/stage2_mlp_baseline.yaml` | modified | 对齐 LIBERO registry，P0 使用 7D action / 8D state |
+| P0-M8-DATA | config | `configs/starflow_vla/stage3_future_token_ablation.yaml` | modified | 对齐 LIBERO registry，P0 使用 7D action / 8D state |
+| P0-M8-DATA | test | `tests/test_starflow_libero_batch.py` | modified | 使用配置声明校验 action/state 维度，真实 LIBERO batch 通过 |
+| P0-M8-DATA | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 LIBERO minimal batch schema 通过 |
+| P0-M8-DATA | docs | `EXPERIMENT_MATRIX.md` | modified | 更新 LIBERO 数据已准备和 batch smoke 状态 |
+| P0-M8-DATA | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 
 ## Source Code Patches
-`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight；`P0-M11` 新增实验矩阵和文档治理测试。
+`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF action / 8D state smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight；`P0-M11` 新增实验矩阵和文档治理测试；`P0-M8-DATA` 对齐真实 LIBERO registry 的 8D state schema。
 
 本阶段不修改 `QwenPI_v3.py`、`LayerwiseFM_ActionHeader.py` 或 `GR00T_ActionHeader.py` 主体逻辑。
 
 当前未对 StarVLA 原始主体文件做需要 `STARFLOW_PATCH_BEGIN / END` 标记的 inline patch。
 
 ## Not Run
-未运行 StarFlowVLA 代码测试、真实模型加载、训练、评测或部署。
+未运行真实模型加载、训练、评测或部署。

@@ -20,13 +20,13 @@
 - [ ] single batch overfit pass。
 - [x] `action_dim=7` 为 P0 默认配置。
 - [x] 不强制启用 `max_action_dim=14 + action_mask`。
-- [ ] LIBERO minimal batch schema pass。
-- [ ] batch 含 image / instruction / state / action。
+- [x] LIBERO minimal batch schema pass。
+- [x] batch 含 image / instruction / state / action。
 - [x] MLP/OFT/VLA_AdapterHeader baseline dry-run pass。
 - [ ] MLP/OFT/VLA_AdapterHeader baseline single batch overfit pass。
-- [ ] future_tokens ablation configs `0/8/16/32/64` pass。
+- [x] future_tokens ablation configs `0/8/16/32/64` pass。
 - [ ] `num_target_vision_tokens` 写入日志。
-- [ ] `adapter_mode=future_token_cross_dit` 写入 manifest。
+- [x] `adapter_mode=future_token_cross_dit` 写入 manifest。
 - [x] `starflow_mapping.json` saved in checkpoint 或 checkpoint 旁路目录。
 - [x] `starflow_mapping.json` 可 JSON 序列化。
 - [ ] checkpoint 包含 model / optimizer / scaler / config / starflow_mapping。
@@ -97,10 +97,10 @@
 
 ### Future Tokens Planning Slot Optimization
 
-- [ ] `num_target_vision_tokens=0/8/16/32/64` 五组配置存在，或在 P0-M7a issue 中明确列出待创建路径。
-- [ ] 五组配置均可完成 config parse。
-- [ ] 每组配置都能写入或计划写入 `starflow_mapping`。
-- [ ] `starflow_mapping` 至少包含 `num_target_vision_tokens`、`adapter_mode`、`state_mode`、`action_dim`、`action_horizon`、StarVLA upstream commit。
+- [x] `num_target_vision_tokens=0/8/16/32/64` 五组配置存在，或在 P0-M7a issue 中明确列出待创建路径。
+- [x] 五组配置均可完成 config parse。
+- [x] 每组配置都能写入或计划写入 `starflow_mapping`。
+- [x] `starflow_mapping` 至少包含 `num_target_vision_tokens`、`adapter_mode`、`state_mode`、`action_dim`、`action_horizon`、StarVLA upstream commit。
 - [ ] 至少一组 token 数完成 Stage B single batch overfit 后，记录 loss finite/NaN、peak memory、latency、action smoothness。
 - [ ] 报告包含 success_rate、loss curve、memory、latency、task length success 或对应占位符。
 - [ ] 未完成指标均标注 `[待 Stage B A100 复验]`、`[待 LIBERO eval]` 或 `[待 RoboCasa / RoboTwin eval]`。

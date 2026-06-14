@@ -305,3 +305,11 @@
 - LIBERO 启动脚本与 yaml 默认调整为 `num_workers=5`、`prefetch_factor=2`，2 卡并发预取峰值为 10 个 worker / 20 个 batch
 - 推理侧 checkpoint 辅助文件解析增强：`_resolve_inference_run_files()` 现在按 checkpoint 目录、直接父目录、旧训练 run 目录，以及 symlink resolve 后的对应目录查找 `config.yaml` 和 `dataset_statistics.json`
 - 该逻辑兼容 `.../Checkpoints/run/checkpoints/steps_xxx` 与 `.../trained_model/name/steps_xxx` 两种布局
+
+## 2026-06-14 — StarFlow-VLA P0 LIBERO goal 数据准备与 batch smoke
+
+- 已下载 P0 最小数据集 `IPEC-COMMUNITY/libero_goal_no_noops_1.0.0_lerobot` 到 `/gemini/code/datasets/LEROBOT_LIBERO_DATA/libero_goal_no_noops_1.0.0_lerobot`
+- 已创建仓库入口软链接 `playground/Datasets/LEROBOT_LIBERO_DATA -> /gemini/code/datasets/LEROBOT_LIBERO_DATA`
+- 已复制 `examples/LIBERO/train_files/modality.json` 到数据集 `meta/modality.json`
+- 已确认当前 LIBERO registry 使用 7D action 与 8D state，state keys 包含 `x,y,z,roll,pitch,yaw,pad,gripper`
+- `.venv/bin/python -m unittest tests.test_starflow_libero_batch -v` 已通过，真实 batch 含 image / lang / state / action

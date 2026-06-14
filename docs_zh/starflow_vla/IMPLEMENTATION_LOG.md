@@ -969,3 +969,42 @@ Stage A 1×A100 40G lightweight validation；本任务只做配置与 mapping �
 
 ### Next
 按用户要求继续准备缺失的 LIBERO 数据，下载目标目录为 `playground/Datasets/LEROBOT_LIBERO_DATA`。
+
+## Record P0-M8-DATA
+
+### Task ID
+P0-M8-DATA
+
+### Goal
+补齐 P0 最小 LIBERO `libero_goal` 数据入口，复验 StarFlow-VLA Stage1 真实 batch schema。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`，本任务只下载/挂载数据并读取一个真实 batch，不加载 StarFlowVLA 模型，不运行训练、评测或部署。
+
+### Files Changed
+- Modified: `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml`
+- Modified: `configs/starflow_vla/stage2_mlp_baseline.yaml`
+- Modified: `configs/starflow_vla/stage3_future_token_ablation.yaml`
+- Modified: `tests/test_starflow_libero_batch.py`
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `EXPERIMENT_MATRIX.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `MEMORY/starflow_vla_environment.md`
+- Modified: `examples/LIBERO/SESSION.md`
+- Data side effects: downloaded `/gemini/code/datasets/LEROBOT_LIBERO_DATA/libero_goal_no_noops_1.0.0_lerobot`; created symlink `playground/Datasets/LEROBOT_LIBERO_DATA -> /gemini/code/datasets/LEROBOT_LIBERO_DATA`; copied `modality.json` into dataset meta.
+
+### Checks
+- `.venv/bin/python -m unittest tests.test_starflow_libero_batch -v`：首次失败，根因是真实 LIBERO registry 返回 8D state。
+- `.venv/bin/python -m unittest tests.test_starflow_libero_batch -v`：通过。
+
+### Findings
+- 真实 `libero_goal` batch 含 `image` / `lang` / `state` / `action`。
+- action keys 为 `x,y,z,roll,pitch,yaw,gripper`，即 7D action。
+- state keys 为 `x,y,z,roll,pitch,yaw,pad,gripper`，即 8D state。
+- 已将三个 StarFlow-VLA P0 配置的 `state_dim` 从 7 对齐为 8。
+
+### Not Run
+未运行真实模型加载、forward/backward、loss finite、single batch overfit、checkpoint 保存/加载、policy server、LIBERO rollout、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M5 Stage B：在数据已可读的前提下执行最小真实模型 forward/backward / loss finite / single batch overfit 前置检查。

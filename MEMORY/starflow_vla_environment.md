@@ -12,3 +12,11 @@
 
 - StarFlow-VLA 相关检查优先使用仓库 `.venv`。
 - `import torch` 可能耗时约 4 分钟，涉及 framework import 的检查需预留等待时间。
+
+## LIBERO 数据
+
+- 已准备 P0 最小数据集 `libero_goal_no_noops_1.0.0_lerobot`。
+- 数据实际目录：`/gemini/code/datasets/LEROBOT_LIBERO_DATA/libero_goal_no_noops_1.0.0_lerobot`。
+- 仓库入口软链接：`playground/Datasets/LEROBOT_LIBERO_DATA -> /gemini/code/datasets/LEROBOT_LIBERO_DATA`。
+- 已将 `examples/LIBERO/train_files/modality.json` 复制到数据集 `meta/modality.json`。
+- 当前 LIBERO registry 使用 7D action 与 8D state：state keys 包含 `x,y,z,roll,pitch,yaw,pad,gripper`。

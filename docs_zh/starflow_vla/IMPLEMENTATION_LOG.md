@@ -862,3 +862,41 @@ Stage A 1×A100 40G lightweight validation；本任务只做工具函数和标�
 
 ### Next
 进入 P0-M10 前需要真实 P0-M5 训练产物；当前仍受 `playground/Datasets/LEROBOT_LIBERO_DATA` 缺失阻塞。
+
+## Record P0-M10
+
+### Task ID
+P0-M10
+
+### Goal
+新增 LIBERO eval smoke preflight，确认 eval 脚本语法和 P0 checkpoint / `starflow_mapping` 前置门禁。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做 shell 语法检查和可跳过的 unittest，不启动 policy server，不运行 LIBERO rollout。
+
+### Files Changed
+- Added: `docs_zh/starflow_vla/EVAL_SMOKE.md`
+- Added: `tests/test_starflow_eval_preflight.py`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Not modified: `examples/LIBERO/eval_files/run_policy_server.sh`
+- Not modified: `examples/LIBERO/eval_files/eval_libero.sh`
+- Not modified: `examples/LIBERO/eval_files/eval_libero.py`
+
+### Checks
+- `python -m py_compile tests/test_starflow_eval_preflight.py`
+- `bash -n examples/LIBERO/eval_files/run_policy_server.sh && bash -n examples/LIBERO/eval_files/eval_libero.sh`
+- `.venv/bin/python -m unittest tests.test_starflow_eval_preflight -v`
+
+### Findings
+- eval shell 脚本语法检查通过。
+- `tests.test_starflow_eval_preflight` 运行成功，2 个用例中 1 个通过、1 个 skip。
+- skip 原因：`playground/Checkpoints/starflow_vla_stage1_qwenpi_v3_native/checkpoints` 不存在。
+- `EVAL_SMOKE.md` 已记录真实 eval smoke 所需 P0 checkpoint、mapping sidecar、LIBERO_HOME 与 LIBERO 数据目录。
+- 当前不能标记 LIBERO eval smoke pass、success_rate、failure category 或 eval report 为通过。
+
+### Not Run
+未启动 policy server，未运行 LIBERO rollout，未统计 success_rate / failure category，未运行真实模型加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M11：做文档与 patch 管理收口；真实 P0-M10 需要先完成 P0-M5 训练并产生 checkpoint。

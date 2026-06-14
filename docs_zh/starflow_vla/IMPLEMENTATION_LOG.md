@@ -660,3 +660,48 @@ Stage A 1×A100 40G lightweight validation；本任务只做 monkeypatch reuse s
 
 ### Next
 进入 P0-M5 / P0-M8 前，先确认是否已有 LIBERO small split 数据与本地模型权重；若缺失，则只能继续做 config / batch schema 级 smoke。
+
+## Record P0-M5
+
+### Task ID
+P0-M5
+
+### Goal
+新增 Stage1 `StarFlowVLA + QwenPI_v3 native + LayerwiseFM` 单臂 7DoF smoke 配置，并完成配置解析与 registry dry-run。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做配置新增、YAML 解析、兼容层检查和 monkeypatch build dry-run，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml`
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Not modified: `starVLA/model/framework/VLM4A/QwenPI_v3.py`
+- Not modified: `starVLA/model/modules/action_model/LayerwiseFM_ActionHeader.py`
+- Not modified: `starVLA/model/modules/action_model/GR00T_ActionHeader.py`
+
+### Checks
+- `find playground -maxdepth 4 ...`
+- `ls -ld playground/Datasets playground/Datasets/LEROBOT_LIBERO_DATA`
+- `.venv/bin/python - <<'PY' ... OmegaConf.load stage1 config and assert key fields ... PY`
+- `.venv/bin/python - <<'PY' ... check base_vlm path and LIBERO data root ... PY`
+- `.venv/bin/python - <<'PY' ... apply_config_compat stage1 config ... PY`
+- `python -m py_compile tests/test_starflow_vla_reuse.py starVLA/model/framework/VLM4A/StarFlowVLA.py starVLA/model/modules/starflow_vla/mapping.py`
+- `.venv/bin/python - <<'PY' ... monkeypatch Qwen_PI_v3.__init__ and build_framework(stage1 cfg) ... PY`
+
+### Findings
+- Stage1 配置解析通过，`framework.name=StarFlowVLA`。
+- Stage1 配置使用 `action_model_type=LayerwiseFM`、`action_dim=7`、`state_dim=7`、`action_horizon=8`、`num_target_vision_tokens=32`。
+- Stage1 配置显式启用 `datasets.vla_data.include_state=true`，以复用 QwenPI_v3 state-to-instruction 路径。
+- Stage1 配置未启用 `max_action_dim=14 + action_mask`。
+- `playground/Pretrained_models/Qwen3-VL-4B-Instruct` 软链接存在，指向 `/gemini/pretrain/Qwen3-VL-4B-Instruct`。
+- `playground/Datasets/LEROBOT_LIBERO_DATA` 当前不存在，因此不能运行 LIBERO batch schema、真实 forward/backward、single batch overfit 或训练。
+- `apply_config_compat()` 后 action horizon / future window / diffusion config 字段保持一致。
+- `build_framework(stage1 cfg)` 在 monkeypatch `Qwen_PI_v3.__init__` 的 dry-run 下通过，不触发真实模型加载。
+
+### Not Run
+未运行真实模型加载、LIBERO batch schema、forward/backward、loss finite、single batch overfit、checkpoint 保存/加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M8：补 LIBERO 数据目录可用性检查与 batch schema smoke；若 `playground/Datasets/LEROBOT_LIBERO_DATA` 仍缺失，则只记录阻塞并等待数据准备。

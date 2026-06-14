@@ -37,9 +37,13 @@
 | P0-M4 | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记已完成的 Stage A / P0-M3 / P0-M4 验收项 |
 | P0-M4 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 | P0-M4 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M4 实施记录 |
+| P0-M5 | config | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` | added | 新增 StarFlowVLA + QwenPI_v3 native + LayerwiseFM 7DoF smoke 配置 |
+| P0-M5 | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 P0 默认 7DoF / 不启用 14D mask 配置项 |
+| P0-M5 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M5 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M5 配置级实施记录 |
 
 ## Source Code Patches
-`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试。
+`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF smoke 配置。
 
 本阶段不修改 `QwenPI_v3.py`、`LayerwiseFM_ActionHeader.py` 或 `GR00T_ActionHeader.py` 主体逻辑。
 

@@ -18,8 +18,8 @@
 - [ ] LayerwiseFM 7DoF single batch forward/backward pass。
 - [ ] loss finite。
 - [ ] single batch overfit pass。
-- [ ] `action_dim=7` 为 P0 默认配置。
-- [ ] 不强制启用 `max_action_dim=14 + action_mask`。
+- [x] `action_dim=7` 为 P0 默认配置。
+- [x] 不强制启用 `max_action_dim=14 + action_mask`。
 - [ ] LIBERO minimal batch schema pass。
 - [ ] batch 含 image / instruction / state / action。
 - [ ] MLP/OFT/VLA_AdapterHeader baseline dry-run pass。

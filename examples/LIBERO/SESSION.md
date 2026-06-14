@@ -1,5 +1,23 @@
 # Session Log
 
+## 2026-06-14 — StarFlow-VLA P0-M3 / P0-M4
+
+- 当前分支：`merge-official-starvla-dev`
+- 已完成 P0-M3：新增 `starVLA/model/modules/starflow_vla/mapping.py` 与 `__init__.py`，提供 `starflow_mapping` schema 构造和旁路 JSON 保存工具
+- 已完成 P0-M4：新增 `tests/test_starflow_vla_reuse.py`，验证 `StarFlowVLA` 继承复用 `Qwen_PI_v3`，不复制 `forward()` / `predict_action()`
+- P0-M3 提交：`8efdb81 Add StarFlow-VLA mapping manifest`
+- P0-M4 提交：`e9c8af4 Add StarFlow-VLA reuse smoke test`
+- `.venv` 中未安装 `pytest`，P0-M4 改用标准库 `unittest` 跑通 4 个用例
+- 当前未跟踪目录：`.libero/`、`LIBERO/`，不应误提交
+
+## 2026-06-14 — StarFlow-VLA 模型路径规则
+
+- 本地模型入口统一放在 `playground/Pretrained_models/`
+- 该目录通常保存软链接；已确认 `Qwen3-VL-4B-Instruct` 指向 `/gemini/pretrain/Qwen3-VL-4B-Instruct/`
+- 后续新增模型文件下载到 `/gemini/code/models/`，再在 `playground/Pretrained_models/` 下创建软链接
+- 相关长期记忆已写入 `MEMORY/starflow_vla_environment.md`
+- StarFlow-VLA 检查优先使用 `.venv`；涉及 `import torch` 的命令需预留约 4 分钟
+
 ## 2026-06-14 — skill 评估记录
 
 - 评估目标：`humanizer`、`deep-research`、`skill-creator`、`ideation`

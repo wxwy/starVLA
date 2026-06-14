@@ -1,5 +1,26 @@
 # Session Log
 
+## 2026-06-14 — skill 评估记录
+
+- 评估目标：`humanizer`、`deep-research`、`skill-creator`、`ideation`
+- 本地缓存中未找到 `humanizer`、`deep-research`、`ideation` 对应的 `SKILL.md`
+- 已确认 `skill-creator` 为元 skill，核心用途是创建/更新 skill，而不是直接处理业务任务
+- 后续若需要精确评估前三者，需要先定位其实际 `SKILL.md` 或安装来源
+
+## 2026-06-14 — 官方来源复核
+
+- 官方 Codex 文档确认 `skill-creator` 是内置 skill，且用于创建/更新 skill
+- 官方 Deep research 文档确认 `deep research` 是 ChatGPT 功能/工作流，不是公开技能目录中的通用 skill 名称
+- 官方 OpenAI 文档把 `ideation` 作为业务/产品使用场景描述，而不是独立 skill 条目
+- 在官方 OpenAI/Developers 页面未找到 `humanizer` 作为公开 skill 名称的证据
+
+## 2026-06-14 — 安装结果
+
+- 已安装 `gh-fix-ci`
+- 已安装 `gh-address-comments`
+- 已安装 `yeet`
+- 安装位置：`/root/.codex/skills`
+
 ## 2026-05-24 — LIBERO eval 适配 checkpoints 目录下单文件 pt
 
 - 确认早期 checkpoint 不是目录，而是直接位于 `playground/trained_model/starVLA_QwenGR00T_libero4in1_qwen3_dit/checkpoints/` 下的单文件：

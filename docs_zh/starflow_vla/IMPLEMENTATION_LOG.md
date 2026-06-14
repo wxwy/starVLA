@@ -1,0 +1,452 @@
+# StarFlow-VLA Implementation Log
+
+版本：V0.1  
+说明：本文件记录 StarFlow-VLA 从设计到代码实现的 step-by-step 过程。每个任务完成后必须追加记录。本文件不是实验报告，不得把 Stage A lightweight validation 冒充 Stage B target smoke、正式训练、完整评测或部署结论。
+
+## Environment Notice
+
+当前 Codex 任务只代表文档编辑 / 代码编辑 / 轻量构建验证，不等价于正式训练、完整评测或真实机器人部署环境。所有未在目标环境运行的训练、评测、部署结果必须标注为：
+
+`未在 Stage B 目标模型 smoke 或正式训练/评测环境验证，需在对应目标环境验证。`
+
+## Two-Stage Environment Policy
+
+- Stage A：1×A100 40G lightweight validation，用于文档、代码构建、静态检查、import、config parse、mock/smoke。
+- Stage B：1×A100 40G target smoke validation，用于真实模型 P0 smoke、single batch overfit、checkpoint、eval smoke。
+- Stage A 与 Stage B 默认均为 1×A100 40G，区别是验证强度，不是硬件差异。
+
+---
+
+## Record Template
+
+### Task ID:
+
+### Issue ID:
+
+### Date:
+
+### Design Reference:
+
+- V4.6.2 Section:
+- TASK_BREAKDOWN:
+- CODEX_ISSUES:
+- ACCEPTANCE_CHECKLIST:
+
+### Environment:
+
+- Stage: A 1×A100 40G lightweight validation or B 1×A100 40G target smoke validation
+- Local path:
+- Target repo path:
+- Is deployment/training environment:
+- GPU available:
+- Data available:
+- Notes:
+
+### Goal:
+
+...
+
+### Steps:
+
+1. ...
+2. ...
+3. ...
+
+### Files Changed:
+
+- Added:
+- Modified:
+- Deleted:
+
+### Tests Run:
+
+```bash
+# command
+```
+
+### Test Results:
+
+- Pass:
+- Fail:
+- Not run:
+- Need target verification:
+- Reason if not run:
+
+### Environment Boundary Statement:
+
+...
+
+### Deviations from Design:
+
+...
+
+### Rollback Plan:
+
+...
+
+### Next Step:
+
+...
+
+---
+
+## Initial Record
+
+### Task ID:
+
+DOC-M1
+
+### Issue ID:
+
+N/A
+
+### Date:
+
+2026-06-14
+
+### Design Reference:
+
+- V4.6.2 Section: Codex 本地执行环境、两段式服务器策略与实施记录规范
+- TASK_BREAKDOWN: P0-M0 / P0-M11
+- CODEX_ISSUES: 全局 issue 模板更新
+- ACCEPTANCE_CHECKLIST: 实施记录验收项
+
+### Environment:
+
+- Stage: A 1×A100 40G lightweight validation
+- Local path: `C:\Users\fast_\Desktop\xx`
+- Target repo path: `E:\projects\starVLA`
+- Is deployment/training environment: 否
+- GPU available: 未在本任务中检查
+- Data available: 未在本任务中检查
+- Notes: 本次只修改工程文档，不实现 StarFlowVLA 代码。
+
+### Goal:
+
+建立 Codex 执行规范、两段式环境策略和实施记录模板。
+
+### Steps:
+
+1. 新增 `CODEX_EXECUTION_GUIDE.md`。
+2. 新增 `IMPLEMENTATION_LOG.md`。
+3. 更新 `CODEX_ISSUES.md` issue 模板。
+4. 更新 `ACCEPTANCE_CHECKLIST.md` 实施记录验收项。
+
+### Files Changed:
+
+- Added: `docs/starflow_vla/CODEX_EXECUTION_GUIDE.md`
+- Added: `docs/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `docs/starflow_vla/CODEX_ISSUES.md`
+- Modified: `docs/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Deleted: none
+
+### Tests Run:
+
+```bash
+rg -n "Stage A|Stage B|IMPLEMENTATION_LOG|未在 Stage B 目标模型 smoke" docs/starflow_vla
+```
+
+### Test Results:
+
+- Pass: 文档文本检查通过。
+- Fail: none
+- Not run: StarFlowVLA 代码测试、训练、评测、部署。
+- Need target verification: 所有需要 A100、真实数据、真实机器人或部署服务的验证。
+- Reason if not run: 本任务只补充工程文档和执行规范。
+
+### Environment Boundary Statement:
+
+本次结果仅为 Stage A 1×A100 40G lightweight validation 的文档更新，不代表 Stage B 目标模型 smoke、正式训练、完整评测或部署结论。
+
+### Deviations from Design:
+
+无。
+
+### Rollback Plan:
+
+回滚本次新增/修改的四份文档即可，不影响 StarVLA 源代码。
+
+### Next Step:
+
+执行 P0-M0：V4.6.2 文档冻结检查。
+
+## Record DOC-M3
+
+- Date: 2026-06-14
+- Task ID: DOC-M3
+- Issue ID: N/A
+- Design Reference: V4.6.2 Section 1.6 / 4.5.3 / 6.11; docs/starflow_vla/ALGORITHM_OPTIMIZATION_PLAN.md
+- Stage: Stage A 1×A100 40G lightweight validation document update
+- Owner: Codex
+- Notes: 本次只修改文档，补充 H2-a future_tokens 规划槽位优化与 H2-b 状态条件注入路径优化；未实现 StarFlowVLA 代码，未运行训练、评测或部署。
+
+### Goal:
+
+把 `future_tokens / num_target_vision_tokens` 和 `state_mode` 两个算法优化方向纳入设计、任务、issue、验收和实验矩阵，并明确所有真实指标必须等待 Stage B A100 或目标 Benchmark 复验。
+
+### Steps:
+
+1. 在最终详细设计文档源文件中补充 H2-a / H2-b 研究假设和实验矩阵。
+2. 在第 4 章模型设计中补充 Future Tokens Planning Slot Optimization 与 State Conditioning Path Optimization。
+3. 更新 `TASK_BREAKDOWN.md`、`P0_IMPLEMENTATION_PLAN.md`、`CODEX_ISSUES.md` 和 `ACCEPTANCE_CHECKLIST.md`。
+4. 新增 `ALGORITHM_OPTIMIZATION_PLAN.md` 作为算法优化执行基线。
+
+### Files Changed:
+
+- Added: `docs/starflow_vla/ALGORITHM_OPTIMIZATION_PLAN.md`
+- Modified: `build_final_design_doc.py`
+- Modified: `chapter4_model_design.md`
+- Modified: `docs/starflow_vla/TASK_BREAKDOWN.md`
+- Modified: `docs/starflow_vla/P0_IMPLEMENTATION_PLAN.md`
+- Modified: `docs/starflow_vla/CODEX_ISSUES.md`
+- Modified: `docs/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Modified: `docs/starflow_vla/IMPLEMENTATION_LOG.md`
+- Deleted: none
+
+### Tests Run:
+
+```bash
+rg -n "H2-a|H2-b|Future Tokens Planning Slot Optimization|State Conditioning Path Optimization|E-H2a|E-H2b|DOC-M3|待 Stage B A100 复验" build_final_design_doc.py chapter4_model_design.md docs/starflow_vla
+```
+
+### Test Results:
+
+- Pass: 文档一致性关键词检查通过；最终详细设计 Markdown / DOCX 已重新生成。
+- Fail: none
+- Not run: StarFlowVLA 代码测试、single batch overfit、LIBERO eval、RoboCasa/RoboTwin eval、真实机器人测试。
+- Need target verification: success_rate、loss curve、peak memory、inference latency、action smoothness、cross benchmark drop、state noise robustness、missing state robustness。
+- Reason if not run: 本任务只补充算法优化文档和实验设计，不具备目标训练/评测环境验证含义。
+
+### Environment Boundary Statement:
+
+本次结果仅为本地文档更新，不代表 A100、Virtaicloud、Bita、LIBERO/RoboCasa/RoboTwin 或真实机器人验证结果。所有未运行指标必须保留 `[待 Stage B A100 复验]` 或对应 Benchmark 占位符。
+
+### Deviations from Design:
+
+`docs/design/基于VLA统一训练与泛化评测框架的机器人基础模型研究_最终详细设计文档.md`、`EXPERIMENT_MATRIX.md`、`MODULE_MAPPING.md`、`CAREER_PRESENTATION.md` 在当前工作区不存在；本次未凭空编造这些文件，而是更新实际存在的最终文档源文件与 `docs/starflow_vla` 执行文档，并新增 `ALGORITHM_OPTIMIZATION_PLAN.md`。
+
+### Rollback Plan:
+
+回滚本记录列出的文档修改与新增 `ALGORITHM_OPTIMIZATION_PLAN.md` 即可，不影响 StarVLA 源代码。
+
+### Next Step:
+
+执行 P0-M0：V4.6.2 文档冻结检查；随后执行 P0-M7a Stage A 配置与 manifest dry-run。
+
+## Record: DOC-M4
+
+### Task ID:
+
+DOC-M4
+
+### Issue ID:
+
+N/A
+
+### Date:
+
+2026-06-14
+
+### Design Reference:
+
+- V4.6.2 Section: 项目命名口径修正
+- V4.6.2 Section: Stage A / Stage B 环境口径修正
+- V4.6.2 Section: VGGT / RGB-3D Geometry Fusion 边界固化
+- TASK_BREAKDOWN: P2-M2 Observation Geometry Adapter Interface
+- CODEX_ISSUES: P2-M2
+- ACCEPTANCE_CHECKLIST: P2 / 《基于世界模型的移动操作规划与决策框架研究》衔接验收项
+
+### Environment:
+
+- Stage: A 1×A100 40G lightweight validation
+- Machine: [待填]
+- GPU: 1×A100 40G
+- Data available: Not required
+- Model loaded: No
+- Is full training/evaluation/deployment environment: No
+- Notes: 本任务只做文档命名与口径修正，未加载真实模型，未运行训练、评测或部署。
+
+### Goal:
+
+统一文档中的项目命名口径：在《基于VLA统一训练与泛化评测框架的机器人基础模型研究》自己的文档中，统一称呼自己为“本项目 / 本研究 / StarFlow-VLA”；提到《基于世界模型的移动操作规划与决策框架研究》时使用完整项目名称。同时保持 Stage A / Stage B 环境口径与 VGGT 边界固化口径一致。
+
+### Steps:
+
+1. 搜索并替换禁用的本项目简称为“本项目”或“本研究”。
+2. 搜索并替换禁用的世界模型规划研究简称为《基于世界模型的移动操作规划与决策框架研究》。
+3. 检查 VGGT 相关表述，确保不再出现禁用项目简称。
+4. 检查 Stage A / Stage B 环境口径，确保均为 1×A100 40G，区别为验证强度。
+5. 确认 VGGT 不作为本项目 P0/P1 必选项。
+
+### Files Changed:
+
+- Modified: `build_final_design_doc.py`
+- Modified: `chapter4_model_design.md`
+- Modified: `基于VLA统一训练与泛化评测框架的机器人基础模型研究_最终详细设计文档.md`
+- Modified: `基于VLA统一训练与泛化评测框架的机器人基础模型研究_最终详细设计文档.docx`
+- Modified: `docs/starflow_vla/TASK_BREAKDOWN.md`
+- Modified: `docs/starflow_vla/CODEX_ISSUES.md`
+- Modified: `docs/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Modified: `docs/starflow_vla/P0_IMPLEMENTATION_PLAN.md`
+- Modified: `docs/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `docs/starflow_vla/CODEX_EXECUTION_GUIDE.md`
+- Modified if exists: `docs/starflow_vla/ALGORITHM_OPTIMIZATION_PLAN.md`
+- Not found: `docs/design/基于VLA统一训练与泛化评测框架的机器人基础模型研究_最终详细设计文档.md`
+- Not found: `docs/starflow_vla/MODULE_MAPPING.md`
+- Not found: `docs/starflow_vla/EXPERIMENT_MATRIX.md`
+- Not found: `docs/starflow_vla/CAREER_PRESENTATION.md`
+
+### Tests Run:
+
+```bash
+rg -n "VGGT|geometry fusion|RGB-3D|ObservationGeometryAdapter|observation_geometry" docs/starflow_vla build_final_design_doc.py chapter4_model_design.md "基于VLA统一训练与泛化评测框架的机器人基础模型研究_最终详细设计文档.md"
+rg -n "<forbidden project aliases>" docs/starflow_vla build_final_design_doc.py chapter4_model_design.md "基于VLA统一训练与泛化评测框架的机器人基础模型研究_最终详细设计文档.md"
+rg -n "<forbidden Stage A hardware aliases>" docs/starflow_vla build_final_design_doc.py chapter4_model_design.md "基于VLA统一训练与泛化评测框架的机器人基础模型研究_最终详细设计文档.md"
+```
+
+### Test Results:
+
+- Pass: 文档命名口径、环境口径与 VGGT 边界检查完成。
+- Fail: none
+- Not run: StarFlowVLA 代码测试、真实模型加载、训练、评测、部署、VGGT 接入。
+- Need target verification: 《基于世界模型的移动操作规划与决策框架研究》中的 VGGT world model 实验和所有 RGB-3D fusion 指标。
+
+### Environment Boundary Statement:
+
+本次结果仅代表 Stage A 1×A100 40G 轻量构建验证阶段的文档修正，不代表 Stage B 目标模型 smoke、8×A100 正式训练、完整 benchmark 评测或真实机器人部署结论。
+
+### Deviations from Design:
+
+无。本次修改不改变技术路线，只修正文档命名、环境与 VGGT 边界表述。
+
+### Rollback Plan:
+
+回滚本次文档修改即可，不影响 StarVLA 源代码。
+
+### Next Step:
+
+继续执行本项目 P0-M0 / P0-M1 / P0-M2，不引入 VGGT。
+
+## Record DOC-M5
+
+### Task ID
+DOC-M5
+
+### Goal
+完成 `docs_zh` 下 StarFlow-VLA 文档归档后的最小一致性检查与 README 索引补全。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做文档整理，不加载模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added or updated: README.md
+- Not added or modified: DESIGN.md already exists
+- Modified if needed: IMPLEMENTATION_LOG.md
+- Other changes: 无
+
+### Checks
+- `ls docs_zh`
+- `find docs_zh -maxdepth 3 -type f | sort`
+- `rg -n "项目一|项目二|本地/4090|Stage A local|VGGT 降级|移除 VGGT|从项目一主线" docs_zh`
+- `rg -n "本项目|StarFlow-VLA|基于世界模型的移动操作规划与决策框架研究|Stage A|Stage B|A100 40G" docs_zh`
+- 未发现旧口径匹配项。
+- 未发现未修正问题。
+
+### Not Run
+未运行 StarFlowVLA 代码测试、真实模型加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M0 / P0-M1 / P0-M2。
+
+## Record DOC-M6
+
+### Task ID
+DOC-M6
+
+### Goal
+继续完成 `docs_zh/starflow_vla` 下 P0-M0 / P0-M1 / P0-M11 的最小文档骨架，停止在 P0-M2 源码实现之前。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做文档整理，不加载模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `DESIGN_FREEZE_CHECK.md`
+- Added: `BASELINE_VERSION.md`
+- Added: `UPSTREAM_COMPATIBILITY.md`
+- Added: `PATCH_MANIFEST.md`
+- Added: `MODULE_MAPPING.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Source code changes: none
+
+### Checks
+- `sed -n '1,240p' SESSION.md`
+- `sed -n '1,240p' TODO.md`
+- `sed -n '1,220p' docs_zh/starflow_vla/P0_IMPLEMENTATION_PLAN.md`
+- `sed -n '1,220p' docs_zh/starflow_vla/TASK_BREAKDOWN.md`
+- `git status --short`
+- `git rev-parse --abbrev-ref HEAD`
+- `git rev-parse HEAD`
+- `git log -1 --format='%H%n%h %ci %s'`
+- `git show -s --format='%H%n%h %ci %s' 42170b2a4df3877ccf6581948e2198d37c363c7f`
+- `rg -n "^version =|version_id" pyproject.toml examples/LIBERO/train_files/starvla_cotrain_libero.yaml`
+- `rg -n "文档版本|V4\\.6\\.2|future_tokens|cross-DiT|PerceiverAdapter|FlowCondition|14D|P0" docs_zh/starflow_vla/DESIGN.md docs_zh/starflow_vla/TASK_BREAKDOWN.md docs_zh/starflow_vla/P0_IMPLEMENTATION_PLAN.md`
+
+### Findings
+- `DESIGN.md` 已是 `V4.6.2 Implementation Trace Patch`。
+- P0-M0 文档冻结口径可通过最小检查。
+- 当前工作区 branch 为 `starVLA_dev`，HEAD 为 `f723d4b5629cd0f5fb8bc8a562dd744f7a79b552`。
+- 设计文档锚点 `42170b2a4df3877ccf6581948e2198d37c363c7f` 当前本地不可解析，进入 P0-M2 前必须先确认最终实现基线。
+- `pyproject.toml` 版本为 `1.0.1`，LIBERO 示例配置 `version_id: "0.21"`。
+
+### Not Run
+未运行 StarFlowVLA 代码测试、真实模型加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+先确认 P0 实现基线使用当前 HEAD 还是设计锚点；确认后再进入 P0-M2 / P0-M3。
+
+## Record DOC-M7
+
+### Task ID
+DOC-M7
+
+### Goal
+按用户选择 2，拉取并切换到设计文档锚点 `42170b2a4df3877ccf6581948e2198d37c363c7f`，为后续 P0-M2 做基线准备。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做 git 基线定位与文档记录，不加载模型，不运行训练、评测或部署。
+
+### Files Changed
+- Modified: `BASELINE_VERSION.md`
+- Modified: `UPSTREAM_COMPATIBILITY.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Source code changes: none
+
+### Checks
+- `git remote -v`
+- `git fetch origin`
+- `git ls-remote origin | rg "42170b2|42170b2a4df3877ccf6581948e2198d37c363c7f"`
+- `git ls-remote https://github.com/starVLA/starVLA.git | rg "42170b2|42170b2a4df3877ccf6581948e2198d37c363c7f"`
+- `git ls-remote --heads origin`
+- `git ls-remote --heads https://github.com/starVLA/starVLA.git`
+- `git fetch https://github.com/starVLA/starVLA.git starVLA_dev:refs/remotes/starvla-official/starVLA_dev`
+- `git cat-file -t 42170b2a4df3877ccf6581948e2198d37c363c7f`
+- `git show -s --format='%H%n%h %ci %s' 42170b2a4df3877ccf6581948e2198d37c363c7f`
+- `git stash push -m "codex-preserve-session-before-42170b2" -- SESSION.md`
+- `git switch --detach 42170b2a4df3877ccf6581948e2198d37c363c7f`
+- `git rev-parse --abbrev-ref HEAD`
+- `git rev-parse HEAD`
+- `git stash list | sed -n '1,10p'`
+- `git status --short --untracked-files=normal`
+
+### Findings
+- 当前 fork `origin` 的 `starVLA_dev` 为 `f723d4b5629cd0f5fb8bc8a562dd744f7a79b552`，不包含设计锚点。
+- 官方仓库 `https://github.com/starVLA/starVLA.git` 的 `starVLA_dev` 包含设计锚点。
+- 已切换到 detached HEAD `42170b2a4df3877ccf6581948e2198d37c363c7f`。
+- `SESSION.md` 本地修改已保存到 `stash@{0}`，名称为 `codex-preserve-session-before-42170b2`。
+- 未跟踪目录 `.libero/` 与 `LIBERO/` 保留未动。
+
+### Not Run
+未运行 StarFlowVLA 代码测试、真实模型加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+从 `42170b2a4df3877ccf6581948e2198d37c363c7f` 创建 P0 实现分支后，再进入 P0-M2 / P0-M3。

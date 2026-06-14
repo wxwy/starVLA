@@ -22,7 +22,7 @@
 - [x] 不强制启用 `max_action_dim=14 + action_mask`。
 - [ ] LIBERO minimal batch schema pass。
 - [ ] batch 含 image / instruction / state / action。
-- [ ] MLP/OFT/VLA_AdapterHeader baseline dry-run pass。
+- [x] MLP/OFT/VLA_AdapterHeader baseline dry-run pass。
 - [ ] MLP/OFT/VLA_AdapterHeader baseline single batch overfit pass。
 - [ ] future_tokens ablation configs `0/8/16/32/64` pass。
 - [ ] `num_target_vision_tokens` 写入日志。

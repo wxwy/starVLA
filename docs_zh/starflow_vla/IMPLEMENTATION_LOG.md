@@ -741,3 +741,44 @@ Stage A 1×A100 40G lightweight validation；本任务只做数据目录可用�
 
 ### Next
 准备或挂载 `playground/Datasets/LEROBOT_LIBERO_DATA` 后，重新运行 `.venv/bin/python -m unittest tests.test_starflow_libero_batch -v`；通过后再进入真实 P0-M5 forward/backward smoke。
+
+## Record P0-M6
+
+### Task ID
+P0-M6
+
+### Goal
+新增 H2 对照用 `QwenOFT + MLP_ActionHeader` 单臂 7DoF baseline smoke 配置，并完成配置解析与 registry dry-run。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只做配置新增、YAML 解析、兼容层检查和 monkeypatch build dry-run，不加载真实模型，不运行训练、评测或部署。
+
+### Files Changed
+- Added: `configs/starflow_vla/stage2_mlp_baseline.yaml`
+- Modified: `ACCEPTANCE_CHECKLIST.md`
+- Modified: `MODULE_MAPPING.md`
+- Modified: `PATCH_MANIFEST.md`
+- Modified: `IMPLEMENTATION_LOG.md`
+- Not modified: `starVLA/model/framework/VLM4A/QwenOFT.py`
+- Not modified: `starVLA/model/modules/action_model/MLP_ActionHeader.py`
+- Not modified: `starVLA/model/modules/action_model/VLA_AdapterHeader.py`
+
+### Checks
+- `.venv/bin/python - <<'PY' ... OmegaConf.load stage2 config and assert key fields ... PY`
+- `.venv/bin/python - <<'PY' ... apply_config_compat stage2 config ... PY`
+- `.venv/bin/python - <<'PY' ... monkeypatch Qwenvl_OFT.__init__ and build_framework(stage2 cfg) ... PY`
+
+### Findings
+- Stage2 baseline 配置解析通过，`framework.name=QwenOFT`。
+- Stage2 baseline 配置使用 `action_model_type=MLP`、`action_dim=7`、`state_dim=7`、`action_horizon=8`。
+- Stage2 baseline 复用当前已存在的 `playground/Pretrained_models/Qwen3-VL-4B-Instruct` 软链接，未下载新模型。
+- `apply_config_compat()` 后 action horizon / future window / action hidden dim 字段保持一致。
+- `build_framework(stage2 cfg)` 在 monkeypatch `Qwenvl_OFT.__init__` 的 dry-run 下通过，不触发真实模型加载。
+- 本阶段只完成 QwenOFT + MLP baseline；VLA_AdapterHeader 对照未新增 runtime 或配置，留后续扩展。
+- 由于 `playground/Datasets/LEROBOT_LIBERO_DATA` 不存在，未运行真实 baseline batch、single batch overfit 或训练。
+
+### Not Run
+未运行真实模型加载、LIBERO batch schema、forward/backward、loss finite、single batch overfit、checkpoint 保存/加载、训练、评测、部署或 VGGT 接入。
+
+### Next
+进入 P0-M7：新增 future_tokens 消融配置；真实 forward/backward 仍依赖 LIBERO 数据目录准备完成。

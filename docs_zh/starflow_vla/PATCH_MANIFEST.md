@@ -44,9 +44,14 @@
 | P0-M8 | test | `tests/test_starflow_libero_batch.py` | added | 新增 LIBERO batch schema smoke 测试，数据缺失时显式 skip |
 | P0-M8 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 | P0-M8 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M8 数据可用性实施记录 |
+| P0-M6 | config | `configs/starflow_vla/stage2_mlp_baseline.yaml` | added | 新增 QwenOFT + MLP 7DoF baseline smoke 配置 |
+| P0-M6 | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 baseline 配置级 dry-run 通过 |
+| P0-M6 | docs | `MODULE_MAPPING.md` | modified | 同步 H2 baseline P0-M6 状态 |
+| P0-M6 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M6 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M6 配置级实施记录 |
 
 ## Source Code Patches
-`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试。
+`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置。
 
 本阶段不修改 `QwenPI_v3.py`、`LayerwiseFM_ActionHeader.py` 或 `GR00T_ActionHeader.py` 主体逻辑。
 

@@ -11,7 +11,7 @@
 | VLM backbone | Qwen3-VL via `get_vlm_model(config=...)` | DOC-M9 静态审计确认保留现有路径 |
 | Projection layers | `QwenPI_v3.project_layers` | DOC-M9 静态审计确认保留现有路径 |
 | Flow Matching action head | `LayerwiseFM_ActionHeader.py` | DOC-M9 静态审计确认 P0 默认路径仍可用 |
-| H2 baseline | `MLP_ActionHeader.py`、`VLA_AdapterHeader.py`、`QwenOFT.py` | 待 P0-M6 |
+| H2 baseline | `MLP_ActionHeader.py`、`QwenOFT.py` | P0-M6 已新增 `stage2_mlp_baseline.yaml` 并完成配置级 dry-run；VLA_AdapterHeader 对照待后续扩展 |
 | Action token / future token route | `future_tokens + cross-DiT` | DOC-M9 静态审计确认 LayerwiseFM / GR00T 均保留 `future_tokens` |
 | State default path | QwenPI_v3 state-to-instruction | DOC-M9 静态审计确认 P0 默认路径保留 |
 | Explicit FlowCondition runtime | 可选 dataclass / wrapper | P2，不阻断 P0 |

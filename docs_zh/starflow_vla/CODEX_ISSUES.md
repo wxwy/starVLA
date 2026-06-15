@@ -388,7 +388,7 @@ Scope: checkpoint
 
 ### Acceptance Criteria
 
-- [ ] checkpoint 包含 model / optimizer / scaler / config / starflow_mapping。
+- [x] checkpoint 包含 model / optimizer / scaler / config / starflow_mapping。
 - [ ] resume 后 100 step 内 loss 偏差 <1%。
 - [ ] `patch_manifest_hash` 可记录。
 - [ ] 允许修改 StarVLA 原文件：可选，优先旁路 JSON。

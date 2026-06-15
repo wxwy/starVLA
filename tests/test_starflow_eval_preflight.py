@@ -10,6 +10,7 @@ from omegaconf import OmegaConf
 STAGE1_CONFIG = Path("configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml")
 RUN_POLICY_SERVER = Path("examples/LIBERO/eval_files/run_policy_server.sh")
 EVAL_LIBERO = Path("examples/LIBERO/eval_files/eval_libero.sh")
+RUN_EVAL_REGRESSION = Path("examples/LIBERO/eval_files/run_starflow_eval_regression.sh")
 
 
 def _latest_checkpoint(checkpoint_dir: Path) -> Path | None:
@@ -30,9 +31,19 @@ def _latest_checkpoint(checkpoint_dir: Path) -> Path | None:
 
 class StarFlowEvalPreflightTest(unittest.TestCase):
     def test_eval_shell_scripts_are_syntax_valid(self):
-        for script in (RUN_POLICY_SERVER, EVAL_LIBERO):
+        for script in (RUN_POLICY_SERVER, EVAL_LIBERO, RUN_EVAL_REGRESSION):
             result = subprocess.run(["bash", "-n", str(script)], check=False, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_eval_shell_supports_quick_regression_mode(self):
+        script_text = EVAL_LIBERO.read_text(encoding="utf-8")
+        self.assertIn("MAX_TASKS=${MAX_TASKS:-}", script_text)
+        self.assertIn("--args.max-tasks", script_text)
+
+        regression_text = RUN_EVAL_REGRESSION.read_text(encoding="utf-8")
+        self.assertIn("run_policy_server.sh", regression_text)
+        self.assertIn("eval_libero.sh", regression_text)
+        self.assertIn("eval_report.json", regression_text)
 
     def test_stage1_checkpoint_has_mapping_before_eval(self):
         cfg = OmegaConf.load(STAGE1_CONFIG)

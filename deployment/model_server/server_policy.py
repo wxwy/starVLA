@@ -6,10 +6,7 @@ import argparse
 import logging
 import os
 import socket
-
-from deployment.model_server.policy_wrapper import PolicyServerWrapper
-from deployment.model_server.tools.websocket_policy_server import WebsocketPolicyServer
-
+import time
 
 def main(args) -> None:
     """Build the policy wrapper and start the websocket server.
@@ -18,10 +15,24 @@ def main(args) -> None:
     eval clients (LIBERO / SimplerEnv / etc.) just need to forward `examples`
     and consume already-unnormalized actions from the response.
     """
+    overall_start = time.perf_counter()
+    logging.info("server_policy.main: start ckpt=%s port=%s", args.ckpt_path, args.port)
+    stage_start = time.perf_counter()
+    from deployment.model_server.policy_wrapper import PolicyServerWrapper
+    from deployment.model_server.tools.websocket_policy_server import WebsocketPolicyServer
+    logging.info(
+        "server_policy.main: module imports finished in %.2fs",
+        time.perf_counter() - stage_start,
+    )
+    stage_start = time.perf_counter()
     wrapper = PolicyServerWrapper(
         ckpt_path=args.ckpt_path,
         device="cuda",
         use_bf16=args.use_bf16,
+    )
+    logging.info(
+        "server_policy.main: PolicyServerWrapper init finished in %.2fs",
+        time.perf_counter() - stage_start,
     )
 
     hostname = socket.gethostname()
@@ -29,6 +40,7 @@ def main(args) -> None:
     logging.info("Creating server (host: %s, ip: %s)", hostname, local_ip)
 
     # start websocket server; wrapper.metadata is sent at handshake.
+    stage_start = time.perf_counter()
     server = WebsocketPolicyServer(
         policy=wrapper,
         host="0.0.0.0",
@@ -36,7 +48,15 @@ def main(args) -> None:
         idle_timeout=args.idle_timeout,
         metadata=wrapper.metadata,
     )
+    logging.info(
+        "server_policy.main: WebsocketPolicyServer init finished in %.2fs",
+        time.perf_counter() - stage_start,
+    )
     logging.info("server running ... metadata=%s", wrapper.metadata)
+    logging.info(
+        "server_policy.main: entering serve_forever after %.2fs",
+        time.perf_counter() - overall_start,
+    )
     server.serve_forever()
 
 

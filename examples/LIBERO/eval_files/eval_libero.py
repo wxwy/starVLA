@@ -30,6 +30,12 @@ from libero.libero.envs import OffScreenRenderEnv
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 from examples.LIBERO.eval_files.model2libero_interface import ModelClient
+from examples.LIBERO.eval_files.starflow_eval_report import (
+    build_eval_report,
+    infer_failure_category,
+    load_eval_metadata,
+    write_eval_report,
+)
 
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
 LIBERO_ENV_RESOLUTION = 256  # resolution used to render training data
@@ -89,6 +95,7 @@ def eval_libero(args: Args) -> None:
     # args.video_out_path = f"{date_base}+{args.job_name}"
 
     pathlib.Path(args.video_out_path).mkdir(parents=True, exist_ok=True)
+    eval_metadata = load_eval_metadata(args.pretrained_path)
 
     if args.task_suite_name == "libero_spatial":
         max_steps = 220  # longest training demo has 193 steps
@@ -115,6 +122,7 @@ def eval_libero(args: Args) -> None:
 
     # Start evaluation
     total_episodes, total_successes = 0, 0
+    episode_records = []
     for task_id in tqdm.tqdm(range(n_eval_tasks)):
         # Get task
         task = task_suite.get_task(task_id)
@@ -141,103 +149,128 @@ def eval_libero(args: Args) -> None:
             t = 0
             replay_images = []
             full_actions = []
+            done = False
+            runtime_error = None
 
             logging.info(f"Starting episode {task_episodes + 1}...")
             step = 0
 
             # full_actions = np.load("./debug/action.npy")
+            try:
+                while t < max_steps + args.num_steps_wait:
+                    # IMPORTANT: Do nothing for the first few timesteps because the simulator drops objects
+                    # and we need to wait for them to fall
+                    if t < args.num_steps_wait:
+                        obs, reward, done, info = env.step(LIBERO_DUMMY_ACTION)
+                        t += 1
+                        continue
 
-            while t < max_steps + args.num_steps_wait:
-                # try:
-                # IMPORTANT: Do nothing for the first few timesteps because the simulator drops objects
-                # and we need to wait for them to fall
-                if t < args.num_steps_wait:
-                    obs, reward, done, info = env.step(LIBERO_DUMMY_ACTION)
-                    t += 1
-                    continue
+                    # IMPORTANT: rotate 180 degrees to match train preprocessing
+                    img = np.ascontiguousarray(obs["agentview_image"][::-1, ::-1])
+                    wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
 
-                # IMPORTANT: rotate 180 degrees to match train preprocessing
-                img = np.ascontiguousarray(obs["agentview_image"][::-1, ::-1])
-                wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
+                    # Save preprocessed image for replay video
+                    replay_images.append(img)
 
-                # Save preprocessed image for replay video
-                replay_images.append(img)
-
-                state = np.concatenate(
-                    (
-                        obs["robot0_eef_pos"],
-                        _quat2axisangle(obs["robot0_eef_quat"]),
-                        obs["robot0_gripper_qpos"],
+                    state = np.concatenate(
+                        (
+                            obs["robot0_eef_pos"],
+                            _quat2axisangle(obs["robot0_eef_quat"]),
+                            obs["robot0_gripper_qpos"],
+                        )
                     )
-                )
 
-                observation = {  #
-                    "observation.primary": np.expand_dims(img, axis=0),  # (H, W, C), dtype=unit8, range(0-255)
-                    "observation.wrist_image": np.expand_dims(wrist_img, axis=0),  # (H, W, C)
-                    "observation.state": np.expand_dims(state, axis=0),
-                    "instruction": [str(task_description)],
-                }
+                    observation = {  #
+                        "observation.primary": np.expand_dims(img, axis=0),  # (H, W, C), dtype=unit8, range(0-255)
+                        "observation.wrist_image": np.expand_dims(wrist_img, axis=0),  # (H, W, C)
+                        "observation.state": np.expand_dims(state, axis=0),
+                        "instruction": [str(task_description)],
+                    }
 
-                # align key with model API --> two images provided here --> check training
-                example_dict = {
-                    "image": [observation["observation.primary"][0], observation["observation.wrist_image"][0]],
-                    "lang": observation["instruction"][0],
-                }
+                    # align key with model API --> two images provided here --> check training
+                    example_dict = {
+                        "image": [observation["observation.primary"][0], observation["observation.wrist_image"][0]],
+                        "lang": observation["instruction"][0],
+                    }
 
-                start_time = time.time()
+                    start_time = time.time()
+                    response = client_model.step(example=example_dict, step=step)
+                    end_time = time.time()
+                    del start_time, end_time
 
-                response = client_model.step(example=example_dict, step=step)
+                    raw_action = response["raw_action"]
 
-                end_time = time.time()
-                # print(f"time: {end_time - start_time}")
+                    world_vector_delta = np.asarray(raw_action.get("world_vector"), dtype=np.float32).reshape(-1)
+                    rotation_delta = np.asarray(raw_action.get("rotation_delta"), dtype=np.float32).reshape(-1)
+                    open_gripper = np.asarray(raw_action.get("open_gripper"), dtype=np.float32).reshape(-1)
+                    gripper = _binarize_gripper_open(open_gripper)
 
-                # #
-                raw_action = response["raw_action"]
+                    if not (world_vector_delta.size == 3 and rotation_delta.size == 3 and open_gripper.size == 1):
+                        logging.warning(
+                            f"Unexpected action sizes: "
+                            f"wv={world_vector_delta.shape}, rot={rotation_delta.shape}, grip={gripper.shape}. "
+                            f"Falling back to LIBERO_DUMMY_ACTION."
+                        )
+                        raise ValueError(
+                            f"Invalid action sizes: world_vector={world_vector_delta.shape}, "
+                            f"rotation_delta={rotation_delta.shape}, gripper={gripper.shape}"
+                        )
 
-                world_vector_delta = np.asarray(raw_action.get("world_vector"), dtype=np.float32).reshape(-1)
-                rotation_delta = np.asarray(raw_action.get("rotation_delta"), dtype=np.float32).reshape(-1)
-                open_gripper = np.asarray(raw_action.get("open_gripper"), dtype=np.float32).reshape(-1)
-                gripper = _binarize_gripper_open(open_gripper)
-
-                if not (world_vector_delta.size == 3 and rotation_delta.size == 3 and open_gripper.size == 1):
-                    logging.warning(
-                        f"Unexpected action sizes: "
-                        f"wv={world_vector_delta.shape}, rot={rotation_delta.shape}, grip={gripper.shape}. "
-                        f"Falling back to LIBERO_DUMMY_ACTION."
-                    )
-                    raise ValueError(
-                        f"Invalid action sizes: world_vector={world_vector_delta.shape}, "
-                        f"rotation_delta={rotation_delta.shape}, gripper={gripper.shape}"
-                    )
-                else:
                     delta_action = np.concatenate([world_vector_delta, rotation_delta, gripper], axis=0)
+                    full_actions.append(delta_action)
 
-                full_actions.append(delta_action)
-
-                # __import__("ipdb").set_trace()
-                # see ../robosuite/controllers/controller_factory.py
-                obs, reward, done, info = env.step(delta_action.tolist())
-                if done:
-                    task_successes += 1
-                    total_successes += 1
-                    break
-                t += 1
-                step += 1
+                    obs, reward, done, info = env.step(delta_action.tolist())
+                    if done:
+                        task_successes += 1
+                        total_successes += 1
+                        break
+                    t += 1
+                    step += 1
+            except Exception as exc:
+                runtime_error = str(exc)
+                logging.exception("LIBERO rollout failed", exc_info=exc)
 
             task_episodes += 1
             total_episodes += 1
 
-            # Save a replay video of the episode
+            # Save report before video encoding so smoke metadata is preserved even
+            # if EGL/video cleanup stalls during process teardown.
             suffix = "success" if done else "failure"
             task_segment = task_description.replace(" ", "_")
-            imageio.mimwrite(
-                pathlib.Path(args.video_out_path) / f"rollout_{task_segment}_episode{episode_idx}_{suffix}.mp4",
-                [np.asarray(x) for x in replay_images],
-                fps=10,
+            video_path = pathlib.Path(args.video_out_path) / f"rollout_{task_segment}_episode{episode_idx}_{suffix}.mp4"
+            episode_records.append(
+                {
+                    "task_id": task_id,
+                    "task_description": task_description,
+                    "episode_idx": episode_idx,
+                    "success": bool(done),
+                    "failure_category": infer_failure_category(success=bool(done), runtime_error=runtime_error),
+                    "runtime_error": runtime_error,
+                    "steps_executed": step,
+                    "video_path": str(video_path) if video_path is not None else None,
+                }
             )
+            interim_report = build_eval_report(
+                args=dataclasses.asdict(args),
+                metadata=eval_metadata,
+                total_episodes=total_episodes,
+                total_successes=total_successes,
+                episode_records=episode_records,
+            )
+            write_eval_report(args.video_out_path, interim_report)
 
-            full_actions = np.stack(full_actions)
-            # np.save(pathlib.Path(args.video_out_path) / f"rollout_{task_segment}_episode{episode_idx}_{suffix}.npy", full_actions)
+            if replay_images:
+                imageio.mimwrite(
+                    video_path,
+                    [np.asarray(x) for x in replay_images],
+                    fps=10,
+                )
+            else:
+                video_path = None
+
+            if full_actions:
+                full_actions = np.stack(full_actions)
+                del full_actions
 
             # print(pathlib.Path(args.video_out_path) / f"rollout_{task_segment}_episode{episode_idx}_{suffix}.mp4")
             # Log current results
@@ -251,6 +284,15 @@ def eval_libero(args: Args) -> None:
 
     logging.info(f"Total success rate: {float(total_successes) / float(total_episodes)}")
     logging.info(f"Total episodes: {total_episodes}")
+    report = build_eval_report(
+        args=dataclasses.asdict(args),
+        metadata=eval_metadata,
+        total_episodes=total_episodes,
+        total_successes=total_successes,
+        episode_records=episode_records,
+    )
+    report_path = write_eval_report(args.video_out_path, report)
+    logging.info(f"Eval report saved to: {report_path}")
 
 
 def _get_libero_env(task, resolution, seed):

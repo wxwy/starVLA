@@ -16,6 +16,8 @@ import gc
 import json
 import math
 import os
+import pickle
+import random
 import re
 import shutil
 import subprocess
@@ -70,6 +72,9 @@ from starVLA.training.trainer_utils.trainer_tools import (
     normalize_dotlist_args,
     _is_complete_deepspeed_checkpoint_dir,
     _is_complete_lightweight_training_checkpoint_dir,
+    save_lightweight_checkpoint_metadata,
+    save_lightweight_scaler_state,
+    load_lightweight_scaler_state,
 )
 
 deepspeed_plugin = DeepSpeedPlugin()
@@ -660,7 +665,8 @@ def prepare_data(cfg, accelerator, output_dir) -> DataLoader:
     vla_train_dataloader = build_dataloader(cfg=cfg, dataset_py=cfg.datasets.vla_data.dataset_py)
 
     accelerator.dataloader_config.dispatch_batches = False
-    dist.barrier()
+    if dist.is_initialized():
+        dist.barrier()
     return vla_train_dataloader
 
 
@@ -952,7 +958,7 @@ class VLATrainer(TrainerUtils):
 
     def _load_lightweight_training_state(self, checkpoint_path):
         checkpoint_path = Path(checkpoint_path)
-        total_stages = 2
+        total_stages = 4
         with open(checkpoint_path / "trainer_state.json", "r", encoding="utf-8") as f:
             trainer_state = json.load(f)
 
@@ -1000,6 +1006,14 @@ class VLATrainer(TrainerUtils):
         gc.collect()
         logger.info(f"[2/{total_stages}] lightweight scheduler / trainer 状态加载完成")
 
+        logger.info(f"[3/{total_stages}] 开始恢复 lightweight scaler 状态")
+        self._load_lightweight_scaler_state(checkpoint_path)
+        logger.info(f"[3/{total_stages}] lightweight scaler 状态恢复完成")
+
+        logger.info(f"[4/{total_stages}] 开始恢复 lightweight RNG 状态")
+        self._load_lightweight_rng_state(checkpoint_path)
+        logger.info(f"[4/{total_stages}] lightweight RNG 状态恢复完成")
+
         self.accelerator.print(f"Resumed lightweight training state from checkpoint: {checkpoint_path}")
 
     def _get_lightweight_optimizer_state_path(self, checkpoint_path: Path, trainer_state: dict) -> Path | None:
@@ -1043,6 +1057,7 @@ class VLATrainer(TrainerUtils):
             deepspeed_tag = latest_file.read_text().strip() or MODEL_NAME
 
         scheduler_files = [name for name in entries if name.startswith(SCHEDULER_NAME)]
+        scaler_files = [name for name in entries if name.startswith(SCALER_NAME)]
         sampler_files = [name for name in entries if name.startswith(SAMPLER_NAME) or name.startswith("dl_state_dict")]
         rng_files = [name for name in entries if name.startswith(RNG_STATE_NAME)]
         custom_files = [name for name in entries if name.startswith("custom_checkpoint_")]
@@ -1051,6 +1066,7 @@ class VLATrainer(TrainerUtils):
             "entries": entries,
             "deepspeed_tag": deepspeed_tag,
             "scheduler_files": scheduler_files,
+            "scaler_files": scaler_files,
             "sampler_files": sampler_files,
             "rng_files": rng_files,
             "custom_count": len(custom_files),
@@ -1411,6 +1427,9 @@ class VLATrainer(TrainerUtils):
             del scheduler_state
             gc.collect()
 
+            self._save_lightweight_scaler_state(checkpoint_path)
+            self._save_lightweight_checkpoint_metadata(checkpoint_path)
+
             trainer_state = {
                 "completed_steps": self.completed_steps,
                 "save_format": save_format,
@@ -1434,7 +1453,64 @@ class VLATrainer(TrainerUtils):
         del optimizer_state
         gc.collect()
 
+        self._save_lightweight_rng_state(checkpoint_path)
+
         self.accelerator.wait_for_everyone()
+
+    def _save_lightweight_checkpoint_metadata(self, checkpoint_path: Path):
+        save_lightweight_checkpoint_metadata(
+            checkpoint_path,
+            self.config,
+            local_output_dir=self.local_output_dir,
+            network_output_dir=self.network_output_dir,
+        )
+
+    @staticmethod
+    def _lightweight_scaler_state_path(checkpoint_path: Path) -> Path:
+        return checkpoint_path / SCALER_NAME
+
+    def _save_lightweight_scaler_state(self, checkpoint_path: Path):
+        save_lightweight_scaler_state(
+            checkpoint_path,
+            getattr(self.accelerator, "scaler", None),
+        )
+
+    def _load_lightweight_scaler_state(self, checkpoint_path: Path):
+        load_lightweight_scaler_state(
+            checkpoint_path,
+            getattr(self.accelerator, "scaler", None),
+            logger=logger,
+        )
+
+    def _lightweight_rng_state_path(self, checkpoint_path: Path) -> Path:
+        return checkpoint_path / f"{RNG_STATE_NAME}_{self.accelerator.process_index}.pkl"
+
+    def _save_lightweight_rng_state(self, checkpoint_path: Path):
+        rng_state = {
+            "python": random.getstate(),
+            "numpy": np.random.get_state(),
+            "torch": torch.get_rng_state(),
+        }
+        if torch.cuda.is_available():
+            rng_state["torch_cuda"] = torch.cuda.get_rng_state_all()
+
+        with open(self._lightweight_rng_state_path(checkpoint_path), "wb") as f:
+            pickle.dump(rng_state, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def _load_lightweight_rng_state(self, checkpoint_path: Path):
+        rng_state_path = self._lightweight_rng_state_path(checkpoint_path)
+        if not rng_state_path.exists():
+            logger.warning(f"lightweight RNG 状态文件不存在，跳过恢复: {rng_state_path}")
+            return
+
+        with open(rng_state_path, "rb") as f:
+            rng_state = pickle.load(f)
+
+        random.setstate(rng_state["python"])
+        np.random.set_state(rng_state["numpy"])
+        torch.set_rng_state(rng_state["torch"])
+        if torch.cuda.is_available() and "torch_cuda" in rng_state:
+            torch.cuda.set_rng_state_all(rng_state["torch_cuda"])
 
     def _sync_accessed_config_snapshots(self):
         if not isinstance(self.config, AccessTrackedConfig):

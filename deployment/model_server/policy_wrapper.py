@@ -22,6 +22,7 @@ Exposed API:
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -44,16 +45,38 @@ class PolicyServerWrapper:
         unnorm_key: Optional[str] = None,
     ) -> None:
         self._ckpt_path = str(ckpt_path)
+        overall_start = time.perf_counter()
 
         logging.info("PolicyServerWrapper: loading framework from %s", self._ckpt_path)
+        stage_start = time.perf_counter()
         framework = baseframework.from_pretrained(self._ckpt_path)
+        logging.info(
+            "PolicyServerWrapper: baseframework.from_pretrained finished in %.2fs",
+            time.perf_counter() - stage_start,
+        )
         if use_bf16:
+            stage_start = time.perf_counter()
             framework = framework.to(torch.bfloat16)
+            logging.info(
+                "PolicyServerWrapper: cast to bfloat16 finished in %.2fs",
+                time.perf_counter() - stage_start,
+            )
+        stage_start = time.perf_counter()
         framework = framework.to(device).eval()
+        logging.info(
+            "PolicyServerWrapper: move to %s + eval finished in %.2fs",
+            device,
+            time.perf_counter() - stage_start,
+        )
         self._framework = framework
 
         # Co-located metadata.
+        stage_start = time.perf_counter()
         model_cfg, _ = read_mode_config(self._ckpt_path)
+        logging.info(
+            "PolicyServerWrapper: read_mode_config for metadata finished in %.2fs",
+            time.perf_counter() - stage_start,
+        )
         self._model_cfg = model_cfg
 
         # action_chunk_size = future_action_window_size + 1 (matches old client).
@@ -76,10 +99,19 @@ class PolicyServerWrapper:
         # Peek at available keys without building a full processor.
         _, _ns = read_mode_config(self._ckpt_path)
         self._available_unnorm_keys: List[str] = list(_ns.keys())
+        logging.info(
+            "PolicyServerWrapper: discovered available_unnorm_keys=%s",
+            self._available_unnorm_keys,
+        )
 
         # Eagerly build when unambiguous; defer for multi-key / no explicit key.
         if unnorm_key is not None or len(self._available_unnorm_keys) == 1:
+            stage_start = time.perf_counter()
             default_proc = self._get_processor(unnorm_key)
+            logging.info(
+                "PolicyServerWrapper: PolicyNormProcessor init finished in %.2fs",
+                time.perf_counter() - stage_start,
+            )
             self._default_unnorm_key = default_proc.unnorm_key
             logging.info(
                 "PolicyServerWrapper ready: action_chunk_size=%d, default_unnorm_key=%s, "
@@ -97,6 +129,10 @@ class PolicyServerWrapper:
                 self._action_chunk_size,
                 self._available_unnorm_keys,
             )
+        logging.info(
+            "PolicyServerWrapper: fully initialized in %.2fs",
+            time.perf_counter() - overall_start,
+        )
 
     def _get_processor(self, unnorm_key: Optional[str]) -> PolicyNormProcessor:
         cache_key = unnorm_key if unnorm_key is not None else "__default__"

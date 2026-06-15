@@ -9,10 +9,14 @@ from typing import Tuple
 import re
 import json
 import gc
+import shutil
+from pathlib import Path
 import numpy as np
 import torch
 import torch.distributed as dist
 from transformers import get_scheduler
+from accelerate.utils import SCALER_NAME
+from omegaconf import OmegaConf
 
 from accelerate.logging import get_logger
 from starVLA.model.framework.share_tools import (
@@ -20,6 +24,8 @@ from starVLA.model.framework.share_tools import (
     _resolve_model_checkpoint_from_dir as _shared_resolve_model_checkpoint_from_dir,
     load_model_weights as _shared_load_model_weights,
 )
+from starVLA.model.modules.starflow_vla.mapping import save_starflow_checkpoint_mapping
+from starVLA.training.trainer_utils.config_tracker import AccessTrackedConfig
 
 logger = get_logger(__name__)
 
@@ -609,6 +615,85 @@ def _is_complete_lightweight_training_checkpoint_dir(path):
         and has_optimizer
         and all(os.path.isfile(file_path) for file_path in required_files)
     )
+
+
+def _lightweight_scaler_state_path(checkpoint_path: str | Path) -> Path:
+    return Path(checkpoint_path) / SCALER_NAME
+
+
+def save_lightweight_scaler_state(checkpoint_path: str | Path, scaler) -> Path:
+    checkpoint_path = Path(checkpoint_path)
+    scaler_payload = {
+        "has_scaler": scaler is not None,
+        "state_dict": scaler.state_dict() if scaler is not None else None,
+    }
+    output_path = _lightweight_scaler_state_path(checkpoint_path)
+    torch.save(scaler_payload, output_path)
+    return output_path
+
+
+def load_lightweight_scaler_state(checkpoint_path: str | Path, scaler, logger=None) -> bool:
+    scaler_state_path = _lightweight_scaler_state_path(checkpoint_path)
+    if not scaler_state_path.exists():
+        if logger is not None:
+            logger.warning(f"lightweight scaler 状态文件不存在，跳过恢复: {scaler_state_path}")
+        return False
+
+    scaler_payload = torch.load(
+        scaler_state_path,
+        map_location="cpu",
+        weights_only=False,
+        mmap=True,
+    )
+
+    if isinstance(scaler_payload, dict) and "has_scaler" in scaler_payload:
+        if not scaler_payload["has_scaler"]:
+            if logger is not None:
+                logger.info("checkpoint 记录当前训练未启用 scaler，跳过恢复。")
+            return False
+        scaler_state = scaler_payload.get("state_dict")
+    else:
+        scaler_state = scaler_payload
+
+    if scaler is None:
+        if logger is not None:
+            logger.warning("当前 accelerator 未启用 scaler，跳过恢复 checkpoint 中的 scaler 状态。")
+        return False
+    if scaler_state is None:
+        if logger is not None:
+            logger.warning("checkpoint scaler 状态为空，跳过恢复。")
+        return False
+
+    scaler.load_state_dict(scaler_state)
+    return True
+
+
+def save_lightweight_checkpoint_metadata(
+    checkpoint_path: str | Path,
+    config,
+    *,
+    local_output_dir: str | Path,
+    network_output_dir: str | Path,
+):
+    checkpoint_path = Path(checkpoint_path)
+    checkpoint_path.mkdir(parents=True, exist_ok=True)
+
+    if isinstance(config, AccessTrackedConfig):
+        config.save_accessed_config(checkpoint_path / "config.yaml", use_original_values=False)
+        full_cfg = config.unwrap()
+    else:
+        OmegaConf.save(config, checkpoint_path / "config.yaml", resolve=True)
+        full_cfg = config
+
+    OmegaConf.save(full_cfg, checkpoint_path / "config.full.yaml", resolve=True)
+
+    for source_dir in (Path(local_output_dir), Path(network_output_dir)):
+        dataset_statistics_path = source_dir / "dataset_statistics.json"
+        if dataset_statistics_path.exists():
+            shutil.copy2(dataset_statistics_path, checkpoint_path / "dataset_statistics.json")
+            break
+
+    save_starflow_checkpoint_mapping(checkpoint_path, config)
 
 
 def _is_complete_deepspeed_checkpoint_dir(path):

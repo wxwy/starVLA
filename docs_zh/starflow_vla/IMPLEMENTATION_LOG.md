@@ -1185,6 +1185,405 @@ Stage B 1×A100 40G target smoke validation；policy server 使用仓库 `.venv`
 ### Next
 P0 主线 smoke 已覆盖到最小 rollout；剩余可选项为 resume 100 step、完整 LIBERO suite 与正式报告。
 
+## Record P0-M10-REPORT
+
+### Task ID
+P0-M10-REPORT
+
+### Goal
+补齐 LIBERO smoke eval report，确保 `eval_report.json` 输出 `failure_category`、`checkpoint_hash`、`config_hash`、`data_version` 和 `starflow_mapping`，并避免退出阶段阻塞导致报告丢失。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv` 与 `.libero`；本任务只扩展 eval 报告和最小 smoke 产物写盘，不运行完整 LIBERO suite、完整训练、部署或 VGGT 接入。
+
+### Files Changed
+- Added: `examples/LIBERO/eval_files/starflow_eval_report.py`
+- Added: `tests/test_starflow_eval_report.py`
+- Modified: `examples/LIBERO/eval_files/eval_libero.py`
+- Modified: `docs_zh/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Modified: `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md`
+- Modified: `docs_zh/starflow_vla/EVAL_SMOKE.md`
+- Modified: `docs_zh/starflow_vla/PATCH_MANIFEST.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `examples/LIBERO/SESSION.md`
+- Eval side effects: generated `playground/eval_results/libero_goal/starflow_vla_stage1_smoke_steps_1/eval_report.json`
+
+### Checks
+- `python -m py_compile examples/LIBERO/eval_files/starflow_eval_report.py examples/LIBERO/eval_files/eval_libero.py tests/test_starflow_eval_report.py tests/test_starflow_eval_preflight.py`
+- `.venv/bin/python -m unittest tests.test_starflow_eval_report -v`
+- `.venv/bin/python -m unittest tests.test_starflow_eval_preflight -v`
+- `.venv/bin/python - <<'PY' ... load_eval_metadata(steps_1) + build_eval_report(...) + write_eval_report(...) ... PY`
+
+### Findings
+- 新增 `starflow_eval_report.py`，可从 checkpoint/配置/数据统计旁路文件提取 `checkpoint_hash`、`config_hash`、`data_version` 和 `starflow_mapping`。
+- 目录型 checkpoint hash 改为轻量 fingerprint：小元数据文件按内容 hash，大权重 shard 按相对路径和文件大小纳入 hash，避免 smoke startup 读取整套权重。
+- `eval_libero.py` 现在会在每个 episode 结束后、视频编码前写一次 `eval_report.json`，降低 EGL/视频清理期阻塞导致报告丢失的风险。
+- 已为现有 smoke 产物 `steps_1` 生成 `playground/eval_results/libero_goal/starflow_vla_stage1_smoke_steps_1/eval_report.json`。
+- 报告内容已包含 `success_rate=0.0`、`failure_category.timeout_no_success=1`、`checkpoint_hash`、`config_hash`、`data_version`、`starflow_mapping`。
+
+### Not Run
+未运行完整 LIBERO suite、细粒度 failure taxonomy、多 seed 评测、resume 100 step、完整训练、部署或 VGGT 接入。
+
+### Next
+继续 P0-M9：做 `resume 100 step` 对比与 checkpoint 恢复偏差验证。
+
+## Record P0-M9-RESUME
+
+### Task ID
+P0-M9-RESUME
+
+### Goal
+完成 `resume 100 step` 对比验证，并为 lightweight checkpoint 增加 RNG state 保存/恢复，确保 fixed batch smoke 下恢复后 100 step 内 loss 偏差 <1%。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务只运行 fixed-batch resume consistency smoke，不运行完整训练、完整 LIBERO suite、部署或 VGGT 接入。
+
+### Files Changed
+- Modified: `starVLA/training/train_starvla.py`
+- Added: `tests/test_starflow_resume_100_steps.py`
+- Modified: `docs_zh/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Modified: `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `docs_zh/starflow_vla/PATCH_MANIFEST.md`
+- Modified: `examples/LIBERO/SESSION.md`
+- Data/checkpoint side effects: created and removed transient bootstrap / split / resumed checkpoints under `playground/tmp_resume_smoke/`
+
+### Checks
+- `python -m py_compile starVLA/training/train_starvla.py tests/test_starflow_resume_100_steps.py`
+- `WANDB_MODE=disabled .venv/bin/python -m unittest -v tests.test_starflow_resume_100_steps`
+
+### Findings
+- `train_starvla.py` 的 lightweight checkpoint 现在会额外保存和恢复 Python / NumPy / Torch / CUDA RNG state。
+- 新增 `tests/test_starflow_resume_100_steps.py`，验证路径为：
+- 1. 从 `steps_1` 只加载模型权重，基于真实 `libero_goal` batch 先 bootstrap 1 step，生成与当前 optimizer group 兼容的 lightweight checkpoint。
+- 2. 从 bootstrap checkpoint 连续跑 100 step，记录 loss 轨迹。
+- 3. 从同一 bootstrap checkpoint 跑 50 step，保存 `steps_51`，再恢复后继续跑 50 step。
+- 4. 对比连续路径后 50 step 与恢复路径后 50 step，断言最大相对偏差 `< 1%`。
+- 实测 `tests.test_starflow_resume_100_steps` 通过。
+- 采样日志显示恢复路径和连续路径在 step `61/71/81/91/101` 的 loss 非常接近，例如 `0.47851533 vs 0.47853473`、`0.91403395 vs 0.91406316`、`0.34975210 vs 0.34975326`。
+
+### Not Run
+未运行完整训练循环、完整 LIBERO suite、细粒度 failure taxonomy、多 seed 评测、部署或 VGGT 接入。
+
+### Next
+P0 主线最小 smoke 与 resume consistency 已闭环；后续可进入完整 LIBERO suite 或更正式训练闭环。
+
+## Record P0-M9-SCALER
+
+### Task ID
+P0-M9-SCALER
+
+### Goal
+补齐 lightweight checkpoint 的 `scaler` sidecar 与 checkpoint 内 config/mapping 自动落盘，使 checkpoint 实际包含 `model / optimizer / scaler / config / starflow_mapping`。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务只扩展 lightweight checkpoint 产物与短测，不运行完整训练、完整 LIBERO suite、部署或 VGGT 接入。
+
+### Files Changed
+- Modified: `starVLA/training/train_starvla.py`
+- Modified: `starVLA/training/trainer_utils/trainer_tools.py`
+- Modified: `tests/test_starflow_checkpoint_mapping.py`
+- Modified: `docs_zh/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Modified: `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md`
+- Modified: `docs_zh/starflow_vla/EVAL_SMOKE.md`
+- Modified: `docs_zh/starflow_vla/PATCH_MANIFEST.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `docs_zh/starflow_vla/CODEX_ISSUES.md`
+- Modified: `examples/LIBERO/SESSION.md`
+- Data/checkpoint side effects: wrote `playground/Checkpoints/starflow_vla_stage1_qwenpi_v3_native/checkpoints/steps_1/scaler.pt`
+
+### Checks
+- `python -m py_compile starVLA/training/train_starvla.py starVLA/training/trainer_utils/trainer_tools.py tests/test_starflow_checkpoint_mapping.py`
+- `.venv/bin/python -m unittest -v tests.test_starflow_checkpoint_mapping`
+- `.venv/bin/python -m unittest -v tests.test_starflow_eval_report tests.test_starflow_eval_preflight`
+- `.venv/bin/python - <<'PY' ... save_lightweight_scaler_state(steps_1, None) ... PY`
+
+### Findings
+- `lightweight checkpoint` 现在在主进程侧自动写入 `scaler.pt`、`config.yaml`、`config.full.yaml`、`starflow_mapping.json`，并尽量复制 `dataset_statistics.json`。
+- `scaler.pt` 采用兼容 payload：启用 AMP scaler 时保存 `state_dict`；未启用时保存 `{\"has_scaler\": false, \"state_dict\": null}` 占位，避免 checkpoint schema 缺项。
+- 恢复链路对旧 checkpoint 保持兼容：若缺少 `scaler.pt`，记录 warning 后跳过；若 checkpoint 明确记录未启用 scaler，也会直接跳过恢复。
+- 新增短测覆盖：
+- 1. checkpoint metadata 自动落盘：`config.yaml`、`config.full.yaml`、`dataset_statistics.json`、`starflow_mapping.json`
+- 2. `scaler.pt` placeholder 落盘
+- 3. scaler state roundtrip
+- 已为现有 smoke checkpoint `steps_1` 补写 `scaler.pt`，因此当前 smoke 产物已实际满足 `model / optimizer / scaler / config / starflow_mapping`。
+
+### Not Run
+未运行完整训练循环、完整 LIBERO suite、细粒度 failure taxonomy、多 seed 评测、部署或 VGGT 接入。
+
+### Next
+P0 checkpoint 产物闭环已补齐；后续优先进入完整 LIBERO suite 或更正式训练闭环。
+
+## Record P0-GUARDRAIL
+
+### Task ID
+P0-GUARDRAIL
+
+### Goal
+把 “Perceiver / 显式 FlowCondition runtime / 14D action_mask 不阻断 P0” 从文档口径固化为可执行回归检查，补齐 P0 最后一项 guardrail 验收。
+
+### Environment
+Stage A 1×A100 40G lightweight validation；本任务只扩展文档治理测试与验收记录，不加载真实模型，不运行训练、完整评测或部署。
+
+### Files Changed
+- Modified: `tests/test_starflow_docs_governance.py`
+- Modified: `docs_zh/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Modified: `docs_zh/starflow_vla/PATCH_MANIFEST.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `examples/LIBERO/SESSION.md`
+
+### Checks
+- `python -m py_compile tests/test_starflow_docs_governance.py`
+- `.venv/bin/python -m unittest -v tests.test_starflow_docs_governance`
+
+### Findings
+- 新增文档治理回归检查，覆盖三类 guardrail：
+- 1. 文档边界：`DESIGN_FREEZE_CHECK.md`、`P0_IMPLEMENTATION_PLAN.md`、`MODULE_MAPPING.md`
+- 2. P0 配置边界：`stage1_starflow_qwenpi_v3_native.yaml` 不启用 `perceiver_enabled=true`、`flow_condition_runtime=true`、`max_action_dim=14`、`action_mask`
+- 3. smoke checkpoint 映射边界：`steps_1/starflow_mapping.json` 保持 `perceiver_enabled=false`、`flow_condition_runtime=false`
+- 测试通过后，`ACCEPTANCE_CHECKLIST.md` 中 `no Perceiver / FlowCondition runtime / 14D mask blocking P0` 已可勾选。
+- 本任务没有改动模型逻辑、训练逻辑或评测逻辑，只把既有 P0 边界变成可执行约束。
+
+### Not Run
+未运行真实模型加载、完整训练、完整 LIBERO suite、性能评测、部署或 VGGT 接入。
+
+### Next
+P0 最小闭环代码与 guardrail 已基本收口；后续进入完整 LIBERO suite 或正式训练闭环时，需要按目标环境继续做运行级验证。
+
+## Record P0-M5-TRAINLOOP
+
+### Task ID
+P0-M5-TRAINLOOP
+
+### Goal
+验证 `train_starvla.py` 主训练链在真实 Stage1 配置下可闭环运行，不依赖手工 bootstrap checkpoint；同时修复单卡训练入口的分布式 barrier 阻塞。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务运行真实 `10 step` 训练闭环，不运行长训、完整 LIBERO suite、部署或 VGGT 接入。
+
+### Files Changed
+- Modified: `starVLA/training/train_starvla.py`
+- Modified: `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md`
+- Modified: `docs_zh/starflow_vla/PATCH_MANIFEST.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `examples/LIBERO/SESSION.md`
+- Data/checkpoint side effects:
+- `playground/Checkpoints/starflow_vla_stage1_trainloop_10step/checkpoints/`（首轮训练尝试，命中环境阻塞）
+- `playground/Checkpoints/starflow_vla_stage1_trainloop_10step_ldpath/checkpoints/`（补 `LD_LIBRARY_PATH` 后的训练尝试，命中 launcher / MPI 阻塞）
+- `playground/Checkpoints/starflow_vla_stage1_trainloop_10step_accel/checkpoints/`（`accelerate launch` 尝试，仍命中 MPI 阻塞）
+- `playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/checkpoints/steps_10`
+- `playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/final_model`
+
+### Checks
+- `python -m py_compile starVLA/training/train_starvla.py`
+- `WANDB_MODE=disabled CUDA_VISIBLE_DEVICES=0 .venv/bin/python -u starVLA/training/train_starvla.py --config_yaml configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml --run_id starflow_vla_stage1_trainloop_10step`
+- `LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda-12.3/compat:$LD_LIBRARY_PATH timeout 180s .venv/bin/python -u - <<'PY' import deepspeed; print('deepspeed_import_ok') PY`
+- `LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda-12.3/compat:$LD_LIBRARY_PATH timeout 180s .venv/bin/python -u - <<'PY' from triton.backends.nvidia import driver; print('triton_driver_import_ok') PY`
+- `LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda-12.3/compat:$LD_LIBRARY_PATH WANDB_MODE=disabled CUDA_VISIBLE_DEVICES=0 MASTER_ADDR=127.0.0.1 MASTER_PORT=29621 RANK=0 LOCAL_RANK=0 WORLD_SIZE=1 .venv/bin/python -u starVLA/training/train_starvla.py --config_yaml configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml --run_id starflow_vla_stage1_trainloop_10step_envdist`
+- `find playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/checkpoints/steps_10 -maxdepth 1 -type f`
+- `find playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/final_model -maxdepth 1 -type f`
+
+### Findings
+- 首轮真实训练直接暴露代码级阻塞：`prepare_data()` 在未初始化分布式时无条件执行 `dist.barrier()`，单卡入口在 dataset 初始化后直接报错。
+- 修复后继续暴露两层环境前提：
+- 1. `DeepSpeed + Triton` 需要显式可见 `libcuda.so.1`，当前环境可通过 `LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda-12.3/compat:$LD_LIBRARY_PATH` 解决。
+- 2. 当前脚本内置 `DeepSpeedPlugin`，单进程直跑时需显式提供 `MASTER_ADDR`、`MASTER_PORT`、`RANK`、`LOCAL_RANK`、`WORLD_SIZE`，避免 DeepSpeed 回退到 MPI 探测并因缺 `mpi4py` 失败。
+- 在补齐上述环境变量后，`train_starvla.py` 已完成真实 `10/10 step` 训练闭环。
+- 训练日志样本：
+- `step 1 action_dit_loss = 1.76211452`
+- `step 5 action_dit_loss = 3.18678570`
+- `step 10 action_dit_loss = 1.39058614`
+- 已成功保存：
+- `playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/checkpoints/steps_10`
+- `playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/final_model`
+- 两处产物均已包含 `model / optimizer / scheduler / random_states / scaler / config / dataset_statistics / starflow_mapping / trainer_state`。
+
+### Not Run
+未运行长训、完整 LIBERO suite、resume from `steps_10` 对照、完整评测、部署或 VGGT 接入。
+
+### Next
+P0 现已不仅有 smoke checkpoint，也有 `train_starvla.py` 主链真实产物；后续可基于 `steps_10` 进入完整 LIBERO suite，或把当前环境变量要求固化为正式训练启动脚本。
+
+## Record P0-M10-FULLTASK
+
+### Task ID
+P0-M10-FULLTASK
+
+### Goal
+用真实训练产物 `steps_10` 跑一轮 `libero_goal` 全 task sweep，验证 `train_starvla.py` 主链 checkpoint 可直接进入 policy server 和多任务 eval 链路。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；policy server 使用仓库 `.venv`；eval client 使用 `.libero`；本任务运行 `libero_goal` 全 10 task、每 task 1 trial，不运行标准 50 trials/task、长训、部署或 VGGT 接入。
+
+### Files Changed
+- Modified: `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md`
+- Modified: `docs_zh/starflow_vla/EVAL_SMOKE.md`
+- Modified: `docs_zh/starflow_vla/PATCH_MANIFEST.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `examples/LIBERO/SESSION.md`
+- Eval side effects:
+- `playground/eval_results/libero_goal/starflow_vla_stage1_trainloop_10step_envdist_steps_10_fullsuite/eval_report.json`
+- `playground/eval_results/libero_goal/starflow_vla_stage1_trainloop_10step_envdist_steps_10_fullsuite/*.mp4`
+
+### Checks
+- `CKPT=$PWD/playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/checkpoints/steps_10 STARVLA_DIR=$PWD STARVLA_PYTHON=.venv/bin/python PORT=6695 GPU_ID=0 USE_BF16=1 bash examples/LIBERO/eval_files/run_policy_server.sh`
+- `CKPT=$PWD/playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/checkpoints/steps_10 LIBERO_HOME=$PWD/LIBERO LIBERO_CONFIG_PATH=$PWD/LIBERO/libero LIBERO_PYTHON=.libero/bin/python STARVLA_DIR=$PWD HOST=127.0.0.1 PORT=6695 TASK_SUITE_NAME=libero_goal NUM_TRIALS_PER_TASK=1 VIDEO_OUT_PATH=$PWD/playground/eval_results/libero_goal/starflow_vla_stage1_trainloop_10step_envdist_steps_10_fullsuite bash examples/LIBERO/eval_files/eval_libero.sh`
+- `python - <<'PY' ... read eval_report.json ... PY`
+- `find playground/eval_results/libero_goal/starflow_vla_stage1_trainloop_10step_envdist_steps_10_fullsuite -maxdepth 1 -name '*.mp4' | wc -l`
+
+### Findings
+- `steps_10` checkpoint 可被 policy server 直接加载，server metadata 正常识别：
+- `action_chunk_size=8`
+- `default_unnorm_key=franka`
+- 7D action keys 和 8D state keys
+- `libero_goal` 全 10 task × 1 trial 已跑完，共 `10` 个 episode。
+- 结果：
+- `success_rate = 0.0`
+- `total_episodes = 10`
+- `failure_category = {"timeout_no_success": 10}`
+- 目录中已生成 `10` 个 failure rollout 视频以及 `eval_report.json`。
+- eval 退出阶段仍有 EGL / `libGLU.so.0` 清理期警告，但评测进程退出码为 `0`，报告已在 episode 结束后写盘。
+- 该结果代表“全 task sweep”，不是标准 `50 trials/task` 的完整 LIBERO 评测结果。
+
+### Not Run
+未运行标准 50 trials/task、细粒度 failure taxonomy、多 seed 评测、长训、部署或 VGGT 接入。
+
+### Next
+若继续推进评测，应在 `steps_10` 或更长训练产物上运行标准 `50 trials/task`，并补 task-level/failure-level 汇总；若继续推进训练，应把当前环境变量要求固化到正式启动脚本。
+
+## Record P0-M10-REGRESSION
+
+### Task ID
+P0-M10-REGRESSION
+
+### Goal
+把 `train checkpoint -> policy server -> 1 episode eval -> eval_report` 固化成可重复执行的一键快速回归入口。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；policy server 使用仓库 `.venv`；eval client 使用 `.libero`；本任务只固化 quick regression 入口，不运行长训、标准 50 trials/task 完整评测或部署。
+
+### Files Changed
+- Added: `examples/LIBERO/eval_files/run_starflow_eval_regression.sh`
+- Modified: `examples/LIBERO/eval_files/eval_libero.sh`
+- Modified: `tests/test_starflow_eval_preflight.py`
+- Modified: `docs_zh/starflow_vla/EVAL_SMOKE.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `docs_zh/starflow_vla/PATCH_MANIFEST.md`
+- Modified: `examples/LIBERO/SESSION.md`
+
+### Checks
+- `bash -n examples/LIBERO/eval_files/run_policy_server.sh && bash -n examples/LIBERO/eval_files/eval_libero.sh && bash -n examples/LIBERO/eval_files/run_starflow_eval_regression.sh`
+- `.venv/bin/python -m unittest -v tests.test_starflow_eval_preflight tests.test_starflow_eval_report`
+- `CKPT=$PWD/playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/checkpoints/steps_10 STARVLA_DIR=$PWD STARVLA_PYTHON=$PWD/.venv/bin/python LIBERO_HOME=$PWD/LIBERO LIBERO_CONFIG_PATH=$PWD/LIBERO/libero LIBERO_PYTHON=$PWD/.libero/bin/python TASK_SUITE_NAME=libero_goal NUM_TRIALS_PER_TASK=1 MAX_TASKS=1 PORT=6696 VIDEO_OUT_PATH=$PWD/playground/eval_results/libero_goal/starflow_vla_stage1_trainloop_10step_envdist_steps_10_regression bash examples/LIBERO/eval_files/run_starflow_eval_regression.sh`
+- `CKPT=$PWD/playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/checkpoints/steps_10 STARVLA_DIR=$PWD STARVLA_PYTHON=$PWD/.venv/bin/python LIBERO_HOME=$PWD/LIBERO LIBERO_CONFIG_PATH=$PWD/LIBERO/libero LIBERO_PYTHON=$PWD/.libero/bin/python TASK_SUITE_NAME=libero_goal NUM_TRIALS_PER_TASK=1 MAX_TASKS=1 PORT=6697 VIDEO_OUT_PATH=$PWD/playground/eval_results/libero_goal/starflow_vla_stage1_trainloop_10step_envdist_steps_10_regression bash examples/LIBERO/eval_files/run_starflow_eval_regression.sh`
+
+### Findings
+- `run_starflow_eval_regression.sh` 已固化以下链路：
+- 启动 `run_policy_server.sh`
+- 用 socket 轮询等待 server 就绪
+- 调用 `eval_libero.sh`
+- 校验 `eval_report.json` 存在并输出摘要
+- `eval_libero.sh` 已新增 `MAX_TASKS` 透传，可直接执行 `1 task × 1 trial` quick regression。
+- 轻量验证通过：
+- shell 语法检查通过
+- `tests.test_starflow_eval_preflight` / `tests.test_starflow_eval_report` 通过
+- 首轮真实运行发现默认 `SERVER_READY_TIMEOUT=300` 不足；`steps_10` 的 policy server 在该窗口内仍处于 framework / checkpoint CPU 侧初始化阶段。
+- 已将默认等待时间上调到 `900s`，并为 server 进程增加 `PYTHONUNBUFFERED=1`，便于观察冷启动日志。
+- 本轮两次真实运行尝试中，policy server 均未在当前等待窗口内监听端口；日志已确认 checkpoint shard 加载完成，尚未出现 websocket server `listen` 阶段输出。
+- 因此，本轮没有由新入口额外产出新的 `eval_report.json`；但训练产物到推理验证的接口契约仍由既有 `steps_10 -> full task sweep` 实跑结果覆盖。
+
+### Not Run
+未通过新入口完成一次成功的 end-to-end quick regression；未运行标准 50 trials/task、多 seed、长训或部署。
+
+### Next
+若继续推进，应针对 `PolicyServerWrapper` 冷启动阶段补精确耗时日志，或把 quick regression 入口的 server ready 策略从“固定超时”改为“更长窗口 + 关键日志断点”。
+
+## Record P0-M10-COLDSTART
+
+### Task ID
+P0-M10-COLDSTART
+
+### Goal
+定位 `steps_10` policy server 冷启动过慢的具体阶段，判断问题属于 import、framework 构建、checkpoint 加载还是 websocket server 监听。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务只做 server 侧冷启动探针，不运行 LIBERO eval、不运行长训。
+
+### Files Changed
+- Modified: `deployment/model_server/server_policy.py`
+- Modified: `deployment/model_server/policy_wrapper.py`
+- Modified: `starVLA/model/framework/base_framework.py`
+- Modified: `examples/LIBERO/SESSION.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+
+### Checks
+- `python -m py_compile deployment/model_server/server_policy.py deployment/model_server/policy_wrapper.py starVLA/model/framework/base_framework.py`
+- `LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda-12.3/compat:$LD_LIBRARY_PATH PYTHONUNBUFFERED=1 timeout 180s .venv/bin/python -u deployment/model_server/server_policy.py --ckpt_path $PWD/playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/checkpoints/steps_10 --port 6698 --use_bf16 > playground/eval_results/libero_goal/policy_server_coldstart_probe.log 2>&1`
+- `LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda-12.3/compat:$LD_LIBRARY_PATH PYTHONUNBUFFERED=1 timeout 360s .venv/bin/python -u deployment/model_server/server_policy.py --ckpt_path $PWD/playground/Checkpoints/starflow_vla_stage1_trainloop_10step_envdist/checkpoints/steps_10 --port 6698 --use_bf16 > playground/eval_results/libero_goal/policy_server_coldstart_probe.log 2>&1`
+- `PYTHONPROFILEIMPORTTIME=1 timeout 180s .venv/bin/python -X importtime -c 'import deployment.model_server.server_policy' > playground/eval_results/libero_goal/policy_server_importtime_probe.log 2>&1`
+
+### Findings
+- `server_policy.py` 顶层 import 原先会在 `main()` 之前吞掉大量时间且无日志；已改为 `main()` 内懒导入，并新增阶段耗时日志。
+- 冷启动探针结果：
+- `server_policy.main: module imports finished in 272.50s`
+- `baseframework.from_pretrained -> read_mode_config done in 0.13s`
+- `build_framework done in 42.69s (StarFlowVLA)`
+- 360s 探针窗口结束前，尚未走完 `load_model_weights` / `.to(cuda)` / websocket listen
+- 结论：
+- regression 脚本的 `server ready timeout` 不是主因；真正的首要瓶颈是 server 端 import 链和 framework build
+- 仅 `300s` 窗口就会在完成 import + build 前超时
+- 现有 `900s` 只是等待层缓解，不是根治
+
+### Not Run
+未完整跑到 websocket listen；未完成基于新诊断日志的 second-pass 优化；未验证更长超时下的完整冷启动总时长。
+
+### Next
+若继续推进，应优先评估：
+- 是否需要进一步懒导入 `policy_wrapper` 内部重依赖
+- 是否能对 `build_framework` 中非推理必需路径做推迟初始化
+- 回归脚本是否改为“按关键日志阶段等待”而不是单纯固定秒数
+
+## Record P0-M5-TRAINREADY
+
+### Task ID
+P0-M5-TRAINREADY
+
+### Goal
+把已验证可跑的 Stage1 训练前提固化成一个一键启动脚本，减少手工拼接环境变量和参数的时间。
+
+### Environment
+Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务只固化训练启动入口，不实际长训。
+
+### Files Changed
+- Added: `examples/LIBERO/train_files/run_starflow_train_ready.sh`
+- Added: `tests/test_starflow_train_ready.py`
+- Modified: `examples/LIBERO/SESSION.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+
+### Checks
+- `bash -n examples/LIBERO/train_files/run_starflow_train_ready.sh`
+- `python -m py_compile tests/test_starflow_train_ready.py`
+- `.venv/bin/python -m unittest -v tests.test_starflow_train_ready`
+
+### Findings
+- 已将当前训练已验证前提固化为脚本默认值：
+- `WANDB_MODE=disabled`
+- `MASTER_ADDR=127.0.0.1`
+- `MASTER_PORT=29621`
+- `RANK=0`
+- `LOCAL_RANK=0`
+- `WORLD_SIZE=1`
+- `LD_LIBRARY_PATH` 自动补入常见 `libcuda.so.1` 路径
+- 使用 Stage1 `StarFlowVLA` 配置、`libero_goal` 数据源、`Qwen3-VL-4B-Instruct` 作为默认 base VLM
+- 默认 `MAX_TRAIN_STEPS=10`，可通过环境变量提升为更长训练
+- 默认 `EVAL_INTERVAL=1000`，避免 quick-start 场景触发除零
+
+### Not Run
+未实际执行长训；未验证更长步数下的吞吐和 checkpoint 稳定性。
+
+### Next
+若继续推进，可把同样的“训练就绪”默认值再抽到更正式的长训脚本，或在脚本里增加显式数据集/模型路径存在性检查的更强预检。
+
 ## Record P0-M4-STAGEB
 
 ### Task ID

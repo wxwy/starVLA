@@ -11,6 +11,7 @@ HOST=${HOST:-127.0.0.1}
 PORT=${PORT:-${BASE_PORT:-6694}}
 TASK_SUITE_NAME=${TASK_SUITE_NAME:-libero_goal}
 NUM_TRIALS_PER_TASK=${NUM_TRIALS_PER_TASK:-50}
+MAX_TASKS=${MAX_TASKS:-}
 MUJOCO_GL_VALUE=${MUJOCO_GL_VALUE:-egl}
 PYOPENGL_PLATFORM_VALUE=${PYOPENGL_PLATFORM_VALUE:-egl}
 
@@ -64,12 +65,21 @@ echo "=== Eval Config ==="
 echo "CKPT=${CKPT}"
 echo "TASK_SUITE_NAME=${TASK_SUITE_NAME}"
 echo "NUM_TRIALS_PER_TASK=${NUM_TRIALS_PER_TASK}"
+echo "MAX_TASKS=${MAX_TASKS:-<all>}"
 echo "VIDEO_OUT_PATH=${VIDEO_OUT_PATH}"
 
-"${LIBERO_PYTHON}" ./examples/LIBERO/eval_files/eval_libero.py \
-    --args.pretrained-path "${CKPT}" \
-    --args.host "${HOST}" \
-    --args.port "${PORT}" \
-    --args.task-suite-name "${TASK_SUITE_NAME}" \
-    --args.num-trials-per-task "${NUM_TRIALS_PER_TASK}" \
+CMD=(
+    "${LIBERO_PYTHON}" ./examples/LIBERO/eval_files/eval_libero.py
+    --args.pretrained-path "${CKPT}"
+    --args.host "${HOST}"
+    --args.port "${PORT}"
+    --args.task-suite-name "${TASK_SUITE_NAME}"
+    --args.num-trials-per-task "${NUM_TRIALS_PER_TASK}"
     --args.video-out-path "${VIDEO_OUT_PATH}"
+)
+
+if [[ -n "${MAX_TASKS}" ]]; then
+    CMD+=(--args.max-tasks "${MAX_TASKS}")
+fi
+
+"${CMD[@]}"

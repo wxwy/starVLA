@@ -105,9 +105,64 @@
 | P0-M4-STAGEB | docs | `EXPERIMENT_MATRIX.md` | modified | 记录 QwenPI_v3 baseline compatibility smoke |
 | P0-M4-STAGEB | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 QwenPI_v3 baseline Stage B 实施记录 |
 | P0-M4-STAGEB | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M10-REPORT | code | `examples/LIBERO/eval_files/starflow_eval_report.py` | added | 新增 eval report 元数据/hash/聚合写入工具 |
+| P0-M10-REPORT | code | `examples/LIBERO/eval_files/eval_libero.py` | modified | 在 episode 结束后、视频编码前写出 `eval_report.json` |
+| P0-M10-REPORT | test | `tests/test_starflow_eval_report.py` | added | 验证 eval report 元数据提取与 JSON 输出 |
+| P0-M10-REPORT | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 eval report failure category 和 metadata 字段通过 |
+| P0-M10-REPORT | docs | `EXPERIMENT_MATRIX.md` | modified | 记录 eval report 产物状态 |
+| P0-M10-REPORT | docs | `EVAL_SMOKE.md` | modified | 记录 eval report 路径与退出阶段写盘策略 |
+| P0-M10-REPORT | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 eval report 实施记录 |
+| P0-M10-REPORT | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M9-RESUME | code | `starVLA/training/train_starvla.py` | modified | lightweight checkpoint 新增 RNG state 保存/恢复 |
+| P0-M9-RESUME | test | `tests/test_starflow_resume_100_steps.py` | added | bootstrap checkpoint + 50/50 resume 100-step consistency smoke |
+| P0-M9-RESUME | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 resume 100 step 偏差 <1% 通过 |
+| P0-M9-RESUME | docs | `EXPERIMENT_MATRIX.md` | modified | 记录 resume 100 step smoke 通过 |
+| P0-M9-RESUME | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 resume consistency 实施记录 |
+| P0-M9-RESUME | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M9-RESUME | docs | `examples/LIBERO/SESSION.md` | modified | 记录 bootstrap checkpoint 与 resume 100 step 结果 |
+| P0-M9-SCALER | code | `starVLA/training/train_starvla.py` | modified | lightweight checkpoint 新增 scaler sidecar 与 checkpoint metadata 自动落盘 |
+| P0-M9-SCALER | code | `starVLA/training/trainer_utils/trainer_tools.py` | modified | 抽出 lightweight scaler state 与 checkpoint metadata 保存工具 |
+| P0-M9-SCALER | test | `tests/test_starflow_checkpoint_mapping.py` | modified | 增补 scaler placeholder / metadata 落盘与 scaler roundtrip 测试 |
+| P0-M9-SCALER | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 checkpoint 含 model / optimizer / scaler / config / starflow_mapping 通过 |
+| P0-M9-SCALER | docs | `EXPERIMENT_MATRIX.md` | modified | 记录 lightweight checkpoint 自动写入 scaler 与 metadata |
+| P0-M9-SCALER | docs | `EVAL_SMOKE.md` | modified | 记录 `steps_1/scaler.pt` 占位文件状态 |
+| P0-M9-SCALER | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 checkpoint scaler / metadata 实施记录 |
+| P0-M9-SCALER | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M9-SCALER | docs | `examples/LIBERO/SESSION.md` | modified | 记录 `steps_1` scaler sidecar 与短测结果 |
+| P0-GUARDRAIL | test | `tests/test_starflow_docs_governance.py` | modified | 新增 P0 guardrail 检查，防止 Perceiver / 显式 FlowCondition / 14D mask 回流为 P0 阻断项 |
+| P0-GUARDRAIL | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 标记 no Perceiver / FlowCondition runtime / 14D mask blocking P0 通过 |
+| P0-GUARDRAIL | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0 guardrail 治理测试记录 |
+| P0-GUARDRAIL | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-GUARDRAIL | docs | `examples/LIBERO/SESSION.md` | modified | 记录 P0 guardrail 文档治理测试结果 |
+| P0-M5-TRAINLOOP | code | `starVLA/training/train_starvla.py` | modified | 修复单卡未初始化分布式时 `prepare_data()` 无条件 `dist.barrier()` 的训练入口阻塞 |
+| P0-M5-TRAINLOOP | docs | `EXPERIMENT_MATRIX.md` | modified | 记录 Stage1 真实 10 step 训练闭环结果与环境前提 |
+| P0-M5-TRAINLOOP | docs | `IMPLEMENTATION_LOG.md` | modified | 追加真实训练主链路闭环记录 |
+| P0-M5-TRAINLOOP | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M5-TRAINLOOP | docs | `examples/LIBERO/SESSION.md` | modified | 记录 `steps_10` / `final_model` 训练产物和环境变量要求 |
+| P0-M10-FULLTASK | docs | `EXPERIMENT_MATRIX.md` | modified | 记录 `steps_10` 的 `libero_goal` 全 10 task × 1 trial task sweep 结果 |
+| P0-M10-FULLTASK | docs | `EVAL_SMOKE.md` | modified | 记录真实训练产物的全 task sweep 目录、成功率和 failure category |
+| P0-M10-FULLTASK | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 `steps_10` 全 task sweep 评测记录 |
+| P0-M10-FULLTASK | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M10-FULLTASK | docs | `examples/LIBERO/SESSION.md` | modified | 记录 `steps_10` 的 `libero_goal` 全 task sweep 结果 |
+| P0-M10-REGRESSION | code | `examples/LIBERO/eval_files/run_starflow_eval_regression.sh` | added | 新增训练产物到 policy server 到 LIBERO eval 的一键快速回归入口 |
+| P0-M10-REGRESSION | code | `examples/LIBERO/eval_files/eval_libero.sh` | modified | 补充 `MAX_TASKS` 透传，支持 quick regression |
+| P0-M10-REGRESSION | test | `tests/test_starflow_eval_preflight.py` | modified | 扩展回归脚本 shell 语法和 quick regression 接线检查 |
+| P0-M10-REGRESSION | docs | `EVAL_SMOKE.md` | modified | 记录一键回归入口与 server 冷启动等待窗口 |
+| P0-M10-REGRESSION | docs | `IMPLEMENTATION_LOG.md` | modified | 追加回归入口固化记录 |
+| P0-M10-REGRESSION | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
+| P0-M10-REGRESSION | docs | `examples/LIBERO/SESSION.md` | modified | 记录一键回归入口和实际运行观察 |
+| P0-M10-COLDSTART | code | `deployment/model_server/server_policy.py` | modified | 将重依赖改为 `main()` 内懒导入，并补充冷启动阶段耗时日志 |
+| P0-M10-COLDSTART | code | `deployment/model_server/policy_wrapper.py` | modified | 补充 `from_pretrained`、dtype/device 迁移和 metadata 阶段耗时日志 |
+| P0-M10-COLDSTART | code | `starVLA/model/framework/base_framework.py` | modified | 补充 `read_mode_config`、`build_framework`、`load_model_weights` 耗时日志 |
+| P0-M10-COLDSTART | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 policy server 冷启动定位记录 |
+| P0-M10-COLDSTART | docs | `examples/LIBERO/SESSION.md` | modified | 记录冷启动阶段拆解结果 |
+| P0-M5-TRAINREADY | code | `examples/LIBERO/train_files/run_starflow_train_ready.sh` | added | 新增训练就绪启动器，固化已验证的 Stage1 训练前提 |
+| P0-M5-TRAINREADY | test | `tests/test_starflow_train_ready.py` | added | 新增训练就绪脚本的语法和关键默认值回归检查 |
+| P0-M5-TRAINREADY | docs | `IMPLEMENTATION_LOG.md` | modified | 追加训练就绪启动器记录 |
+| P0-M5-TRAINREADY | docs | `examples/LIBERO/SESSION.md` | modified | 记录训练就绪启动器默认值 |
 
 ## Source Code Patches
-`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF action / 8D state smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight；`P0-M11` 新增实验矩阵和文档治理测试；`P0-M8-DATA` 对齐真实 LIBERO registry 的 8D state schema；`P0-M5-STAGEB` 记录真实 Stage1 smoke 验证结果；`P0-M9-STAGEB` 记录 smoke checkpoint save/load 与 eval preflight；`P0-M6-STAGEB` 记录 MLP baseline Stage B smoke 验证结果；`P0-M7-STAGEB` 记录 future token 5 组 Stage B smoke 验证结果；`P0-M10-STAGEB` 记录最小 LIBERO rollout smoke；`P0-M4-STAGEB` 记录 QwenPI_v3 baseline compatibility smoke。
+`P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF action / 8D state smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight；`P0-M11` 新增实验矩阵和文档治理测试；`P0-M8-DATA` 对齐真实 LIBERO registry 的 8D state schema；`P0-M5-STAGEB` 记录真实 Stage1 smoke 验证结果；`P0-M9-STAGEB` 记录 smoke checkpoint save/load 与 eval preflight；`P0-M6-STAGEB` 记录 MLP baseline Stage B smoke 验证结果；`P0-M7-STAGEB` 记录 future token 5 组 Stage B smoke 验证结果；`P0-M10-STAGEB` 记录最小 LIBERO rollout smoke；`P0-M4-STAGEB` 记录 QwenPI_v3 baseline compatibility smoke；`P0-M10-REPORT` 新增 eval report helper，并将报告写入前移到 episode 结束后、视频编码前；`P0-M9-RESUME` 为 lightweight checkpoint 增加 RNG state，并跑通 bootstrap checkpoint + 100-step resume consistency smoke；`P0-M9-SCALER` 为 lightweight checkpoint 增加 scaler sidecar、config/mapping 自动落盘，并补齐 `steps_1/scaler.pt`；`P0-GUARDRAIL` 将 Perceiver / 显式 FlowCondition / 14D mask 的 P0 边界固化为可执行文档治理测试；`P0-M5-TRAINLOOP` 修复单卡 barrier 阻塞，并跑通 `train_starvla.py` 的真实 10 step 训练闭环；`P0-M10-FULLTASK` 追加 `steps_10` 在 `libero_goal` 上的全 10 task × 1 trial task sweep；`P0-M10-REGRESSION` 固化训练产物到 policy server 到单 episode eval 的一键快速回归入口；`P0-M10-COLDSTART` 为 policy server 冷启动增加阶段耗时日志并确认 import/build 才是首要瓶颈；`P0-M5-TRAINREADY` 固化训练就绪默认值，减少手工拼接环境变量的时间。
 
 本阶段不修改 `QwenPI_v3.py`、`LayerwiseFM_ActionHeader.py` 或 `GR00T_ActionHeader.py` 主体逻辑。
 

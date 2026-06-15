@@ -9,6 +9,7 @@ Note: No device placement or optimizer concerns handled here (delegated to train
 import importlib
 import pkgutil
 from pathlib import Path
+import time
 from typing import Any, Dict, List
 
 import numpy as np
@@ -233,22 +234,45 @@ class baseframework(PreTrainedModel):
             RuntimeError: If state_dict key mismatch occurs under strict=True.
             FileNotFoundError: If underlying files are missing (surfaced earlier).
         """
+        overall_start = time.perf_counter()
+        logger.info("[from_pretrained] start ckpt=%s", pretrained_checkpoint)
+
+        stage_start = time.perf_counter()
         model_config, norm_stats = read_mode_config(pretrained_checkpoint)  # read config and norm_stats
+        logger.info(
+            "[from_pretrained] read_mode_config done in %.2fs",
+            time.perf_counter() - stage_start,
+        )
 
         config = dict_to_namespace(model_config)
         model_config = config
         model_config.trainer.pretrained_checkpoint = None
         
+        stage_start = time.perf_counter()
         FrameworkModel = build_framework(cfg=model_config)
+        logger.info(
+            "[from_pretrained] build_framework done in %.2fs (%s)",
+            time.perf_counter() - stage_start,
+            type(FrameworkModel).__name__,
+        )
         # set for action un-norm
         FrameworkModel.norm_stats = norm_stats
         # Load from checkpoint through the shared loader used by training.
         try:
+            stage_start = time.perf_counter()
             load_model_weights(FrameworkModel, pretrained_checkpoint, strict=True)
+            logger.info(
+                "[from_pretrained] load_model_weights done in %.2fs",
+                time.perf_counter() - stage_start,
+            )
         except RuntimeError as e:
             logger.warning(f"Strict checkpoint load failed for `{pretrained_checkpoint}`: {e}")
             raise
 
         # **ensure model is on GPU**
         FrameworkModel = FrameworkModel
+        logger.info(
+            "[from_pretrained] finished in %.2fs",
+            time.perf_counter() - overall_start,
+        )
         return FrameworkModel

@@ -29,18 +29,18 @@
 - [x] `adapter_mode=future_token_cross_dit` 写入 manifest。
 - [x] `starflow_mapping.json` saved in checkpoint 或 checkpoint 旁路目录。
 - [x] `starflow_mapping.json` 可 JSON 序列化。
-- [ ] checkpoint 包含 model / optimizer / scaler / config / starflow_mapping。
-- [ ] resume 后 100 step 内 loss 偏差 <1%。
+- [x] checkpoint 包含 model / optimizer / scaler / config / starflow_mapping。
+- [x] resume 后 100 step 内 loss 偏差 <1%。
 - [x] `patch_manifest_hash` 可记录。
 - [x] LIBERO eval preflight pass。
 - [x] LIBERO rollout eval smoke pass。
 - [x] eval report 输出 success_rate。
-- [ ] eval report 输出 failure category。
-- [ ] eval report 包含 checkpoint hash、config hash、data version、starflow_mapping。
+- [x] eval report 输出 failure category。
+- [x] eval report 包含 checkpoint hash、config hash、data version、starflow_mapping。
 - [x] `MODULE_MAPPING.md` exists。
 - [x] `PATCH_MANIFEST.md` exists。
 - [x] `EXPERIMENT_MATRIX.md` exists。
-- [ ] no Perceiver / FlowCondition runtime / 14D mask blocking P0。
+- [x] no Perceiver / FlowCondition runtime / 14D mask blocking P0。
 
 ## P1 验收清单：增强项，不阻断 P0
 

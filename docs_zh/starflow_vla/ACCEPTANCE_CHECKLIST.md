@@ -24,7 +24,7 @@
 - [x] batch 含 image / instruction / state / action。
 - [x] MLP/OFT/VLA_AdapterHeader baseline dry-run pass。
 - [x] MLP/OFT/VLA_AdapterHeader baseline single batch overfit pass。
-- [x] future_tokens ablation configs `0/8/16/32/64` pass。
+- [x] future_tokens ablation configs `0/16/32/64` pass。
 - [x] `num_target_vision_tokens` 写入日志。
 - [x] `adapter_mode=future_token_cross_dit` 写入 manifest。
 - [x] `starflow_mapping.json` saved in checkpoint 或 checkpoint 旁路目录。
@@ -98,8 +98,8 @@
 
 ### Future Tokens Planning Slot Optimization
 
-- [x] `num_target_vision_tokens=0/8/16/32/64` 五组配置存在，或在 P0-M7a issue 中明确列出待创建路径。
-- [x] 五组配置均可完成 config parse。
+- [x] `num_target_vision_tokens=0/16/32/64` 四组配置存在，或在 P0-M7a issue 中明确列出待创建路径。
+- [x] 四组配置均可完成 config parse。
 - [x] 每组配置都能写入或计划写入 `starflow_mapping`。
 - [x] `starflow_mapping` 至少包含 `num_target_vision_tokens`、`adapter_mode`、`state_mode`、`action_dim`、`action_horizon`、StarVLA upstream commit。
 - [ ] 至少一组 token 数完成 Stage B single batch overfit 后，记录 loss finite/NaN、peak memory、latency、action smoothness。

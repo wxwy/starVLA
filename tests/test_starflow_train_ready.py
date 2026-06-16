@@ -19,7 +19,9 @@ class StarFlowTrainReadyTest(unittest.TestCase):
         self.assertIn("MASTER_ADDR", script_text)
         self.assertIn("WORLD_SIZE", script_text)
         self.assertIn("--datasets.vla_data.per_device_batch_size \"${PER_DEVICE_BATCH_SIZE}\"", script_text)
+        self.assertIn("--trainer.gradient_accumulation_steps \"${GRADIENT_ACCUMULATION_STEPS}\"", script_text)
         self.assertIn("--trainer.save_checkpoint_as_directory True", script_text)
+        self.assertIn("accelerate launch", script_text)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-run_id: starflow_vla_stage3_future_token_ablation
+run_id: E-H2b-04_starflow_libero-goal_qwen3vl4b_lwfm_state-hybrid-cross
 run_root_dir: playground/Checkpoints
 seed: 42
 wandb_entity: your_wandb_entity
@@ -6,14 +6,9 @@ wandb_project: llavavla
 is_debug: false
 version_id: "0.21"
 
-ablation:
-  name: future_token_cross_dit
-  num_target_vision_tokens_values: [0, 16, 32, 64]
-  default_num_target_vision_tokens: 32
-  adapter_mode: future_token_cross_dit
-
 framework:
   name: StarFlowVLA
+  state_mode: hybrid_gated
   qwenvl:
     base_vlm: ./playground/Pretrained_models/Qwen3-VL-4B-Instruct
     attn_implementation: flash_attention_2

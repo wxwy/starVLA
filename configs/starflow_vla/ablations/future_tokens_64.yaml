@@ -1,16 +1,10 @@
-run_id: starflow_vla_stage3_future_token_ablation
+run_id: E-H2a-04_starflow_libero-goal_qwen3vl4b_lwfm_ft64
 run_root_dir: playground/Checkpoints
 seed: 42
 wandb_entity: your_wandb_entity
 wandb_project: llavavla
 is_debug: false
 version_id: "0.21"
-
-ablation:
-  name: future_token_cross_dit
-  num_target_vision_tokens_values: [0, 16, 32, 64]
-  default_num_target_vision_tokens: 32
-  adapter_mode: future_token_cross_dit
 
 framework:
   name: StarFlowVLA
@@ -30,7 +24,7 @@ framework:
     num_inference_timesteps: 4
     add_pos_embed: true
     max_seq_len: 1024
-    num_target_vision_tokens: 32
+    num_target_vision_tokens: 64
     noise_beta_alpha: 1.5
     noise_beta_beta: 1.0
     noise_s: 0.999

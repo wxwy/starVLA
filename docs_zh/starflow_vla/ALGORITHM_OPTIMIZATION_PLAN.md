@@ -44,7 +44,7 @@ StarVLA 当前 LayerwiseFM / GR00T action head 已具备 `future_tokens` / `num_
 默认变量：
 
 ```text
-num_target_vision_tokens = 0 / 8 / 16 / 32 / 64
+num_target_vision_tokens = 0 / 16 / 32 / 64
 ```
 
 解释：
@@ -52,8 +52,7 @@ num_target_vision_tokens = 0 / 8 / 16 / 32 / 64
 | Value | Meaning | Risk |
 | --- | --- | --- |
 | 0 | 移除 future planning slots | 可能触发空 token 边界 |
-| 8 | 低预算 planning slots | 容量不足 |
-| 16 | 中低预算 planning slots | 可能是低延迟折中 |
+| 16 | 低预算 planning slots | 可能是低延迟折中 |
 | 32 | StarVLA 常用默认 | 作为默认基线 |
 | 64 | 高预算 planning slots | 显存和延迟增加 |
 
@@ -123,15 +122,20 @@ StarVLA 当前 QwenPI_v3 已具备 state-to-instruction 路径，LayerwiseFM / G
 
 | exp_id | hypothesis_id | config path | benchmark | state_mode | num_target_vision_tokens | action_dim | action_horizon | metrics | stage | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| E-H2a-01 | H2-a | `configs/starflow_vla/ablations/future_tokens_0.yaml` | LIBERO small | `discretized_instruction` | 0 | 7 | 8 | overfit_steps/loss_finite/NaN/peak_memory/latency/action_smoothness | P0 Stage B | `[待 Stage B A100 复验]` |
-| E-H2a-02 | H2-a | `configs/starflow_vla/ablations/future_tokens_8.yaml` | LIBERO small | `discretized_instruction` | 8 | 7 | 8 | overfit_steps/loss_finite/NaN/peak_memory/latency/action_smoothness | P0 Stage B | `[待 Stage B A100 复验]` |
-| E-H2a-03 | H2-a | `configs/starflow_vla/ablations/future_tokens_16.yaml` | LIBERO full | `discretized_instruction` | 16 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P1 | `[待 LIBERO eval]` |
-| E-H2a-04 | H2-a | `configs/starflow_vla/ablations/future_tokens_32.yaml` | LIBERO full | `discretized_instruction` | 32 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P1 | `[待 LIBERO eval]` |
-| E-H2a-05 | H2-a | `configs/starflow_vla/ablations/future_tokens_64.yaml` | RoboCasa/RoboTwin/cross | `discretized_instruction` | 64 | 7/14 | 8/16 | cross_drop/worst_family/peak_memory/latency/task_length_success | P2 | `[待 RoboCasa / RoboTwin eval]` |
-| E-H2b-01 | H2-b | `configs/starflow_vla/state/discretized_instruction.yaml` | LIBERO small/full | `discretized_instruction` | 32 | 7 | 8 | success_rate/state_sensitive_success/overfit_steps/smoothness/noise_robustness | P0/P1 | `[待 Stage B A100 复验]` |
+| E-H2a-01 | H2-a | `configs/starflow_vla/ablations/future_tokens_0.yaml` | LIBERO small/full | `discretized_instruction` | 0 | 7 | 8 | overfit_steps/loss_finite/NaN/peak_memory/latency/action_smoothness | P0 Stage B | `[待 Stage B A100 复验]` |
+| E-H2a-02 | H2-a | `configs/starflow_vla/ablations/future_tokens_16.yaml` | LIBERO full | `discretized_instruction` | 16 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P1 | `[待 LIBERO eval]` |
+| E-H2a-03 | H2-a | `configs/starflow_vla/ablations/future_tokens_32.yaml` | LIBERO full | `discretized_instruction` | 32 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P0/P1 | `P0-M5-Stage1 正式长训进行中：run_id=P0-M5-E-H2a-04_..._ft32_250615（命名标签误写为 E-H2a-04，实际对应 E-H2a-03），当前约 steps_15500/100000` |
+| E-H2a-04 | H2-a | `configs/starflow_vla/ablations/future_tokens_64.yaml` | LIBERO full（P1）/ RoboCasa/RoboTwin（P2） | `discretized_instruction` | 64 | 7/14 | 8/16 | cross_drop/worst_family/peak_memory/latency/task_length_success | P1/P2 | `[待 LIBERO eval] / [待 RoboCasa / RoboTwin eval]` |
+| E-H2b-01 | H2-b | `configs/starflow_vla/state/discretized_instruction.yaml` | LIBERO small/full | `discretized_instruction` | 32 | 7 | 8 | success_rate/state_sensitive_success/overfit_steps/smoothness/noise_robustness | P0/P1 | `P0-M5-Stage1 默认路径，与 E-H2a-03 同一场训练` |
 | E-H2b-02 | H2-b | `configs/starflow_vla/state/continuous_head.yaml` | LIBERO full | `continuous_head` | 32 | 7 | 8 | success_rate/state_sensitive_success/loss_curve/smoothness/latency | P1 | `[待 LIBERO eval]` |
 | E-H2b-03 | H2-b | `configs/starflow_vla/state/hybrid_gated.yaml` | LIBERO full | `hybrid_gated` | 32 | 7 | 8 | success_rate/state_sensitive_success/noise_robustness/missing_state_robustness/latency | P2 | `[待 Stage B A100 复验]` |
 | E-H2b-04 | H2-b | `configs/starflow_vla/state/hybrid_gated_cross.yaml` | RoboCasa/RoboTwin/cross | `hybrid_gated` | 32 | 7/14 | 8/16 | cross_drop/long_horizon_success/noise_robustness/worst_family | P2 | `[待 RoboCasa / RoboTwin eval]` |
+
+### 矩阵说明
+
+- `E-H2a-03` 与 `E-H2b-01` 的变量组合（`num_target_vision_tokens=32` + `state_mode=discretized_instruction`）正是 `P0-M5-Stage1` 的默认配置，因此由同一场训练覆盖。
+- 当前 `tmux starflow_train` 中的长训 run_id 写为 `P0-M5-E-H2a-04_..._ft32_250615`，属于命名标签笔误，实际配置为 `ft32`，应在实验记录中更正为 `E-H2a-03`。
+- `E-H2a-04`（`future_tokens=64`）尚未开始训练，仍按 P1/P2 占位。
 
 ## 3.5 RGB-Geometry Observation Fusion with VGGT：P2 / 与《基于世界模型的移动操作规划与决策框架研究》的接口预留
 

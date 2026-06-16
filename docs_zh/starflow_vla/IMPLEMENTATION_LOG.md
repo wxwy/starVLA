@@ -1615,3 +1615,58 @@ Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务�
 
 ### Next
 P0 主线 smoke 已覆盖到最小 rollout；剩余可选项为 resume 100 step、完整 LIBERO suite 与正式报告。
+
+---
+
+## Record P0-MATRIX-REALIGN
+
+### Task ID
+P0-MATRIX-REALIGN
+
+### Date
+2026-06-16
+
+### Goal
+重新整理 StarFlow-VLA 实验矩阵，修正当前训练 run_id 与算法假设 ID 的命名不一致，补齐 H2-a/H2-b 所需的独立配置入口。
+
+### Environment
+Stage A 本地文档/配置整理；不涉及目标训练环境；不动正在运行的 `tmux starflow_train`。
+
+### Files Changed
+- Modified: `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md`
+- Modified: `docs_zh/starflow_vla/ALGORITHM_OPTIMIZATION_PLAN.md`
+- Modified: `docs_zh/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Added: `configs/starflow_vla/ablations/future_tokens_0.yaml`
+- Added: `configs/starflow_vla/ablations/future_tokens_16.yaml`
+- Added: `configs/starflow_vla/ablations/future_tokens_32.yaml`
+- Added: `configs/starflow_vla/ablations/future_tokens_64.yaml`
+- Added: `configs/starflow_vla/state/discretized_instruction.yaml`
+- Added: `configs/starflow_vla/state/continuous_head.yaml`
+- Added: `configs/starflow_vla/state/hybrid_gated.yaml`
+- Added: `configs/starflow_vla/state/hybrid_gated_cross.yaml`
+
+### Findings
+- 当前 `tmux starflow_train` 的 run_id 为 `P0-M5-E-H2a-04_starflow_libero-goal_qwen3vl4b_lwfm_ft32_250615`，实际配置 `num_target_vision_tokens=32`，按 `ALGORITHM_OPTIMIZATION_PLAN.md` 应归属 **E-H2a-03**，命名标签存在笔误。
+- 已保存 checkpoint 目录不动，避免破坏 wandb 和训练恢复；仅在文档中加注说明。
+- `EXPERIMENT_MATRIX.md` 增加“算法假设 ID”列，明确 P0 Matrix 与 H2-a/H2-b 的映射：
+  - P0-M5-Stage1 ↔ E-H2a-03 + E-H2b-01
+  - P0-M7-FutureTokens ↔ E-H2a-01/02/03/04
+- 补齐 `configs/starflow_vla/ablations/` 下 4 个独立 yaml，分别对应 `num_target_vision_tokens=0/16/32/64`。
+- 补齐 `configs/starflow_vla/state/` 下 4 个独立 yaml，分别对应 `discretized_instruction` / `continuous_head` / `hybrid_gated` / `hybrid_gated_cross`。
+- `state/continuous_head.yaml`、`state/hybrid_gated.yaml`、`state/hybrid_gated_cross.yaml` 中新增 `framework.state_mode` 字段作为配置占位；当前训练代码不消费该字段，后续 H2-b 实现时读取。
+- `ACCEPTANCE_CHECKLIST.md` 中 `num_target_vision_tokens` 取值口径从 `0/8/16/32/64` 修正为 `0/16/32/64`，与 stage3 配置及 4 个 ablation yaml 一致。
+
+### Checks
+- `python -m py_compile configs/starflow_vla/ablations/*.yaml configs/starflow_vla/state/*.yaml`（通过 OmegaConf parse 验证）
+- `bash -n examples/LIBERO/train_files/run_starflow_train_ready.sh`
+- `.venv/bin/python -m unittest tests.test_starflow_docs_governance -v`
+
+### Not Run
+未运行新配置的真实 forward/backward、single batch overfit 或长训；`state_mode=continuous_head/hybrid_gated` 运行时路径尚未实现。
+
+### Next
+- 等 `P0-M5-E-H2a-03` 长训完成后，按优先级启动 `future_tokens=0/16/64` 消融。
+- 评估 policy server 冷启动优化，确保评测链路可端到端跑通。
+- 在 P1 阶段实现 `state_mode=continuous_head` 运行时路径并启动 E-H2b-02 训练。
+

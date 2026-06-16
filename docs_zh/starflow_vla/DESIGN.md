@@ -1,11 +1,11 @@
 # 《基于 Vision-Language-Action 统一训练与泛化评测框架的机器人基础模型研究》最终详细设计文档
 
-**模型/项目名称**：StarFlow-VLA 
-**技术路线**：Qwen3-VL + StarVLA + Flow Matching 
-**数据范围**：LIBERO、RoboCasa、RoboTwin 
-**训练/验证环境**：Stage A 与 Stage B 默认均使用 1×A100 40G；Stage A 用于轻量构建验证，Stage B 用于目标模型 smoke 验证；8×A100 / Virtaicloud / Bita 作为正式训练候选环境，不代表当前已完成正式长训。 
-**文档版本**：V4.6.2 Implementation Trace Patch 
-**生成日期**：2026-06-14 
+**模型/项目名称**：StarFlow-VLA  
+**技术路线**：Qwen3-VL + StarVLA + Flow Matching  
+**数据范围**：LIBERO、RoboCasa、RoboTwin  
+**训练/验证环境**：Stage A 与 Stage B 默认均使用 1×A100 40G；Stage A 用于轻量构建验证，Stage B 用于目标模型 smoke 验证；8×A100 / Virtaicloud / Bita 作为正式训练候选环境，不代表当前已完成正式长训。  
+**文档版本**：V4.6.2 Implementation Trace Patch  
+**生成日期**：2026-06-14  
 **文档定位**：面向代码适配、模型训练、推理部署、效果验证和技术专家评审的工程详细设计文档
 
 ## 0 封面、修订记录与文档控制
@@ -147,7 +147,7 @@ V4.3 将研究假设和工程验证项分层管理。后续论文实验不能只
 
 | 优先级 | 假设 | 行业状态 | 已有证据/待补引用 | 尚未证明的空白 | 验证实验 | 论文主贡献 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 核心 P0 | H1 Flow Matching vs ACT 长时序泛化假设 | Emerging Consensus | π0/π0.5/GR00T 等路线显示 FM 潜力，需补公开引用 | 缺少在 LIBERO/RoboCasa/RoboTwin 上 FM>ACT 的系统证明 | E01/E11/E21/E34 | 是 |
+| 背景/后续扩展 | H1 Flow Matching vs ACT 长时序泛化假设 | Background Assumption / Optional Baseline | π0/π0.5/GR00T 等路线显示 FM 潜力，当前项目采用 StarVLA 已有 LayerwiseFM 路线作为主策略 | 完整 FM vs ACT 公平对照需要额外 ACT 训练、同预算评测和跨 Benchmark 复验，不进入当前 P0/P1 执行矩阵 | Optional-H1-ACT / Future Work | 否 |
 | 核心 P0 | H2 StarVLA-native future_tokens + cross-DiT vs MLP/OFT/VLA_AdapterHeader 泛化假设 | Emerging Consensus | OpenVLA-OFT、π 系列、VIMA 等趋势偏向 token/action query，StarVLA 已具备 future_tokens + cross-DiT 条件机制 | 缺少 future_tokens + cross-DiT 与 MLP/OFT/VLA_AdapterHeader baseline 的受控跨 Benchmark 对比 | E11/E13/E13-a/E40 | 是 |
 | 核心 P0 | H2-a future_tokens 规划槽位优化假设 | Open Question | StarVLA LayerwiseFM/GR00T 已暴露 num_target_vision_tokens，但公开工作较少把它作为规划容量变量系统研究 | future_tokens 是否只是冗余视觉 token，还是承载目标、时序抽象和动作规划容量，仍缺少受控实验 | E-H2a-01 至 E-H2a-04 | 候选 |
 | 增强 P1 | H2-b 状态条件注入路径优化假设 | Open Question | StarVLA 已同时存在 state-to-instruction 与 action_head.state_encoder 路径，具备低成本对照基础 | 本体状态通过语言 token、连续 state encoder 或 hybrid gated path 注入时，对控制精度和跨 Benchmark 泛化的影响尚未系统验证 | E-H2b-01 至 E-H2b-04 | 候选 |
@@ -174,15 +174,17 @@ V4.3 将研究假设和工程验证项分层管理。后续论文实验不能只
 
 ### 1.6.2 假设到实验的追踪规则
 
-所有主线实验报告必须包含 `hypothesis_id` 字段。论文主线固定为 H1、H2、H3；H4、H5、H6 作为高价值增强研究，H7、H8 作为资源允许时的补充研究。一个实验可以服务多个假设，但每个 P0 假设至少需要一个 P0 实验和一个 Baseline 对照。评审时不接受只给最终模型分数的报告，必须给出“假设 → 实验 → 指标 → 结论 → 失败分析”的完整链路。
+所有主线实验报告必须包含 `hypothesis_id` 字段。论文长期主线固定为 H1、H2、H3（H1 当前阶段降级为后续完整论文扩展 / optional baseline）；当前 P0/P1 执行聚焦 H2 及其 H2-a/H2-b 子问题；H4、H5、H6 作为高价值增强研究，H7、H8 作为资源允许时的补充研究。一个实验可以服务多个假设，但每个 P0 假设至少需要一个 P0 实验和一个 Baseline 对照。评审时不接受只给最终模型分数的报告，必须给出“假设 → 实验 → 指标 → 结论 → 失败分析”的完整链路。
 
 ### 当前 P0/P1 执行覆盖率说明
 
 当前 `docs/starflow_vla` 下的 P0/P1 文档与 `EXPERIMENT_MATRIX.md` 主要覆盖 StarFlow-VLA framework、QwenPI_v3 reuse、LayerwiseFM 7DoF、MLP baseline（H2 总 baseline）、H2-a future_tokens 消融（`0/16/32/64`）、H2-b state conditioning 的 P1 入口（`continuous_head`）、starflow_mapping、checkpoint 与 LIBERO eval smoke。
 
-当前矩阵不等价于完整覆盖本文档 H1-H8 的全部研究版图。尚未完整覆盖的内容包括：H1 Flow Matching vs ACT 正式对照、H3 Data Mixture 最优比例、RoboCasa/RoboTwin 完整 cross benchmark、ACT / DP / OpenVLA / StarVLA 原版完整 baseline、Data Scaling 25/50/75/100、Leave-One-Benchmark-Out、Sim2Real 和真实机器人部署结果。
+当前矩阵不等价于完整覆盖本文档 H1-H8 的全部研究版图。当前项目不重复证明 Flow Matching 相对 ACT 的通用优势，而是基于 StarVLA 已有 LayerwiseFM 路线，聚焦研究 H2：future_tokens / cross-DiT 条件路径及其 H2-a/H2-b 消融。尚未完整覆盖的内容包括：H1 Flow Matching vs ACT 正式对照（已降级为后续完整论文扩展 / optional baseline，不进入当前 P0/P1 执行矩阵）、H3 Data Mixture 最优比例、RoboCasa/RoboTwin 完整 cross benchmark、Data Scaling 25/50/75/100、Leave-One-Benchmark-Out、Sim2Real 和真实机器人部署结果。
 
 因此，当前实验矩阵支撑的是 V4.6.2 的 P0/P1 执行基线和 H2-a/H2-b 局部算法优化，不应被表述为完整论文级全量实验矩阵。
+
+当前 P0/P1 执行矩阵不包含 ACT baseline。ACT / H1 Flow Matching vs ACT 作为后续完整论文扩展或 optional baseline 保留，不作为当前 P0/P1 阻断项，也不进入当前训练次数统计。
 
 H2-a/H2-b 是 H2 的算法优化子问题。MLP/OFT/VLA_AdapterHeader baseline 服务于 H2 总假设对照，不属于 H2-a/H2-b 子变量消融；其中当前 P0 优先使用 MLP baseline，OFT/VLA_AdapterHeader 可作为后续 baseline 扩展。
 
@@ -198,7 +200,7 @@ RGB token 提供语义、外观和任务相关区域信息，VGGT geometry token
 
 | ID | 类型 | 对应实验 | 核心指标 | 通过标准 | 失败归因 | 主贡献 |
 | --- | --- | --- | --- | --- | --- | --- |
-| H1 | P0 | E01/E11/E21/E34 | success_rate、smoothness、cross_drop | FM 优于 ACT 或同分下更平滑 | horizon、loss、solver、数据分布 | 是 |
+| H1 | Background / FX | Optional-H1-ACT / Future Work | success_rate、smoothness、cross_drop | 当前不作为 P0/P1 通过标准；后续完整论文如补 ACT，需要同数据、同预算、同评测协议 | ACT 实现成本、公平预算、跨 Benchmark 复验成本 | 否 |
 | H2 | P0 | E11/E13/E15/E40 | cross_success_rate、worst_family | ActionToken 优于 MLP 且最差任务族不明显下降 | attention、state 注入、token 初始化 | 是 |
 | H2-a | P0/P1 | E-H2a-01 至 E-H2a-04 | overfit_steps、loss_finite、peak_memory、latency、success_rate、cross_drop | 得到 future_tokens 容量与收敛、稳定性、泛化之间的可解释边界 | token 数过小、slot 冗余、显存/延迟瓶颈 | 候选 |
 | H2-b | P1/P2 | E-H2b-01 至 E-H2b-04 | state_sensitive_success、noise_robustness、smoothness、cross_drop | 识别 state-to-instruction、continuous_head、hybrid_gated 的适用边界 | 状态编码弱、语言化状态噪声、门控退化 | 候选 |

@@ -1735,3 +1735,51 @@ rg -n "0/16/32/64|E-H2a-04|H2 总 baseline|P0-M5.*E-H2a-03|ft=32.*baseline|当�
 - 继续推进 policy server 冷启动优化，确保评测链路可端到端跑通。
 
 
+
+## Record: DOC-H1-ACT-Downgrade
+
+### Task ID
+DOC-H1-ACT-Downgrade
+
+### Date
+2026-06-16
+
+### Goal
+将 H1 Flow Matching vs ACT 从当前 P0/P1 必跑矩阵中降级为背景假设 / 后续完整论文扩展 / optional baseline，避免 ACT baseline 阻断当前 StarFlow-VLA H2 主线实验。当前主线收敛为 H2：future_tokens + cross-DiT vs MLP baseline，以及 H2-a future_tokens=0/16/32/64 消融。
+
+### Files Changed
+- Modified: `docs_zh/starflow_vla/DESIGN.md`
+- Modified: `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md`
+- Modified: `docs_zh/starflow_vla/ALGORITHM_OPTIMIZATION_PLAN.md`
+- Modified: `docs_zh/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `docs_zh/starflow_vla/PATCH_MANIFEST.md`
+
+### Key Changes
+- H1 从当前核心 P0 / 当前论文主贡献降级为背景假设 / 后续扩展。
+- ACT baseline 不进入当前 P0/P1 必跑矩阵。
+- ACT baseline 不进入当前训练次数统计。
+- 当前推荐主线训练矩阵明确为 5 场：ft32 baseline、ft0、ft16、ft64、MLP baseline。
+- continuous_head 保持 P1 runtime 后补。
+- H2/H2-a/H2-b 主线保持不变。
+
+### Tests Run
+
+```bash
+rg -n "ACT|H1|Flow Matching vs ACT|FM vs ACT" docs_zh/starflow_vla
+rg -n "核心 P0.*H1|H1.*核心 P0|ACT.*P0 必做|ACT.*阻断|ACT.*当前必跑|当前推荐主线训练矩阵|optional baseline|后续完整论文扩展" docs_zh/starflow_vla
+```
+
+### Test Results
+- Pass: ACT/H1 已从当前 P0/P1 必跑矩阵中降级。
+- Not run: 代码测试、训练、完整评测、真实机器人部署。
+- Reason if not run: 本任务只做 Markdown 文档口径调整。
+- Need target verification: 如未来完整论文需要证明 H1，需要补 ACT baseline、公平训练预算和跨 Benchmark eval。
+
+### Not Run
+未运行代码测试、正式训练、完整评测、真实机器人部署。
+
+### Next
+- 继续推进 H2-a future_tokens=0/16/64 消融训练。
+- 继续推进 H2 总 baseline MLP 训练。
+- 在 P1 阶段实现 continuous_head runtime 并启动 E-H2b-02。

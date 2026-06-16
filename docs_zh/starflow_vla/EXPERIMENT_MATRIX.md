@@ -15,13 +15,14 @@
 
 尚未完整覆盖：
 
-- H1 Flow Matching vs ACT 正式对照
+- H1 Flow Matching vs ACT 正式对照（已降级为后续完整论文扩展 / optional baseline，不进入当前 P0/P1）
 - H3 Data Mixture 最优比例
 - RoboCasa/RoboTwin 完整 cross benchmark
-- ACT / DP / OpenVLA / StarVLA 原版完整 baseline
 - Data Scaling 25/50/75/100
 - Leave-One-Benchmark-Out
 - Sim2Real / 真实机器人部署结果
+
+ACT / H1 Flow Matching vs ACT 已降级为后续完整论文扩展或 optional baseline，不进入当前 P0/P1 必跑矩阵，不进入当前训练次数统计。当前实验矩阵的主证明目标是 H2：StarVLA-native future_tokens + cross-DiT vs MLP baseline，以及 H2-a future_tokens=0/16/32/64 消融。
 
 所有 Stage A / Stage B / 未验证边界均保留；smoke、dry-run、single batch overfit、1 trial eval 不等价于正式长训或完整评测结论。
 
@@ -44,7 +45,25 @@
 
 ---
 
-## 2. H2-a / H2-b Core Algorithm Sub-Matrix
+---
+
+## 2. Current Recommended Main Training Matrix
+
+本项目当前主证明收敛为 H2：StarVLA-native future_tokens + cross-DiT vs MLP baseline，以及 H2-a future_tokens=0/16/32/64 消融。ACT / H1 不进入当前训练次数统计。当前推荐主线共 **5 场**训练：
+
+| 顺序 | 实验 | 变量 | 作用 | 当前是否必跑 |
+| --- | --- | --- | --- | --- |
+| 1 | P0-M5-Stage1 / E-H2a-03 / E-H2b-01 | ft=32 + discretized_instruction | StarFlowVLA 默认 baseline | 是，已覆盖/在跑 |
+| 2 | E-H2a-01 | ft=0 | 验证 future tokens 是否必要 | 是 |
+| 3 | E-H2a-02 | ft=16 | 验证低 token 预算是否足够 | 是 |
+| 4 | E-H2a-04 | ft=64 | 验证高 token 预算是否继续带来收益 | 是 |
+| 5 | P0-M6-MLP / H2-total-baseline | MLP baseline | H2 总 baseline，对照 future_tokens + cross-DiT 主路线 | 是 |
+| 6 | E-H2b-02 | continuous_head | H2-b P1 state conditioning 对照 | P1，可在 runtime 实现后补 |
+| - | H1-ACT | ACT baseline | FM vs ACT 完整对照 | 否，后续 optional |
+
+---
+
+## 3. H2-a / H2-b Core Algorithm Sub-Matrix
 
 | 实验 ID | 工程任务映射 | 变量 | 配置 | 是否新增训练 | 当前状态 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -61,7 +80,7 @@
 
 ---
 
-## 3. Engineering and Baseline Appendix
+## 4. Engineering and Baseline Appendix
 
 | 项目 | 类型 | 是否进入 H2-a/H2-b 子矩阵 | 是否支撑详细设计文档 | 说明 |
 | --- | --- | --- | --- | --- |
@@ -70,10 +89,11 @@
 | **OFT / VLA_AdapterHeader** | 后续 baseline | 否 | 可进一步支撑 H2 | 当前未运行，标注为待扩展 baseline |
 | **hybrid_gated** | P2 advanced | 否 | 仅支撑未来 H2-b 扩展 | 不进入当前 P0/P1 |
 | **VGGT / geometry fusion** | P2 / 世界模型项目接口 | 否 | 不支撑本项目 P0/P1 主线 | 仅接口预留 |
+| **ACT baseline** | 后续完整论文扩展 / optional baseline | 否 | 不支撑当前 P0/P1 主矩阵；仅在需要证明 H1 FM vs ACT 时补充 | 当前不跑，不计入训练次数 |
 
 ---
 
-## 4. Design Hypothesis Coverage Status
+## 5. Design Hypothesis Coverage Status
 
 | 详细设计假设/模块 | 当前覆盖状态 | 当前支撑文件/实验 | 尚缺内容 |
 | --- | --- | --- | --- |
@@ -82,7 +102,7 @@
 | H2-a future_tokens | 部分覆盖 | E-H2a-01 至 E-H2a-04 | 需完整训练、评测、显存/延迟统计 |
 | H2-b state conditioning | 部分覆盖 | E-H2b-01/E-H2b-02 | `continuous_head` runtime 与正式实验 |
 | H2 总 baseline | 部分覆盖 | P0-M6-MLP | OFT/VLA_AdapterHeader 可后续补充 |
-| H1 FM vs ACT | 未覆盖 | 当前无完整 ACT 对照 | 需要 ACT baseline |
+| H1 FM vs ACT | 后续扩展 / optional baseline | 当前不进入 P0/P1 矩阵 | 如完整论文需要，可补 ACT baseline、公平预算对照和跨 Benchmark 复验 |
 | H3 Data Mixture | 未覆盖 | 当前无三数据集混训比例矩阵 | LIBERO/RoboCasa/RoboTwin mixture |
 | Cross Benchmark | 未完整覆盖 | eval smoke | RoboCasa/RoboTwin 完整评测 |
 | Sim2Real / deployment | 未覆盖 | 接口与安全门设计 | 真实机器人验证 |

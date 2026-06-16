@@ -60,6 +60,7 @@
 
 ## P2 验收清单：Advanced，不阻断 P0/P1
 
+- [ ] ACT baseline 为 H1 后续完整论文扩展 / optional baseline，不阻断当前 P0/P1 验收。
 - [ ] PerceiverAdapter dry-run pass。
 - [ ] PerceiverAdapter 可通过 `perceiver_enabled` 开关启用/关闭。
 - [ ] 显式 FlowCondition runtime dataclass 可选启用。
@@ -80,6 +81,7 @@
 - [ ] 文档明确 VGGT 是本项目 P2 optional extension / 与《基于世界模型的移动操作规划与决策框架研究》的接口预留。
 - [ ] 文档明确《基于世界模型的移动操作规划与决策框架研究》将 VGGT 作为 geometric world state encoder。
 - [ ] 未实现 VGGT 时不得声称完成 RGB-3D fusion 训练或评测。
+
 
 ## 禁止项检查
 

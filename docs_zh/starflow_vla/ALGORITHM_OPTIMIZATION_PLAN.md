@@ -7,7 +7,7 @@ Status: 已完成实验设计，待 Stage B A100 复验
 
 本文件补充本项目主线算法优化与《基于世界模型的移动操作规划与决策框架研究》衔接方向。StarFlow-VLA 主线算法优化包括 Future Tokens Planning Slot Optimization 与 State Conditioning Path Optimization；RGB-Geometry Observation Fusion with VGGT 不属于本项目 P0/P1 主线，仅作为本项目 P2 optional extension / 与《基于世界模型的移动操作规划与决策框架研究》的接口预留。
 
-本文件只细化 H2-a/H2-b 两个算法优化子问题，不替代 DESIGN.md 中 H1-H8 的完整研究假设矩阵。当前 P0/P1 执行矩阵只覆盖 StarFlow-VLA 最小闭环与 H2 局部优化，不宣称已经完成 H1/H3/Cross Benchmark/Sim2Real 等完整验证。当前文件只定义研究假设、配置变量、实验矩阵、验收指标和 P0/P1/P2 边界；不代表 StarFlowVLA 代码已经实现，不代表 A100、LIBERO、RoboCasa、RoboTwin、VGGT 或真实机器人结果已经完成。
+本文件只细化 H2-a future_tokens planning slot optimization 与 H2-b state conditioning path optimization，不承担 H1 Flow Matching vs ACT 的完整证明。ACT baseline 已降级为后续完整论文扩展 / optional baseline，不进入当前 P0/P1 执行矩阵。本文件不替代 DESIGN.md 中 H1-H8 的完整研究假设矩阵。当前 P0/P1 执行矩阵只覆盖 StarFlow-VLA 最小闭环与 H2 局部优化，不宣称已经完成 H1/H3/Cross Benchmark/Sim2Real 等完整验证。当前文件只定义研究假设、配置变量、实验矩阵、验收指标和 P0/P1/P2 边界；不代表 StarFlowVLA 代码已经实现，不代表 A100、LIBERO、RoboCasa、RoboTwin、VGGT 或真实机器人结果已经完成。
 
 ## 0. Optimization Scope
 

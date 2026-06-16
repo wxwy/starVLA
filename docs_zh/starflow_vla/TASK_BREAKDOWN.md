@@ -496,11 +496,11 @@ config_schema: xxx
 | Task ID | P0-M7a |
 | 任务名称 | future_tokens 规划槽位优化 / 动作条件 token 预算优化 |
 | 优先级 | P0 |
-| 目标 | 将 `num_target_vision_tokens=0/8/16/32/64` 固化为算法变量，支撑 H2-a |
+| 目标 | 将 `num_target_vision_tokens=0/16/32/64` 固化为算法变量，支撑 H2-a；`ft=8` 可作为可选 dense-sweep，不进入当前 P0/P1 执行矩阵 |
 | 涉及文件 | StarVLA config、`starflow_mapping`、checkpoint manifest、实验报告 |
-| 新增文件 | 可选 `configs/starflow_vla/ablations/future_tokens_{0,8,16,32,64}.yaml` |
+| 新增文件 | `configs/starflow_vla/ablations/future_tokens_{0,16,64}.yaml`；`ft=32` 由 P0-M5-Stage1 baseline 覆盖，不重复创建 |
 | 修改 StarVLA 原文件 | 否；如 0-token 边界必须 patch，需另开 issue 并标注 `STARFLOW_PATCH_BEGIN / END` |
-| Stage A 验收 | 五组配置存在或在 issue 中列出；config parse 通过；dry-run 不加载完整大模型也能验证字段；`starflow_mapping` 记录 `num_target_vision_tokens`、`state_mode`、`action_dim`、`action_horizon` |
+| Stage A 验收 | 四组配置存在或在 issue 中列出；config parse 通过；dry-run 不加载完整大模型也能验证字段；`starflow_mapping` 记录 `num_target_vision_tokens`、`state_mode`、`action_dim`、`action_horizon` |
 | Stage B 复验 | 至少一组 token 数完成 single batch overfit；记录 loss finite/NaN、peak memory、latency、action smoothness |
 | 不作为 P0 完成条件 | LIBERO full success rate、RoboCasa/RoboTwin cross benchmark、完整 latency Pareto |
 | 输出 | Implementation Record + H2-a 实验占位表，未完成指标写 `[待 Stage B A100 复验]` |
@@ -511,7 +511,7 @@ config_schema: xxx
 | --- | --- |
 | Task ID | P1-M1 |
 | 任务名称 | Future Tokens Ablation on LIBERO |
-| 目标 | 在 LIBERO full split 上比较 `0/8/16/32/64` planning slots |
+| 目标 | 在 LIBERO full split 上比较 `0/16/32/64` planning slots；`ft=8` 不作为当前 P0/P1 编号 |
 | 前置条件 | P0-M7a Stage B single batch overfit 至少一组通过 |
 | 指标 | success_rate、loss curve、single batch overfit speed、action chunk smoothness、peak memory、inference latency、按任务长度分组 success |
 | 输出 | LIBERO ablation report；所有未运行项写 `[待 LIBERO eval]` |

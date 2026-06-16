@@ -49,7 +49,7 @@
 | P0-M6 | docs | `MODULE_MAPPING.md` | modified | 同步 H2 baseline P0-M6 状态 |
 | P0-M6 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 | P0-M6 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M6 配置级实施记录 |
-| P0-M7 | config | `configs/starflow_vla/stage3_future_token_ablation.yaml` | added | 新增 future_tokens `0/8/16/32/64` 消融配置 |
+| P0-M7 | config | `configs/starflow_vla/stage3_future_token_ablation.yaml` | added | 新增 future_tokens `0/8/16/32/64` 消融配置（历史记录；当前 P0/P1 可执行矩阵已收敛为 `0/16/32/64`） |
 | P0-M7 | docs | `MODULE_MAPPING.md` | modified | 同步 future token ablation 配置状态 |
 | P0-M7 | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 | P0-M7 | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 P0-M7 配置级实施记录 |
@@ -160,6 +160,16 @@
 | P0-M5-TRAINREADY | test | `tests/test_starflow_train_ready.py` | added | 新增训练就绪脚本的语法和关键默认值回归检查 |
 | P0-M5-TRAINREADY | docs | `IMPLEMENTATION_LOG.md` | modified | 追加训练就绪启动器记录 |
 | P0-M5-TRAINREADY | docs | `examples/LIBERO/SESSION.md` | modified | 记录训练就绪启动器默认值 |
+| DOC-Matrix-Cleanup | docs | `DESIGN.md` | modified | 统一 H2-a/H2-b 实验编号、future_tokens 取值、MLP baseline 定位和当前 P0/P1 覆盖边界 |
+| DOC-Matrix-Cleanup | docs | `ALGORITHM_OPTIMIZATION_PLAN.md` | modified | 统一 H2-a/H2-b 实验编号、future_tokens 取值和当前 P0/P1 覆盖边界 |
+| DOC-Matrix-Cleanup | docs | `EXPERIMENT_MATRIX.md` | modified | 重构为 Engineering / Algorithm / Appendix / Coverage 四张表，统一口径并修正可执行命令 |
+| DOC-Matrix-Cleanup | docs | `ACCEPTANCE_CHECKLIST.md` | modified | 修正 future_tokens 验收口径为 0/16/32/64 |
+| DOC-Matrix-Cleanup | docs | `P0_IMPLEMENTATION_PLAN.md` | modified | 修正 future_tokens 执行口径为 0/16/32/64 |
+| DOC-Matrix-Cleanup | docs | `CODEX_ISSUES.md` | modified | 修正 future_tokens 执行口径为 0/16/32/64 |
+| DOC-Matrix-Cleanup | docs | `CODEX_EXECUTION_GUIDE.md` | modified | 修正 future_tokens 执行口径为 0/16/32/64 |
+| DOC-Matrix-Cleanup | docs | `MODULE_MAPPING.md` | modified | 修正 future_tokens 映射路径和 MLP baseline 定位 |
+| DOC-Matrix-Cleanup | docs | `IMPLEMENTATION_LOG.md` | modified | 追加 DOC-Matrix-Cleanup 记录 |
+| DOC-Matrix-Cleanup | docs | `PATCH_MANIFEST.md` | modified | 追加本记录 |
 
 ## Source Code Patches
 `P0-M2` 新增 StarFlowVLA facade 文件；`P0-M3` 新增独立 mapping schema / 旁路 JSON 保存工具，并让 facade 委托该工具返回映射；`P0-M4` 新增不加载真实模型的 QwenPI_v3 复用 smoke 测试；`P0-M5` 新增 Stage1 7DoF action / 8D state smoke 配置；`P0-M8` 新增 LIBERO batch schema smoke 测试；`P0-M6` 新增 QwenOFT + MLP baseline smoke 配置；`P0-M7` 新增 future_tokens 消融配置；`P0-M9` 新增 checkpoint sidecar mapping 保存工具；`P0-M10` 新增 eval smoke preflight；`P0-M11` 新增实验矩阵和文档治理测试；`P0-M8-DATA` 对齐真实 LIBERO registry 的 8D state schema；`P0-M5-STAGEB` 记录真实 Stage1 smoke 验证结果；`P0-M9-STAGEB` 记录 smoke checkpoint save/load 与 eval preflight；`P0-M6-STAGEB` 记录 MLP baseline Stage B smoke 验证结果；`P0-M7-STAGEB` 记录 future token 5 组 Stage B smoke 验证结果；`P0-M10-STAGEB` 记录最小 LIBERO rollout smoke；`P0-M4-STAGEB` 记录 QwenPI_v3 baseline compatibility smoke；`P0-M10-REPORT` 新增 eval report helper，并将报告写入前移到 episode 结束后、视频编码前；`P0-M9-RESUME` 为 lightweight checkpoint 增加 RNG state，并跑通 bootstrap checkpoint + 100-step resume consistency smoke；`P0-M9-SCALER` 为 lightweight checkpoint 增加 scaler sidecar、config/mapping 自动落盘，并补齐 `steps_1/scaler.pt`；`P0-GUARDRAIL` 将 Perceiver / 显式 FlowCondition / 14D mask 的 P0 边界固化为可执行文档治理测试；`P0-M5-TRAINLOOP` 修复单卡 barrier 阻塞，并跑通 `train_starvla.py` 的真实 10 step 训练闭环；`P0-M10-FULLTASK` 追加 `steps_10` 在 `libero_goal` 上的全 10 task × 1 trial task sweep；`P0-M10-REGRESSION` 固化训练产物到 policy server 到单 episode eval 的一键快速回归入口；`P0-M10-COLDSTART` 为 policy server 冷启动增加阶段耗时日志并确认 import/build 才是首要瓶颈；`P0-M5-TRAINREADY` 固化训练就绪默认值，减少手工拼接环境变量的时间。

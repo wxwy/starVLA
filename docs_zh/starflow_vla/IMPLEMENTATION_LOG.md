@@ -785,6 +785,8 @@ Stage A 1×A100 40G lightweight validation；本任务只做配置新增、YAML 
 
 ## Record P0-M7
 
+> 注：本记录为历史实施记录，记录当时使用 `num_target_vision_tokens=0/8/16/32/64` 五组进行配置级验证的过程。当前 P0/P1 可执行矩阵已收敛为 `0/16/32/64`，`ft=8` 不再分配当前 E-H2a 编号，不代表当前执行矩阵。
+
 ### Task ID
 P0-M7
 
@@ -938,6 +940,8 @@ Stage A 1×A100 40G lightweight validation；本任务只做文档治理和标�
 P0 Stage A 配置、文档、registry、mapping 和 preflight 工作已收口；继续 P0 Stage B 前需要准备 `playground/Datasets/LEROBOT_LIBERO_DATA` 并产生 P0 checkpoint。
 
 ## Record P0-M7a
+
+> 注：本记录为历史实施记录，记录当时使用 `num_target_vision_tokens=0/8/16/32/64` 五组进行 mapping 测试的过程。当前 P0/P1 可执行矩阵已收敛为 `0/16/32/64`，`ft=8` 不再分配当前 E-H2a 编号，不代表当前执行矩阵。
 
 ### Task ID
 P0-M7a
@@ -1115,6 +1119,8 @@ Stage B 1×A100 40G target smoke validation；使用仓库 `.venv`；本任务�
 进入 P0-M7 Stage B：复验 future token `num_target_vision_tokens=0/8/16/32/64` 的真实 forward / single batch smoke。
 
 ## Record P0-M7-STAGEB
+
+> 注：本记录为历史实施记录，记录当时使用 `num_target_vision_tokens=0/8/16/32/64` 五组进行 Stage B smoke 验证的过程。当前 P0/P1 可执行矩阵已收敛为 `0/16/32/64`，`ft=8` 不再分配当前 E-H2a 编号，不代表当前执行矩阵。
 
 ### Task ID
 P0-M7-STAGEB
@@ -1669,4 +1675,63 @@ Stage A 本地文档/配置整理；不涉及目标训练环境；不动正在�
 - 等 `P0-M5-E-H2a-03` 长训完成后，按优先级启动 `future_tokens=0/16/64` 消融。
 - 评估 policy server 冷启动优化，确保评测链路可端到端跑通。
 - 在 P1 阶段实现 `state_mode=continuous_head` 运行时路径并启动 E-H2b-02 训练。
+
+---
+
+## Record: DOC-Matrix-Cleanup
+
+### Task ID
+DOC-Matrix-Cleanup
+
+### Date
+2026-06-16
+
+### Goal
+统一 DESIGN.md、ALGORITHM_OPTIMIZATION_PLAN.md、EXPERIMENT_MATRIX.md 与相关执行文档中的 H2-a/H2-b 实验编号、future_tokens 取值、MLP baseline 定位和 P0/P1 覆盖边界，避免 P0-Mx 工程编号与 E-H2x 算法编号混用，确保矩阵可执行且不伪造结果。
+
+### Files Changed
+- Modified: `docs_zh/starflow_vla/DESIGN.md`
+- Modified: `docs_zh/starflow_vla/ALGORITHM_OPTIMIZATION_PLAN.md`
+- Modified: `docs_zh/starflow_vla/EXPERIMENT_MATRIX.md`
+- Modified: `docs_zh/starflow_vla/ACCEPTANCE_CHECKLIST.md`
+- Modified: `docs_zh/starflow_vla/P0_IMPLEMENTATION_PLAN.md`
+- Modified: `docs_zh/starflow_vla/CODEX_ISSUES.md`
+- Modified: `docs_zh/starflow_vla/CODEX_EXECUTION_GUIDE.md`
+- Modified: `docs_zh/starflow_vla/MODULE_MAPPING.md`
+- Modified: `docs_zh/starflow_vla/IMPLEMENTATION_LOG.md`
+- Modified: `docs_zh/starflow_vla/PATCH_MANIFEST.md`
+
+### Key Changes
+- 将当前执行矩阵中的 H2-a 统一为 `num_target_vision_tokens=0/16/32/64`。
+- 将 E-H2a 编号统一为 E-H2a-01 至 E-H2a-04。
+- 明确 `ft=32` 由 P0-M5-Stage1 baseline 覆盖，不重复跑。
+- 明确 `ft=8` 为早期候选/可选 dense-sweep，不进入当前 P0/P1 执行矩阵。
+- 明确 MLP baseline 是 H2 总 baseline，不属于 H2-a/H2-b 子消融。
+- 明确 QwenPI_v3 baseline compatibility 是工程兼容性验证，不进入 H2-a/H2-b 算法子矩阵。
+- 保留 P0-Mx 工程编号与 E-H2x 算法编号双编号体系。
+- 在 DESIGN.md 中增加“当前 P0/P1 执行覆盖率说明”，明确当前矩阵不等价于完整覆盖 H1-H8。
+- 将 EXPERIMENT_MATRIX.md 重构为：P0/P1 Engineering Execution Matrix、H2-a/H2-b Core Algorithm Sub-Matrix、Engineering and Baseline Appendix、Design Hypothesis Coverage Status 四张表。
+- 修正所有 sweep 命令，使其通过 `CONFIG_YAML` 指定对应配置。
+
+### Checks
+
+```bash
+rg -n "0/8/16/32/64|E-H2a-05|future_tokens_8|H1 口径 baseline|删除 P0-Mx|hybrid_gated.*P1|continuous_head.*P0" docs docs_zh configs || true
+rg -n "0/16/32/64|E-H2a-04|H2 总 baseline|P0-M5.*E-H2a-03|ft=32.*baseline|当前 P0/P1 执行覆盖率|不等价于完整覆盖|QwenPI_v3.*工程兼容性验证" docs docs_zh || true
+```
+
+### Test Results
+- Pass: 文档口径检查通过（未发现旧口径作为当前执行矩阵残留）。
+- Not run: 代码测试、训练、完整评测、真实机器人部署。
+- Reason if not run: 本任务只做 Markdown 文档口径收敛与矩阵可执行化。
+- Need target verification: H2-a/H2-b 正式训练、完整 LIBERO/RoboCasa/RoboTwin eval、H1/H3 等完整研究实验。
+
+### Not Run
+未运行代码测试、正式训练、完整评测、真实机器人部署。当前 `tmux starflow_train` 长训仍在进行中，其结果不代表最终成功率。
+
+### Next
+- 等 `P0-M5-E-H2a-03` 长训完成后，启动 `future_tokens=0/16/64` 消融。
+- 实现 `state_mode=continuous_head` 运行时路径，再启动 E-H2b-02 训练。
+- 继续推进 policy server 冷启动优化，确保评测链路可端到端跑通。
+
 

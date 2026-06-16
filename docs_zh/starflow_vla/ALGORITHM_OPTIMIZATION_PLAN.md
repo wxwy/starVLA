@@ -5,7 +5,9 @@ Design Reference: V4.6.2 Implementation Trace Patch
 Scope: algorithm optimization only  
 Status: 已完成实验设计，待 Stage B A100 复验
 
-本文件补充本项目主线算法优化与《基于世界模型的移动操作规划与决策框架研究》衔接方向。StarFlow-VLA 主线算法优化包括 Future Tokens Planning Slot Optimization 与 State Conditioning Path Optimization；RGB-Geometry Observation Fusion with VGGT 不属于本项目 P0/P1 主线，仅作为本项目 P2 optional extension / 与《基于世界模型的移动操作规划与决策框架研究》的接口预留。当前文件只定义研究假设、配置变量、实验矩阵、验收指标和 P0/P1/P2 边界；不代表 StarFlowVLA 代码已经实现，不代表 A100、LIBERO、RoboCasa、RoboTwin、VGGT 或真实机器人结果已经完成。
+本文件补充本项目主线算法优化与《基于世界模型的移动操作规划与决策框架研究》衔接方向。StarFlow-VLA 主线算法优化包括 Future Tokens Planning Slot Optimization 与 State Conditioning Path Optimization；RGB-Geometry Observation Fusion with VGGT 不属于本项目 P0/P1 主线，仅作为本项目 P2 optional extension / 与《基于世界模型的移动操作规划与决策框架研究》的接口预留。
+
+本文件只细化 H2-a/H2-b 两个算法优化子问题，不替代 DESIGN.md 中 H1-H8 的完整研究假设矩阵。当前 P0/P1 执行矩阵只覆盖 StarFlow-VLA 最小闭环与 H2 局部优化，不宣称已经完成 H1/H3/Cross Benchmark/Sim2Real 等完整验证。当前文件只定义研究假设、配置变量、实验矩阵、验收指标和 P0/P1/P2 边界；不代表 StarFlowVLA 代码已经实现，不代表 A100、LIBERO、RoboCasa、RoboTwin、VGGT 或真实机器人结果已经完成。
 
 ## 0. Optimization Scope
 
@@ -123,8 +125,8 @@ StarVLA 当前 QwenPI_v3 已具备 state-to-instruction 路径，LayerwiseFM / G
 | exp_id | hypothesis_id | config path | benchmark | state_mode | num_target_vision_tokens | action_dim | action_horizon | metrics | stage | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | E-H2a-01 | H2-a | `configs/starflow_vla/ablations/future_tokens_0.yaml` | LIBERO small/full | `discretized_instruction` | 0 | 7 | 8 | overfit_steps/loss_finite/NaN/peak_memory/latency/action_smoothness | P0 Stage B | `[待 Stage B A100 复验]` |
-| E-H2a-02 | H2-a | `configs/starflow_vla/ablations/future_tokens_16.yaml` | LIBERO full | `discretized_instruction` | 16 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P1 | `[待 LIBERO eval]` |
-| E-H2a-03 | H2-a | `configs/starflow_vla/ablations/future_tokens_32.yaml` | LIBERO full | `discretized_instruction` | 32 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P0/P1 | `P0-M5-Stage1 正式长训进行中：run_id=P0-M5-E-H2a-04_..._ft32_250615（命名标签误写为 E-H2a-04，实际对应 E-H2a-03），当前约 steps_15500/100000` |
+| E-H2a-02 | H2-a | `configs/starflow_vla/ablations/future_tokens_16.yaml` | LIBERO full | `discretized_instruction` | 16 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P0/P1 | `[待 Stage B A100 复验]` |
+| E-H2a-03 | H2-a | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` | LIBERO full | `discretized_instruction` | 32 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P0/P1 | `P0-M5-Stage1 baseline 默认配置，长训进行中；run_id 命名标签误写为 E-H2a-04，实际对应 E-H2a-03；当前约 steps_15500/100000，不代表最终成功率` |
 | E-H2a-04 | H2-a | `configs/starflow_vla/ablations/future_tokens_64.yaml` | LIBERO full（P1）/ RoboCasa/RoboTwin（P2） | `discretized_instruction` | 64 | 7/14 | 8/16 | cross_drop/worst_family/peak_memory/latency/task_length_success | P1/P2 | `[待 LIBERO eval] / [待 RoboCasa / RoboTwin eval]` |
 | E-H2b-01 | H2-b | `configs/starflow_vla/state/discretized_instruction.yaml` | LIBERO small/full | `discretized_instruction` | 32 | 7 | 8 | success_rate/state_sensitive_success/overfit_steps/smoothness/noise_robustness | P0/P1 | `P0-M5-Stage1 默认路径，与 E-H2a-03 同一场训练` |
 | E-H2b-02 | H2-b | `configs/starflow_vla/state/continuous_head.yaml` | LIBERO full | `continuous_head` | 32 | 7 | 8 | success_rate/state_sensitive_success/loss_curve/smoothness/latency | P1 | `[待 LIBERO eval]` |

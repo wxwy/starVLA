@@ -1,11 +1,11 @@
 # 《基于 Vision-Language-Action 统一训练与泛化评测框架的机器人基础模型研究》最终详细设计文档
 
-**模型/项目名称**：StarFlow-VLA  
-**技术路线**：Qwen3-VL + StarVLA + Flow Matching  
-**数据范围**：LIBERO、RoboCasa、RoboTwin  
-**训练/验证环境**：Stage A 与 Stage B 默认均使用 1×A100 40G；Stage A 用于轻量构建验证，Stage B 用于目标模型 smoke 验证；8×A100 / Virtaicloud / Bita 作为正式训练候选环境，不代表当前已完成正式长训。  
-**文档版本**：V4.6.2 Implementation Trace Patch  
-**生成日期**：2026-06-14  
+**模型/项目名称**：StarFlow-VLA 
+**技术路线**：Qwen3-VL + StarVLA + Flow Matching 
+**数据范围**：LIBERO、RoboCasa、RoboTwin 
+**训练/验证环境**：Stage A 与 Stage B 默认均使用 1×A100 40G；Stage A 用于轻量构建验证，Stage B 用于目标模型 smoke 验证；8×A100 / Virtaicloud / Bita 作为正式训练候选环境，不代表当前已完成正式长训。 
+**文档版本**：V4.6.2 Implementation Trace Patch 
+**生成日期**：2026-06-14 
 **文档定位**：面向代码适配、模型训练、推理部署、效果验证和技术专家评审的工程详细设计文档
 
 ## 0 封面、修订记录与文档控制
@@ -119,7 +119,7 @@ VGGT 在本项目中仅作为 P2 optional extension，并作为《基于世界�
 | 模型接口 | QwenPI_v3 reuse 与 LayerwiseFM 单臂闭环 | loss finite，单 batch overfit 通过 | 复用 QwenPI_v3 / LayerwiseFM 的 7DoF smoke test | P0 |
 | 模型接口 | starflow_mapping manifest 完整性 | 字段完整且可序列化 | manifest schema test + checkpoint 写入检查 | P0 |
 | 模型接口 | 7DoF/14DoF action_mask 兼容 | 通过率 100% | `max_action_dim=14 + action_mask + masked loss` 单元测试 | P1 |
-| 实验 | H2 future_tokens / num_target_vision_tokens 消融 | 0/8/16/32/64 配置均可 dry-run | 配置解析 + 单 batch overfit + cross-DiT planning slot 检查 | P0 |
+| 实验 | H2 future_tokens / num_target_vision_tokens 消融 | 0/16/32/64 配置均可 dry-run | 配置解析 + 单 batch overfit + cross-DiT planning slot 检查 | P0 |
 | 实验 | PerceiverAdapter / 显式 FlowCondition runtime | advanced 配置可 dry-run | P2 扩展测试，不阻断 P0 训练闭环 | P2 |
 | 推理 | 单次动作块生成延迟 | A100 ≤200ms；优化路径目标 ≤100ms | profiling 报告 | P1 |
 | 部署 | 安全门拦截率 | 越界动作 100% 拦截 | 仿真故障注入 | P0 |
@@ -149,7 +149,7 @@ V4.3 将研究假设和工程验证项分层管理。后续论文实验不能只
 | --- | --- | --- | --- | --- | --- | --- |
 | 核心 P0 | H1 Flow Matching vs ACT 长时序泛化假设 | Emerging Consensus | π0/π0.5/GR00T 等路线显示 FM 潜力，需补公开引用 | 缺少在 LIBERO/RoboCasa/RoboTwin 上 FM>ACT 的系统证明 | E01/E11/E21/E34 | 是 |
 | 核心 P0 | H2 StarVLA-native future_tokens + cross-DiT vs MLP/OFT/VLA_AdapterHeader 泛化假设 | Emerging Consensus | OpenVLA-OFT、π 系列、VIMA 等趋势偏向 token/action query，StarVLA 已具备 future_tokens + cross-DiT 条件机制 | 缺少 future_tokens + cross-DiT 与 MLP/OFT/VLA_AdapterHeader baseline 的受控跨 Benchmark 对比 | E11/E13/E13-a/E40 | 是 |
-| 核心 P0 | H2-a future_tokens 规划槽位优化假设 | Open Question | StarVLA LayerwiseFM/GR00T 已暴露 num_target_vision_tokens，但公开工作较少把它作为规划容量变量系统研究 | future_tokens 是否只是冗余视觉 token，还是承载目标、时序抽象和动作规划容量，仍缺少受控实验 | E-H2a-01 至 E-H2a-05 | 候选 |
+| 核心 P0 | H2-a future_tokens 规划槽位优化假设 | Open Question | StarVLA LayerwiseFM/GR00T 已暴露 num_target_vision_tokens，但公开工作较少把它作为规划容量变量系统研究 | future_tokens 是否只是冗余视觉 token，还是承载目标、时序抽象和动作规划容量，仍缺少受控实验 | E-H2a-01 至 E-H2a-04 | 候选 |
 | 增强 P1 | H2-b 状态条件注入路径优化假设 | Open Question | StarVLA 已同时存在 state-to-instruction 与 action_head.state_encoder 路径，具备低成本对照基础 | 本体状态通过语言 token、连续 state encoder 或 hybrid gated path 注入时，对控制精度和跨 Benchmark 泛化的影响尚未系统验证 | E-H2b-01 至 E-H2b-04 | 候选 |
 | 核心 P0 | H3 Data Mixture 最优比例假设 | Open Question | OpenX/RT-X/Octo 证明混训价值，比例规律仍需系统验证 | 缺少 LIBERO/RoboCasa/RoboTwin 混合比例、负迁移和 Pareto 研究 | E08-E12/E29-E31 | 是 |
 | 增强 P1 | H4 Curriculum Mixing vs Random Mixing 假设 | Open Question | NLP/多任务学习有间接证据，机器人 VLA 需补引用 | 机器人 BC/VLA 中 curriculum mixture 是否提升泛化尚未明确 | E12/E38 | 候选 |
@@ -176,7 +176,17 @@ V4.3 将研究假设和工程验证项分层管理。后续论文实验不能只
 
 所有主线实验报告必须包含 `hypothesis_id` 字段。论文主线固定为 H1、H2、H3；H4、H5、H6 作为高价值增强研究，H7、H8 作为资源允许时的补充研究。一个实验可以服务多个假设，但每个 P0 假设至少需要一个 P0 实验和一个 Baseline 对照。评审时不接受只给最终模型分数的报告，必须给出“假设 → 实验 → 指标 → 结论 → 失败分析”的完整链路。
 
-H2-a 和 H2-b 是 H2 的算法优化子问题，不替代 H2 主线。H2-a 将 `future_tokens` / `num_target_vision_tokens` 从工程参数提升为动作规划槽位容量变量，默认比较 `0/8/16/32/64`；H2-b 将状态注入路径从默认 `state-to-instruction` 扩展为 `continuous state encoder` 与 `hybrid gated state conditioning` 对照。两者都必须先形成配置、日志和 manifest 字段，再进入 Stage B A100 的 single batch overfit、LIBERO eval smoke 和跨 Benchmark 复验。
+### 当前 P0/P1 执行覆盖率说明
+
+当前 `docs/starflow_vla` 下的 P0/P1 文档与 `EXPERIMENT_MATRIX.md` 主要覆盖 StarFlow-VLA framework、QwenPI_v3 reuse、LayerwiseFM 7DoF、MLP baseline（H2 总 baseline）、H2-a future_tokens 消融（`0/16/32/64`）、H2-b state conditioning 的 P1 入口（`continuous_head`）、starflow_mapping、checkpoint 与 LIBERO eval smoke。
+
+当前矩阵不等价于完整覆盖本文档 H1-H8 的全部研究版图。尚未完整覆盖的内容包括：H1 Flow Matching vs ACT 正式对照、H3 Data Mixture 最优比例、RoboCasa/RoboTwin 完整 cross benchmark、ACT / DP / OpenVLA / StarVLA 原版完整 baseline、Data Scaling 25/50/75/100、Leave-One-Benchmark-Out、Sim2Real 和真实机器人部署结果。
+
+因此，当前实验矩阵支撑的是 V4.6.2 的 P0/P1 执行基线和 H2-a/H2-b 局部算法优化，不应被表述为完整论文级全量实验矩阵。
+
+H2-a/H2-b 是 H2 的算法优化子问题。MLP/OFT/VLA_AdapterHeader baseline 服务于 H2 总假设对照，不属于 H2-a/H2-b 子变量消融；其中当前 P0 优先使用 MLP baseline，OFT/VLA_AdapterHeader 可作为后续 baseline 扩展。
+
+H2-a 和 H2-b 是 H2 的算法优化子问题，不替代 H2 主线。H2-a 将 `future_tokens` / `num_target_vision_tokens` 从工程参数提升为动作规划槽位容量变量，默认比较 `0/16/32/64`；H2-b 将状态注入路径从默认 `state-to-instruction` 扩展为 `continuous state encoder` 与 `hybrid gated state conditioning` 对照。两者都必须先形成配置、日志和 manifest 字段，再进入 Stage B A100 的 single batch overfit、LIBERO eval smoke 和跨 Benchmark 复验。
 
 ### H2-c RGB-Geometry Observation Fusion：P2 预留与《基于世界模型的移动操作规划与决策框架研究》衔接
 
@@ -190,7 +200,7 @@ RGB token 提供语义、外观和任务相关区域信息，VGGT geometry token
 | --- | --- | --- | --- | --- | --- | --- |
 | H1 | P0 | E01/E11/E21/E34 | success_rate、smoothness、cross_drop | FM 优于 ACT 或同分下更平滑 | horizon、loss、solver、数据分布 | 是 |
 | H2 | P0 | E11/E13/E15/E40 | cross_success_rate、worst_family | ActionToken 优于 MLP 且最差任务族不明显下降 | attention、state 注入、token 初始化 | 是 |
-| H2-a | P0/P1 | E-H2a-01 至 E-H2a-05 | overfit_steps、loss_finite、peak_memory、latency、success_rate、cross_drop | 得到 future_tokens 容量与收敛、稳定性、泛化之间的可解释边界 | token 数过小、slot 冗余、显存/延迟瓶颈 | 候选 |
+| H2-a | P0/P1 | E-H2a-01 至 E-H2a-04 | overfit_steps、loss_finite、peak_memory、latency、success_rate、cross_drop | 得到 future_tokens 容量与收敛、稳定性、泛化之间的可解释边界 | token 数过小、slot 冗余、显存/延迟瓶颈 | 候选 |
 | H2-b | P1/P2 | E-H2b-01 至 E-H2b-04 | state_sensitive_success、noise_robustness、smoothness、cross_drop | 识别 state-to-instruction、continuous_head、hybrid_gated 的适用边界 | 状态编码弱、语言化状态噪声、门控退化 | 候选 |
 | H3 | P0 | E08-E12/E29-E31 | mixture_pareto、negative_transfer | 非均匀比例优于均匀或单源 | 数据偏置、任务族冲突 | 是 |
 | H4 | P1 | E12/E38 | 收敛速度、cross_success_rate | 同预算下 curriculum 更优 | 课程顺序、采样权重 | 候选 |
@@ -1087,7 +1097,7 @@ action_model:
 
 | 变量 | 候选值 | 目的 |
 | --- | --- | --- |
-| `num_target_vision_tokens` | `0/8/16/32/64` | 分析 planning slot 数量影响 |
+| `num_target_vision_tokens` | `0/16/32/64` | 分析 planning slot 数量影响 |
 | `action_model_type` | `LayerwiseFM / GR00T / MLP baseline` | 对比 action head 路线 |
 | `state_mode` | `discretized_instruction / continuous_head / none` | 分析状态进入路径 |
 
@@ -1100,12 +1110,12 @@ action_model:
 默认消融变量固定为：
 
 ```text
-num_target_vision_tokens = 0 / 8 / 16 / 32 / 64
+num_target_vision_tokens = 0 / 16 / 32 / 64
 ```
 
 其中 `0` 表示移除 future planning slots，只保留 VLM token、state path 与 action trajectory token，用于判断 future tokens 是否真的参与规划；`8` 和 `16` 用于低预算条件；`32` 对齐 StarVLA 当前常用默认；`64` 用于验证额外 planning capacity 是否带来收益或只增加显存与延迟。所有配置必须写入 `starflow_mapping` 和 checkpoint manifest，至少包含 `num_target_vision_tokens`、`adapter_mode=future_token_cross_dit`、`state_mode`、`action_dim`、`action_horizon`、StarVLA upstream commit 和 config hash。
 
-P0 只要求完成配置层和最小训练层验证：`0/8/16/32/64` 配置可解析，`build_framework(cfg)` dry-run 不触发完整大模型加载边界错误，至少一个 token 数在 Stage B A100 完成 single batch overfit 对照记录。P0 不要求声明完整 LIBERO success rate。P1 才执行 LIBERO full split 的 success/loss/memory/latency 对照；P2 才进入 RoboCasa、RoboTwin 和 Cross Benchmark drop 分析。
+P0 只要求完成配置层和最小训练层验证：`0/16/32/64` 配置可解析，`build_framework(cfg)` dry-run 不触发完整大模型加载边界错误，至少一个 token 数在 Stage B A100 完成 single batch overfit 对照记录。P0 不要求声明完整 LIBERO success rate。P1 才执行 LIBERO full split 的 success/loss/memory/latency 对照；P2 才进入 RoboCasa、RoboTwin 和 Cross Benchmark drop 分析。
 
 验收指标包括：single batch overfit 收敛速度、loss finite/NaN 稳定性、LIBERO eval smoke success、action chunk smoothness、peak memory、inference latency、cross benchmark drop、按任务长度分组的 success。任何未完成 Stage B 验证的指标必须写为 `[待 Stage B A100 复验]`、`[待 LIBERO eval]` 或 `[待 RoboCasa / RoboTwin eval]`，不得用本地 dry-run 或 mock 结果替代。
 
@@ -1176,7 +1186,7 @@ Stage3 advanced: perceiver_enabled=true
 | A1 | MLPAdapter | MLP/OFT/VLA_AdapterHeader baseline | 最小可运行 baseline |
 | A2 | ActionTokenAdapter | future_tokens + cross-DiT | 验证 H2 |
 | A3 | PerceiverAdapter | perceiver_enabled=true | 长 token 压缩 advanced |
-| A4 | Action token 数量 | `num_target_vision_tokens=0/8/16/32/64` | planning slot 数量影响 |
+| A4 | Action token 数量 | `num_target_vision_tokens=0/16/32/64` | planning slot 数量影响 |
 | A5 | State path | `discretized_instruction` vs `continuous_head` | 状态进入路径对照 |
 | A6 | Embodiment token | embodiment tag / token on-off | 验证 H6 |
 
@@ -1549,7 +1559,7 @@ bimanual-ready synchronized execution
 | StateEncoder bimanual test | `[B,28/54]` state | `state_emb [B,128]` | 固定 state_dim=14 | P1 |
 | DirectProjectionAdapter test | `fusion_features` | `FlowCondition.global_cond` | 无法生成 FlowCondition | P1 |
 | MLPAdapter test | `fusion_features + state_emb` | `global_cond [B,D_cond]` | 维度错误 | P0 |
-| future_tokens + cross-DiT mapping test | `num_target_vision_tokens=0/8/16/32/64` | planning slot 消融可运行 | 配置无法切换或 loss 不可运行 | P0 |
+| future_tokens + cross-DiT mapping test | `num_target_vision_tokens=0/16/32/64` | planning slot 消融可运行 | 配置无法切换或 loss 不可运行 | P0 |
 | PerceiverAdapter advanced test | long `visual_language_tokens` | compact tokens | mask 无效或 token 数异常 | P2/Advanced |
 | starflow_mapping protocol test | StarVLA-native tensors | `starflow_mapping` 字段完整、可序列化 | mapping 字段缺失 | P0 |
 | explicit FlowCondition runtime test | wrapper/dataclass 配置 | runtime dataclass 可选启用且日志完整 | P0 依赖显式 dataclass | P2/Advanced |
@@ -1718,7 +1728,7 @@ sequenceDiagram
 | --- | --- | --- | --- | --- | --- |
 | Stage1 | 跑通 Qwen3-VL + FM 单臂闭环 | `StarFlowVLA + QwenPI_v3 reuse + LayerwiseFM` | action head 1e-4 | 8×A100: global batch 64；5090: debug batch 2-4 | LIBERO val loss 稳定下降，smoke eval ≥60% |
 | Stage2 | MLP baseline 对照 | `adapter_mode=mlp_baseline`，复用 MLP/OFT/VLA_AdapterHeader | lora 1e-5, head 1e-4 | 8×A100 FSDP；云环境优先 | MLP baseline 与 Stage1 可公平对照 |
-| Stage3 | Action Token / future token 消融 | `num_target_vision_tokens=0/8/16/32/64` | lora 5e-6, head 5e-5 | 8×A100 或 Virtaicloud/Bita 长训 | H2 对照实验完成，完整 cross matrix 输出 |
+| Stage3 | Action Token / future token 消融 | `num_target_vision_tokens=0/16/32/64` | lora 5e-6, head 5e-5 | 8×A100 或 Virtaicloud/Bita 长训 | H2 对照实验完成，完整 cross matrix 输出 |
 | Stage3 advanced | Perceiver 可选扩展 | `perceiver_enabled=true` | perceiver 5e-5 | 8×A100 | 确认长 token/多视角瓶颈后启用 |
 | Stage4 optional | 7/14DoF 或真实机器人扩展 | `max_action_dim=14 + action_mask` | adapter/head 1e-5 | 单机或少量 A100 | 真实机器人仿真回放和安全测试通过 |
 
@@ -2087,7 +2097,7 @@ Adapter 相关实验必须采用“双层映射”记录，避免把抽象研究
 | --- | --- | --- | --- | --- |
 | E11 | MLPAdapter baseline | MLP/OFT/VLA_AdapterHeader baseline | 是 | 建立低成本对照 |
 | E13 | ActionTokenAdapter | LayerwiseFM/GR00T future_tokens + cross-DiT | 是 | 验证 action-token/future-token 条件机制 |
-| E13-a | Action token 数量 | `num_target_vision_tokens=0/8/16/32/64` | 是 | 分析 planning slot 数量影响 |
+| E13-a | Action token 数量 | `num_target_vision_tokens=0/16/32/64` | 是 | 分析 planning slot 数量影响 |
 | E13-b | State path | `discretized_instruction` vs `continuous_head` | P1 | 比较状态文本化与连续 head state_encoder |
 | E14 | PerceiverAdapter | 新增 Perceiver token compressor | 否，advanced | 长 token / 多视角压缩研究 |
 | E15 | FlowCondition runtime | 显式 dataclass + wrapper | 否，P2/advanced | 统一 adapter/head 接口诊断 |
@@ -2142,19 +2152,20 @@ Adapter 相关实验必须采用“双层映射”记录，避免把抽象研究
 
 | exp_id | hypothesis_id | config path | benchmark | state_mode | num_target_vision_tokens | action_dim | action_horizon | metrics | stage | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+> 说明：ft=8 曾为早期候选，当前 P0/P1 可执行矩阵已冻结为 0/16/32/64，不分配当前 E-H2a 编号；ft=8 仅可作为资源充足时的补充 dense-sweep，不进入当前执行矩阵。
+
 | E-H2a-01 | H2-a | configs/starflow_vla/ablations/future_tokens_0.yaml | LIBERO small | discretized_instruction | 0 | 7 | 8 | overfit_steps/loss_finite/NaN/peak_memory/latency/action_smoothness | P0 Stage B | [待 Stage B A100 复验] |
-| E-H2a-02 | H2-a | configs/starflow_vla/ablations/future_tokens_8.yaml | LIBERO small | discretized_instruction | 8 | 7 | 8 | overfit_steps/loss_finite/NaN/peak_memory/latency/action_smoothness | P0 Stage B | [待 Stage B A100 复验] |
-| E-H2a-03 | H2-a | configs/starflow_vla/ablations/future_tokens_16.yaml | LIBERO full | discretized_instruction | 16 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P1 | [待 LIBERO eval] |
-| E-H2a-04 | H2-a | configs/starflow_vla/ablations/future_tokens_32.yaml | LIBERO full | discretized_instruction | 32 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P1 | [待 LIBERO eval] |
-| E-H2a-05 | H2-a | configs/starflow_vla/ablations/future_tokens_64.yaml | RoboCasa/RoboTwin/cross | discretized_instruction | 64 | 7/14 | 8/16 | cross_drop/worst_family/peak_memory/latency/task_length_success | P2 | [待 RoboCasa / RoboTwin eval] |
-| E-H2b-01 | H2-b | configs/starflow_vla/state/discretized_instruction.yaml | LIBERO small/full | discretized_instruction | 32 | 7 | 8 | success_rate/state_sensitive_success/overfit_steps/smoothness/noise_robustness | P0/P1 | [待 Stage B A100 复验] |
+| E-H2a-02 | H2-a | configs/starflow_vla/ablations/future_tokens_16.yaml | LIBERO full | discretized_instruction | 16 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P0/P1 | [待 Stage B A100 复验] |
+| E-H2a-03 | H2-a | configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml | LIBERO full | discretized_instruction | 32 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P0/P1 | P0-M5-Stage1 baseline 默认配置，长训进行中；run_id 命名标签误写为 E-H2a-04，实际对应 E-H2a-03 |
+| E-H2a-04 | H2-a | configs/starflow_vla/ablations/future_tokens_64.yaml | LIBERO full（P1）/ RoboCasa/RoboTwin（P2） | discretized_instruction | 64 | 7/14 | 8/16 | cross_drop/worst_family/peak_memory/latency/task_length_success | P1/P2 | [待 LIBERO eval] / [待 RoboCasa / RoboTwin eval] |
+| E-H2b-01 | H2-b | configs/starflow_vla/state/discretized_instruction.yaml | LIBERO small/full | discretized_instruction | 32 | 7 | 8 | success_rate/state_sensitive_success/overfit_steps/smoothness/noise_robustness | P0/P1 | P0-M5-Stage1 baseline 默认路径 |
 | E-H2b-02 | H2-b | configs/starflow_vla/state/continuous_head.yaml | LIBERO full | continuous_head | 32 | 7 | 8 | success_rate/state_sensitive_success/loss_curve/smoothness/latency | P1 | [待 LIBERO eval] |
 | E-H2b-03 | H2-b | configs/starflow_vla/state/hybrid_gated.yaml | LIBERO full | hybrid_gated | 32 | 7 | 8 | success_rate/state_sensitive_success/noise_robustness/missing_state_robustness/latency | P2 | [待 Stage B A100 复验] |
 | E-H2b-04 | H2-b | configs/starflow_vla/state/hybrid_gated_cross.yaml | RoboCasa/RoboTwin/cross | hybrid_gated | 32 | 7/14 | 8/16 | cross_drop/long_horizon_success/noise_robustness/worst_family | P2 | [待 RoboCasa / RoboTwin eval] |
 
 ### 6.11.2 实验优先级
 
-P0 实验为 StarFlowVLA framework registry smoke、QwenPI_v3 reuse、LayerwiseFM 单臂 7DoF 闭环、E01、E08-E13、E13-a、E-H2a-01、E-H2a-02、E-H2b-01、E26-E31、E34，以及 `starflow_mapping` manifest 和 MLP/OFT/VLA_AdapterHeader baseline 对照。P1 实验为 E-H2a-03、E-H2a-04、E-H2b-02、E13-b、E38-E40、`max_action_dim=14 + action_mask`、masked loss、`continuous_head` state path 和 solver manifest。P2/advanced 实验为 E-H2a-05、E-H2b-03、E-H2b-04、E14、E15、细粒度 condition injection ablation、bimanual coordination loss、E16-E21、E32-E33 和真实机器人预研，只有在 P0/P1 安全门和回放评测通过后进入。E22-E25 不再验证“Scaling Law 是否存在”，只用于分析 Scaling Transfer、收益递减和负迁移边界。
+P0 实验为 StarFlowVLA framework registry smoke、QwenPI_v3 reuse、LayerwiseFM 单臂 7DoF 闭环、E01、E08-E13、E13-a、E-H2a-01、E-H2a-02、E-H2b-01（与 E-H2a-03 同一场 baseline 训练覆盖）、E26-E31、E34，以及 `starflow_mapping` manifest 和 MLP/OFT/VLA_AdapterHeader baseline 对照。P1 实验为 E-H2a-04、E-H2b-02、E13-b、E38-E40、`max_action_dim=14 + action_mask`、masked loss、`continuous_head` state path 和 solver manifest。P2/advanced 实验为 E-H2b-03、E-H2b-04、E14、E15、细粒度 condition injection ablation、bimanual coordination loss、E16-E21、E32-E33 和真实机器人预研，只有在 P0/P1 安全门和回放评测通过后进入。E22-E25 不再验证“Scaling Law 是否存在”，只用于分析 Scaling Transfer、收益递减和负迁移边界。
 
 ## 6.12 验收规则
 
@@ -2859,7 +2870,7 @@ L_total = L_fm
 | P0 | QwenPI_v3 复用闭环 | QwenPI_v3 / qwen_vl_interface / project_layers 复用记录，未复制主 forward 的 MODULE_MAPPING.md |
 | P0 | LayerwiseFM 单臂 7DoF 训练闭环 | finite loss、single batch overfit、Euler sample smoke、Stage1 checkpoint |
 | P0 | MLP/OFT/VLA_AdapterHeader baseline | E11 baseline 配置、日志、checkpoint、同域与跨 Benchmark 报告 |
-| P0 | future_tokens + cross-DiT 消融 | `num_target_vision_tokens=0/8/16/32/64` 配置、loss 曲线、E13/E13-a 报告 |
+| P0 | future_tokens + cross-DiT 消融 | `num_target_vision_tokens=0/16/32/64` 配置、loss 曲线、E13/E13-a 报告 |
 | P0 | starflow_mapping manifest | checkpoint manifest 中包含 base_framework、action_head、adapter_mode、state_mode、solver、patch_manifest_hash |
 | P0 | 评测矩阵与风险演练 | LIBERO/RoboCasa/RoboTwin 同域与跨域报告；OOM、DataLoader、Checkpoint、W&B、NCCL 演练记录 |
 | P1 | 7DoF/14DoF action_mask | `max_action_dim=14 + action_mask + masked loss` 单元测试和混 batch smoke test |

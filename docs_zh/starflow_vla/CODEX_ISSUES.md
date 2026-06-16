@@ -307,7 +307,7 @@ Scope: action_head
 
 ### Goal
 
-支持 `num_target_vision_tokens=0/8/16/32/64` 消融。
+支持 `num_target_vision_tokens=0/16/32/64` 消融。
 
 ### Files
 
@@ -547,18 +547,18 @@ Scope: algorithm optimization
 
 ### Goal
 
-把 `future_tokens` / `num_target_vision_tokens` 作为动作条件 token 预算和规划槽位容量变量，建立 `0/8/16/32/64` 五组配置与 manifest 字段，为 H2-a 提供最小可执行入口。
+把 `future_tokens` / `num_target_vision_tokens` 作为动作条件 token 预算和规划槽位容量变量，建立 `0/16/32/64` 四组配置与 manifest 字段，为 H2-a 提供最小可执行入口。`ft=32` 由 P0-M5-Stage1 baseline 覆盖，不重复创建；`ft=8` 可作为资源充足时的可选 dense-sweep，不进入当前 P0/P1 执行矩阵。
 
 ### Files
 
-- Add/modify: optional `configs/starflow_vla/ablations/future_tokens_{0,8,16,32,64}.yaml`
+- Add/modify: `configs/starflow_vla/ablations/future_tokens_{0,16,64}.yaml`；`ft=32` 使用 `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` baseline
 - Modify: checkpoint / report manifest schema only if needed
 - Modify: docs/starflow_vla/ALGORITHM_OPTIMIZATION_PLAN.md
 - Do not modify: QwenPI_v3 / LayerwiseFM / GR00T 主体逻辑
 
 ### Acceptance Criteria
 
-- [ ] `num_target_vision_tokens=0/8/16/32/64` 配置存在或在 issue 中明确列出。
+- [ ] `num_target_vision_tokens=0/16/32/64` 配置存在或在 issue 中明确列出。
 - [ ] Stage A config parse / build_framework dry-run pass。
 - [ ] `starflow_mapping` 记录 `num_target_vision_tokens`、`adapter_mode=future_token_cross_dit`、`state_mode`、`action_dim`、`action_horizon`。
 - [ ] 至少一条 Implementation Record 记录本 issue 的 Stage A / Stage B 边界。
@@ -583,11 +583,11 @@ Scope: algorithm optimization
 
 ### Goal
 
-在 LIBERO full split 上比较 `0/8/16/32/64` planning slots 对 success、loss、显存、延迟和动作平滑性的影响。
+在 LIBERO full split 上比较 `0/16/32/64` planning slots 对 success、loss、显存、延迟和动作平滑性的影响。
 
 ### Acceptance Criteria
 
-- [ ] 五组配置均能进入 LIBERO 训练/评测脚本。
+- [ ] 四组配置均能进入 LIBERO 训练/评测脚本。
 - [ ] 报告包含 success_rate、loss curve、single batch overfit speed、action chunk smoothness、peak memory、inference latency、按任务长度分组 success。
 - [ ] 未完成指标写 `[待 LIBERO eval]`。
 - [ ] 不使用 Stage A dry-run 结果冒充 LIBERO full 结果。
@@ -595,7 +595,7 @@ Scope: algorithm optimization
 ### Tests
 
 ```bash
-rg -n "E-H2a|future_tokens_0|future_tokens_8|future_tokens_16|future_tokens_32|future_tokens_64" docs/starflow_vla
+rg -n "E-H2a|future_tokens_0|future_tokens_16|future_tokens_32|future_tokens_64" docs/starflow_vla
 ```
 
 ## [P1-M2] State Conditioning Path Comparison

@@ -99,6 +99,7 @@
 ### Future Tokens Planning Slot Optimization
 
 - [x] `num_target_vision_tokens=0/16/32/64` 四组配置存在，或在 P0-M7a issue 中明确列出待创建路径。
+- [ ] `ft=8` 为可选补充 dense-sweep，不作为 P0/P1 验收项。
 - [x] 四组配置均可完成 config parse。
 - [x] 每组配置都能写入或计划写入 `starflow_mapping`。
 - [x] `starflow_mapping` 至少包含 `num_target_vision_tokens`、`adapter_mode`、`state_mode`、`action_dim`、`action_horizon`、StarVLA upstream commit。

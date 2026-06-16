@@ -70,7 +70,7 @@ Stage B 默认也使用 `1×A100 40G`，区别不是硬件类型，而是验证�
 - checkpoint save/load；
 - predict_action shape check；
 - LIBERO eval smoke；
-- future_tokens 8/16/32/64 dry-run；
+- future_tokens 0/16/32/64 dry-run；
 - 必要时进行 `num_target_vision_tokens=0` 边界测试。
 
 Stage A 与 Stage B 默认均为 `1×A100 40G`。Stage A 偏文档、配置、import、registry 和 dry-run；Stage B 偏真实模型 smoke、single batch overfit、checkpoint 和 eval smoke。除非明确进入 P1/P2 advanced 或正式训练，不以切换硬件作为默认验证策略。

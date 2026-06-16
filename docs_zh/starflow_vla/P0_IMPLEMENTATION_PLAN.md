@@ -158,7 +158,7 @@
 
 **目标**
 
-完成 `num_target_vision_tokens=0/8/16/32/64` 消融配置，为 H2 提供主线实验。
+完成 `num_target_vision_tokens=0/16/32/64` 消融配置，为 H2 提供主线实验。
 
 **包含任务**
 
@@ -241,11 +241,11 @@ P0 不接入 VGGT，不实现 RGB-3D fusion，不新增 geometry encoder 依赖�
 
 **目标**
 
-将 `future_tokens` / `num_target_vision_tokens` 作为动作条件 token 预算和规划槽位容量变量，形成 `0/8/16/32/64` 五组配置和 manifest 记录，为 H2-a 提供 P0 级最小实验入口。
+将 `future_tokens` / `num_target_vision_tokens` 作为动作条件 token 预算和规划槽位容量变量，形成 `0/16/32/64` 五组配置和 manifest 记录，为 H2-a 提供 P0 级最小实验入口。
 
 **验收标准**
 
-- Stage A：`num_target_vision_tokens=0/8/16/32/64` 配置存在或在 issue 中明确列出。
+- Stage A：`num_target_vision_tokens=0/16/32/64` 配置存在或在 issue 中明确列出。
 - Stage A：config parse / build_framework dry-run pass。
 - Stage A：`starflow_mapping` 记录 `num_target_vision_tokens`、`adapter_mode=future_token_cross_dit`、`state_mode`、`action_dim`、`action_horizon`。
 - Stage A：不修改 QwenPI_v3 / LayerwiseFM / GR00T 主体逻辑。
@@ -265,5 +265,5 @@ Stage B：single batch overfit 只要求至少一组完成，完整 LIBERO/RoboC
 
 - P0：默认 `state_mode=discretized_instruction`，复用 QwenPI_v3 state-to-instruction。
 - P1：新增 `state_mode=continuous_head` 对照，复用或包装 action head `state_encoder`。
-- P2：新增 `state_mode=hybrid_gated`，仅在 P1 结果显示单一路径存在短板时启用。
+- P2：新增 `state_mode=hybrid_gated`，作为 P2 advanced optional，不进入当前 P0/P1 执行矩阵。
 - 所有状态路径指标在未完成 Stage B 前写为 `[待 Stage B A100 复验]`，不得用本地 dry-run 冒充训练或评测结果。

@@ -11,9 +11,9 @@
 | VLM backbone | Qwen3-VL via `get_vlm_model(config=...)` | DOC-M9 静态审计确认保留现有路径 |
 | Projection layers | `QwenPI_v3.project_layers` | DOC-M9 静态审计确认保留现有路径 |
 | Flow Matching action head | `LayerwiseFM_ActionHeader.py` | DOC-M9 静态审计确认 P0 默认路径仍可用 |
-| H2 baseline | `MLP_ActionHeader.py`、`QwenOFT.py` | P0-M6 已新增 `stage2_mlp_baseline.yaml` 并完成配置级 dry-run；VLA_AdapterHeader 对照待后续扩展 |
+| H2 总 baseline | `MLP_ActionHeader.py`、`QwenOFT.py` | P0-M6 已新增 `stage2_mlp_baseline.yaml` 并完成配置级 dry-run；用于 `future_tokens + cross-DiT` vs `MLP/OFT/VLA_AdapterHeader` 主线对照；不属于 H2-a/H2-b 子消融；VLA_AdapterHeader 对照待后续扩展 |
 | Action token / future token route | `future_tokens + cross-DiT` | DOC-M9 静态审计确认 LayerwiseFM / GR00T 均保留 `future_tokens` |
-| future token ablation | `configs/starflow_vla/stage3_future_token_ablation.yaml` | P0-M7 已新增 `0/8/16/32/64` 配置级消融入口；真实 forward/overfit 待数据可用后复验 |
+| future token ablation | `configs/starflow_vla/ablations/future_tokens_{0,16,64}.yaml` + `stage1_starflow_qwenpi_v3_native.yaml`（ft=32 baseline） | P0-M7 已新增 `0/16/32/64` 配置级消融入口；`ft=32` 由 P0-M5-Stage1 baseline 覆盖；真实 forward/overfit 待 Stage B 复验 |
 | State default path | QwenPI_v3 state-to-instruction | DOC-M9 静态审计确认 P0 默认路径保留 |
 | Explicit FlowCondition runtime | 可选 dataclass / wrapper | P2，不阻断 P0 |
 | PerceiverAdapter | 可选 token compressor | P2，不阻断 P0 |

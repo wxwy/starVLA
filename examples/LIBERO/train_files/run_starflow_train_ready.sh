@@ -19,6 +19,7 @@ WANDB_ENTITY=${WANDB_ENTITY:-silencewx-harbin-institute-of-technology}
 BASE_VLM=${BASE_VLM:-${STARVLA_DIR}/playground/Pretrained_models/Qwen3-VL-4B-Instruct}
 LIBERO_DATA_ROOT=${LIBERO_DATA_ROOT:-${STARVLA_DIR}/playground/Datasets/LEROBOT_LIBERO_DATA}
 DATA_MIX=${DATA_MIX:-libero_goal}
+CONFIG_YAML=${CONFIG_YAML:-configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml}
 FRAMEWORK_NAME=${FRAMEWORK_NAME:-StarFlowVLA}
 FREEZE_MODULES=${FREEZE_MODULES:-qwen_vl_interface}
 NUM_WORKERS=${NUM_WORKERS:-0}
@@ -80,6 +81,7 @@ echo "=== StarFlow Train Ready ==="
 echo "STARVLA_DIR=${STARVLA_DIR}"
 echo "RUN_ROOT_DIR=${RUN_ROOT_DIR}"
 echo "RUN_ID=${RUN_ID}"
+echo "CONFIG_YAML=${CONFIG_YAML}"
 echo "MAX_TRAIN_STEPS=${MAX_TRAIN_STEPS}"
 echo "NUM_PROCESSES=${NUM_PROCESSES}"
 echo "GRADIENT_ACCUMULATION_STEPS=${GRADIENT_ACCUMULATION_STEPS}"
@@ -93,7 +95,7 @@ echo "OUTPUT_DIR=${OUTPUT_DIR}"
 
 TRAIN_ARGS=(
     starVLA/training/train_starvla.py
-    --config_yaml configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml
+    --config_yaml "${CONFIG_YAML}"
     --framework.name "${FRAMEWORK_NAME}"
     --framework.qwenvl.base_vlm "${BASE_VLM}"
     --datasets.vla_data.data_root_dir "${LIBERO_DATA_ROOT}"

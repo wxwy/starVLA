@@ -41,18 +41,48 @@
 .venv/bin/python -m unittest tests.test_starflow_checkpoint_mapping -v
 .venv/bin/python -m unittest tests.test_starflow_eval_preflight -v
 
-# P0-M5-Stage1 / E-H2a-03 / E-H2b-01 长训（当前在 tmux starflow_train 中运行）
+# P0-M5-Stage1 / E-H2a-03 / E-H2b-01 长训
+# 当前在 tmux starflow_train 中运行：NUM_PROCESSES=4，有效全局 batch=32
+RUN_ID="P0-M5-E-H2a-03_starflow_libero-goal_qwen3vl4b_lwfm_ft32_$(date +%y%m%d)" \
+MAX_TRAIN_STEPS=100000 \
+SAVE_INTERVAL=500 \
+LOGGING_FREQUENCY=100 \
+EVAL_INTERVAL=1000 \
+NUM_PROCESSES=4 \
+GRADIENT_ACCUMULATION_STEPS=2 \
+PER_DEVICE_BATCH_SIZE=4 \
+NUM_WORKERS=1 \
+CONFIG_YAML=configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml \
 bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 # P0-M7 Future Tokens 消融 sweep（4 个独立 yaml）
 for ft in 0 16 32 64; do
-  RUN_ID="P0-M7-E-H2a-$(printf '%02d' $((ft/16+1)))_starflow_libero-goal_qwen3vl4b_lwfm_ft${ft}_$(date +%y%m%d)" \
+  idx=$((ft == 0 ? 1 : ft / 16 + 1))
+  RUN_ID="P0-M7-E-H2a-$(printf '%02d' ${idx})_starflow_libero-goal_qwen3vl4b_lwfm_ft${ft}_$(date +%y%m%d)" \
+  CONFIG_YAML="configs/starflow_vla/ablations/future_tokens_${ft}.yaml" \
+  MAX_TRAIN_STEPS=100000 \
+  SAVE_INTERVAL=500 \
+  LOGGING_FREQUENCY=100 \
+  EVAL_INTERVAL=1000 \
+  NUM_PROCESSES=4 \
+  GRADIENT_ACCUMULATION_STEPS=2 \
+  PER_DEVICE_BATCH_SIZE=4 \
+  NUM_WORKERS=1 \
   bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 done
 
-# P1 State Conditioning 对照
+# P1-S1 / E-H2b-02 State Conditioning 对照
 RUN_ID="P1-S1-E-H2b-02_starflow_libero-goal_qwen3vl4b_lwfm_continuous_$(date +%y%m%d)" \
-  bash examples/LIBERO/train_files/run_starflow_train_ready.sh
+CONFIG_YAML=configs/starflow_vla/state/continuous_head.yaml \
+MAX_TRAIN_STEPS=100000 \
+SAVE_INTERVAL=500 \
+LOGGING_FREQUENCY=100 \
+EVAL_INTERVAL=1000 \
+NUM_PROCESSES=4 \
+GRADIENT_ACCUMULATION_STEPS=2 \
+PER_DEVICE_BATCH_SIZE=4 \
+NUM_WORKERS=1 \
+bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 ```
 
 ## Not Run

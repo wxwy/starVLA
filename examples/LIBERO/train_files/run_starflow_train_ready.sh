@@ -19,7 +19,7 @@ WANDB_ENTITY=${WANDB_ENTITY:-silencewx-harbin-institute-of-technology}
 WANDB_RUN_ID=${WANDB_RUN_ID:-${RUN_ID}}
 WANDB_NAME=${WANDB_NAME:-${RUN_ID}}
 BASE_VLM=${BASE_VLM:-${STARVLA_DIR}/playground/Pretrained_models/Qwen3-VL-4B-Instruct}
-LIBERO_DATA_ROOT=${LIBERO_DATA_ROOT:-/gemini/code/datasets/LEROBOT_LIBERO_DATA}
+LIBERO_DATA_ROOT=${LIBERO_DATA_ROOT:-/gemini/code/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA}
 DATA_MIX=${DATA_MIX:-libero_all}
 CONFIG_YAML=${CONFIG_YAML:-configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml}
 FRAMEWORK_NAME=${FRAMEWORK_NAME:-StarFlowVLA}
@@ -30,7 +30,7 @@ NUM_PROCESSES=${NUM_PROCESSES:-${NUM_PROCESS:-1}}
 ENABLE_LOCAL_CHECKPOINT_STAGING=${ENABLE_LOCAL_CHECKPOINT_STAGING:-True}
 LOCAL_CHECKPOINT_ROOT=${LOCAL_CHECKPOINT_ROOT:-/root/temp}
 LOCAL_CHECKPOINT_KEEP_COUNT=${LOCAL_CHECKPOINT_KEEP_COUNT:-1}
-IS_RESUME=${IS_RESUME:-True}
+IS_RESUME=${IS_RESUME:-False}
 
 cd "${STARVLA_DIR}"
 
@@ -57,16 +57,18 @@ for candidate in /usr/lib/x86_64-linux-gnu /usr/local/cuda-12.3/compat; do
     fi
 done
 
-export WANDB_MODE=${WANDB_MODE:-disabled}
+export WANDB_MODE=${WANDB_MODE:-online}
 export MASTER_ADDR=${MASTER_ADDR:-127.0.0.1}
 export MASTER_PORT=${MASTER_PORT:-29621}
-export RANK=${RANK:-0}
-export LOCAL_RANK=${LOCAL_RANK:-0}
-export WORLD_SIZE=${WORLD_SIZE:-${NUM_PROCESSES}}
 export PYTHONUNBUFFERED=1
 export ACCELERATE_GRADIENT_ACCUMULATION_STEPS=${ACCELERATE_GRADIENT_ACCUMULATION_STEPS:-${GRADIENT_ACCUMULATION_STEPS}}
 
+WORLD_SIZE=${WORLD_SIZE:-${NUM_PROCESSES}}
+
 if [[ "${NUM_PROCESSES}" -gt 1 ]]; then
+    export RANK=${RANK:-0}
+    export LOCAL_RANK=${LOCAL_RANK:-0}
+    export WORLD_SIZE
     if ip link show bond0 &>/dev/null; then
         export NCCL_SOCKET_IFNAME=${NCCL_SOCKET_IFNAME:-bond0}
         export NCCL_IB_HCA=${NCCL_IB_HCA:-mlx5_2,mlx5_3}

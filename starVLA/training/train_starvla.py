@@ -1217,7 +1217,7 @@ class VLATrainer(TrainerUtils):
 
     def _log_metrics(self, metrics):
         """Record training metrics."""
-        if self.completed_steps % self.config.trainer.logging_frequency == 0 and dist.get_rank() == 0:
+        if self.completed_steps % self.config.trainer.logging_frequency == 0 and self.accelerator.is_main_process:
             last_lrs = self.lr_scheduler.get_last_lr()
             for i, group in enumerate(self.optimizer.param_groups):
                 group_name = group.get("name", str(i))

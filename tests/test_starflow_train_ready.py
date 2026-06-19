@@ -21,6 +21,9 @@ class StarFlowTrainReadyTest(unittest.TestCase):
         self.assertIn("WORLD_SIZE", script_text)
         self.assertIn('--datasets.vla_data.per_device_batch_size "${PER_DEVICE_BATCH_SIZE}"', script_text)
         self.assertIn('--trainer.gradient_accumulation_steps "${GRADIENT_ACCUMULATION_STEPS}"', script_text)
+        self.assertIn("--trainer.checkpoint_format lightweight", script_text)
+        self.assertIn("LOCAL_CHECKPOINT_ROOT=${LOCAL_CHECKPOINT_ROOT:-/root/temp}", script_text)
+        self.assertIn('--trainer.local_checkpoint_root "${LOCAL_CHECKPOINT_ROOT}"', script_text)
         self.assertIn("--trainer.save_checkpoint_as_directory True", script_text)
         self.assertIn("accelerate launch", script_text)
 

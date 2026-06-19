@@ -1,8 +1,8 @@
-run_id: starflow_vla_stage1_qwenpi_v3_native
+run_id: P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250615
 run_root_dir: playground/Checkpoints
 seed: 42
 wandb_entity: your_wandb_entity
-wandb_project: llavavla
+wandb_project: starflow_vla
 is_debug: false
 version_id: "0.21"
 
@@ -55,22 +55,22 @@ datasets:
   vla_data:
     dataset_py: lerobot_datasets
     include_state: true
-    data_root_dir: playground/Datasets/LEROBOT_LIBERO_DATA
-    data_mix: libero_goal
+    data_root_dir: /gemini/code/datasets/LEROBOT_LIBERO_DATA
+    data_mix: libero_all
     action_type: delta_qpos
     sequential_step_sampling: false
     CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."
-    per_device_batch_size: 1
-    num_workers: 0
+    per_device_batch_size: 4
+    num_workers: 1
     prefetch_factor: 2
     load_all_data_for_training: true
     video_backend: torchvision_av
 
 trainer:
-  max_train_steps: 10
+  max_train_steps: 80000
   num_warmup_steps: 0
-  save_interval: 10
-  eval_interval: 10
+  save_interval: 125
+  eval_interval: 250
   learning_rate:
     base: 2.5e-05
     qwen_vl_interface: 1.0e-05
@@ -84,10 +84,15 @@ trainer:
     vlm: 0.0
   max_grad_norm: 1.0
   weight_decay: 0.0
-  logging_frequency: 1
+  logging_frequency: 50
   gradient_clipping: 1.0
-  gradient_accumulation_steps: 1
+  gradient_accumulation_steps: 8
   gradient_checkpointing: true
+  checkpoint_format: lightweight
+  is_resume: true
+  enable_local_checkpoint_staging: true
+  local_checkpoint_root: /root/temp
+  local_checkpoint_keep_count: 1
   save_format: safetensors
   save_checkpoint_as_directory: true
   save_with_training_state: false

@@ -64,6 +64,10 @@ from transformers import AutoProcessor, get_scheduler
 from starVLA.dataloader import build_dataloader
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.model.framework.share_tools import apply_config_compat
+from starVLA.training.checkpoints import (
+    load_deepspeed_universal_checkpoint,
+    save_deepspeed_universal_checkpoint,
+)
 from starVLA.training.trainer_utils.config_tracker import AccessTrackedConfig, wrap_config
 from starVLA.training.trainer_utils.trainer_tools import (
     TrainerUtils,
@@ -71,6 +75,7 @@ from starVLA.training.trainer_utils.trainer_tools import (
     setup_optimizer_and_scheduler,
     normalize_dotlist_args,
     _is_complete_deepspeed_checkpoint_dir,
+    _is_complete_deepspeed_universal_checkpoint_dir,
     _is_complete_lightweight_training_checkpoint_dir,
     save_lightweight_checkpoint_metadata,
     save_lightweight_scaler_state,
@@ -218,7 +223,11 @@ def _get_latest_checkpoint_entry(checkpoint_dir: Path):
         if file_match and entry.is_file():
             checkpoint_entries.append((entry, int(file_match.group(1))))
         elif dir_match and entry.is_dir():
-            if _is_complete_deepspeed_checkpoint_dir(entry) or _is_complete_lightweight_training_checkpoint_dir(entry):
+            if (
+                _is_complete_deepspeed_checkpoint_dir(entry)
+                or _is_complete_deepspeed_universal_checkpoint_dir(entry)
+                or _is_complete_lightweight_training_checkpoint_dir(entry)
+            ):
                 checkpoint_entries.append((entry, int(dir_match.group(1))))
 
     if not checkpoint_entries:
@@ -240,8 +249,10 @@ def _get_latest_checkpoint_entry_with_status(checkpoint_dir: Path):
         if file_match and entry.is_file():
             checkpoint_entries.append({"path": entry, "step": int(file_match.group(1)), "complete": True})
         elif dir_match and entry.is_dir():
-            is_complete = _is_complete_deepspeed_checkpoint_dir(entry) or _is_complete_lightweight_training_checkpoint_dir(
-                entry
+            is_complete = (
+                _is_complete_deepspeed_checkpoint_dir(entry)
+                or _is_complete_deepspeed_universal_checkpoint_dir(entry)
+                or _is_complete_lightweight_training_checkpoint_dir(entry)
             )
             checkpoint_entries.append({"path": entry, "step": int(dir_match.group(1)), "complete": is_complete})
 
@@ -279,7 +290,11 @@ def _list_complete_checkpoint_entries(checkpoint_dir: Path):
         if file_match and entry.is_file():
             checkpoint_entries.append({"path": entry, "step": int(file_match.group(1)), "complete": True})
         elif dir_match and entry.is_dir():
-            if _is_complete_deepspeed_checkpoint_dir(entry) or _is_complete_lightweight_training_checkpoint_dir(entry):
+            if (
+                _is_complete_deepspeed_checkpoint_dir(entry)
+                or _is_complete_deepspeed_universal_checkpoint_dir(entry)
+                or _is_complete_lightweight_training_checkpoint_dir(entry)
+            ):
                 checkpoint_entries.append({"path": entry, "step": int(dir_match.group(1)), "complete": True})
 
     checkpoint_entries.sort(key=lambda x: x["step"])
@@ -741,6 +756,29 @@ class VLATrainer(TrainerUtils):
         self.save_checkpoint_as_directory = getattr(self.config.trainer, "save_checkpoint_as_directory", True)
         self.checkpoint_max_shard_size = getattr(self.config.trainer, "checkpoint_max_shard_size", "5GB")
         self.local_checkpoint_keep_count = max(int(getattr(self.config.trainer, "local_checkpoint_keep_count", 1)), 1)
+        self.save_universal_checkpoint = getattr(self.config.trainer, "save_universal_checkpoint", False)
+        self.checkpoint_format = self._resolve_checkpoint_format()
+
+    def _resolve_checkpoint_format(self) -> str:
+        raw_format = getattr(self.config.trainer, "checkpoint_format", None)
+        if raw_format is None:
+            if self.save_with_training_state:
+                return "deepspeed_state"
+            return "universal"
+
+        checkpoint_format = str(raw_format).strip().lower()
+        aliases = {
+            "deepspeed_universal": "universal",
+            "universal_full_adam": "universal",
+            "deepspeed": "deepspeed_state",
+            "training_state": "deepspeed_state",
+            "directory": "lightweight",
+        }
+        checkpoint_format = aliases.get(checkpoint_format, checkpoint_format)
+        valid_formats = {"lightweight", "universal", "deepspeed_state", "model_only"}
+        if checkpoint_format not in valid_formats:
+            raise ValueError(f"Unsupported trainer.checkpoint_format `{raw_format}`. Expected one of {sorted(valid_formats)}.")
+        return checkpoint_format
 
     def prepare_training(self):
         rank = dist.get_rank() if dist.is_initialized() else 0
@@ -792,11 +830,13 @@ class VLATrainer(TrainerUtils):
     def _init_wandb(self):
         """Initialize Weights & Biases."""
         if self.accelerator.is_main_process:
-            wandb_run_id = re.sub(r"[^A-Za-z0-9_.-]", "-", str(self.config.run_id))[:128]
+            raw_wandb_run_id = getattr(self.config, "wandb_run_id", None) or self.config.run_id
+            wandb_run_id = re.sub(r"[^A-Za-z0-9_.-]", "-", str(raw_wandb_run_id))[:128]
+            wandb_name = getattr(self.config, "wandb_name", None) or self.config.run_id
             wandb.init(
                 id=wandb_run_id,
                 resume="allow",
-                name=self.config.run_id,
+                name=wandb_name,
                 dir=os.path.join(self.config.output_dir, "wandb"),
                 project=self.config.wandb_project,
                 entity=self.config.wandb_entity,
@@ -837,6 +877,10 @@ class VLATrainer(TrainerUtils):
             if resume_from_checkpoint:
                 self.resume_from_checkpoint = resume_from_checkpoint
                 if os.path.isdir(self.resume_from_checkpoint) and _is_complete_deepspeed_checkpoint_dir(
+                    self.resume_from_checkpoint
+                ):
+                    self.resume_requires_training_state = True
+                elif os.path.isdir(self.resume_from_checkpoint) and _is_complete_deepspeed_universal_checkpoint_dir(
                     self.resume_from_checkpoint
                 ):
                     self.resume_requires_training_state = True
@@ -902,6 +946,7 @@ class VLATrainer(TrainerUtils):
             return
 
         checkpoint_parts = self._inspect_directory_checkpoint(checkpoint_path)
+        is_universal_checkpoint = _is_complete_deepspeed_universal_checkpoint_dir(checkpoint_path)
         total_stages = 2 + int(checkpoint_parts["custom_count"] > 0)
 
         if self.accelerator.is_main_process:
@@ -909,6 +954,7 @@ class VLATrainer(TrainerUtils):
             logger.info(
                 "目录式 checkpoint 检测结果: "
                 f"deepspeed_tag={checkpoint_parts['deepspeed_tag']}, "
+                f"is_universal={is_universal_checkpoint}, "
                 f"scheduler_files={checkpoint_parts['scheduler_files']}, "
                 f"sampler_files={checkpoint_parts['sampler_files']}, "
                 f"rng_files={checkpoint_parts['rng_files']}, "
@@ -918,35 +964,50 @@ class VLATrainer(TrainerUtils):
         for hook in self.accelerator._load_model_state_pre_hook.values():
             hook([], str(checkpoint_path))
 
-        logger.info(f"[1/{total_stages}] 开始加载 DeepSpeed 模型/优化器状态: {checkpoint_path}")
-        load_path, _ = self.model.load_checkpoint(
-            str(checkpoint_path),
-            checkpoint_parts["deepspeed_tag"],
-            load_module_strict=True,
-            load_optimizer_states=True,
-            load_lr_scheduler_states=True,
-        )
+        if is_universal_checkpoint:
+            logger.info(f"[1/{total_stages}] 开始加载 DeepSpeed Universal 模型/优化器状态: {checkpoint_path}")
+            load_path, _ = load_deepspeed_universal_checkpoint(
+                self.model,
+                checkpoint_path,
+                load_optimizer_states=True,
+                load_lr_scheduler_states=True,
+            )
+        else:
+            logger.info(
+                f"[1/{total_stages}] 开始加载 DeepSpeed 模型/优化器状态: "
+                f"{checkpoint_path}, tag={checkpoint_parts['deepspeed_tag']}"
+            )
+            load_path, _ = self.model.load_checkpoint(
+                str(checkpoint_path),
+                checkpoint_parts["deepspeed_tag"],
+                load_module_strict=True,
+                load_optimizer_states=True,
+                load_lr_scheduler_states=True,
+            )
         if load_path is None:
             raise RuntimeError(f"DeepSpeed checkpoint load failed: {checkpoint_path}")
         logger.info(f"[1/{total_stages}] DeepSpeed 模型/优化器状态加载完成: {load_path}")
 
-        logger.info(f"[2/{total_stages}] 开始加载 scheduler / dataloader / RNG 状态")
-        schedulers = [scheduler for scheduler in self.accelerator._schedulers if not isinstance(scheduler, DeepSpeedSchedulerWrapper)]
-        override_attributes = load_accelerator_state(
-            str(checkpoint_path),
-            [],
-            [],
-            schedulers,
-            self.accelerator._dataloaders,
-            self.accelerator.state.process_index,
-            self.accelerator.scaler,
-            "cpu",
-        )
-        if "step" in override_attributes:
-            self.accelerator.step = override_attributes["step"]
-        logger.info(
-            f"[2/{total_stages}] scheduler / dataloader / RNG 状态加载完成"
-        )
+        if checkpoint_parts["scheduler_files"] or checkpoint_parts["rng_files"] or checkpoint_parts["sampler_files"]:
+            logger.info(f"[2/{total_stages}] 开始加载 scheduler / dataloader / RNG 状态")
+            schedulers = [scheduler for scheduler in self.accelerator._schedulers if not isinstance(scheduler, DeepSpeedSchedulerWrapper)]
+            override_attributes = load_accelerator_state(
+                str(checkpoint_path),
+                [],
+                [],
+                schedulers,
+                self.accelerator._dataloaders,
+                self.accelerator.state.process_index,
+                self.accelerator.scaler,
+                "cpu",
+            )
+            if "step" in override_attributes:
+                self.accelerator.step = override_attributes["step"]
+            logger.info(
+                f"[2/{total_stages}] scheduler / dataloader / RNG 状态加载完成"
+            )
+        else:
+            logger.warning(f"[2/{total_stages}] checkpoint 不包含 scheduler / dataloader / RNG 状态，跳过该阶段")
 
         if checkpoint_parts["custom_count"] > 0:
             logger.info(f"[3/{total_stages}] 开始加载 {checkpoint_parts['custom_count']} 个自定义状态")
@@ -1078,9 +1139,11 @@ class VLATrainer(TrainerUtils):
         checkpoint_path = self.local_checkpoint_dir / f"steps_{self.completed_steps}"
         self._ensure_local_checkpoint_capacity(checkpoint_path)
 
-        if self.accelerator.distributed_type == DistributedType.DEEPSPEED and self.save_with_training_state:
+        if self.checkpoint_format == "universal":
+            self._save_deepspeed_universal_checkpoint(checkpoint_path, save_format)
+        elif self.checkpoint_format == "deepspeed_state":
             self.accelerator.save_state(output_dir=str(checkpoint_path), safe_serialization=(save_format == "safetensors"))
-        elif self.save_checkpoint_as_directory:
+        elif self.checkpoint_format == "lightweight":
             self._save_lightweight_directory_checkpoint(checkpoint_path, save_format)
         elif self.accelerator.is_main_process and save_format == "safetensors":
             from safetensors.torch import save_file
@@ -1106,6 +1169,50 @@ class VLATrainer(TrainerUtils):
             self._enqueue_checkpoint_sync(checkpoint_path)
 
         self.accelerator.wait_for_everyone()
+
+    def save_deepspeed_zero_checkpoint(self, output_dir, tag=None):
+        """Save the current DeepSpeed engine state as a native ZeRO checkpoint.
+
+        This is intended for one-shot conversion from lightweight checkpoints to
+        DeepSpeed Universal Checkpoints. It should only be called when the model
+        has already been prepared as a DeepSpeed engine.
+        """
+        if self.accelerator.distributed_type != DistributedType.DEEPSPEED:
+            raise RuntimeError("save_deepspeed_zero_checkpoint requires a DeepSpeed engine")
+
+        output_dir = Path(output_dir)
+        if self.accelerator.is_main_process:
+            output_dir.mkdir(parents=True, exist_ok=True)
+        self.accelerator.wait_for_everyone()
+
+        if tag is None:
+            tag = f"steps_{self.completed_steps}"
+
+        logger.info(f"Saving DeepSpeed ZeRO checkpoint to {output_dir} with tag {tag}")
+        self.model.save_checkpoint(str(output_dir), tag=tag)
+        self.accelerator.wait_for_everyone()
+        logger.info(f"DeepSpeed ZeRO checkpoint saved to {output_dir / tag}")
+
+    def _save_deepspeed_universal_checkpoint(self, checkpoint_path: Path, save_format: str):
+        """Save a full Adam DeepSpeed Universal Checkpoint.
+
+        The lightweight checkpoint is used only as a temporary source for
+        rank-sharded ZeRO optimizer states. Adam exp_avg/exp_avg_sq are
+        preserved from optimizer_rank_*.pt files.
+        """
+        if self.accelerator.distributed_type != DistributedType.DEEPSPEED:
+            raise RuntimeError("save_universal_checkpoint requires DeepSpeed training")
+        if save_format != "safetensors":
+            raise ValueError("save_universal_checkpoint currently requires trainer.save_format=safetensors")
+
+        save_deepspeed_universal_checkpoint(
+            checkpoint_path=checkpoint_path,
+            save_format=save_format,
+            model=self.model,
+            accelerator=self.accelerator,
+            save_lightweight_checkpoint=self._save_lightweight_directory_checkpoint,
+            logger=logger,
+        )
 
     def _log_metrics(self, metrics):
         """Record training metrics."""
@@ -1252,9 +1359,11 @@ class VLATrainer(TrainerUtils):
         self._ensure_local_checkpoint_capacity(final_checkpoint)
         os.makedirs(final_checkpoint, exist_ok=True)
 
-        if self.accelerator.distributed_type == DistributedType.DEEPSPEED and self.save_with_training_state:
+        if self.checkpoint_format == "universal":
+            self._save_deepspeed_universal_checkpoint(final_checkpoint, save_format)
+        elif self.checkpoint_format == "deepspeed_state":
             self.accelerator.save_state(output_dir=str(final_checkpoint), safe_serialization=(save_format == "safetensors"))
-        elif self.save_checkpoint_as_directory:
+        elif self.checkpoint_format == "lightweight":
             self._save_lightweight_directory_checkpoint(final_checkpoint, save_format)
         elif self.accelerator.is_main_process and save_format == "safetensors":
             from safetensors.torch import save_file

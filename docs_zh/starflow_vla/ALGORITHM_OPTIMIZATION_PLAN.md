@@ -126,7 +126,7 @@ StarVLA 当前 QwenPI_v3 已具备 state-to-instruction 路径，LayerwiseFM / G
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | E-H2a-01 | H2-a | `configs/starflow_vla/ablations/future_tokens_0.yaml` | LIBERO small/full | `discretized_instruction` | 0 | 7 | 8 | overfit_steps/loss_finite/NaN/peak_memory/latency/action_smoothness | P0 Stage B | `[待 Stage B A100 复验]` |
 | E-H2a-02 | H2-a | `configs/starflow_vla/ablations/future_tokens_16.yaml` | LIBERO full | `discretized_instruction` | 16 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P0/P1 | `[待 Stage B A100 复验]` |
-| E-H2a-03 | H2-a | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` | LIBERO full | `discretized_instruction` | 32 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P0/P1 | `P0-M5-Stage1 baseline 默认配置，长训进行中；run_id 命名标签误写为 E-H2a-04，实际对应 E-H2a-03；当前约 steps_15500/100000，不代表最终成功率` |
+| E-H2a-03 | H2-a | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` | LIBERO full | `discretized_instruction` | 32 | 7 | 8 | success_rate/loss_curve/peak_memory/latency/task_length_success | P0/P1 | `P0-M5-Stage1 baseline 默认配置，run_id / checkpoint 路径统一为 P0-M5-E-H2a-03_..._ft32_250615；已转 full-adam Universal checkpoint，支持单卡继续训练` |
 | E-H2a-04 | H2-a | `configs/starflow_vla/ablations/future_tokens_64.yaml` | LIBERO full（P1）/ RoboCasa/RoboTwin（P2） | `discretized_instruction` | 64 | 7/14 | 8/16 | cross_drop/worst_family/peak_memory/latency/task_length_success | P1/P2 | `[待 LIBERO eval] / [待 RoboCasa / RoboTwin eval]` |
 | E-H2b-01 | H2-b | `configs/starflow_vla/state/discretized_instruction.yaml` | LIBERO small/full | `discretized_instruction` | 32 | 7 | 8 | success_rate/state_sensitive_success/overfit_steps/smoothness/noise_robustness | P0/P1 | `P0-M5-Stage1 默认路径，与 E-H2a-03 同一场训练` |
 | E-H2b-02 | H2-b | `configs/starflow_vla/state/continuous_head.yaml` | LIBERO full | `continuous_head` | 32 | 7 | 8 | success_rate/state_sensitive_success/loss_curve/smoothness/latency | P1 | `[待 LIBERO eval]` |
@@ -136,7 +136,7 @@ StarVLA 当前 QwenPI_v3 已具备 state-to-instruction 路径，LayerwiseFM / G
 ### 矩阵说明
 
 - `E-H2a-03` 与 `E-H2b-01` 的变量组合（`num_target_vision_tokens=32` + `state_mode=discretized_instruction`）正是 `P0-M5-Stage1` 的默认配置，因此由同一场训练覆盖。
-- 当前 `tmux starflow_train` 中的长训 run_id 写为 `P0-M5-E-H2a-04_..._ft32_250615`，属于命名标签笔误，实际配置为 `ft32`，应在实验记录中更正为 `E-H2a-03`。
+- 当前运行：单卡 40G，run_id `P0-M5-E-H2a-03_..._ft32_250615`，`WANDB_MODE=online`。
 - `E-H2a-04`（`future_tokens=64`）尚未开始训练，仍按 P1/P2 占位。
 
 ## 3.5 RGB-Geometry Observation Fusion with VGGT：P2 / 与《基于世界模型的移动操作规划与决策框架研究》的接口预留

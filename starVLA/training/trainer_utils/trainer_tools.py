@@ -25,6 +25,7 @@ from starVLA.model.framework.share_tools import (
     load_model_weights as _shared_load_model_weights,
 )
 from starVLA.model.modules.starflow_vla.mapping import save_starflow_checkpoint_mapping
+from starVLA.training.checkpoints import is_complete_deepspeed_universal_checkpoint_dir
 from starVLA.training.trainer_utils.config_tracker import AccessTrackedConfig
 
 logger = get_logger(__name__)
@@ -553,6 +554,8 @@ class TrainerUtils:
             elif dir_match and os.path.isdir(entry_path):
                 if _is_complete_deepspeed_checkpoint_dir(entry_path):
                     checkpoint_entries.append((entry, int(dir_match.group(1))))
+                elif _is_complete_deepspeed_universal_checkpoint_dir(entry_path):
+                    checkpoint_entries.append((entry, int(dir_match.group(1))))
                 elif _is_complete_lightweight_training_checkpoint_dir(entry_path):
                     checkpoint_entries.append((entry, int(dir_match.group(1))))
                 else:
@@ -708,3 +711,8 @@ def _is_complete_deepspeed_checkpoint_dir(path):
 
     required_files = [latest_file, model_file, optim_file, rng_file]
     return all(os.path.isfile(file_path) for file_path in required_files)
+
+
+def _is_complete_deepspeed_universal_checkpoint_dir(path):
+    """Check whether a DeepSpeed Universal checkpoint tag directory is complete enough for resume."""
+    return is_complete_deepspeed_universal_checkpoint_dir(path)

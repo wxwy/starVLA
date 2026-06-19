@@ -82,7 +82,8 @@ from starVLA.training.trainer_utils.trainer_tools import (
     load_lightweight_scaler_state,
 )
 
-deepspeed_plugin = DeepSpeedPlugin()
+_num_processes = int(os.environ.get("NUM_PROCESSES", "1"))
+deepspeed_plugin = DeepSpeedPlugin() if _num_processes > 1 else None
 gradient_accumulation_plugin = GradientAccumulationPlugin(
     num_steps=int(os.environ.get("ACCELERATE_GRADIENT_ACCUMULATION_STEPS", "1")),
     sync_each_batch=True,

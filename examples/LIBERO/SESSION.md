@@ -1,5 +1,30 @@
 # Session Log
 
+## 2026-06-19 — StarFlow Train 会话状态（11:34 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-19 11:34 CST |
+| 目标 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250618_r2` |
+| 实际运行 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 主训练进程 PID | `84113` |
+| 数据加载子进程 PID | `124465` |
+| checkpoint 同步进程 PID | 无 |
+| 训练状态 | ✅ **正常运行中**（主进程 `SLl+`，数据 worker `Dl+`） |
+| 当前步数 | 2625 / 80000 |
+| 当前 loss | 网络目录无 `output.log`，上次可读值 step 360 的 `0.1705` |
+| 主进程 CPU | 160% |
+| 数据worker CPU | 25.1% |
+| 主进程内存 | 约 2.0 GiB（维持在基线） |
+| GPU | `P1.gpu.medium`，利用率 **100%**，显存 39540/40488 MiB（97.6%） |
+| `/root/temp` | `checkpoints/` 子目录为空 |
+| root overlay | **4%（1.1G / 30G）** |
+| 网络 checkpoint | `checkpoints/steps_125/` 至 `steps_2625/` |
+| 负载 | 15.17 / 14.97 / 14.24 |
+| 数据加载 | 数据 worker `Dl+`，处于不可中断睡眠 |
+| 目标 r2 目录 | 不存在 |
+| 备注 | 训练正常；GPU 维持 100%；1 分钟负载上升至 15.17；数据 worker 进入 `Dl+` 状态，通常是数据读取/同步 IO；主进程内存维持 2.0 GiB 基线；本地暂存空；summary.jsonl 最新 2625；关注 step 2750 checkpoint 触发 |
+
 ## 2026-06-19 — StarFlow Train 会话状态（11:31 CST）
 
 | 字段 | 值 |

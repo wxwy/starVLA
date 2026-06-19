@@ -29,12 +29,52 @@ ACT / H1 Flow Matching vs ACT 已降级为后续完整论文扩展或 optional b
 
 ---
 
+## 当前服务器运行状态与迁移说明
+
+> 本状态写于 2026-06-19，用于在服务器迁移时同步实验进度。
+
+| 项目 | 内容 |
+| --- | --- |
+| 当前服务器 | 原训练服务器（单卡 P1.gpu.medium） |
+| 正在运行的实验 | **E-H2a-03-4in1 / E-H2b-01-4in1**：`num_target_vision_tokens=32` + `data_mix=libero_all` |
+| 实际 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 当前进度 | step **2625 / 80000**（约 3.3%），单卡运行中 |
+| 启动命令 | `examples/LIBERO/train_files/run_starflow_train_ready.sh`，`DATA_MIX=libero_all`，`NUM_PROCESSES=1`，`GRADIENT_ACCUMULATION_STEPS=8`，`PER_DEVICE_BATCH_SIZE=4` |
+| 训练状态 | ✅ 正常运行中；checkpoint 已同步至 `steps_2625`；`output.log` 未生成，以 W&B 面板为准 |
+| 已完成实验 | 无（P0-M5-Stage1 goal 辅助分支在另一运行中，不计入当前 4-in-1 主线） |
+| 下一个待跑实验 | **E-H2a-01-4in1**：`num_target_vision_tokens=0` + `data_mix=libero_all` |
+| 下一条启动命令 | 见下方「迁移后下一条命令」 |
+
+### 迁移后下一条命令（新服务器执行）
+
+在新服务器上，**不要**重新启动当前正在跑的 `E-H2a-03-4in1`（除非需要复现/继续该 baseline）。下一步应直接开始第 2 个实验：
+
+```bash
+# E-H2a-01-4in1：future_tokens=0，验证无 planning slots 的边界
+RUN_ID="P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_$(date +%y%m%d)" \
+CONFIG_YAML=configs/starflow_vla/ablations/future_tokens_0.yaml \
+DATA_MIX=libero_all \
+MAX_TRAIN_STEPS=80000 \
+SAVE_INTERVAL=125 \
+LOGGING_FREQUENCY=50 \
+EVAL_INTERVAL=250 \
+NUM_PROCESSES=1 \
+GRADIENT_ACCUMULATION_STEPS=8 \
+PER_DEVICE_BATCH_SIZE=4 \
+NUM_WORKERS=1 \
+bash examples/LIBERO/train_files/run_starflow_train_ready.sh
+```
+
+> 若新服务器为 4 卡且希望保持有效全局 batch=32，可改为 `NUM_PROCESSES=4`、`GRADIENT_ACCUMULATION_STEPS=2`。单卡成本约 1.42 分/step，4 卡约 1.80 分/step（参考 IMPLEMENTATION_LOG）。
+
+本文件 Scope 之后的所有章节保持原实验矩阵定义不变，仅更新状态列。
+
 ## 1. P0/P1 Engineering Execution Matrix
 
 | 工程任务 ID | 关联算法实验 ID | 配置/入口 | 目标 | 当前状态 | 阻塞/下一步 |
 | --- | --- | --- | --- | --- | --- |
 | **P0-M5-Stage1** | E-H2a-03-goal / E-H2b-01-goal | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` | StarFlowVLA + QwenPI_v3 native + LayerwiseFM 7DoF action / 8D state；`data_mix=libero_goal`、`num_target_vision_tokens=32`、`state_mode=discretized_instruction` | 配置解析、`apply_config_compat()`、`build_framework()` dry-run 通过；LIBERO batch schema、真实 forward/backward、loss finite、single batch overfit 前置验证通过；真实 `train_starvla.py` 10 step 训练闭环通过；**LIBERO-Goal 辅助长训进行中：`P0-M5-E-H2a-03_starflow_libero-goal_qwen3vl4b_lwfm_ft32_250615`（单卡 40G，`PER_DEVICE_BATCH_SIZE=4`、`GRADIENT_ACCUMULATION_STEPS=8`，有效全局 batch=32，`WANDB_MODE=online`）**；该运行已从 4 卡 DeepSpeed ZeRO-2 转为 full-adam Universal checkpoint，可单卡恢复继续训练 | 不作为最终混合数据主 baseline；用于 LIBERO-Goal sanity、warm-start source 与 `E-H2a-03-4in1-from-goal31500` curriculum 对照 |
-| **P0-M5-Stage1-4in1** | E-H2a-03-4in1 / E-H2b-01-4in1 | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` + `DATA_MIX=libero_all` | StarFlowVLA 默认主 baseline；`data_mix=libero_all`、`num_target_vision_tokens=32`、`state_mode=discretized_instruction` | 待正式长训；应从同一 base model 启动，作为 LIBERO 4-in-1 主 baseline | 后续 H2-a future_tokens 与 MLP 主对照优先以该分支为基准 |
+| **P0-M5-Stage1-4in1** | E-H2a-03-4in1 / E-H2b-01-4in1 | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` + `DATA_MIX=libero_all` | StarFlowVLA 默认主 baseline；`data_mix=libero_all`、`num_target_vision_tokens=32`、`state_mode=discretized_instruction` | **正在长训中**：run_id `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619`，单卡 P1.gpu.medium，`PER_DEVICE_BATCH_SIZE=4`、`GRADIENT_ACCUMULATION_STEPS=8`，有效全局 batch=32；当前 step 2625 / 80000；checkpoint 已同步至 `steps_2625` | 作为 LIBERO 4-in-1 主 baseline；后续 H2-a future_tokens 与 MLP 主对照优先以该分支为基准；迁移后新服务器应继续跑下一条实验 E-H2a-01-4in1 |
 | **P0-M5-Stage1-4in1-Curriculum** | E-H2a-03-4in1-from-goal31500 | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` + `DATA_MIX=libero_all` + goal checkpoint init | curriculum / transfer 对照；从 `E-H2a-03-goal` 的 `steps_31500` full-adam Universal checkpoint 继续训练到 LIBERO 4-in-1 | 可选；待启动 | 不作为纯 4-in-1 baseline，只用于分析 goal-only warm-start 对混合数据训练的影响 |
 | **P0-M5-QwenPI-v3-Compatibility** | — | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` with `framework.name=QwenPI_v3` | 工程兼容性验证：确认 StarFlowVLA facade 没有破坏原 QwenPI_v3 baseline 入口 | 真实 forward/backward、loss finite 通过 | 未运行 baseline overfit / checkpoint / 长训；不属于 H2-a/H2-b 算法实验 |
 | **P0-M6-MLP** | H2-total-baseline | `configs/starflow_vla/stage2_mlp_baseline.yaml` | H2 总 baseline：future_tokens + cross-DiT 主路线与 MLP/OFT/VLA_AdapterHeader baseline 的受控对照；不属于 H2-a/H2-b 子消融 | 配置解析、`apply_config_compat()`、`build_framework()` dry-run 通过；真实 forward/backward、loss finite、single batch overfit 前置验证通过 | 未保存 baseline checkpoint / 未长训；OFT / VLA_AdapterHeader 可作为后续扩展 baseline |
@@ -75,7 +115,7 @@ ACT / H1 Flow Matching vs ACT 已降级为后续完整论文扩展或 optional b
 | **E-H2a-01-4in1** | P0-M7 | `num_target_vision_tokens=0` + `data_mix=libero_all` | `configs/starflow_vla/ablations/future_tokens_0.yaml` + CLI override | 是 | 配置已创建，前置 smoke 通过，待正式长训 | 验证无 future planning slots 的边界；主消融应在 4-in-1 上执行 |
 | **E-H2a-02-4in1** | P0-M7 | `num_target_vision_tokens=16` + `data_mix=libero_all` | `configs/starflow_vla/ablations/future_tokens_16.yaml` + CLI override | 是 | 配置已创建，前置 smoke 通过，待正式长训 | 低 token 预算；主消融应在 4-in-1 上执行 |
 | **E-H2a-03-goal** | P0-M5-Stage1 | `num_target_vision_tokens=32` + `data_mix=libero_goal` | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` | 否 | 单卡 40G 长训进行中，run_id `P0-M5-E-H2a-03_..._ft32_250615` | 辅助分支：LIBERO-Goal sanity、warm-start source、curriculum 前半段 |
-| **E-H2a-03-4in1** | P0-M5-Stage1-4in1 | `num_target_vision_tokens=32` + `data_mix=libero_all` | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` + CLI override | 是 | 待正式长训 | 主 baseline；后续 future_tokens / MLP 对照以此为基准 |
+| **E-H2a-03-4in1** | P0-M5-Stage1-4in1 | `num_target_vision_tokens=32` + `data_mix=libero_all` | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` + CLI override | 是 | **正在长训中**：run_id `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619`，单卡 P1.gpu.medium，当前 step 2625 / 80000；checkpoint 已同步至 `steps_2625` | 主 baseline；后续 future_tokens / MLP 对照以此为基准；迁移后下一条跑 E-H2a-01-4in1 |
 | **E-H2a-03-4in1-from-goal31500** | P0-M5-Stage1-4in1-Curriculum | goal checkpoint → `data_mix=libero_all` | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` + checkpoint init | 可选 | 待启动 | curriculum / transfer 对照，不作为纯 4-in-1 baseline |
 | **E-H2a-04-4in1** | P0-M7 | `num_target_vision_tokens=64` + `data_mix=libero_all` | `configs/starflow_vla/ablations/future_tokens_64.yaml` + CLI override | 是 | 配置已创建，前置 smoke 通过，待正式长训 | 高 token 预算，关注显存和延迟 |
 | **E-H2b-01-4in1** | P0-M5-Stage1-4in1 | `state_mode=discretized_instruction` + `data_mix=libero_all` | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` + CLI override | 否 | 待随 E-H2a-03-4in1 覆盖 | 默认状态路径 |

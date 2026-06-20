@@ -1,5 +1,167 @@
 # Session Log
 
+## 2026-06-20 — StarFlow Train 会话状态（08:07 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-20 08:07 CST |
+| 目标 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250618_r2` |
+| 实际运行 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 主训练进程 PID | `84113`（已运行约 31h35m） |
+| 数据加载子进程 PID | `124465` |
+| 训练状态 | ✅ **正常运行中**（主进程 `RLl+`，数据 worker `Sl+`） |
+| 当前步数 | **7375 / 80000**（与 08:02 相同） |
+| 最新完整 checkpoint | `steps_7375`（约 18G） |
+| 当前 loss | `output.log` 无最新可读值；历史 step 50 的 `action_dit_loss=0.4859` |
+| 主进程 CPU | 163%（ps）/ **512.5%**（top 瞬时） |
+| 数据 worker CPU | 23.0%（ps） |
+| 主进程内存 | RSS 约 2.0 GiB |
+| 数据 worker 内存 | RSS 约 5.5 GiB |
+| GPU | `P1.gpu.medium`，利用率 **100%**，显存 39540/40488 MiB（97.7%），功耗 250 W |
+| 系统负载 | 22.04 / 22.40 / 22.02 |
+| 系统内存 | 503 GiB 总，77 GiB 已用，421 GiB 可用 |
+| root overlay | 30G 总，860M 已用，30G 可用（**3%**） |
+| `/root/temp` | 28K（已清理） |
+| 网络 checkpoint | `checkpoints/steps_125/` 至 `steps_7375/` |
+| 输出目录总大小 | 1.1T |
+| 备注 | 距 08:02 约 5 分钟步数仍未推进；主进程 CPU 瞬时飙升至 **512.5%**，GPU 保持满载，可能处于 checkpoint 前准备或 CPU 密集型操作；`steps_7375` 保持完整；建议继续观察下一个监控点 |
+
+
+## 2026-06-20 — StarFlow Train 会话状态（08:02 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-20 08:02 CST |
+| 目标 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250618_r2` |
+| 实际运行 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 主训练进程 PID | `84113`（已运行约 31h30m） |
+| 数据加载子进程 PID | `124465` |
+| 训练状态 | ✅ **正常运行中**（主进程 `SLl+`，数据 worker `Sl+`/`R`） |
+| 当前步数 | **7375 / 80000**（与 07:58 相同） |
+| 最新完整 checkpoint | `steps_7375`（约 18G） |
+| 当前 loss | `output.log` 无最新可读值；历史 step 50 的 `action_dit_loss=0.4859` |
+| 主进程 CPU | 163%（ps）/ 133.3%（top 瞬时） |
+| 数据 worker CPU | 23.0%（ps）/ 73.3%（top 瞬时） |
+| 主进程内存 | RSS 约 2.0 GiB |
+| 数据 worker 内存 | RSS 约 5.5 GiB |
+| GPU | `P1.gpu.medium`，利用率 **100%**，显存 39540/40488 MiB（97.7%），功耗 250 W |
+| 系统负载 | 24.48 / 23.19 / 22.17 |
+| 系统内存 | 503 GiB 总，78 GiB 已用，420 GiB 可用 |
+| root overlay | 30G 总，860M 已用，30G 可用（**3%**） |
+| `/root/temp` | 28K（已清理） |
+| 网络 checkpoint | `checkpoints/steps_125/` 至 `steps_7375/` |
+| 输出目录总大小 | 1.1T |
+| 备注 | 距 07:58 约 4 分钟步数未推进，GPU 仍满载，数据 worker 瞬时 CPU 升高，可能处于训练迭代或 checkpoint 前准备；`steps_7375` 保持完整；预计下一记录 step 7500 |
+
+
+## 2026-06-20 — StarFlow Train 会话状态（07:58 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-20 07:58 CST |
+| 目标 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250618_r2` |
+| 实际运行 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 主训练进程 PID | `84113`（已运行约 31h26m） |
+| 数据加载子进程 PID | `124465` |
+| 训练状态 | ✅ **正常运行中**（主进程 `SLl+`，数据 worker `Sl+`） |
+| 当前步数 | **7375 / 80000**（`summary.jsonl` 最新记录） |
+| 最新完整 checkpoint | `steps_7375`（约 18G） |
+| 当前 loss | `output.log` 无最新可读值；历史 step 50 的 `action_dit_loss=0.4859` |
+| 主进程 CPU | 163%（ps）/ 125.0%（top 瞬时） |
+| 数据 worker CPU | 23.0%（ps） |
+| 主进程内存 | RSS 约 2.0 GiB |
+| 数据 worker 内存 | RSS 约 5.5 GiB |
+| GPU | `P1.gpu.medium`，利用率 **100%**，显存 39540/40488 MiB（97.7%），功耗 250 W |
+| 系统负载 | 22.81 / 22.56 / 21.77 |
+| 系统内存 | 503 GiB 总，78 GiB 已用，419 GiB 可用 |
+| root overlay | 30G 总，860M 已用，30G 可用（**3%**） |
+| `/root/temp` | 28K（已清理） |
+| 网络 checkpoint | `checkpoints/steps_125/` 至 `steps_7375/` |
+| 输出目录总大小 | 1.1T |
+| 备注 | 距上次监控约 9.75 小时，训练从 step 5250 推进至 step 7375，新增 17 个 checkpoint；GPU 利用率恢复并稳定 100%；输出目录从 744G 增至 1.1T；预计向 step 7500 推进 |
+
+
+## 2026-06-19 — StarFlow Train 会话状态（22:12 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-19 22:12 CST |
+| 目标 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250618_r2` |
+| 实际运行 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 主训练进程 PID | `84113`（已运行约 21:40） |
+| 数据加载子进程 PID | `124465` |
+| 训练状态 | ✅ **正常运行中**（主进程 `SLl+`，数据 worker `Dl+`） |
+| 当前步数 | **5250 / 80000**（`summary.jsonl` 最新记录与 22:07 相同） |
+| 最新完整 checkpoint | `steps_5250`（约 18G） |
+| 当前 loss | `output.log` 无最新可读值；历史 step 50 的 `action_dit_loss=0.4859` |
+| 主进程 CPU | 163%（ps）/ 126.7%（top 瞬时） |
+| 数据 worker CPU | 24.7%（ps） |
+| 主进程内存 | RSS 约 2.0 GiB |
+| 数据 worker 内存 | RSS 约 5.5 GiB |
+| GPU | `P1.gpu.medium`，利用率 **86%**，显存 39540/40488 MiB（97.7%），功耗 250 W |
+| 系统负载 | 30.76 / 26.74 / 26.71 |
+| 系统内存 | 503 GiB 总，80 GiB 已用，417 GiB 可用 |
+| root overlay | 30G 总，860M 已用，30G 可用（**3%**） |
+| `/root/temp` | 28K（已清理） |
+| 网络 checkpoint | `checkpoints/steps_125/` 至 `steps_5250/` |
+| 输出目录总大小 | 744G |
+| 备注 | 从 22:07 到 22:12 的 5 分钟内 `summary.jsonl` 未新增步数记录，可能处于 checkpoint 同步或数据加载等待；GPU 利用率从 96% 略降至 86%；`steps_5250` 保持完整；预计下一记录 step 5375 |
+
+
+## 2026-06-19 — StarFlow Train 会话状态（22:07 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-19 22:07 CST |
+| 目标 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250618_r2` |
+| 实际运行 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 主训练进程 PID | `84113`（已运行约 21:35） |
+| 数据加载子进程 PID | `124465` |
+| 训练状态 | ✅ **正常运行中**（主进程 `RLl+`，数据 worker `Dl+`） |
+| 当前步数 | **5250 / 80000**（`summary.jsonl` 最新记录） |
+| 最新完整 checkpoint | `steps_5250`（约 18G，已同步至网络） |
+| 当前 loss | `output.log` 无最新可读值；历史 step 50 的 `action_dit_loss=0.4859` |
+| 主进程 CPU | 163%（ps）/ 126.7%（top 瞬时） |
+| 数据 worker CPU | 24.7%（ps）/ 80.0%（top 瞬时） |
+| 主进程内存 | RSS 约 2.0 GiB |
+| 数据 worker 内存 | RSS 约 5.5 GiB |
+| GPU | `P1.gpu.medium`，利用率 **96%**，显存 39540/40488 MiB（97.7%），功耗 250 W |
+| 系统负载 | 21.75 / 26.85 / 26.90 |
+| 系统内存 | 503 GiB 总，80 GiB 已用，418 GiB 可用 |
+| root overlay | 30G 总，860M 已用，30G 可用（**3%**） |
+| `/root/temp` | 28K（已清理） |
+| 网络 checkpoint | `checkpoints/steps_125/` 至 `steps_5250/` |
+| 输出目录总大小 | 744G |
+| 备注 | GPU 利用率从 22:03 的 0% 恢复至 96%，训练恢复正常；`steps_5250` 已完整保存并同步至网络；`/root/temp` 已清理，root overlay 从 30% 回落至 3%；输出目录从 728G 增至 744G；预计向 step 5375 推进 |
+
+
+## 2026-06-19 — StarFlow Train 会话状态（22:03 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-19 22:03 CST |
+| 目标 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250618_r2` |
+| 实际运行 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 主训练进程 PID | `84113`（已运行约 21:31） |
+| 数据加载子进程 PID | `124465` |
+| 训练状态 | ✅ **正常运行中**（主进程 `DLl+`，数据 worker `Sl+`） |
+| 当前步数 | **5250 / 80000**（`summary.jsonl` 最新记录） |
+| 最新完整 checkpoint | `steps_5125`（约 18G，已同步至网络） |
+| 当前 loss | `output.log` 无最新可读值；历史 step 50 的 `action_dit_loss=0.4859` |
+| 主进程 CPU | 163%（ps）/ 33.3%（top 瞬时） |
+| 数据 worker CPU | 24.7%（ps） |
+| 主进程内存 | RSS 约 6.6 GiB |
+| 数据 worker 内存 | RSS 约 5.5 GiB |
+| GPU | `P1.gpu.medium`，利用率 **0%**，显存 39540/40488 MiB（97.7%），功耗 250 W |
+| 系统负载 | 28.34 / 27.42 / 26.71 |
+| 系统内存 | 503 GiB 总，83 GiB 已用，414 GiB 可用 |
+| root overlay | 30G 总，8.9G 已用，22G 可用（**30%**） |
+| `/root/temp` | 18G（`steps_5125` 本地暂存） |
+| 网络 checkpoint | `checkpoints/steps_125/` 至 `steps_5125/` |
+| 输出目录总大小 | 728G |
+| 备注 | GPU 利用率从 16:40 的 98% 降至 0%，显存仍占 97.7%，可能处于 checkpoint 保存或数据加载等待阶段；`steps_5125` 已完整保存；`/root/temp` 仍有 18G 暂存，说明轻量 checkpoint 同步尚未完成或正在排队；root overlay 从 3% 升至 30%，需关注磁盘空间 |
+
+
 ## 2026-06-19 — StarFlow Train 会话状态（16:40 CST）
 
 | 字段 | 值 |

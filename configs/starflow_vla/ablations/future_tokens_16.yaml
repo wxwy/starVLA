@@ -1,4 +1,4 @@
-run_id: E-H2a-02_starflow_libero-goal_qwen3vl4b_lwfm_ft16
+run_id: P0-M7-E-H2a-02_starflow_libero-4in1_qwen3vl4b_lwfm_ft16
 run_root_dir: playground/Checkpoints
 seed: 42
 wandb_entity: your_wandb_entity
@@ -56,21 +56,21 @@ datasets:
     dataset_py: lerobot_datasets
     include_state: true
     data_root_dir: playground/Datasets/LEROBOT_LIBERO_DATA
-    data_mix: libero_goal
+    data_mix: libero_all
     action_type: delta_qpos
     sequential_step_sampling: false
     CoT_prompt: "Your task is {instruction}. To identify the key objects for your task. Locate their bounding boxes in [x1,y1,x2,y2] format."
-    per_device_batch_size: 1
-    num_workers: 0
+    per_device_batch_size: 8
+    num_workers: 2
     prefetch_factor: 2
     load_all_data_for_training: true
     video_backend: torchvision_av
 
 trainer:
-  max_train_steps: 10
+  max_train_steps: 80000
   num_warmup_steps: 0
-  save_interval: 10
-  eval_interval: 10
+  save_interval: 125
+  eval_interval: 250
   learning_rate:
     base: 2.5e-05
     qwen_vl_interface: 1.0e-05
@@ -84,9 +84,9 @@ trainer:
     vlm: 0.0
   max_grad_norm: 1.0
   weight_decay: 0.0
-  logging_frequency: 1
+  logging_frequency: 50
   gradient_clipping: 1.0
-  gradient_accumulation_steps: 1
+  gradient_accumulation_steps: 4
   gradient_checkpointing: true
   save_format: safetensors
   save_checkpoint_as_directory: true

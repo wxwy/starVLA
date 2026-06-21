@@ -41,6 +41,13 @@ def find_run_id_from_tmux():
     m = re.search(r"RUN_ID=(\S+)", text)
     if m:
         return m.group(1)
+    # Fallback: extract run_id from checkpoint paths shown in tmux output
+    m = re.search(
+        r"(?:/disk/rl/starVLA/playground/Checkpoints|/localdisk-tmp)/([^/\s]+)/checkpoints/steps_\d+",
+        text,
+    )
+    if m:
+        return m.group(1)
     return None
 
 

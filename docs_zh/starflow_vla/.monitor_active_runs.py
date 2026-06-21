@@ -26,29 +26,85 @@ def get_tmux_train_text():
     return run("tmux capture-pane -pt train -S -2000 2>/dev/null", "")
 
 
-def find_run_id_from_tmux():
-    """Extract the run_id from the tmux `train` session text."""
-    text = get_tmux_train_text()
+def get_tmux_pane_pid(session_name="train"):
+    """Get the shell PID of the tmux session pane."""
+    return run(f"tmux list-panes -t {session_name} -F '#{{pane_pid}}' 2>/dev/null", "")
+
+
+def get_child_pids(pid):
+    """Return direct child PIDs of a given PID."""
+    children = []
+    for pid_str in os.listdir("/proc"):
+        if not pid_str.isdigit():
+            continue
+        try:
+            with open(f"/proc/{pid_str}/status", "rb") as f:
+                status = f.read().decode("utf-8", errors="ignore")
+            ppid_match = re.search(r"PPid:\s+(\d+)", status)
+            if ppid_match and ppid_match.group(1) == pid:
+                children.append(pid_str)
+        except Exception:
+            continue
+    return children
+
+
+def get_run_id_from_tmux_process(session_name="train"):
+    """
+    Find the train_starvla process running under the tmux session and return
+    its --run_id argument. This is more reliable than parsing tmux text because
+    it reads the actual process command line.
+    """
+    pane_pid = get_tmux_pane_pid(session_name)
+    if not pane_pid:
+        return None
+
+    queue = [pane_pid]
+    seen = {pane_pid}
+    while queue:
+        current = queue.pop(0)
+        try:
+            with open(f"/proc/{current}/cmdline", "rb") as f:
+                cmdline = f.read().replace(b"\x00", b" ").decode("utf-8", errors="ignore")
+        except Exception:
+            cmdline = ""
+
+        if "train_starvla" in cmdline:
+            m = re.search(r"--run_id\s+(\S+)", cmdline)
+            if m:
+                return m.group(1)
+
+        for child in get_child_pids(current):
+            if child not in seen:
+                seen.add(child)
+                queue.append(child)
+    return None
+
+
+def find_run_id_from_tmux_text(text):
+    """Extract the run_id from the tmux `train` session text (fallback)."""
     if not text:
         return None
-    # Look for --run_id in the command line, or RUN_ID= in env var form
-    m = re.search(r"--run_id\s+(\S+)", text)
-    if m:
-        return m.group(1)
-    m = re.search(r'RUN_ID=["\']?(\S+?)["\']?\s+\\\\?$', text, re.MULTILINE)
-    if m:
-        return m.group(1)
-    m = re.search(r"RUN_ID=(\S+)", text)
+    # Prefer the expanded RUN_ID= line printed by the run script (e.g. RUN_ID=P0-M6-...)
+    # This appears after the shell command that launched training.
+    m = re.search(r"^RUN_ID=([A-Za-z0-9_\.\-]+)$", text, re.MULTILINE)
     if m:
         return m.group(1)
     # Fallback: extract run_id from checkpoint paths shown in tmux output
-    m = re.search(
+    matches = re.findall(
         r"(?:/disk/rl/starVLA/playground/Checkpoints|/localdisk-tmp)/([^/\s]+)/checkpoints/steps_\d+",
         text,
     )
-    if m:
-        return m.group(1)
+    if matches:
+        return matches[-1]
     return None
+
+
+def find_run_id_from_tmux():
+    """Determine the run_id currently running in tmux `train`."""
+    run_id = get_run_id_from_tmux_process("train")
+    if run_id:
+        return run_id
+    return find_run_id_from_tmux_text(get_tmux_train_text())
 
 
 def get_run_id_base(run_id):

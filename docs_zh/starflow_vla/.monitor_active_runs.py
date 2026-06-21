@@ -31,8 +31,14 @@ def find_run_id_from_tmux():
     text = get_tmux_train_text()
     if not text:
         return None
-    # Look for --run_id in the command line shown in tmux
+    # Look for --run_id in the command line, or RUN_ID= in env var form
     m = re.search(r"--run_id\s+(\S+)", text)
+    if m:
+        return m.group(1)
+    m = re.search(r'RUN_ID=["\']?(\S+?)["\']?\s+\\\\?$', text, re.MULTILINE)
+    if m:
+        return m.group(1)
+    m = re.search(r"RUN_ID=(\S+)", text)
     if m:
         return m.group(1)
     return None

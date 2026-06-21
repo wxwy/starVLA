@@ -42,21 +42,25 @@
 | eval_interval | 250 |
 | local_checkpoint_root | `/root/temp` |
 
-## 最新监控状态（2026-06-21 12:45 CST）
+## 最新监控状态（2026-06-21 17:25 CST）
 
 | 字段 | 值 |
 | --- | --- |
-| 监控时间 | 2026-06-21 12:45 CST |
-| 训练状态 | ✅ 已 resume 并正常运行中 |
-| 当前步数 | **11250 / 80000** |
-| resume 源 checkpoint | `steps_11000`（DeepSpeed ZeRO-2 格式，单进程 world_size=1） |
-| 最新完整 checkpoint | `steps_11250` ✅（普通格式，已同步） |
+| 监控时间 | 2026-06-21 17:25 CST |
+| 训练状态 | ✅ 正常运行中 |
+| 当前步数 | **13248 / 80000**（17%） |
+| 最新完整 checkpoint | `steps_13250`（普通格式） |
+| 最新 Loss | `action_dit_loss: 0.1088`（Step 13240） |
 | 设备 | `NVIDIA A100-SXM4-80GB`（80 GB 显存） |
 | 计费 | 5.58 元/h |
-| GPU 利用率 | 训练中 |
-| GPU 显存 | 81920 MiB |
-| 训练速度 | 约 7.40 s/it（非 fused AdamW 模式） |
-| 备注 | 从 DeepSpeed checkpoint 降级恢复为普通单卡训练；`optimizer_rank_00000.pt` 中的 `base_optimizer_state` 已提取并 reshape 到普通 PyTorch optimizer state；DeepSpeed 特有状态（loss scaler、fp32 分区）已丢弃；`steps_11250` 为普通格式，下次 resume 可恢复 `fused=True` 高速模式 |
+| GPU 利用率 | 46%（本次采样偏低，训练仍在推进） |
+| GPU 显存 | 63,473 MiB / 81,920 MiB（77.5%） |
+| GPU 功耗 | 99.43 W / 400 W |
+| GPU 温度 | 49°C |
+| 训练速度 | 约 7.61–7.74 s/it |
+| 已运行时间 | 4 小时 8 分钟 |
+| 已产生成本 | **约 23.1 元** |
+| 备注 | 当前 session 为 `P0-M5-E-H2a-03...250619`，`is_resume=True`；从 `steps_11250` 普通 checkpoint 继续训练，optimizer 理论上已恢复 `fused=True` |
 
 ## 关键节点
 
@@ -68,6 +72,7 @@
 | 2026-06-19 22:12 | 5250 | `steps_5250` | 5 分钟步数未推进，GPU 86% |
 | 2026-06-20 07:58 | 7375 | `steps_7375` | overnight 正常推进，GPU 100% |
 | 2026-06-21 12:45 | 11250 | `steps_11250` | 从 DeepSpeed checkpoint resume，设备切换为 A100(80G)，训练参数变更，计费 5.58 元/h；新 checkpoint 为普通格式 |
+| 2026-06-21 17:25 | 13248 | `steps_13250` | 当前正常运行，17% 完成；GPU 利用率瞬时 46%，功耗 99W，训练仍在推进 |
 
 ## 注意事项
 

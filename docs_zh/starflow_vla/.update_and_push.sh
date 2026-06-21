@@ -22,6 +22,7 @@ git add "${MD_FILE}"
 git commit -m "docs(starflow_vla): update ${RUN_ID} training tracker at $(date '+%Y%m%d_%H%M%S')
 
 🤖 Generated with [Claude Code](https://claude.com/code)"
+git pull --rebase origin "$(git branch --show-current)"
 git push origin HEAD
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Push complete."

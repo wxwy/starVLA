@@ -228,19 +228,19 @@ RUN_ID="P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_260621_1421" 
 
 | 字段 | 值 |
 | --- | --- |
-| 监控时间 | 2026-06-21 16:46:50 CST |
+| 监控时间 | 2026-06-21 17:16:27 CST |
 | 训练状态 | 🟢 运行中 |
 | run_id | `P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_260621_1421` |
 | 活跃进程数 | 7 |
-| 已运行时间 | 2小时 25分钟 |
-| 当前步数 | **1205 / 80000** |
+| 已运行时间 | 2小时 54分钟 |
+| 当前步数 | **1452 / 80000** |
 | 完成比例 | 2.0% |
-| 训练速度 | ~7.18 s/it |
-| data_time | 0.001 s |
-| model_time | 1.794 s |
-| 最新完整 checkpoint | `steps_1000` |
+| 训练速度 | ~7.15 s/it |
+| data_time | 0.0 s |
+| model_time | 1.769 s |
+| 最新完整 checkpoint | `steps_1250` |
 | GPU | NVIDIA A100-SXM4-80GB |
 | GPU 利用率 | 100% |
 | 显存使用 | 60067 MiB / 81920 MiB (73.3%) |
-| 功耗 | 381.57 W / 400.00 W |
-| 温度 | 56°C |
+| 功耗 | 330.86 W / 400.00 W |
+| 温度 | 55°C |

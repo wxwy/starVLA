@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-自动发现并更新所有活跃 train_starvla 进程的训练记录 markdown。
-由 Claude Code 创建，每 30 分钟运行一次。
+自动从 tmux `train` 会话发现并更新训练记录 markdown。
+只监控 tmux session `train` 中的实验，不管其他活跃进程。
 """
 import os
 import re
@@ -21,34 +21,26 @@ def run(cmd, default=""):
         return default
 
 
-def find_active_runs():
-    """Discover active train_starvla processes and their run_ids."""
-    runs = {}
-    for pid_str in os.listdir("/proc"):
-        if not pid_str.isdigit():
-            continue
-        try:
-            with open(f"/proc/{pid_str}/cmdline", "rb") as f:
-                cmdline = f.read().replace(b"\x00", b" ").decode("utf-8", errors="ignore")
-        except Exception:
-            continue
-        if "train_starvla" not in cmdline or "--run_id" not in cmdline:
-            continue
-        m = re.search(r"--run_id\s+(\S+)", cmdline)
-        if not m:
-            continue
-        run_id = m.group(1)
-        if run_id not in runs:
-            runs[run_id] = []
-        runs[run_id].append(pid_str)
-    return runs
+def get_tmux_train_text():
+    """Capture the full text of the tmux `train` session pane."""
+    return run("tmux capture-pane -pt train -S -2000 2>/dev/null", "")
+
+
+def find_run_id_from_tmux():
+    """Extract the run_id from the tmux `train` session text."""
+    text = get_tmux_train_text()
+    if not text:
+        return None
+    # Look for --run_id in the command line shown in tmux
+    m = re.search(r"--run_id\s+(\S+)", text)
+    if m:
+        return m.group(1)
+    return None
 
 
 def get_run_id_base(run_id):
-    """Extract the experiment base id, e.g. P0-M7-E-H2a-01 from full run_id."""
+    """Extract the experiment base id, e.g. P0-M7-E-H2a-04 from full run_id."""
     parts = run_id.split("_")
-    # Full run_id looks like P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048
-    # Keep everything up to and including the experiment code segment.
     base_parts = []
     for p in parts:
         base_parts.append(p)
@@ -59,10 +51,8 @@ def get_run_id_base(run_id):
 
 def find_markdown(run_id):
     """Find the markdown tracker file for a run_id."""
-    # Exact match first
     for candidate in DOCS_DIR.glob(f"*{run_id}*.md"):
         return candidate
-    # Then by base experiment id
     base = get_run_id_base(run_id)
     for candidate in DOCS_DIR.glob(f"*{base}*.md"):
         return candidate
@@ -88,9 +78,9 @@ def get_latest_checkpoint(run_id):
     return cks[0]
 
 
-def parse_tmux_progress(session_name="train"):
-    """Parse the latest tqdm-style progress bar from a tmux session."""
-    text = run(f"tmux capture-pane -pt {session_name} -S -2000 2>/dev/null", "")
+def parse_tmux_progress():
+    """Parse the latest tqdm-style progress bar from tmux `train` session."""
+    text = get_tmux_train_text()
     pattern = (
         r"(\d+)%\|.*?\|\s*(\d+)/(\d+)\s*\[([\d:]+)<([\d:]+),\s*([\d.]+)s/it,\s*"
         r"data_times=([\d.]+),\s*model_times=([\d.]+)\]"
@@ -108,7 +98,6 @@ def parse_tmux_progress(session_name="train"):
             "data_time": float(m[6]),
             "model_time": float(m[7]),
         }
-    # Fallback looser match
     matches = re.findall(r"(\d+)/(\d+)\s*\[.*?([\d.]+)s/it", text)
     if matches:
         m = matches[-1]
@@ -121,6 +110,22 @@ def parse_tmux_progress(session_name="train"):
             "model_time": None,
         }
     return None
+
+
+def parse_step_loss_logs(text, max_entries=10):
+    """Parse the last ~10 Step loss lines from tmux text."""
+    pattern = r"Step\s+(\d+),\s+Loss:\s+\{([^}]+)\}"
+    matches = re.findall(pattern, text)
+    entries = []
+    for step_str, inner in matches[-max_entries:]:
+        try:
+            step = int(step_str)
+        except ValueError:
+            continue
+        loss_match = re.search(r"'action_dit_loss':\s*([\d.eE+-]+)", inner)
+        loss = float(loss_match.group(1)) if loss_match else None
+        entries.append((step, loss))
+    return entries
 
 
 def get_gpu_stats():
@@ -145,6 +150,44 @@ def get_gpu_stats():
     }
 
 
+def get_cpu_mem_stats():
+    text = run("free -h 2>/dev/null | head -2", "")
+    if not text:
+        return None
+    lines = text.strip().splitlines()
+    if len(lines) < 2:
+        return None
+    # Parse Mem line
+    parts = lines[1].split()
+    if len(parts) < 4:
+        return None
+    return {
+        "total": parts[1],
+        "used": parts[2],
+        "free": parts[3],
+    }
+
+
+def get_disk_stats():
+    text = run("df -h /disk/rl /localdisk-tmp 2>/dev/null", "")
+    if not text:
+        return None
+    lines = text.strip().splitlines()
+    result = {}
+    for line in lines[1:]:
+        parts = line.split()
+        if len(parts) < 6:
+            continue
+        mount = parts[5]
+        result[mount] = {
+            "size": parts[1],
+            "used": parts[2],
+            "avail": parts[3],
+            "use_pct": parts[4],
+        }
+    return result
+
+
 def format_runtime(seconds):
     if seconds < 60:
         return f"{int(seconds)}秒"
@@ -158,45 +201,30 @@ def format_runtime(seconds):
     return f"{days}天 {hours}小时 {minutes}分钟"
 
 
-def get_process_runtime(pids):
-    """Return the longest runtime among the given pids in seconds."""
-    max_seconds = 0
-    for pid in pids:
-        etime = run(f"ps -p {pid} -o etime=", "").strip()
-        if not etime:
-            continue
-        # etime formats: MM:SS, HH:MM:SS, DD-HH:MM:SS
-        try:
-            if "-" in etime:
-                days, rest = etime.split("-")
-                h, m, s = rest.split(":")
-                seconds = int(days) * 86400 + int(h) * 3600 + int(m) * 60 + int(s)
-            else:
-                parts = etime.split(":")
-                if len(parts) == 2:
-                    seconds = int(parts[0]) * 60 + int(parts[1])
-                elif len(parts) == 3:
-                    seconds = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-                else:
-                    continue
-            max_seconds = max(max_seconds, seconds)
-        except Exception:
-            continue
-    return max_seconds
+def parse_elapsed(elapsed_str):
+    """Parse elapsed time string like 1:23:45 or 23:45 into seconds."""
+    parts = elapsed_str.split(":")
+    try:
+        if len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        elif len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+        elif len(parts) == 1:
+            return int(parts[0])
+    except Exception:
+        pass
+    return 0
 
 
-def update_markdown(md_path, run_id, pids, prog, latest_ckpt, gpu):
+def update_markdown(md_path, run_id, prog, latest_ckpt, gpu, cpu_mem, disk):
     content = md_path.read_text(encoding="utf-8")
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S CST")
-    runtime_seconds = get_process_runtime(pids)
-    runtime_str = format_runtime(runtime_seconds) if runtime_seconds else "未知"
 
+    # Build automatic monitoring section
     rows = [
         f"| 监控时间 | {now} |",
-        f"| 训练状态 | 🟢 运行中 |",
+        f"| 训练状态 | 🟢 运行中（来自 tmux `train`） |",
         f"| run_id | `{run_id}` |",
-        f"| 活跃进程数 | {len(pids)} |",
-        f"| 已运行时间 | {runtime_str} |",
     ]
 
     if prog:
@@ -206,6 +234,8 @@ def update_markdown(md_path, run_id, pids, prog, latest_ckpt, gpu):
             f"| 训练速度 | ~{prog['sec_per_it']:.2f} s/it |",
             f"| data_time | {prog['data_time']} s |" if prog.get("data_time") is not None else "",
             f"| model_time | {prog['model_time']} s |" if prog.get("model_time") is not None else "",
+            f"| 已运行时间 | {prog['elapsed']} |",
+            f"| 预计剩余时间 | {prog['eta']} |",
         ])
     elif latest_ckpt:
         rows.append(f"| 当前步数 | {latest_ckpt[0]} / 80000（来自最新 checkpoint） |")
@@ -226,7 +256,36 @@ def update_markdown(md_path, run_id, pids, prog, latest_ckpt, gpu):
             f"| 温度 | {gpu['temp']}°C |",
         ])
 
-    # Remove empty strings
+    if cpu_mem:
+        rows.extend([
+            f"| 内存总量 | {cpu_mem['total']} |",
+            f"| 内存已用 | {cpu_mem['used']} |",
+            f"| 内存空闲 | {cpu_mem['free']} |",
+        ])
+
+    if disk:
+        for mount in ["/disk/rl", "/localdisk-tmp"]:
+            info = disk.get(mount)
+            if info:
+                rows.append(
+                    f"| 存储 `{mount}` | {info['used']} / {info['size']} ({info['use_pct']} 已用) |"
+                )
+
+    # Cost estimate
+    if prog:
+        sec_per_it = prog.get("sec_per_it", 0)
+        if sec_per_it:
+            cost_per_step = 5.58 / 3600 * sec_per_it
+            elapsed_sec = parse_elapsed(prog.get("elapsed", "0"))
+            elapsed_cost = 5.58 / 3600 * elapsed_sec
+            total_sec_est = sec_per_it * prog["total_steps"]
+            total_cost_est = 5.58 / 3600 * total_sec_est
+            rows.extend([
+                f"| 每 step 成本 | ~{cost_per_step:.4f} 元 |",
+                f"| 已产生成本 | ~{elapsed_cost:.2f} 元 |",
+                f"| 完整训练预估成本 | ~{total_cost_est:.2f} 元 |",
+            ])
+
     rows = [r for r in rows if r]
 
     section_header = "## 自动监控状态"
@@ -234,7 +293,6 @@ def update_markdown(md_path, run_id, pids, prog, latest_ckpt, gpu):
     new_section = f"{section_header}\n\n{section_body}\n"
 
     if section_header in content:
-        # Replace existing section (up to next ## or end of file)
         content = re.sub(
             rf"{re.escape(section_header)}\n.*?(?=\n## |\Z)",
             new_section.rstrip(),
@@ -250,22 +308,29 @@ def update_markdown(md_path, run_id, pids, prog, latest_ckpt, gpu):
 
 
 def main():
-    active_runs = find_active_runs()
-    if not active_runs:
-        print("No active train_starvla processes found.")
+    tmux_text = get_tmux_train_text()
+    if not tmux_text:
+        print("tmux session `train` not found or empty.")
         return
 
-    print(f"Active runs: {list(active_runs.keys())}")
-    prog = parse_tmux_progress("train")
-    gpu = get_gpu_stats()
+    run_id = find_run_id_from_tmux()
+    if not run_id:
+        print("No --run_id found in tmux `train` session.")
+        return
 
-    for run_id, pids in active_runs.items():
-        md_path = find_markdown(run_id)
-        if not md_path:
-            print(f"No markdown tracker found for {run_id}, skipping.")
-            continue
-        latest_ckpt = get_latest_checkpoint(run_id)
-        update_markdown(md_path, run_id, pids, prog, latest_ckpt, gpu)
+    print(f"Monitoring tmux `train` run: {run_id}")
+    prog = parse_tmux_progress()
+    latest_ckpt = get_latest_checkpoint(run_id)
+    gpu = get_gpu_stats()
+    cpu_mem = get_cpu_mem_stats()
+    disk = get_disk_stats()
+
+    md_path = find_markdown(run_id)
+    if not md_path:
+        print(f"No markdown tracker found for {run_id}, skipping.")
+        return
+
+    update_markdown(md_path, run_id, prog, latest_ckpt, gpu, cpu_mem, disk)
 
 
 if __name__ == "__main__":

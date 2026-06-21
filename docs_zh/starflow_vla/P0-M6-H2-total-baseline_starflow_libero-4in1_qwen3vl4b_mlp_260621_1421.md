@@ -222,3 +222,24 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 ---
 
 *本文档将持续更新。*
+
+## 自动监控状态
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-21 15:16:45 CST |
+| 训练状态 | 🟢 运行中 |
+| run_id | `P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_260621_1421` |
+| 活跃进程数 | 7 |
+| 已运行时间 | 55分钟 4秒 |
+| 当前步数 | **454 / 80000** |
+| 完成比例 | 1.0% |
+| 训练速度 | ~7.12 s/it |
+| data_time | 0.001 s |
+| model_time | 1.773 s |
+| 最新完整 checkpoint | `steps_250` |
+| GPU | NVIDIA A100-SXM4-80GB |
+| GPU 利用率 | 99% |
+| 显存使用 | 60067 MiB / 81920 MiB (73.3%) |
+| 功耗 | 355.46 W / 400.00 W |
+| 温度 | 56°C |

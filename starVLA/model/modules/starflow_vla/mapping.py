@@ -47,6 +47,7 @@ def build_starflow_mapping(
     num_inference_timesteps = _get_config_value(
         config, ("framework", "action_model", "num_inference_timesteps"), 4
     )
+    state_mode = _get_config_value(config, ("framework", "state_mode"), "discretized_instruction")
     version_id = _get_config_value(config, ("version_id",), None)
 
     return {
@@ -55,7 +56,9 @@ def build_starflow_mapping(
         "implementation_mode": "starvla_native",
         "base_framework": "QwenPI_v3",
         "action_head": _to_jsonable(action_model_type),
-        "state_mode": "discretized_instruction",
+        "state_mode": _to_jsonable(state_mode),
+        "state_enters_instruction": state_mode == "discretized_instruction",
+        "state_enters_action_head": state_mode == "continuous_head",
         "adapter_mode": "future_token_cross_dit",
         "flow_condition_runtime": False,
         "perceiver_enabled": False,

@@ -284,11 +284,7 @@ class Qwen_PI_v3(baseframework):
             [example["state"] for example in examples] if "state" in examples[0] else None
         )  # List[ndarray (1, state_dim)] or None
 
-        # Prepend discretised proprioceptive state to each instruction string.
-        instructions = (
-            self.add_discretized_state_to_instruction(instructions, state) if state is not None else instructions
-        )
-        state = None  # state is now encoded in the instruction tokens
+        instructions, state = self._prepare_state_condition(instructions, state)
 
         # Step 1: encode through QwenVL
         vl_embs_list, backbone_attention_mask = self._encode_vl_hidden_states(batch_images, instructions)
@@ -359,11 +355,7 @@ class Qwen_PI_v3(baseframework):
         instructions = [example["lang"] for example in examples]  # List[str]
         state = [example["state"] for example in examples] if "state" in examples[0] else None  # List[ndarray] or None
 
-        # Encode proprioceptive state into the instruction string, then discard raw state.
-        instructions = (
-            self.add_discretized_state_to_instruction(instructions, state) if state is not None else instructions
-        )
-        state = None
+        instructions, state = self._prepare_state_condition(instructions, state)
 
         # Optionally resize images to the resolution used during training.
         train_obs_image_size = getattr(self.config.datasets.vla_data, "obs_image_size", None)
@@ -389,6 +381,17 @@ class Qwen_PI_v3(baseframework):
 
         normalized_actions = pred_actions.detach().cpu().numpy()
         return {"normalized_actions": normalized_actions}
+
+    def _prepare_state_condition(
+        self,
+        instructions: List[str],
+        state: Optional[List[np.ndarray]],
+    ) -> Tuple[List[str], Optional[List[np.ndarray]]]:
+        """Default QwenPI_v3 state path: encode state into instruction tokens."""
+        if state is None:
+            return instructions, None
+        instructions = self.add_discretized_state_to_instruction(instructions, state)
+        return instructions, None
 
     def state2str_transform(self, state: np.ndarray) -> str:
         """Quantise a state vector into 256 uniform bins and return it as a space-separated token string.

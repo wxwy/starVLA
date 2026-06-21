@@ -5,23 +5,36 @@ from types import SimpleNamespace
 from unittest import mock
 
 import numpy as np
+import torch
 
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.model.framework.VLM4A.QwenPI_v3 import Qwen_PI_v3
 from starVLA.model.framework.VLM4A.StarFlowVLA import StarFlowVLA
 
 
-def _minimal_config() -> SimpleNamespace:
+class _CaptureActionModel:
+    def __init__(self):
+        self.captured_state = None
+
+    def __call__(self, vl_embs_list, actions, state, encoder_attention_mask=None):
+        self.captured_state = state
+        return torch.tensor(0.0)
+
+
+def _minimal_config(state_mode=None) -> SimpleNamespace:
+    framework = SimpleNamespace(
+        name="StarFlowVLA",
+        action_model=SimpleNamespace(
+            action_model_type="LayerwiseFM",
+            num_target_vision_tokens=32,
+            num_inference_timesteps=4,
+        ),
+    )
+    if state_mode is not None:
+        framework.state_mode = state_mode
     return SimpleNamespace(
         version_id="0.21",
-        framework=SimpleNamespace(
-            name="StarFlowVLA",
-            action_model=SimpleNamespace(
-                action_model_type="LayerwiseFM",
-                num_target_vision_tokens=32,
-                num_inference_timesteps=4,
-            ),
-        ),
+        framework=framework,
     )
 
 
@@ -59,6 +72,83 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertTrue(updated[0].endswith(" [ACTION]"))
         self.assertEqual(len(updated[0].split("[STATE] ")[1].split(" [ACTION]")[0].split()), 7)
 
+    def test_default_state_mode_keeps_discretized_instruction_path(self):
+        model = object.__new__(StarFlowVLA)
+        model.config = _minimal_config()
+        instructions = ["open the drawer"]
+        states = [np.array([[0.0, 0.5, -0.5, 1.0, -1.0, 0.25, -0.25]], dtype=np.float32)]
+
+        updated_instructions, action_head_state = model._prepare_state_condition(instructions, states)
+
+        self.assertTrue(updated_instructions[0].startswith("open the drawer [STATE] "))
+        self.assertTrue(updated_instructions[0].endswith(" [ACTION]"))
+        self.assertIsNone(action_head_state)
+
+    def test_continuous_head_state_mode_preserves_raw_state(self):
+        model = object.__new__(StarFlowVLA)
+        model.config = _minimal_config(state_mode="continuous_head")
+        instructions = ["open the drawer"]
+        states = [np.array([[0.0, 0.5, -0.5, 1.0, -1.0, 0.25, -0.25]], dtype=np.float32)]
+
+        updated_instructions, action_head_state = model._prepare_state_condition(instructions, states)
+
+        self.assertEqual(updated_instructions, instructions)
+        self.assertIs(action_head_state, states)
+
+    def test_continuous_head_forward_passes_state_to_action_head(self):
+        model = object.__new__(StarFlowVLA)
+        model.config = _minimal_config(state_mode="continuous_head")
+        model.config.trainer = {"repeated_diffusion_steps": 2}
+        model.action_horizon = 8
+        action_model = _CaptureActionModel()
+        model.action_model = action_model
+        model._encode_vl_hidden_states = lambda images, instructions: ([torch.zeros(1, 1, 1)], None)
+        examples = [
+            {
+                "image": [],
+                "lang": "open the drawer",
+                "action": np.zeros((8, 7), dtype=np.float32),
+                "state": np.zeros((1, 8), dtype=np.float32),
+            }
+        ]
+
+        output = model.forward(examples)
+
+        self.assertIn("action_loss", output)
+        self.assertIsNotNone(action_model.captured_state)
+        self.assertEqual(tuple(action_model.captured_state.shape), (2, 1, 8))
+
+    def test_default_forward_does_not_pass_state_to_action_head(self):
+        model = object.__new__(StarFlowVLA)
+        model.config = _minimal_config()
+        model.config.trainer = {"repeated_diffusion_steps": 2}
+        model.action_horizon = 8
+        action_model = _CaptureActionModel()
+        model.action_model = action_model
+        model._encode_vl_hidden_states = lambda images, instructions: ([torch.zeros(1, 1, 1)], None)
+        examples = [
+            {
+                "image": [],
+                "lang": "open the drawer",
+                "action": np.zeros((8, 7), dtype=np.float32),
+                "state": np.zeros((1, 8), dtype=np.float32),
+            }
+        ]
+
+        output = model.forward(examples)
+
+        self.assertIn("action_loss", output)
+        self.assertIsNone(action_model.captured_state)
+
+    def test_unsupported_state_mode_fails_fast(self):
+        model = object.__new__(StarFlowVLA)
+        model.config = _minimal_config(state_mode="hybrid_gated")
+        instructions = ["open the drawer"]
+        states = [np.array([[0.0, 0.5, -0.5, 1.0, -1.0, 0.25, -0.25]], dtype=np.float32)]
+
+        with self.assertRaisesRegex(ValueError, "Unsupported StarFlowVLA state_mode"):
+            model._prepare_state_condition(instructions, states)
+
     def test_mapping_method_is_json_ready(self):
         model = object.__new__(StarFlowVLA)
         model.config = _minimal_config()
@@ -68,8 +158,21 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertEqual(mapping["framework_name"], "StarFlowVLA")
         self.assertEqual(mapping["base_framework"], "QwenPI_v3")
         self.assertEqual(mapping["action_head"], "LayerwiseFM")
+        self.assertEqual(mapping["state_mode"], "discretized_instruction")
+        self.assertTrue(mapping["state_enters_instruction"])
+        self.assertFalse(mapping["state_enters_action_head"])
         self.assertFalse(mapping["flow_condition_runtime"])
         self.assertFalse(mapping["perceiver_enabled"])
+
+    def test_continuous_head_mapping_is_json_ready(self):
+        model = object.__new__(StarFlowVLA)
+        model.config = _minimal_config(state_mode="continuous_head")
+
+        mapping = model.describe_starflow_mapping()
+
+        self.assertEqual(mapping["state_mode"], "continuous_head")
+        self.assertFalse(mapping["state_enters_instruction"])
+        self.assertTrue(mapping["state_enters_action_head"])
 
 
 if __name__ == "__main__":

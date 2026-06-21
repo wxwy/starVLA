@@ -1,5 +1,33 @@
 # Session Log
 
+## 2026-06-21 — P1 continuous_head build / forward-backward / 10-step smoke
+
+| 字段 | 值 |
+| --- | --- |
+| 配置 | `configs/starflow_vla/state/continuous_head.yaml` |
+| run_id | `P1-M1-E-H2b-02_continuous_head_10step_smoke_260621_1849` |
+| 数据 | `libero_goal`，真实 LIBERO batch，batch size 1 |
+| build | 通过；`StarFlowVLA` + `LayerwiseFM`，`num_target_vision_tokens=32`，action head `state_encoder` 存在 |
+| single-batch forward/backward | 通过；action `(8, 7)`，state `(1, 8)`；loss `1.6213243` finite；捕获到 action head 收到 state shape `(1, 1, 8)`；668 个可训练参数张量获得 finite grad |
+| 10-step smoke | 通过；最终 step 10 `action_dit_loss=1.1300001`，`mse_score=0.1388952` |
+| checkpoint | `playground/Checkpoints/P1-M1-E-H2b-02_continuous_head_10step_smoke_260621_1849/checkpoints/steps_10` |
+| final model | `playground/Checkpoints/P1-M1-E-H2b-02_continuous_head_10step_smoke_260621_1849/final_model` |
+| manifest | `state_mode=continuous_head`，`state_enters_instruction=false`，`state_enters_action_head=true`，`num_target_vision_tokens=32` |
+| W&B | offline run written under the run directory |
+| 下一步 | 可进入 `E-H2b-02-4in1` 正式训练；正式训练需覆盖 `DATA_MIX=libero_all` 并沿用 P0 主线 batch/step/保存策略 |
+
+## 2026-06-21 — P1 continuous_head runtime 最小实现
+
+| 字段 | 值 |
+| --- | --- |
+| 任务 | 实现 `state_mode=continuous_head` 的 StarFlowVLA runtime 分流 |
+| 状态 | 已完成最小代码改动与单元测试 |
+| 关键改动 | `QwenPI_v3` 抽出 `_prepare_state_condition()` 默认 hook；`StarFlowVLA` 按 `framework.state_mode` 选择 `discretized_instruction` / `continuous_head` / `none`；`hybrid_gated` 当前显式报错，避免误跑 P2 |
+| manifest | `starflow_mapping` 现在读取真实 `state_mode`，并记录 `state_enters_instruction` 与 `state_enters_action_head` |
+| 已通过测试 | `/opt/conda/envs/starVLA/bin/python -m unittest tests.test_starflow_vla_reuse -v`；`/opt/conda/envs/starVLA/bin/python -m unittest tests.test_starflow_checkpoint_mapping -v` |
+| 未通过/非本次引入 | `tests.test_starflow_future_token_variants` 仍期待 `[0, 8, 16, 32, 64]`，但当前配置为 `[0, 16, 32, 64]`；`tests.test_starflow_docs_governance` 依赖的 `playground/Checkpoints/starflow_vla_stage1_qwenpi_v3_native/checkpoints/steps_1/starflow_mapping.json` 当前不存在 |
+| 下一步 | 跑 `continuous_head.yaml` 的 build / single-batch forward-backward / 10-step smoke，再启动 `E-H2b-02-4in1` 正式训练 |
+
 ## 2026-06-20 — StarFlow Train 会话状态（08:07 CST）
 
 | 字段 | 值 |

@@ -17,6 +17,7 @@ git commit -m "docs(starflow_vla): auto-update training tracker at $(date '+%Y-%
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
-# Pull remote changes to avoid push rejection, then push.
-git pull --rebase origin merge-official-starvla-dev || true
+# Pull remote changes to avoid push rejection. --autostash handles any unrelated
+# local modifications (e.g. config YAML edits) without committing them.
+git pull --rebase --autostash origin merge-official-starvla-dev || true
 git push origin merge-official-starvla-dev

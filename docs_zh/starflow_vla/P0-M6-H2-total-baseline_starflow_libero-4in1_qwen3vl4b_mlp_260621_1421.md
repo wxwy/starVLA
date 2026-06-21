@@ -208,6 +208,8 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 - 本实验作为 H2 总 baseline，与 `future_tokens + cross-DiT` 主路线对照。
 - CLI 启动时覆盖了 `framework.name=StarFlowVLA`，action head 仍为 MLP。
 - 训练从 scratch 开始，无预训练 checkpoint。
+- **本实验已在 step 250 停止**，tmux 会话 `train` 当前已被用于运行 `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260620_1652`。
+- 如需继续本实验，需从 `steps_250` resume 并重新占用 tmux 会话或新建会话。
 
 ---
 

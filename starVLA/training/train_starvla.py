@@ -1175,6 +1175,11 @@ class VLATrainer(TrainerUtils):
                 self.optimizer.load_state_dict(plain_optimizer_state)
             else:
                 self.optimizer.load_state_dict(optimizer_state)
+                # The underlying AdamW was created with fused=True. Old checkpoints
+                # saved during fused=False runs should not keep it disabled forever;
+                # restore fused=True for plain (non-DeepSpeed) checkpoints.
+                for group in self.optimizer.param_groups:
+                    group["fused"] = True
             del optimizer_state
         logger.info(f"[1/{total_stages}] lightweight optimizer 状态加载完成")
 

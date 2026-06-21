@@ -1176,9 +1176,16 @@ class VLATrainer(TrainerUtils):
             else:
                 self.optimizer.load_state_dict(optimizer_state)
                 # The underlying AdamW was created with fused=True. Old checkpoints
-                # saved during fused=False runs should not keep it disabled forever;
-                # restore fused=True for plain (non-DeepSpeed) checkpoints.
+                # saved during fused=False runs persist fused=False in param_groups.
+                # For plain (non-DeepSpeed) checkpoints, move optimizer state tensors
+                # to the same device as their parameters and restore fused=True.
                 for group in self.optimizer.param_groups:
+                    for p in group["params"]:
+                        if p in self.optimizer.state:
+                            state = self.optimizer.state[p]
+                            for key in ("exp_avg", "exp_avg_sq", "step"):
+                                if key in state and isinstance(state[key], torch.Tensor):
+                                    state[key] = state[key].to(p.device, dtype=p.dtype)
                     group["fused"] = True
             del optimizer_state
         logger.info(f"[1/{total_stages}] lightweight optimizer 状态加载完成")

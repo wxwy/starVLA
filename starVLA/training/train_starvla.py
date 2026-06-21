@@ -83,7 +83,14 @@ from starVLA.training.trainer_utils.trainer_tools import (
 )
 
 _num_processes = int(os.environ.get("NUM_PROCESSES", "1"))
-deepspeed_plugin = DeepSpeedPlugin() if _num_processes > 1 else None
+# When launched via `accelerate launch --config_file deepspeed_*.yaml`, Accelerate
+# sets ACCELERATE_USE_DEEPSPEED / ACCELERATE_DEEPSPEED_CONFIG_FILE and will create
+# the DeepSpeed plugin itself. In that case we must not override it with None.
+_use_accelerate_deepspeed = (
+    os.environ.get("ACCELERATE_USE_DEEPSPEED", "").lower() in ("true", "1")
+    or os.environ.get("ACCELERATE_DEEPSPEED_CONFIG_FILE", "") != ""
+)
+deepspeed_plugin = DeepSpeedPlugin() if (_num_processes > 1 and not _use_accelerate_deepspeed) else None
 gradient_accumulation_plugin = GradientAccumulationPlugin(
     num_steps=int(os.environ.get("ACCELERATE_GRADIENT_ACCUMULATION_STEPS", "1")),
     sync_each_batch=True,
@@ -715,6 +722,99 @@ def setup_optimizer_and_scheduler(model, cfg) -> Tuple[torch.optim.Optimizer, to
     return optimizer, lr_scheduler
 
 
+def _convert_deepspeed_optimizer_state_to_plain(optimizer_state, target_optimizer, model):
+    """
+    Convert a DeepSpeed ZeRO optimizer state dict (with flattened per-group params)
+    into a standard PyTorch optimizer state dict matching ``target_optimizer``.
+
+    DeepSpeed stores one flat ``exp_avg`` / ``exp_avg_sq`` tensor per parameter
+    group and records the slice position of every original parameter in
+    ``param_slice_mappings``. This function slices those flat tensors back into
+    per-parameter states so the checkpoint can be resumed without DeepSpeed.
+    """
+    base_state = optimizer_state.get("base_optimizer_state")
+    param_slice_mappings = optimizer_state.get("param_slice_mappings", [])
+    if not isinstance(base_state, dict) or "param_groups" not in base_state or "state" not in base_state:
+        raise RuntimeError("Invalid DeepSpeed optimizer state: missing base_optimizer_state.")
+
+    # Build a name -> param map for all trainable parameters in the model.
+    name_to_param = {}
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            name_to_param[name] = param
+
+    # Build a lookup from group name to target group.
+    target_groups_by_name = {}
+    for group in target_optimizer.param_groups:
+        group_name = group.get("name")
+        if group_name is None:
+            raise RuntimeError("Target optimizer param group is missing the 'name' key required for DeepSpeed conversion.")
+        if group_name in target_groups_by_name:
+            raise RuntimeError(f"Duplicate target optimizer group name: {group_name}")
+        target_groups_by_name[group_name] = group
+
+    new_state = {}
+    new_param_groups = []
+
+    for ds_group_idx, ds_group in enumerate(base_state["param_groups"]):
+        ds_group_name = ds_group.get("name", f"group_{ds_group_idx}")
+        if ds_group_name not in target_groups_by_name:
+            raise RuntimeError(
+                f"DeepSpeed optimizer group '{ds_group_name}' not found in target optimizer. "
+                f"Available groups: {list(target_groups_by_name.keys())}"
+            )
+        target_group = target_groups_by_name[ds_group_name]
+
+        ds_group_state = base_state["state"][ds_group_idx]
+        ds_exp_avg = ds_group_state["exp_avg"]
+        ds_exp_avg_sq = ds_group_state["exp_avg_sq"]
+        ds_step = ds_group_state["step"]
+
+        slice_mapping = param_slice_mappings[ds_group_idx] if ds_group_idx < len(param_slice_mappings) else {}
+
+        # Reconstruct per-parameter states for every parameter in the target group.
+        for param in target_group["params"]:
+            param_name = None
+            for name, p in name_to_param.items():
+                if p is param:
+                    param_name = name
+                    break
+            if param_name is None:
+                raise RuntimeError(
+                    "A parameter in the target optimizer could not be matched to any named trainable model parameter."
+                )
+            if param_name not in slice_mapping:
+                raise RuntimeError(
+                    f"Parameter '{param_name}' not found in DeepSpeed param_slice_mappings for group '{ds_group_name}'."
+                )
+            fragment = slice_mapping[param_name]
+            start = int(fragment.start)
+            numel = int(fragment.numel)
+            if numel != param.numel():
+                raise RuntimeError(
+                    f"Parameter '{param_name}' numel mismatch: checkpoint slice has {numel}, "
+                    f"but model parameter has {param.numel()}."
+                )
+            new_state[id(param)] = {
+                "step": ds_step,
+                "exp_avg": ds_exp_avg[start : start + numel].view_as(param).clone(),
+                "exp_avg_sq": ds_exp_avg_sq[start : start + numel].view_as(param).clone(),
+            }
+            # Ensure state tensors live on the same device/dtype as the target parameter.
+            for key in ("exp_avg", "exp_avg_sq"):
+                new_state[id(param)][key] = new_state[id(param)][key].to(param.device, dtype=param.dtype)
+
+        # Reconstruct the param group with current parameter ids but preserved hyperparameters.
+        # Force fused=False because the converted state does not satisfy the strict requirements
+        # of the fused AdamW kernel (contiguity / dtype / device checks can fail across params).
+        new_group = {k: v for k, v in ds_group.items() if k != "params"}
+        new_group["params"] = [id(p) for p in target_group["params"]]
+        new_group["fused"] = False
+        new_param_groups.append(new_group)
+
+    return {"state": new_state, "param_groups": new_param_groups}
+
+
 class VLATrainer(TrainerUtils):
     def __init__(self, cfg, model, vla_train_dataloader, optimizer, lr_scheduler, accelerator):
         self.config = cfg
@@ -1039,6 +1139,10 @@ class VLATrainer(TrainerUtils):
                 weights_only=False,
                 mmap=True,
             )
+            is_deepspeed_optimizer_state = (
+                isinstance(optimizer_state, dict)
+                and ("base_optimizer_state" in optimizer_state or "zero_stage" in optimizer_state or "ds_version" in optimizer_state)
+            )
             if self.accelerator.distributed_type == DistributedType.DEEPSPEED and hasattr(self.optimizer, "optimizer"):
                 world_size = self.accelerator.num_processes
                 state_dict_list = [None] * world_size
@@ -1048,6 +1152,27 @@ class VLATrainer(TrainerUtils):
                     load_optimizer_states=True,
                     load_from_fp32_weights=False,
                 )
+            elif is_deepspeed_optimizer_state:
+                # Fallback: load the underlying PyTorch optimizer state from a DeepSpeed
+                # checkpoint even though the current run is not using DeepSpeed.
+                # This preserves momentum/variance and param_groups so that a run originally
+                # trained with DeepSpeed can be resumed on a single GPU without DeepSpeed.
+                logger.warning(
+                    f"Checkpoint optimizer state at {optimizer_state_path} was saved under DeepSpeed, "
+                    f"but the current distributed_type is {self.accelerator.distributed_type}. "
+                    f"Extracting base_optimizer_state and loading it without DeepSpeed. "
+                    f"DeepSpeed-specific states (loss scaler, fp32 partitions) will be discarded."
+                )
+                base_optimizer_state = optimizer_state.get("base_optimizer_state")
+                if not isinstance(base_optimizer_state, dict) or "param_groups" not in base_optimizer_state:
+                    raise RuntimeError(
+                        f"Cannot downgrade-load DeepSpeed optimizer state: missing base_optimizer_state "
+                        f"or param_groups in {optimizer_state_path}."
+                    )
+                plain_optimizer_state = _convert_deepspeed_optimizer_state_to_plain(
+                    optimizer_state, self.optimizer, self.model
+                )
+                self.optimizer.load_state_dict(plain_optimizer_state)
             else:
                 self.optimizer.load_state_dict(optimizer_state)
             del optimizer_state

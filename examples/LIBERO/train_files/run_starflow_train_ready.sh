@@ -89,6 +89,10 @@ if [[ "${ENABLE_LOCAL_CHECKPOINT_STAGING}" == "True" || "${ENABLE_LOCAL_CHECKPOI
     mkdir -p "${LOCAL_CHECKPOINT_ROOT}"
 fi
 
+# Allow users to force accelerate + DeepSpeed launch even with a single process.
+# This is useful when resuming a DeepSpeed checkpoint and you want to stay in DeepSpeed.
+FORCE_DEEPSPEED=${FORCE_DEEPSPEED:-false}
+
 echo "=== StarFlow Train Ready ==="
 echo "STARVLA_DIR=${STARVLA_DIR}"
 echo "RUN_ROOT_DIR=${RUN_ROOT_DIR}"
@@ -112,6 +116,7 @@ echo "ENABLE_LOCAL_CHECKPOINT_STAGING=${ENABLE_LOCAL_CHECKPOINT_STAGING}"
 echo "LOCAL_CHECKPOINT_ROOT=${LOCAL_CHECKPOINT_ROOT}"
 echo "LOCAL_CHECKPOINT_KEEP_COUNT=${LOCAL_CHECKPOINT_KEEP_COUNT}"
 echo "IS_RESUME=${IS_RESUME}"
+echo "FORCE_DEEPSPEED=${FORCE_DEEPSPEED}"
 if [[ "$#" -gt 0 ]]; then
     echo "EXTRA_ARGS=$*"
 fi
@@ -148,7 +153,7 @@ TRAIN_ARGS=(
     "$@"
 )
 
-if [[ "${NUM_PROCESSES}" -gt 1 ]]; then
+if [[ "${NUM_PROCESSES}" -gt 1 || "${FORCE_DEEPSPEED}" == "true" ]]; then
     accelerate launch \
         --config_file "${DEEPSPEED_CONFIG}" \
         --num_processes "${NUM_PROCESSES}" \

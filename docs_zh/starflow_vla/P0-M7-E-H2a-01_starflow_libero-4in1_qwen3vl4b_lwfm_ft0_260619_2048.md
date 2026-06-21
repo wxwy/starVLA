@@ -162,3 +162,24 @@ tmux attach -t train
 - 会话记录：`/gemini/code/starVLA/SESSION.md`
 - 训练输出：`/gemini/code/starVLA/playground/Checkpoints/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048/`
 - 启动脚本：`examples/LIBERO/train_files/run_starflow_train_ready.sh`
+
+## 自动监控状态
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-21 14:45:21 CST |
+| 训练状态 | 🟢 运行中 |
+| run_id | `P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048` |
+| 活跃进程数 | 4 |
+| 已运行时间 | 2小时 0分钟 |
+| 当前步数 | **9299 / 80000** |
+| 完成比例 | 12.0% |
+| 训练速度 | ~5.09 s/it |
+| data_time | 0.0 s |
+| model_time | 1.261 s |
+| 最新完整 checkpoint | `steps_9250` |
+| GPU | NVIDIA A100-SXM4-80GB |
+| GPU 利用率 | 100% |
+| 显存使用 | 48939 MiB / 81920 MiB (59.7%) |
+| 功耗 | 104.89 W / 400.00 W |
+| 温度 | 52°C |

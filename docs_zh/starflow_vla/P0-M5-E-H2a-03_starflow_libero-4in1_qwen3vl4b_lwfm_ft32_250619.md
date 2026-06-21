@@ -42,25 +42,21 @@
 | eval_interval | 250 |
 | local_checkpoint_root | `/root/temp` |
 
-## 最新监控状态（2026-06-21 20:12 CST）
+## 最新监控状态（2026-06-21 20:42 CST）
 
 | 字段 | 值 |
 | --- | --- |
-| 监控时间 | 2026-06-21 20:12 CST |
-| 训练状态 | ✅ 正常运行中 |
-| 当前步数 | **14566 / 80000**（18%） |
-| 最新完整 checkpoint | `steps_14625`（普通格式） |
-| 最新 Loss | `action_dit_loss: 0.1041`（Step 14560） |
+| 监控时间 | 2026-06-21 20:42 CST |
+| 训练状态 | ❌ 已 crash（resume 时 fused AdamW device mismatch） |
+| 当前步数 | 启动后 resume 到 **14750 / 80000**，第一步优化时 crash |
+| 最新完整 checkpoint | `steps_14750`（resume 源） |
 | 设备 | `NVIDIA A100-SXM4-80GB`（80 GB 显存） |
 | 计费 | 5.58 元/h |
-| GPU 利用率 | 100% |
-| GPU 显存 | 63,473 MiB / 81,920 MiB（77.5%） |
-| GPU 功耗 | 385.10 W / 400 W |
-| GPU 温度 | 61°C |
-| 训练速度 | 约 7.44–9.34 s/it（有波动） |
-| 已运行时间 | 6 小时 55 分钟 |
-| 已产生成本 | **约 38.6 元** |
-| 备注 | 当前 session 为 `P0-M5-E-H2a-03...250619`，`is_resume=True`；GPU 利用率恢复 100%，温度略升至 61°C |
+| GPU 利用率 | 0%（进程已退出） |
+| GPU 显存 | 1 MiB / 81,920 MiB |
+| GPU 功耗 | 59.60 W / 400 W |
+| GPU 温度 | 28°C |
+| 备注 | 尝试从 `steps_14750` 恢复 `fused=True`，但 checkpoint 里 `state_steps` 仍在 CPU，直接启用 fused 导致 device mismatch；代码已修正，需用最新代码重新 resume |
 
 ## 关键节点
 
@@ -79,6 +75,7 @@
 | 2026-06-21 19:12 | 14095 | `steps_14125` | 推进到 18%，GPU 利用率瞬时 59%，功耗 363W，Loss 0.0843 |
 | 2026-06-21 19:42 | 14336 | `steps_14375` | 持续推进，GPU 利用率瞬时 41%，功耗读数 451W，Loss 0.1017 |
 | 2026-06-21 20:12 | 14566 | `steps_14625` | GPU 利用率恢复 100%，功耗 385W，温度 61°C，速度波动 7.44–9.34 s/it |
+| 2026-06-21 20:42 | 14750 | `steps_14750` | 尝试 resume 恢复 fused=True，因 `state_steps` 在 CPU 导致 device mismatch crash；代码已修正，待重新启动 |
 
 ## 注意事项
 

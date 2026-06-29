@@ -1,14 +1,10 @@
 import json
 import os
-from accelerate.logging import get_logger
+import logging
 import numpy as np
-from torch.utils.data import DataLoader
-import numpy as np
-import torch.distributed as dist
 from pathlib import Path
-from starVLA.dataloader.vlm_datasets import make_vlm_dataloader
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 def save_dataset_statistics(dataset_statistics, run_dir):
     """Saves a `dataset_statistics.json` file."""
@@ -36,6 +32,8 @@ def save_dataset_statistics(dataset_statistics, run_dir):
 def build_dataloader(cfg, dataset_py="lerobot_datasets_oxe"): # TODO now here only is get dataset, we need mv dataloader to here
 
     if dataset_py == "lerobot_datasets":
+        from torch.utils.data import DataLoader
+        import torch.distributed as dist
         from starVLA.dataloader.lerobot_datasets import get_vla_dataset, collate_fn
         vla_dataset_cfg = cfg.datasets.vla_data
 
@@ -67,6 +65,7 @@ def build_dataloader(cfg, dataset_py="lerobot_datasets_oxe"): # TODO now here on
             vla_dataset.save_dataset_statistics(output_dir / "dataset_statistics.json")
         return vla_train_dataloader
     elif dataset_py == "vlm_datasets":
+        from starVLA.dataloader.vlm_datasets import make_vlm_dataloader
         vlm_data_module = make_vlm_dataloader(cfg)
         vlm_train_dataloader = vlm_data_module["train_dataloader"]
         

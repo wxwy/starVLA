@@ -1,13 +1,17 @@
 import unittest
+import tempfile
+from pathlib import Path
 
 from starVLA.dataloader.mowa import (
     DATA_GATE,
     MOWA_PRIMARY_CANDIDATE,
+    MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH,
     MoWAEpisodeToWindowSampler,
     MoWAUnifiedEpisode,
     MoWAWindowConfig,
     MoWAWindowSample,
     build_mowa_g0_report_skeleton,
+    build_mowa_robocasa365_local_smoke_report,
 )
 
 
@@ -77,6 +81,27 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertEqual(payload["candidates"][0]["role"], "PrimaryCandidate")
         self.assertEqual(payload["candidates"][0]["temporal_profile_status"], DATA_GATE)
         self.assertNotIn("measured", str(payload).lower())
+
+    def test_robocasa365_local_smoke_reports_missing_data_without_profile(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            report = build_mowa_robocasa365_local_smoke_report(Path(tmpdir))
+        payload = report.to_dict()
+
+        self.assertFalse(payload["local_checks"]["path_exists"])
+        self.assertEqual(payload["local_checks"]["profile_status"], DATA_GATE)
+        self.assertIn("missing local minimal dataset", payload["go_no_go"])
+        self.assertNotIn("measured", str(payload).lower())
+
+    def test_robocasa365_local_smoke_detects_minimal_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH).mkdir(parents=True)
+            report = build_mowa_robocasa365_local_smoke_report(root)
+        payload = report.to_dict()
+
+        self.assertTrue(payload["local_checks"]["path_exists"])
+        self.assertEqual(payload["candidates"][0]["download_status"], "available")
+        self.assertEqual(payload["candidates"][0]["temporal_profile_status"], DATA_GATE)
 
 
 if __name__ == "__main__":

@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass, field, replace
+from pathlib import Path
+from typing import Any, Mapping
 
 from starVLA.dataloader.mowa.schema import DATA_GATE, TBD
 
 
 MOWA_PRIMARY_CANDIDATE = "robocasa365"
+MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH = "v1.0/target/atomic/OpenDrawer/20250816/lerobot"
+MOWA_ROBOCASA365_OPEN_DRAWER_MIXTURE = "robocasa365_open_drawer_target_human"
 
 
 @dataclass(frozen=True)
@@ -49,6 +52,7 @@ class MoWADataGateReport:
     stage: str = "G0"
     experiment_budget: str = "not_counted"
     candidates: tuple[MoWADataGateCandidate, ...] = field(default_factory=tuple)
+    local_checks: Mapping[str, Any] = field(default_factory=dict)
     go_no_go: str = TBD
     unresolved_items: tuple[str, ...] = field(default_factory=tuple)
 
@@ -58,6 +62,7 @@ class MoWADataGateReport:
             "stage": self.stage,
             "experiment_budget": self.experiment_budget,
             "candidates": [candidate.to_dict() for candidate in self.candidates],
+            "local_checks": dict(self.local_checks),
             "go_no_go": self.go_no_go,
             "unresolved_items": list(self.unresolved_items),
         }
@@ -95,4 +100,56 @@ def build_mowa_g0_report_skeleton() -> MoWADataGateReport:
             "history window / future horizon / action chunk must remain Data Gate before profiling.",
             "future action leakage tests must pass before P0/P1 training.",
         ),
+    )
+
+
+def build_mowa_robocasa365_local_smoke_report(
+    data_root: Path | str,
+    mixture_name: str = MOWA_ROBOCASA365_OPEN_DRAWER_MIXTURE,
+) -> MoWADataGateReport:
+    """检查 RoboCasa365 最小闭环数据路径是否已在本地准备。
+
+    该函数只做路径存在性检查，不读取真实数据，不产生 fps/Hz/window
+    等 profile 结论。
+    """
+
+    root = Path(data_root)
+    expected_relative_path = MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH
+    expected_path = root / expected_relative_path
+    path_exists = expected_path.exists()
+
+    report = build_mowa_g0_report_skeleton()
+    candidates = []
+    for candidate in report.candidates:
+        if candidate.dataset == MOWA_PRIMARY_CANDIDATE:
+            candidates.append(
+                replace(
+                    candidate,
+                    download_status="available" if path_exists else "missing",
+                    schema_status=DATA_GATE,
+                    temporal_profile_status=DATA_GATE,
+                    leakage_status=TBD,
+                    notes=(
+                        "本地已发现 OpenDrawer target/human 最小闭环路径；仍需执行 schema/profile/leakage。"
+                        if path_exists
+                        else "本地未发现 OpenDrawer target/human 最小闭环路径；需先准备数据后再做真实 G0。"
+                    ),
+                )
+            )
+        else:
+            candidates.append(candidate)
+
+    return replace(
+        report,
+        candidates=tuple(candidates),
+        local_checks={
+            "dataset": MOWA_PRIMARY_CANDIDATE,
+            "mixture_name": mixture_name,
+            "data_root": str(root),
+            "expected_relative_path": expected_relative_path,
+            "expected_path": str(expected_path),
+            "path_exists": path_exists,
+            "profile_status": DATA_GATE,
+        },
+        go_no_go="TBD" if path_exists else "No-Go: missing local minimal dataset",
     )

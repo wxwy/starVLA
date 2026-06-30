@@ -16,7 +16,11 @@ class StarFlowTrainReadyTest(unittest.TestCase):
     def test_train_ready_shell_contains_known_good_defaults(self):
         script_text = TRAIN_READY.read_text(encoding="utf-8")
         self.assertIn("CONFIG_YAML=${CONFIG_YAML:-configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml}", script_text)
+        self.assertIn("FRAMEWORK_NAME=${FRAMEWORK_NAME:-}", script_text)
         self.assertIn('--config_yaml "${CONFIG_YAML}"', script_text)
+        self.assertIn('if [[ -n "${FRAMEWORK_NAME}" ]]; then', script_text)
+        self.assertIn('TRAIN_ARGS+=(--framework.name "${FRAMEWORK_NAME}")', script_text)
+        self.assertNotIn("FRAMEWORK_NAME=${FRAMEWORK_NAME:-StarFlowVLA}", script_text)
         self.assertIn("MASTER_ADDR", script_text)
         self.assertIn("WORLD_SIZE", script_text)
         self.assertIn('--datasets.vla_data.per_device_batch_size "${PER_DEVICE_BATCH_SIZE}"', script_text)

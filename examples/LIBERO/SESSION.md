@@ -26,6 +26,19 @@
 | 日志 | `run.log`、`policy_server.log` |
 | 状态 | 已启动；policy server 正在加载 checkpoint |
 
+## 2026-06-30 — StarFlow 标准化评测运行快照（16:56 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | `2026-06-30 16:56 CST` |
+| 主进程 | `server_policy.py` PID `211134`，CPU `22.8%`，RSS `3528544 KB` |
+| client 进程 | `eval_libero.py` PID `276422`，CPU `3.9%`，RSS `331372 KB` |
+| 任务集进度 | `libero_goal`，已进入正式评测阶段，`MAX_TASKS=-1`，仍在执行 |
+| GPU | `nvidia-smi` 当前无可见 GPU 进程，显存 `0MiB / 24258MiB`，GPU-Util `0%` |
+| 系统内存 | `503Gi` 总，`121Gi` 已用，`30Gi` 空闲，`377Gi` 可用 |
+| 目录空间 | `/gemini/code` 使用率 `51%`，评测输出与 checkpoint 所在盘可用空间充足 |
+| 备注 | 这轮记录按实验规范补入了资源占用信息，后续每个 checkpoint 的正式结果也应同步记录对应资源快照 |
+
 ## 2026-06-21 — P1 continuous_head build / forward-backward / 10-step smoke
 
 | 字段 | 值 |

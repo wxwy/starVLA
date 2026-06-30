@@ -1,0 +1,95 @@
+{
+  "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot",
+  "sampled_episode_indices": [
+    0,
+    1,
+    4
+  ],
+  "video_keys": [
+    "observation.images.robot0_eye_in_hand",
+    "observation.images.robot0_agentview_left",
+    "observation.images.robot0_agentview_right"
+  ],
+  "entries": [
+    {
+      "episode_index": 0,
+      "video_key": "observation.images.robot0_eye_in_hand",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000000.mp4",
+      "video_exists": true,
+      "cache_key": "c15198692dc23952",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 0,
+      "video_key": "observation.images.robot0_agentview_left",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
+      "video_exists": true,
+      "cache_key": "08a72608036365dd",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 0,
+      "video_key": "observation.images.robot0_agentview_right",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_right/episode_000000.mp4",
+      "video_exists": true,
+      "cache_key": "b5d3625d89293461",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 1,
+      "video_key": "observation.images.robot0_eye_in_hand",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000001.mp4",
+      "video_exists": true,
+      "cache_key": "a15df288e2b4fa8a",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 1,
+      "video_key": "observation.images.robot0_agentview_left",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000001.mp4",
+      "video_exists": true,
+      "cache_key": "cd0c2f44f6c17f27",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 1,
+      "video_key": "observation.images.robot0_agentview_right",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_right/episode_000001.mp4",
+      "video_exists": true,
+      "cache_key": "a930f608a426c68e",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 4,
+      "video_key": "observation.images.robot0_eye_in_hand",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000004.mp4",
+      "video_exists": true,
+      "cache_key": "b6c9232c5f3a88d6",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 4,
+      "video_key": "observation.images.robot0_agentview_left",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000004.mp4",
+      "video_exists": true,
+      "cache_key": "5837746d3e23817e",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 4,
+      "video_key": "observation.images.robot0_agentview_right",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_right/episode_000004.mp4",
+      "video_exists": true,
+      "cache_key": "7feb391dafe22879",
+      "cache_status": "Data Gate"
+    }
+  ],
+  "missing_video_count": 0,
+  "latent_shape_status": "Data Gate",
+  "cache_hash_status": "Data Gate",
+  "encoder_status": "Data Gate",
+  "notes": [
+    "Manifest smoke only checks video paths and deterministic cache keys.",
+    "No Wan encoder, VAE, latent tensor, cache file or training code is executed."
+  ]
+}

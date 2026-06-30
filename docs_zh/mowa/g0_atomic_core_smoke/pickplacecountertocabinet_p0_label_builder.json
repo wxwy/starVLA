@@ -1,0 +1,892 @@
+{
+  "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot",
+  "sampled_episode_indices": [
+    0,
+    1,
+    4
+  ],
+  "constructible_heads": [
+    "task_progress",
+    "action_outcome_class"
+  ],
+  "masked_heads": [
+    "manipulation_readiness",
+    "failure_risk",
+    "next_best_view_score",
+    "subgoal_feasibility",
+    "object_visibility_future"
+  ],
+  "sample_count": 24,
+  "samples": [
+    {
+      "episode_index": 0,
+      "row_index": 0,
+      "labels": {
+        "task_progress": 0.0,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 0,
+      "row_index": 1,
+      "labels": {
+        "task_progress": 0.004081632653061225,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 0,
+      "row_index": 2,
+      "labels": {
+        "task_progress": 0.00816326530612245,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 0,
+      "row_index": 3,
+      "labels": {
+        "task_progress": 0.012244897959183673,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 0,
+      "row_index": 4,
+      "labels": {
+        "task_progress": 0.0163265306122449,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 0,
+      "row_index": 5,
+      "labels": {
+        "task_progress": 0.02040816326530612,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 0,
+      "row_index": 6,
+      "labels": {
+        "task_progress": 0.024489795918367346,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 0,
+      "row_index": 7,
+      "labels": {
+        "task_progress": 0.02857142857142857,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 1,
+      "row_index": 0,
+      "labels": {
+        "task_progress": 0.0,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 1,
+      "row_index": 1,
+      "labels": {
+        "task_progress": 0.0045662100456621,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 1,
+      "row_index": 2,
+      "labels": {
+        "task_progress": 0.0091324200913242,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 1,
+      "row_index": 3,
+      "labels": {
+        "task_progress": 0.0136986301369863,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 1,
+      "row_index": 4,
+      "labels": {
+        "task_progress": 0.0182648401826484,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 1,
+      "row_index": 5,
+      "labels": {
+        "task_progress": 0.0228310502283105,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 1,
+      "row_index": 6,
+      "labels": {
+        "task_progress": 0.0273972602739726,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 1,
+      "row_index": 7,
+      "labels": {
+        "task_progress": 0.0319634703196347,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 4,
+      "row_index": 0,
+      "labels": {
+        "task_progress": 0.0,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 4,
+      "row_index": 1,
+      "labels": {
+        "task_progress": 0.004739336492890996,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 4,
+      "row_index": 2,
+      "labels": {
+        "task_progress": 0.009478672985781991,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 4,
+      "row_index": 3,
+      "labels": {
+        "task_progress": 0.014218009478672985,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 4,
+      "row_index": 4,
+      "labels": {
+        "task_progress": 0.018957345971563982,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 4,
+      "row_index": 5,
+      "labels": {
+        "task_progress": 0.023696682464454975,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 4,
+      "row_index": 6,
+      "labels": {
+        "task_progress": 0.02843601895734597,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    },
+    {
+      "episode_index": 4,
+      "row_index": 7,
+      "labels": {
+        "task_progress": 0.03317535545023697,
+        "action_outcome_class": {
+          "next_reward": 0.0,
+          "next_done": false,
+          "class_mapping_status": "Data Gate"
+        }
+      },
+      "masks": {
+        "task_progress": true,
+        "manipulation_readiness": false,
+        "failure_risk": false,
+        "next_best_view_score": false,
+        "subgoal_feasibility": false,
+        "object_visibility_future": false,
+        "action_outcome_class": true
+      },
+      "sources": {
+        "task_progress": [
+          "frame_index",
+          "episode_row_count"
+        ],
+        "action_outcome_class": [
+          "next.reward",
+          "next.done"
+        ]
+      },
+      "data_gate": {
+        "thresholds": "Data Gate",
+        "class_mapping": "Data Gate",
+        "window": "Data Gate"
+      }
+    }
+  ],
+  "notes": [
+    "Smoke-only labels are targets, not WAM inputs.",
+    "task_progress is normalized by episode row count for dry-run only.",
+    "action_outcome_class keeps raw next.reward/next.done; class mapping remains Data Gate.",
+    "Non-constructible P0 heads stay masked."
+  ]
+}

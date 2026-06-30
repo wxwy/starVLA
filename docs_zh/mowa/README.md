@@ -21,6 +21,8 @@ MoWA（Mobile World Action Model，面向移动操作的世界动作模型）是
 | `06_data_gate_report.md` | G0 Data Verification Gate 报告模板。 |
 | `07_implementation_log.md` | 所有 MoWA 修改、测试、待确认项与 SOT 影响记录。 |
 | `08_starvla_data_benchmark_support_matrix.md` | 基于 StarVLA 当前仓库生成的 MoWA 数据 / benchmark 支持矩阵。 |
+| `09_p0_label_builder_design.md` | P0 label coverage 与 label/mask builder 设计草案。 |
+| `10_p1_latent_cache_manifest_design.md` | P1 latent cache manifest 设计草案。 |
 | `prompts/*.md` | 可独立复制给 Codex / Claude 的阶段 prompt。 |
 
 ## Codex / Claude 必读文件
@@ -49,4 +51,4 @@ MoWA 的 Source-of-Truth 包括：
 
 ## 执行门禁
 
-不得直接跳过 G0 进入 P0/P1。G0 未完成前，只允许生成数据门禁 skeleton、schema 草案、window sampler 设计、leakage test 计划和报告模板；不得启动 P0/P1 主训练，不得把任何 fps、Hz、window、batch、显存、训练时长或阈值写成 `measured`。
+不得直接跳过 G0 进入 P0/P1。G0 未完成前，只允许生成数据门禁 skeleton、schema 草案、window sampler 设计、leakage test 计划和报告模板；不得启动 P0/P1 主训练，任何 fps、Hz、window、batch、显存、训练时长或阈值都必须保持 `Data Gate` / `TBD` / `target` 口径。

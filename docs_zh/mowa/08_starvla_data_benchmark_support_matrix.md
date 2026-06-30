@@ -103,9 +103,61 @@
 - [download_target_human.sh](/gemini/code/starVLA/examples/Robocasa_365/train_files/download_target_human.sh:1) 提供了全量 `target/human` 下载入口。
 - [examples/Robocasa_365/README.md](/gemini/code/starVLA/examples/Robocasa_365/README.md:35) 先用单任务 `OpenDrawer` 演示，再扩展到更多任务。
 
-## 六、MoWA 执行建议
+## 六、MoWA 固定主对比数据配方
+
+P0 / P1-b0 / P1-b1 / P2 diagnostic 的主对比必须使用同一数据域。G0 可以从单任务 smoke 开始，但进入主对比时必须固定 recipe，避免把数据差异误写成算法差异。
+
+当前固定 recipe：
+
+| 字段 | 值 |
+|---|---|
+| recipe_name | `mowa_robocasa365_target_human_atomic_core_v1` |
+| split | `target` |
+| source | `human` |
+| task_type | `atomic` |
+| 用途 | MoWA P0/P1/P2 主对比数据域 |
+| G0 状态 | 下载可用性检查中；profile / label / leakage 仍为 Data Gate |
+
+任务清单均来自 RoboCasa365 registry 中存在 `target/human` 路径的 atomic 任务：
+
+| task | relative_path |
+|---|---|
+| OpenDrawer | `v1.0/target/atomic/OpenDrawer/20250816/lerobot` |
+| OpenCabinet | `v1.0/target/atomic/OpenCabinet/20250813/lerobot` |
+| CloseFridge | `v1.0/target/atomic/CloseFridge/20250816/lerobot` |
+| CloseToasterOvenDoor | `v1.0/target/atomic/CloseToasterOvenDoor/20250818/lerobot` |
+| CoffeeSetupMug | `v1.0/target/atomic/CoffeeSetupMug/20250813/lerobot` |
+| NavigateKitchen | `v1.0/target/atomic/NavigateKitchen/20250821/lerobot` |
+| PickPlaceCounterToCabinet | `v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot` |
+| PickPlaceToasterToCounter | `v1.0/target/atomic/PickPlaceToasterToCounter/20250817/lerobot` |
+| PickPlaceSinkToCounter | `v1.0/target/atomic/PickPlaceSinkToCounter/20250813/lerobot` |
+| TurnOnSinkFaucet | `v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot` |
+
+注意：`CloseDrawer`、`CloseCabinet`、`OpenFridge` 当前 RoboCasa365 registry 中没有 `target/human` 路径，不能放入该固定主对比 recipe。若后续使用它们，只能作为其他 split/source 的额外实验或待确认项，不能混入主对比。
+
+### 6.1 10 项子集选择依据
+
+该 recipe 是 MoWA 详细设计的执行补充，不改写第 1 章 Source-of-Truth。选择 10 个子集时采用以下约束：
+
+1. 数据域固定：只选 `target/human/atomic`，用于 P0 / P1-b0 / P1-b1 / P2 diagnostic 的同域主对比，避免把 split、source 或 task_type 差异误写成算法差异。
+2. Registry 可验证：每个任务必须在 RoboCasa365 registry 中存在明确 `target/human` lerobot 路径，并能被 `g0_recipe_smoke.py` 做目录、meta、data、videos 四项可用性检查。
+3. 能力覆盖：任务组合覆盖厨房移动操作的基础原语，包括开关容器、导航接近、拿取放置、水槽/设备交互和简单准备类任务。
+4. 工程规模受控：10 项作为 OpenDrawer 单任务 smoke 与全量 `target_human_all` 之间的核心子集，先支持 G0 / P0 / P1 的 profile、label coverage、leakage 和 latent manifest 闭环。
+5. 排除规则明确：缺少 `target/human` 路径的任务不得混入该 recipe；若后续使用其他 split/source 或 composite 任务，必须作为额外数据域记录，不能替代主对比 recipe。
+
+当前选择不是 RoboCasa365 官方 benchmark 划分，而是 MoWA 在三个月工程约束下的固定主对比数据配方。若后续 G0 发现某项任务字段不足、下载不可用或 label / latent / leakage 不通过，应记录为 Data Gate 风险，并通过新 recipe 版本处理，不在原 recipe 内静默替换。
+
+下载完成后用以下命令检查 recipe 是否齐全：
+
+```bash
+.venv/bin/python tools/mowa/g0_recipe_smoke.py \
+  --data-root playground/Datasets/robocasa365 \
+  --output docs_zh/mowa/mowa_g0_robocasa365_atomic_core_recipe_smoke.json
+```
+
+## 七、MoWA 执行建议
 
 下一步建议直接做两件事：
 
 1. 在 G0 中把 `robocasa365` 设为 `PrimaryCandidate`，把 `LIBERO` 和 `RoboTwin` 设为 `AuxiliarySanity`。
-2. 若要实际下载，先只执行 `robocasa365` 的最小任务集，而不是一次性全量下载。
+2. 若要实际下载，先执行 `mowa_robocasa365_target_human_atomic_core_v1`，并用 `g0_recipe_smoke.py` 检查 10 个任务是否齐全。

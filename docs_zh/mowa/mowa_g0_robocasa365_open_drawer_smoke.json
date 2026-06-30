@@ -1,0 +1,164 @@
+{
+  "report_id": "mowa_g0_datagate_TBD",
+  "stage": "G0",
+  "experiment_budget": "not_counted",
+  "candidates": [
+    {
+      "dataset": "robocasa365",
+      "role": "PrimaryCandidate",
+      "starvla_support": "train+eval+registry",
+      "default_use": "G0/P0 first loop",
+      "download_status": "available",
+      "license_status": "Data Gate",
+      "schema_status": "schema_smoke_available",
+      "temporal_profile_status": "Data Gate",
+      "p0_label_status": "Data Gate",
+      "latent_cache_status": "Data Gate",
+      "leakage_status": "TBD",
+      "notes": "本地已发现 OpenDrawer target/human 最小闭环路径；已完成 meta 只读 schema smoke，仍需执行 profile/leakage。"
+    },
+    {
+      "dataset": "libero",
+      "role": "AuxiliarySanity",
+      "starvla_support": "train+eval+registry",
+      "default_use": "action schema and sampler sanity",
+      "download_status": "Data Gate",
+      "license_status": "Data Gate",
+      "schema_status": "Data Gate",
+      "temporal_profile_status": "Data Gate",
+      "p0_label_status": "Data Gate",
+      "latent_cache_status": "Data Gate",
+      "leakage_status": "TBD",
+      "notes": "固定桌面操作辅助集，不能作为移动操作主证据。"
+    },
+    {
+      "dataset": "robotwin",
+      "role": "AuxiliarySanity",
+      "starvla_support": "train+eval+registry",
+      "default_use": "action bridge and manipulation sanity",
+      "download_status": "Data Gate",
+      "license_status": "Data Gate",
+      "schema_status": "Data Gate",
+      "temporal_profile_status": "Data Gate",
+      "p0_label_status": "Data Gate",
+      "latent_cache_status": "Data Gate",
+      "leakage_status": "TBD",
+      "notes": "操作泛化和双臂 sanity，不作为 MoWA 第一主闭环。"
+    }
+  ],
+  "local_checks": {
+    "dataset": "robocasa365",
+    "mixture_name": "robocasa365_open_drawer_target_human",
+    "data_root": "playground/Datasets/robocasa365",
+    "expected_relative_path": "v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+    "expected_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+    "path_exists": true,
+    "schema_smoke_available": true,
+    "meta_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/meta",
+    "existing_meta_files": [
+      "info.json",
+      "episodes.jsonl",
+      "episodes_stats.jsonl",
+      "tasks.jsonl",
+      "modality.json"
+    ],
+    "missing_meta_files": [],
+    "declared_total_episodes": 514,
+    "declared_total_frames": 137431,
+    "declared_fps": 20,
+    "declared_splits": {
+      "train": "0:514"
+    },
+    "declared_robot_type": "PandaOmron",
+    "declared_data_path_template": "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
+    "declared_video_path_template": "videos/chunk-{episode_chunk:03d}/{video_key}/episode_{episode_index:06d}.mp4",
+    "feature_keys_present": [
+      "observation.state",
+      "action",
+      "timestamp",
+      "frame_index",
+      "episode_index",
+      "task_index"
+    ],
+    "feature_keys_missing": [],
+    "video_feature_keys": [
+      "observation.images.robot0_eye_in_hand",
+      "observation.images.robot0_agentview_left",
+      "observation.images.robot0_agentview_right"
+    ],
+    "modality_video_keys": [
+      "robot0_eye_in_hand",
+      "robot0_agentview_left",
+      "robot0_agentview_right"
+    ],
+    "modality_state_keys": [
+      "base_position",
+      "base_rotation",
+      "end_effector_position_relative",
+      "end_effector_rotation_relative",
+      "gripper_qpos"
+    ],
+    "modality_action_keys": [
+      "base_motion",
+      "control_mode",
+      "end_effector_position",
+      "end_effector_rotation",
+      "gripper_close"
+    ],
+    "sample_episodes": [
+      {
+        "episode_index": 0,
+        "tasks": [
+          "Open the right drawer."
+        ],
+        "length": 334
+      },
+      {
+        "episode_index": 1,
+        "tasks": [
+          "Open the right drawer."
+        ],
+        "length": 235
+      },
+      {
+        "episode_index": 2,
+        "tasks": [
+          "Open the right drawer."
+        ],
+        "length": 226
+      },
+      {
+        "episode_index": 3,
+        "tasks": [
+          "Open the right drawer."
+        ],
+        "length": 433
+      },
+      {
+        "episode_index": 4,
+        "tasks": [
+          "Open the left drawer."
+        ],
+        "length": 208
+      }
+    ],
+    "data_dir_exists": true,
+    "video_dir_exists": true,
+    "extras_dir_exists": true,
+    "parquet_file_count": 514,
+    "video_file_count": 1542,
+    "episode_extra_dir_count": 514,
+    "action_hz_status": "Data Gate",
+    "obs_fps_status": "Data Gate",
+    "history_window_status": "Data Gate",
+    "future_window_status": "Data Gate",
+    "leakage_check_status": "TBD",
+    "profile_status": "Data Gate"
+  },
+  "go_no_go": "No-Go: schema smoke available; profile/leakage pending",
+  "unresolved_items": [
+    "obs fps / action Hz must be profiled by G0 before use.",
+    "history window / future horizon / action chunk must remain Data Gate before profiling.",
+    "future action leakage tests must pass before P0/P1 training."
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+  "episode_count": 514,
+  "sampled_episode_indices": [
+    0,
+    1,
+    4
+  ],
+  "sampled_row_counts": [
+    334,
+    235,
+    208
+  ],
+  "min_episode_length": 130,
+  "max_episode_length": 603,
+  "boundary_smoke": {
+    "window_config": {
+      "history_steps": 3,
+      "future_steps": 2,
+      "action_chunk_steps": 2,
+      "status": "smoke_only_target"
+    },
+    "sampled_windows": [
+      {
+        "episode_index": 0,
+        "row_count": 334,
+        "anchor_index": 3,
+        "history_indices": [
+          1,
+          2,
+          3
+        ],
+        "future_indices": [
+          4,
+          5
+        ],
+        "action_target_indices": [
+          3,
+          4
+        ],
+        "future_action_in_inputs": false,
+        "full_future": true,
+        "full_action_chunk": true
+      },
+      {
+        "episode_index": 1,
+        "row_count": 235,
+        "anchor_index": 3,
+        "history_indices": [
+          1,
+          2,
+          3
+        ],
+        "future_indices": [
+          4,
+          5
+        ],
+        "action_target_indices": [
+          3,
+          4
+        ],
+        "future_action_in_inputs": false,
+        "full_future": true,
+        "full_action_chunk": true
+      },
+      {
+        "episode_index": 4,
+        "row_count": 208,
+        "anchor_index": 3,
+        "history_indices": [
+          1,
+          2,
+          3
+        ],
+        "future_indices": [
+          4,
+          5
+        ],
+        "action_target_indices": [
+          3,
+          4
+        ],
+        "future_action_in_inputs": false,
+        "full_future": true,
+        "full_action_chunk": true
+      }
+    ],
+    "cross_episode_leakage_status": "smoke_passed",
+    "future_action_leakage_status": "smoke_passed"
+  },
+  "p0_label_coverage": {
+    "task_progress": "candidate_from_frame_index_and_episode_length; Data Gate",
+    "manipulation_readiness": "candidate_from_state_action_reward; Data Gate",
+    "failure_risk": "insufficient_without_failure_annotation; Data Gate",
+    "next_best_view_score": "requires_view_label_or_proxy_definition; Data Gate",
+    "subgoal_feasibility": "candidate_from_reward_done_and_task_progress; Data Gate",
+    "object_visibility_future": "requires_video_decode_or_visibility_proxy; Data Gate",
+    "action_outcome_class": "candidate_from_next.reward_next.done; Data Gate"
+  },
+  "unresolved_items": [
+    "P0 labels are coverage candidates only; no label builder has been validated.",
+    "obs fps / action Hz / training windows remain Data Gate until profiling.",
+    "full leakage gate still needs production sampler coverage across train/val splits."
+  ]
+}

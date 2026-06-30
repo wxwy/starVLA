@@ -1,0 +1,113 @@
+{
+  "recipe_name": "mowa_robocasa365_target_human_atomic_core_v1",
+  "data_root": "playground/Datasets/robocasa365",
+  "task_count": 10,
+  "episode_count": 5055,
+  "checked_window_count": 15165,
+  "failed_window_count": 0,
+  "window_config": {
+    "history_steps": 3,
+    "future_steps": 2,
+    "action_chunk_steps": 2,
+    "status": "metadata_level_smoke"
+  },
+  "tasks": [
+    {
+      "task": "OpenDrawer",
+      "relative_path": "v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+      "episode_count": 514,
+      "checked_window_count": 1542,
+      "failed_window_count": 0,
+      "min_episode_length": 130,
+      "max_episode_length": 603
+    },
+    {
+      "task": "OpenCabinet",
+      "relative_path": "v1.0/target/atomic/OpenCabinet/20250813/lerobot",
+      "episode_count": 500,
+      "checked_window_count": 1500,
+      "failed_window_count": 0,
+      "min_episode_length": 133,
+      "max_episode_length": 664
+    },
+    {
+      "task": "CloseFridge",
+      "relative_path": "v1.0/target/atomic/CloseFridge/20250816/lerobot",
+      "episode_count": 513,
+      "checked_window_count": 1539,
+      "failed_window_count": 0,
+      "min_episode_length": 133,
+      "max_episode_length": 615
+    },
+    {
+      "task": "CloseToasterOvenDoor",
+      "relative_path": "v1.0/target/atomic/CloseToasterOvenDoor/20250818/lerobot",
+      "episode_count": 505,
+      "checked_window_count": 1515,
+      "failed_window_count": 0,
+      "min_episode_length": 95,
+      "max_episode_length": 305
+    },
+    {
+      "task": "CoffeeSetupMug",
+      "relative_path": "v1.0/target/atomic/CoffeeSetupMug/20250813/lerobot",
+      "episode_count": 502,
+      "checked_window_count": 1506,
+      "failed_window_count": 0,
+      "min_episode_length": 142,
+      "max_episode_length": 434
+    },
+    {
+      "task": "NavigateKitchen",
+      "relative_path": "v1.0/target/atomic/NavigateKitchen/20250821/lerobot",
+      "episode_count": 500,
+      "checked_window_count": 1500,
+      "failed_window_count": 0,
+      "min_episode_length": 48,
+      "max_episode_length": 282
+    },
+    {
+      "task": "PickPlaceCounterToCabinet",
+      "relative_path": "v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot",
+      "episode_count": 502,
+      "checked_window_count": 1506,
+      "failed_window_count": 0,
+      "min_episode_length": 148,
+      "max_episode_length": 638
+    },
+    {
+      "task": "PickPlaceToasterToCounter",
+      "relative_path": "v1.0/target/atomic/PickPlaceToasterToCounter/20250817/lerobot",
+      "episode_count": 512,
+      "checked_window_count": 1536,
+      "failed_window_count": 0,
+      "min_episode_length": 183,
+      "max_episode_length": 497
+    },
+    {
+      "task": "PickPlaceSinkToCounter",
+      "relative_path": "v1.0/target/atomic/PickPlaceSinkToCounter/20250813/lerobot",
+      "episode_count": 501,
+      "checked_window_count": 1503,
+      "failed_window_count": 0,
+      "min_episode_length": 215,
+      "max_episode_length": 712
+    },
+    {
+      "task": "TurnOnSinkFaucet",
+      "relative_path": "v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot",
+      "episode_count": 506,
+      "checked_window_count": 1518,
+      "failed_window_count": 0,
+      "min_episode_length": 139,
+      "max_episode_length": 523
+    }
+  ],
+  "future_action_leakage_status": "smoke_passed",
+  "cross_episode_leakage_status": "smoke_passed",
+  "go_no_go": "TBD: metadata leakage smoke passed; production dataloader remains Data Gate",
+  "notes": [
+    "This smoke checks sampler boundaries over episode metadata, not training dataloader workers.",
+    "Future action remains a target-only field; it is not inserted into WAM inputs."
+  ]
+}

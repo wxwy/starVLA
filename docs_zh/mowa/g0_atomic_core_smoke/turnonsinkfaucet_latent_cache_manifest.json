@@ -1,0 +1,95 @@
+{
+  "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot",
+  "sampled_episode_indices": [
+    0,
+    1,
+    4
+  ],
+  "video_keys": [
+    "observation.images.robot0_eye_in_hand",
+    "observation.images.robot0_agentview_left",
+    "observation.images.robot0_agentview_right"
+  ],
+  "entries": [
+    {
+      "episode_index": 0,
+      "video_key": "observation.images.robot0_eye_in_hand",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000000.mp4",
+      "video_exists": true,
+      "cache_key": "bdce4a2f04e0a5cd",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 0,
+      "video_key": "observation.images.robot0_agentview_left",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
+      "video_exists": true,
+      "cache_key": "4b4c6140829f2baf",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 0,
+      "video_key": "observation.images.robot0_agentview_right",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/videos/chunk-000/observation.images.robot0_agentview_right/episode_000000.mp4",
+      "video_exists": true,
+      "cache_key": "d95bdadcf39ccdc8",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 1,
+      "video_key": "observation.images.robot0_eye_in_hand",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000001.mp4",
+      "video_exists": true,
+      "cache_key": "dbfdbde51e725c59",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 1,
+      "video_key": "observation.images.robot0_agentview_left",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000001.mp4",
+      "video_exists": true,
+      "cache_key": "2600adf39663ad9f",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 1,
+      "video_key": "observation.images.robot0_agentview_right",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/videos/chunk-000/observation.images.robot0_agentview_right/episode_000001.mp4",
+      "video_exists": true,
+      "cache_key": "5d5b58eb24c26b80",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 4,
+      "video_key": "observation.images.robot0_eye_in_hand",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000004.mp4",
+      "video_exists": true,
+      "cache_key": "618a36de3bf7ed1f",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 4,
+      "video_key": "observation.images.robot0_agentview_left",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000004.mp4",
+      "video_exists": true,
+      "cache_key": "dea851ad4e9f29ff",
+      "cache_status": "Data Gate"
+    },
+    {
+      "episode_index": 4,
+      "video_key": "observation.images.robot0_agentview_right",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/videos/chunk-000/observation.images.robot0_agentview_right/episode_000004.mp4",
+      "video_exists": true,
+      "cache_key": "968ada0c93d331da",
+      "cache_status": "Data Gate"
+    }
+  ],
+  "missing_video_count": 0,
+  "latent_shape_status": "Data Gate",
+  "cache_hash_status": "Data Gate",
+  "encoder_status": "Data Gate",
+  "notes": [
+    "Manifest smoke only checks video paths and deterministic cache keys.",
+    "No Wan encoder, VAE, latent tensor, cache file or training code is executed."
+  ]
+}

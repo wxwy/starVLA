@@ -1,0 +1,52 @@
+{
+  "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/NavigateKitchen/20250821/lerobot",
+  "sampled_episode_indices": [
+    0,
+    1,
+    4
+  ],
+  "sampled_row_counts": [
+    177,
+    130,
+    118
+  ],
+  "timestamp_monotonic": true,
+  "frame_index_monotonic": true,
+  "timestamp_delta_preview": [
+    0.05
+  ],
+  "action_shape_consistent": true,
+  "state_shape_consistent": true,
+  "action_shapes": [
+    [
+      12
+    ],
+    [
+      12
+    ],
+    [
+      12
+    ]
+  ],
+  "state_shapes": [
+    [
+      16
+    ],
+    [
+      16
+    ],
+    [
+      16
+    ]
+  ],
+  "next_done_seen": false,
+  "reward_signal_seen": false,
+  "obs_fps_status": "Data Gate",
+  "action_hz_status": "Data Gate",
+  "history_window_status": "Data Gate",
+  "future_window_status": "Data Gate",
+  "notes": [
+    "Timestamp deltas are parquet previews for G0 only; they are not MoWA production profile results.",
+    "Production WAM Hz, history window, future window and action chunk remain Data Gate."
+  ]
+}

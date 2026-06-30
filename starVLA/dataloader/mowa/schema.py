@@ -1,7 +1,7 @@
 """MoWA G0 schema skeleton.
 
 本模块只定义数据门禁和 window 切片所需的最小结构，不读取真实数据，
-也不把任何未实测 profile 写成 measured。
+也不把任何未实测 profile 写成正式数值结论。
 """
 
 from __future__ import annotations

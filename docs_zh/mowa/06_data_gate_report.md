@@ -108,3 +108,313 @@
 | latent cache 不通过 | 阻断 P1，保留 P0 | latent cache failure report |
 | leakage test 不通过 | 阻断所有训练 | sampler fix TODO |
 | eval adapter 不通过 | 降级为离线指标或等待适配 | eval adapter risk |
+
+## 10. 当前只读 Smoke 记录
+
+本节记录本机 `robocasa365_open_drawer_target_human` 只读 metadata smoke 结果。该检查不读取 parquet / video 内容，不 profile 训练吞吐，不启动 P0/P1，不计入实验预算。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/mowa_g0_robocasa365_open_drawer_smoke.json` |
+| data_root | `playground/Datasets/robocasa365` |
+| relative_path | `v1.0/target/atomic/OpenDrawer/20250816/lerobot` |
+| path_exists | true |
+| schema_smoke_available | true |
+| declared_total_episodes | 514 |
+| declared_total_frames | 137431 |
+| declared_fps | 20（dataset metadata declared，不作为 MoWA measured profile） |
+| declared_robot_type | `PandaOmron` |
+| feature_keys_present | `observation.state`、`action`、`timestamp`、`frame_index`、`episode_index`、`task_index` |
+| video_feature_keys | `observation.images.robot0_eye_in_hand`、`observation.images.robot0_agentview_left`、`observation.images.robot0_agentview_right` |
+| parquet_file_count | 514 |
+| video_file_count | 1542 |
+| episode_extra_dir_count | 514 |
+| obs_fps_status | Data Gate |
+| action_hz_status | Data Gate |
+| history_window_status | Data Gate |
+| future_window_status | Data Gate |
+| leakage_check_status | TBD |
+| go_no_go | `No-Go: schema smoke available; profile/leakage pending` |
+
+当前结论：OpenDrawer target/human 最小数据闭环已经具备只读 schema smoke 条件；G0 仍未放行 P0/P1，因为 profile、P0 label coverage、latent cache 可行性和 leakage 检查尚未完成。
+
+## 11. 当前 UnifiedEpisode Schema Smoke
+
+本节记录 `M1-002/M1-003` 的只读 parquet schema smoke。该检查只读取一个 episode 的 parquet schema 和少量标量预览，不读取视频内容，不启动训练。
+
+| 字段 | 当前值 |
+|---|---|
+| adapter | `starVLA/dataloader/mowa/robocasa365_adapter.py` |
+| episode | `episode_000000.parquet` |
+| row_count | 334 |
+| instruction | `Open the right drawer.` |
+| observation.state shape | `(16,)` |
+| action shape | `(12,)` |
+| required columns | `observation.state`、`action`、`timestamp`、`frame_index`、`episode_index`、`task_index` |
+| missing columns | none |
+| sample timestamps | `0.0, 0.05, 0.10, 0.15, 0.20`（parquet preview，不作为 MoWA official profile result） |
+| window smoke | history `(1, 2, 3)`、future `(4, 5)`、action target `(3, 4)` with anchor `3` |
+| future action leakage | action target 不进入 `inputs` |
+| obs_fps | Data Gate |
+| action_hz | Data Gate |
+| history_window | Data Gate |
+| future_window | Data Gate |
+
+当前结论：RoboCasa365 Lerobot parquet 可映射到 `MoWAUnifiedEpisode` 草案，并可通过现有 `MoWAEpisodeToWindowSampler` 生成不泄漏 future action 的 `MoWAWindowSample`。G0 仍未放行 P0/P1，因为尚未完成 profile、P0 label coverage、latent cache 可行性和跨 episode leakage 检查。
+
+## 12. 当前 Dataset Boundary / Leakage Smoke 与 P0 Coverage 初判
+
+本节记录 `M1-004` 的只读 dataset-level smoke。该检查读取 `episodes.jsonl` 和 3 个 sampled episode 的 parquet schema，不读取视频内容，不启动训练。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/mowa_g0_robocasa365_open_drawer_dataset_smoke.json` |
+| cli | `tools/mowa/g0_dataset_smoke.py` |
+| sampled_episode_indices | `0, 1, 4` |
+| sampled_row_counts | `334, 235, 208` |
+| metadata_episode_count | 514 |
+| metadata_min_episode_length | 130 |
+| metadata_max_episode_length | 603 |
+| smoke window config | history_steps=`3`、future_steps=`2`、action_chunk_steps=`2`，仅 smoke target |
+| sampled history/action boundary | `history_indices <= anchor_index`，smoke passed |
+| sampled future boundary | `future_indices > anchor_index`，smoke passed |
+| future action leakage | `action_chunk_target` 不进入 `inputs`，smoke passed |
+| cross_episode_leakage_status | `smoke_passed` |
+| obs_fps / action_hz | Data Gate |
+| production window | Data Gate |
+
+P0 label coverage 初判：
+
+| P0 head | 当前结论 |
+|---|---|
+| task_progress | candidate_from_frame_index_and_episode_length; Data Gate |
+| manipulation_readiness | candidate_from_state_action_reward; Data Gate |
+| failure_risk | insufficient_without_failure_annotation; Data Gate |
+| next_best_view_score | requires_view_label_or_proxy_definition; Data Gate |
+| subgoal_feasibility | candidate_from_reward_done_and_task_progress; Data Gate |
+| object_visibility_future | requires_video_decode_or_visibility_proxy; Data Gate |
+| action_outcome_class | candidate_from_next.reward_next.done; Data Gate |
+
+当前结论：M1-004 sampled boundary / leakage smoke 已通过，但它不是完整门禁。P0 label 只是可构造性初判，尚未实现或验证 label builder；G0 仍未放行 P0/P1。
+
+## 13. 固定主对比 Recipe 可用性
+
+本节记录 MoWA P0/P1/P2 固定主对比数据配方的下载可用性。该检查只验证任务目录和基础 Lerobot 结构是否存在，不读取 parquet / video 内容。
+
+| 字段 | 当前值 |
+|---|---|
+| recipe_name | `mowa_robocasa365_target_human_atomic_core_v1` |
+| report_json | `docs_zh/mowa/mowa_g0_robocasa365_atomic_core_recipe_smoke.json` |
+| cli | `tools/mowa/g0_recipe_smoke.py` |
+| split / source | `target` / `human` |
+| task_type | atomic |
+| task_count | 10 |
+| available_task_count | 10 |
+| missing_task_count | 0 |
+| go_no_go | `TBD: recipe available; profile/leakage/labels still Data Gate` |
+
+当前固定任务清单：
+
+| task | 当前可用性 |
+|---|---|
+| OpenDrawer | available |
+| OpenCabinet | available |
+| CloseFridge | available |
+| CloseToasterOvenDoor | available |
+| CoffeeSetupMug | available |
+| NavigateKitchen | available |
+| PickPlaceCounterToCabinet | available |
+| PickPlaceToasterToCounter | available |
+| PickPlaceSinkToCounter | available |
+| TurnOnSinkFaucet | available |
+
+当前结论：固定主对比 recipe 的 10 个 target/human/atomic 任务已具备基础 Lerobot 结构。该结论只代表目录、meta、data、videos 可用；P0/P1/P2 主对比仍必须继续通过 profile、label coverage、leakage 和 latent cache 相关 G0 检查后才能启动。
+
+## 14. 当前只读 Profile Smoke
+
+本节记录 `OpenDrawer target/human` 的只读 profile smoke。该检查读取 sampled episode 的少量 parquet 行，只用于检查 timestamp / frame_index / shape 一致性，不读取视频内容，不给出正式 fps / Hz / window 结论。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/mowa_g0_robocasa365_open_drawer_profile_smoke.json` |
+| cli | `tools/mowa/g0_profile_smoke.py` |
+| sampled_episode_indices | `0, 1, 4` |
+| sampled_row_counts | `334, 235, 208` |
+| timestamp_monotonic | true |
+| frame_index_monotonic | true |
+| timestamp_delta_preview | `0.05`（parquet preview，不作为 MoWA official fps / Hz profile result） |
+| action_shape_consistent | true，shape=`(12,)` |
+| state_shape_consistent | true，shape=`(16,)` |
+| next_done_seen | false（preview rows only） |
+| reward_signal_seen | false（preview rows only） |
+| obs_fps_status | Data Gate |
+| action_hz_status | Data Gate |
+| history_window_status | Data Gate |
+| future_window_status | Data Gate |
+
+当前结论：sampled parquet 的 timestamp、frame_index、state/action shape 一致性通过 smoke；生产用 WAM Hz、history window、future window、action chunk 仍保持 Data Gate。
+
+## 15. 当前 P0 Label Coverage Smoke
+
+本节记录 `OpenDrawer target/human` 的 P0 label coverage smoke。该检查只做字段级可构造性判断，不生成训练标签，不定义阈值，不启动 P0 模型。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/mowa_g0_p0_label_coverage_open_drawer_smoke.json` |
+| cli | `tools/mowa/g0_p0_label_coverage_smoke.py` |
+| sampled_episode_indices | `0, 1, 4` |
+| available_columns | `action`、`annotation.human.task_description`、`annotation.human.task_name`、`episode_index`、`frame_index`、`index`、`next.done`、`next.reward`、`observation.state`、`task_index`、`timestamp` |
+| constructible_heads | `task_progress`、`action_outcome_class` |
+| masked_or_data_gate_heads | `manipulation_readiness`、`failure_risk`、`next_best_view_score`、`subgoal_feasibility`、`object_visibility_future` |
+
+| P0 head | status | source_fields | mask_rule |
+|---|---|---|---|
+| task_progress | candidate_constructible | `frame_index`、`timestamp`、`episode_index` | mask if frame_index/timestamp/episode length unavailable |
+| manipulation_readiness | Data Gate | `observation.state`、`action` | mask until readiness proxy is validated |
+| failure_risk | masked | `failure_annotation` | mask by default |
+| next_best_view_score | masked | `view_score`、`visibility_label` | mask by default |
+| subgoal_feasibility | Data Gate | `next.reward`、`next.done`、`frame_index` | mask until feasibility proxy is validated |
+| object_visibility_future | masked | `future_video`、`object_visibility_proxy` | mask by default |
+| action_outcome_class | candidate_constructible | `next.reward`、`next.done` | mask if reward/done unavailable |
+
+当前结论：P0 FullHeads 首轮只能以 mask 方式处理不可构造 heads；若要先做训练 smoke，候选可构造 head 仅为 `task_progress` 和 `action_outcome_class`。所有阈值、class mapping 和 proxy 定义仍为 Data Gate。
+
+## 16. 当前 Latent Cache Manifest Smoke
+
+本节记录 `OpenDrawer target/human` 的 latent cache manifest smoke。该检查只验证视频路径和确定性 cache key，不执行 Wan encoder / VAE，不生成 latent tensor，不写 cache 文件。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/mowa_g0_latent_cache_manifest_open_drawer_smoke.json` |
+| cli | `tools/mowa/g0_latent_cache_manifest_smoke.py` |
+| sampled_episode_indices | `0, 1, 4` |
+| video_keys | `observation.images.robot0_eye_in_hand`、`observation.images.robot0_agentview_left`、`observation.images.robot0_agentview_right` |
+| manifest_entries | 9 |
+| missing_video_count | 0 |
+| latent_shape_status | Data Gate |
+| cache_hash_status | Data Gate |
+| encoder_status | Data Gate |
+
+当前结论：OpenDrawer sampled episode 的三路视频路径齐全，latent cache manifest 的路径和 cache key 规则可以稳定生成。真实 latent 编码、latent shape、cache hash 和吞吐仍为 Data Gate。
+
+## 17. 当前 10 项 Atomic Core 批量 Smoke
+
+本节记录 `mowa_robocasa365_target_human_atomic_core_v1` 的 10 项批量只读 smoke。该检查逐项运行 profile、P0 label coverage 和 latent cache manifest smoke；不启动训练，不解码视频，不执行 Wan encoder / VAE。
+
+| 字段 | 当前值 |
+|---|---|
+| summary_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_batch_smoke_summary.json` |
+| output_dir | `docs_zh/mowa/g0_atomic_core_smoke/` |
+| task_count | 10 |
+| passed_task_count | 10 |
+| failed_task_count | 0 |
+| checks | `profile`、`p0_label_coverage`、`latent_cache_manifest` |
+| sampled_episode_indices | `0, 1, 4` |
+| profile_smoke | 10/10 timestamp monotonic、frame_index monotonic、state/action shape consistent |
+| p0_label_coverage | 10/10 仅 `task_progress`、`action_outcome_class` 为 candidate constructible；其余五类 head 继续 mask / Data Gate |
+| latent_manifest | 10/10 missing_video_count=0 |
+| go_no_go | `TBD: batch smoke passed; production profile/labels/leakage remain Data Gate` |
+
+当前结论：10 项核心 recipe 已通过训练前只读 smoke，足以支持下一步进入 P0 label builder / ConstructibleHeads smoke 设计。它仍不是完整 G0 放行：生产 WAM Hz、history/future/action chunk、真实 label builder 阈值、完整 leakage gate、真实 latent cache 编码和吞吐仍保持 Data Gate。
+
+## 18. 当前 P0 ConstructibleHeads Label Builder Dry-run
+
+本节记录 P0 ConstructibleHeads label builder 的 dry-run 结果。该检查只生成当前可构造 head 的 smoke targets 和七类 head mask，不启动训练，不定义 production 阈值，不冻结 `action_outcome_class` class mapping。
+
+| 字段 | 当前值 |
+|---|---|
+| open_drawer_report_json | `docs_zh/mowa/mowa_g0_p0_label_builder_open_drawer_smoke.json` |
+| batch_summary_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_p0_label_builder_summary.json` |
+| cli | `tools/mowa/g0_p0_label_builder_smoke.py` |
+| task_count | 10 |
+| passed_task_count | 10 |
+| failed_task_count | 0 |
+| constructible_heads | `task_progress`、`action_outcome_class` |
+| masked_heads | `manipulation_readiness`、`failure_risk`、`next_best_view_score`、`subgoal_feasibility`、`object_visibility_future` |
+| action_outcome_class_mapping | Data Gate；dry-run 只保留 `next.reward` / `next.done` |
+| go_no_go | `TBD: constructible label smoke passed; production labels remain Data Gate` |
+
+当前结论：P0 的最小 ConstructibleHeads 训练前目标可以从 10 项 recipe 中 dry-run 生成，但仍不能等价为正式 label builder 放行。正式训练前还需要确认 batch 级 dataloader 接入、完整 leakage gate、production profile，以及是否接受只用两个 head 的 P0 smoke 配置。
+
+## 19. 当前 Batch 级 Dataloader Smoke
+
+本节记录 10 项 recipe 的 batch 级 dataloader smoke。该检查组合 `WindowSample` 边界、action target、ConstructibleHeads labels/masks 和 leakage invariant；不实例化生产 dataloader，不读取视频内容，不启动训练。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_batch_dataloader_smoke.json` |
+| cli | `tools/mowa/g0_batch_dataloader_smoke.py` |
+| task_count | 10 |
+| sampled_episode_indices | `0, 1, 4` |
+| sample_count | 30 |
+| window_config | history_steps=`3`、future_steps=`2`、action_chunk_steps=`2`，smoke_only_target |
+| future_action_leakage_status | `smoke_passed` |
+| constructible_label_status | `smoke_passed` |
+| input_keys | `current_index`、`history_actions`、`history_indices`、`instruction`、`observations` |
+| target_keys | `action_chunk_target`、`future_indices`、`wam_targets` |
+| p0_label_keys | `action_outcome_class`、`task_progress` |
+| go_no_go | `TBD: batch dataloader smoke passed; production dataloader remains Data Gate` |
+
+当前结论：10 项 recipe 的 sampled windows 可以与 ConstructibleHeads dry-run targets/masks 对齐，且 future action target 不进入 WAM inputs。该检查为最小 P0 ConstructibleHeads 训练入口提供前置依据，但生产 dataloader、完整 leakage gate、正式 window 参数和训练配置仍需单独放行。
+
+## 20. 当前 Metadata 级 Leakage Gate
+
+本节记录 10 项 recipe 的 metadata 级 leakage gate。该检查读取每个任务的 `meta/episodes.jsonl`，对每个 episode 选择 start/mid/end 三类 anchor，验证 sampler 边界和 future action target-only invariant；不读取视频内容，不实例化生产 dataloader workers，不启动训练。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_leakage_gate_smoke.json` |
+| cli | `tools/mowa/g0_leakage_gate_smoke.py` |
+| task_count | 10 |
+| episode_count | 5055 |
+| checked_window_count | 15165 |
+| failed_window_count | 0 |
+| window_config | history_steps=`3`、future_steps=`2`、action_chunk_steps=`2`，metadata_level_smoke |
+| future_action_leakage_status | `smoke_passed` |
+| cross_episode_leakage_status | `smoke_passed` |
+| go_no_go | `TBD: metadata leakage smoke passed; production dataloader remains Data Gate` |
+
+当前结论：10 项 recipe 的 metadata 级 sampler 边界和 target-only action invariant 已通过 smoke。该结果关闭了 G0 的主要 metadata leakage 风险，但仍不等价于生产 dataloader workers / distributed sampler / train-val split 的正式放行。
+
+## 21. 当前 10 项 Temporal Profile
+
+本节记录 10 项 recipe 的 full-recipe temporal profile。该检查读取所有 sampled recipe parquet 的 scalar columns，用于确认 timestamp / frame_index / shape / reward-done 轮廓；不读取视频内容，不测试训练吞吐，不自动冻结 WAM Hz、history window、future horizon 或 action chunk。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_temporal_profile.json` |
+| cli | `tools/mowa/g0_temporal_profile.py` |
+| task_count | 10 |
+| episode_count | 5055 |
+| parquet_count | 5055 |
+| metadata_total_frames | 1342150 |
+| parquet_total_rows | 1342150 |
+| timestamp_monotonic | true |
+| frame_index_monotonic | true |
+| timestamp_delta_values | `0.049999`、`0.05`、`0.050001`、`0.050003`（parquet scalar profile；浮点舍入差异） |
+| state_shapes | `(16,)` |
+| action_shapes | `(12,)` |
+| reward_signal_seen | true |
+| next_done_seen | true |
+| obs_fps_status | Data Gate |
+| action_hz_status | Data Gate |
+| history_window_status | Data Gate |
+| future_window_status | Data Gate |
+| go_no_go | `TBD: temporal profile passed; production WAM Hz/window remain Data Gate` |
+
+任务级行数：
+
+| task | episode_count | parquet_total_rows | min_episode_rows | max_episode_rows |
+|---|---:|---:|---:|---:|
+| OpenDrawer | 514 | 137431 | 130 | 603 |
+| OpenCabinet | 500 | 184024 | 133 | 664 |
+| CloseFridge | 513 | 155443 | 133 | 615 |
+| CloseToasterOvenDoor | 505 | 86401 | 95 | 305 |
+| CoffeeSetupMug | 502 | 117168 | 142 | 434 |
+| NavigateKitchen | 500 | 72786 | 48 | 282 |
+| PickPlaceCounterToCabinet | 502 | 131904 | 148 | 638 |
+| PickPlaceToasterToCounter | 512 | 148353 | 183 | 497 |
+| PickPlaceSinkToCounter | 501 | 194952 | 215 | 712 |
+| TurnOnSinkFaucet | 506 | 113688 | 139 | 523 |
+
+当前结论：10 项 recipe 的 scalar temporal profile 已通过，metadata frame 数与 parquet row 数一致，timestamp / frame_index 单调，state/action shape 一致。该结果可以作为 P0 ConstructibleHeads 最小训练入口的数据轮廓依据；正式训练配置仍必须显式声明 WAM Hz、history/future window 和 action chunk 的来源，不能把本节自动解释为最终窗口冻结。

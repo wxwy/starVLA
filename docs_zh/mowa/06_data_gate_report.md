@@ -418,3 +418,24 @@ P0 label coverage 初判：
 | TurnOnSinkFaucet | 506 | 113688 | 139 | 523 |
 
 当前结论：10 项 recipe 的 scalar temporal profile 已通过，metadata frame 数与 parquet row 数一致，timestamp / frame_index 单调，state/action shape 一致。该结果可以作为 P0 ConstructibleHeads 最小训练入口的数据轮廓依据；正式训练配置仍必须显式声明 WAM Hz、history/future window 和 action chunk 的来源，不能把本节自动解释为最终窗口冻结。
+
+## 22. 当前 P0 ConstructibleHeads 最小训练入口准备
+
+本节记录 P0 ConstructibleHeads one-step train smoke 的入口准备状态。该入口只用于验证当前 G0 已可构造的两个 head 能完成 forward / loss / backward / one-step update，不计入 E-001 至 E-020，不放开其他五类 P0 head。
+
+| 字段 | 当前值 |
+|---|---|
+| config | `configs/mowa/mowa_p0_constructible_heads_smoke.yaml` |
+| module | `starVLA/model/modules/mowa/p0_heads.py` |
+| cli | `tools/mowa/p0_constructible_heads_train_smoke.py` |
+| test | `tests/mowa/test_mowa_p0_heads.py` |
+| constructible_heads | `task_progress`、`action_outcome_class` |
+| masked_heads | `manipulation_readiness`、`failure_risk`、`next_best_view_score`、`subgoal_feasibility`、`object_visibility_future` |
+| labels_source | G0 smoke labels |
+| update_step | 手写 one-step SGD；不使用 `torch.optim` |
+| expected_vram | 0；默认 CPU 运行，不调用 `.cuda()` |
+| smoke_report_json | TBD，待当前推理任务结束后运行 |
+| class_mapping_status | Data Gate |
+| go_no_go | `TBD: entry prepared; train smoke not executed in this session` |
+
+当前结论：P0 ConstructibleHeads 最小训练入口已经具备代码和配置草案，但本轮未执行完整 torch smoke。原因是当前用户同步运行推理，`import torch` 阶段会触发本机 PyTorch 库加载 I/O；为避免干扰推理，本轮只完成 `py_compile` 验证，训练 smoke 报告仍保持 TBD。

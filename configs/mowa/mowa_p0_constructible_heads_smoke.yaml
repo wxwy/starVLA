@@ -1,0 +1,33 @@
+project_short_name: MoWA
+stage: P0
+experiment_id: smoke_not_counted
+model:
+  type: MoWAP0ConstructibleHeads
+  input_dim: 4
+  hidden_dim: 32
+heads:
+  constructible:
+    - task_progress
+    - action_outcome_class
+  masked:
+    - manipulation_readiness
+    - failure_risk
+    - next_best_view_score
+    - subgoal_feasibility
+    - object_visibility_future
+data:
+  recipe_name: mowa_robocasa365_target_human_atomic_core_v1
+  split: target
+  source: human
+  task_type: atomic
+  labels_source: G0 smoke labels
+training:
+  mode: one_step_smoke
+  counted_in_experiment_budget: false
+  lr: 0.001
+  max_samples: 30
+data_gate:
+  class_mapping: Data Gate
+  wam_hz: Data Gate
+  history_window: Data Gate
+  future_window: Data Gate

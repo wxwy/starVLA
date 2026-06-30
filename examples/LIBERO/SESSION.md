@@ -39,6 +39,22 @@
 | 目录空间 | `/gemini/code` 使用率 `51%`，评测输出与 checkpoint 所在盘可用空间充足 |
 | 备注 | 这轮记录按实验规范补入了资源占用信息，后续每个 checkpoint 的正式结果也应同步记录对应资源快照 |
 
+## 2026-06-30 — StarFlow 标准化评测结果（steps_10000）
+
+| 字段 | 值 |
+| --- | --- |
+| checkpoint | `playground/Checkpoints/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619/checkpoints/steps_10000` |
+| 任务集 | `libero_goal` |
+| 评测规模 | `10` tasks, `50` trials/task, `500` episodes |
+| 最终结果 | `180 / 500` |
+| 最终成功率 | `36.0%` |
+| 任务明细 | `turn on the stove 50/50`，`put the bowl on the plate 45/50`，`put the bowl on top of the cabinet 30/50`，`open the middle drawer of the cabinet 24/50`，`put the bowl on the stove 19/50`，`open the top drawer and put the bowl inside 4/50`，`push the plate to the front of the stove 3/50`，`put the cream cheese in the bowl 3/50`，`put the wine bottle on top of the cabinet 2/50`，`put the wine bottle on the rack 0/50` |
+| 服务端资源 | `server_policy.py` PID `211134`，CPU 约 `193%`，GPU 显存约 `10.16GiB` |
+| 测试端资源 | `eval_libero.py` 在评测过程中持续运行，最终写出 `eval_report.json`；结尾阶段已退出 |
+| 系统资源 | `503Gi` 总内存，`121Gi` 已用，`377Gi` 可用；GPU `0%` 利用率，显存 `10158MiB / 24258MiB` |
+| 产物 | `eval_report.json`、各 task rollout 视频、`run.log`、`policy_server.log` |
+| 结论 | 这组 checkpoint 已完成标准化评测，可作为后续其他 step 的对照基线 |
+
 ## 2026-06-21 — P1 continuous_head build / forward-backward / 10-step smoke
 
 | 字段 | 值 |

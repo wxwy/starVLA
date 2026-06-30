@@ -1,5 +1,31 @@
 # Session Log
 
+## 2026-06-30 — StarFlow 标准化评测连通性 smoke
+
+| 字段 | 值 |
+| --- | --- |
+| 评测目标 | 验证 StarFlow 目录式 checkpoint 可通过标准 LIBERO 评测链路启动 |
+| checkpoint | `playground/Checkpoints/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619/checkpoints/steps_10000` |
+| 任务集 | `libero_goal` |
+| smoke 设置 | `MAX_TASKS=1`，`NUM_TRIALS_PER_TASK=1`，总 1 episode |
+| 输出目录 | `playground/eval_results/libero_goal/std_smoke_P0-M5-ft32-4in1_steps_10000` |
+| 结果 | `eval_report.json` 已生成；`total_episodes=1`，`total_successes=0`，`success_rate=0.0` |
+| 环境观察 | `.venv` 可用 CUDA 1 卡；policy server 首次 import 极慢，`module imports finished` 耗时约 531.75s；模型加载后显存约 9.9GiB |
+| 异常说明 | rollout 完成后 EGL 清理阶段出现 `libGLU.so.0` / `EGL_NOT_INITIALIZED`，符合既有记录中“episode 完成后清理报错不计入评测失败”的口径 |
+| 下一步 | 正式标准化评测使用 `libero_goal`、10 任务、每任务 50 trials；当前单卡环境预计单 checkpoint 耗时很长，建议按 checkpoint 顺序串行跑并保留 `eval_report.json` |
+
+## 2026-06-30 — StarFlow 标准化评测正式启动
+
+| 字段 | 值 |
+| --- | --- |
+| checkpoint | `playground/Checkpoints/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619/checkpoints/steps_10000` |
+| 输出目录 | `playground/eval_results/libero_goal/std_P0-M5-ft32-4in1_steps_10000` |
+| 任务集 | `libero_goal` |
+| 正式设置 | `NUM_TRIALS_PER_TASK=50`，`MAX_TASKS=-1`，预期 10 任务共 500 episodes |
+| 后台 PID | `211097` |
+| 日志 | `run.log`、`policy_server.log` |
+| 状态 | 已启动；policy server 正在加载 checkpoint |
+
 ## 2026-06-21 — P1 continuous_head build / forward-backward / 10-step smoke
 
 | 字段 | 值 |

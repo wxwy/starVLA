@@ -1,0 +1,47 @@
+project_short_name: MoWA
+stage: P0
+experiment_id: E-001
+config_role: runtime_policy_draft_not_confirmed
+
+resource_budget:
+  gpu_type: TBD
+  num_gpus: TBD
+  per_device_batch_size: TBD
+  gradient_accumulation_steps: TBD
+  effective_batch_size: TBD
+  max_train_steps: TBD
+  expected_vram: TBD
+  expected_runtime: TBD
+
+checkpoint:
+  run_root_dir: TBD
+  local_checkpoint_root: TBD
+  save_interval: target_1000
+  checkpoint_format: target_lightweight
+  save_checkpoint_as_directory: true
+  local_checkpoint_keep_count: target_1
+  resume_policy: target_resume_latest_complete_only
+  incomplete_checkpoint_policy: target_ignore_or_prune_incomplete
+  delete_or_overwrite_policy: no_delete_without_confirmation
+  checkpoint_logic_change_allowed: false
+
+logging:
+  wandb_mode: TBD
+  wandb_project: TBD
+  logging_frequency: target_10
+
+launch_requirements:
+  require_recipe_available: true
+  require_production_preflight_passed: true
+  require_p0_one_step_smoke_passed: true
+  require_fullheads_interface: true
+  require_runtime_policy_confirmation: true
+  require_human_confirmation_before_training: true
+
+status:
+  policy_confirmed: false
+  launch_ready: false
+  notes:
+    - Values marked target are engineering defaults for review, not measured results.
+    - This policy does not modify checkpoint/resume/save code.
+    - E-001 must not start until policy_confirmed and launch_ready are explicitly true.

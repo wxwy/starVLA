@@ -443,3 +443,73 @@ P0 label coverage 初判：
 | go_no_go | `TBD: train smoke passed; production training remains Data Gate` |
 
 当前结论：P0 ConstructibleHeads 最小训练入口已完成 one-step smoke：当前 G0 已可构造的 `task_progress` 与 `action_outcome_class` 两个 head 可以完成 forward / loss / backward / one-step update，loss 在一次手写 SGD step 后下降。该结果不计入 E-001，不放开其他五类 P0 head，不等价于 production dataloader / train-val split / distributed sampler / P0 主训练放行；`class_mapping_status`、WAM Hz 和 window 仍保持 Data Gate。
+
+## 23. 当前 Production Preflight Smoke
+
+本节记录 P0 主训练前的 production-entry preflight。该检查只验证 deterministic train/val split、rank 分片和多 worker 少量 schema/window 读取，不启动训练主干，不计入 E-001，不冻结 production window。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json` |
+| cli | `tools/mowa/g0_production_preflight_smoke.py` |
+| module | `starVLA/dataloader/mowa/production_preflight.py` |
+| split_strategy | `episode_index_modulo` |
+| val_every | 10 |
+| train_episode_count | 4544 |
+| val_episode_count | 511 |
+| split_overlap_count | 0 |
+| worker_count | 2 |
+| worker_sample_count | 16 |
+| failed_sample_count | 0 |
+| rank_count | 2 |
+| distributed_overlap_count | 0 |
+| split_status | `smoke_passed` |
+| worker_status | `smoke_passed` |
+| distributed_sampler_status | `smoke_passed` |
+| future_action_leakage_status | `smoke_passed` |
+| go_no_go | `TBD: production preflight smoke passed; main training still requires explicit E-001 launch` |
+
+当前结论：固定 10 项 recipe 的 production-entry smoke 已通过，train/val split、rank 分片和多 worker 读取的最小不变量成立，future action 仍未进入 WAM inputs。该结果只说明 E-001 前置数据入口风险下降，不代表已启动或放行 P0 主训练；正式训练前仍需显式确认 E-001、训练配置、资源预算和保存/恢复策略。
+
+## 24. 当前 E-001 Readiness Smoke
+
+本节记录 E-001 启动前 readiness 聚合检查。该检查只读取已有 G0/P0/preflight 报告，不启动训练，不修改训练主干，不计入 E-001。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/mowa_e001_readiness_smoke.json` |
+| cli | `tools/mowa/e001_readiness_smoke.py` |
+| recipe_available | true |
+| production_preflight_passed | true |
+| p0_one_step_smoke_passed | true |
+| p0_fullheads_interface_created | true |
+| e001_launch_draft_created | true |
+| e001_launch_ready_false | true |
+| runtime_policy_draft_created | true |
+| runtime_policy_confirmed_false | true |
+| task_count | 10 |
+| available_task_count | 10 |
+| train_episode_count | 4544 |
+| val_episode_count | 511 |
+| split_overlap_count | 0 |
+| distributed_overlap_count | 0 |
+| worker_sample_count | 16 |
+| failed_sample_count | 0 |
+| p0_smoke_sample_count | 30 |
+| p0_fullheads_interface_config | `configs/mowa/mowa_p0_fullheads_interface.yaml` |
+| e001_launch_draft_config | `configs/mowa/mowa_e001_launch_draft.yaml` |
+| e001_runtime_policy_draft_config | `configs/mowa/mowa_e001_runtime_policy_draft.yaml` |
+| class_mapping_status | Data Gate |
+| training_started | false |
+| go_no_go | `TBD: E-001 prerequisites mostly passed; launch draft exists but resource/save-resume remain Data Gate` |
+
+未解决项：
+
+- `docs_zh/mowa/00_project_proposal.md`、`01_technical_survey.md`、`02_detailed_design.md` 当前不可读。
+- P0 FullHeads interface draft、E-001 launch draft 和 runtime policy draft 已创建，但 launch draft 明确 `launch_ready=false`，runtime policy 明确 `policy_confirmed=false`，不可执行。
+- production WAM Hz/window 仍为 Data Gate。
+- `class_mapping_status` 仍为 Data Gate。
+- runtime policy draft 尚未确认。
+- resource budget 仍为 TBD。
+
+当前结论：E-001 的数据、最小 P0 smoke、P0 FullHeads interface、launch draft 与 runtime policy draft 前置条件基本成立，但 launch draft 明确不可执行，runtime policy 仍未确认，不能自动进入主训练。下一步必须先明确资源预算和保存/恢复策略，并将 `policy_confirmed` 与 `launch_ready` 从 false 显式改为 true；任何修改训练主干、checkpoint/resume/save 逻辑或正式启动训练都需要单独确认。

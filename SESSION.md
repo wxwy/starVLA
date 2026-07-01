@@ -17,6 +17,7 @@
   - batch dataloader smoke：10 个任务、30 个 sampled windows，通过 future action target-only 检查。
   - metadata leakage gate：5055 个 episode、15165 个 anchor windows、failed_window_count=0。
   - temporal profile：5055 个 parquet、1342150 行，metadata_total_frames 与 parquet_total_rows 对齐；WAM Hz/window 仍不冻结。
+  - production-entry preflight smoke：train_episode_count=4544、val_episode_count=511、split_overlap_count=0、distributed_overlap_count=0、worker_sample_count=16、failed_sample_count=0；仍不启动 E-001。
 - 真实 label builder 阈值 / class mapping、生产 dataloader workers、真实 latent cache 仍为 Data Gate。
 - P0 ConstructibleHeads 最小训练入口已完成代码准备：
   - 仅启用 `task_progress`、`action_outcome_class` 两个当前可构造 head。
@@ -25,12 +26,25 @@
   - 默认 CPU 运行，预计显存占用为 0。
   - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 已通过 1 项测试，用时 166.764s；本机 `torch` 导入需要分钟级等待窗口。
   - `p0_constructible_heads_train_smoke.py` 已通过并生成 `docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json`：sample_count=30、input_shape=[30, 4]、loss_before=0.024293631315231323、loss_after=0.024045661091804504、class_mapping_status=Data Gate。
+- E-001 readiness smoke 已生成 `docs_zh/mowa/mowa_e001_readiness_smoke.json`：
+  - recipe_available=true、production_preflight_passed=true、p0_one_step_smoke_passed=true、p0_fullheads_interface_created=true、e001_launch_draft_created=true、e001_launch_ready_false=true、runtime_policy_draft_created=true、runtime_policy_confirmed_false=true。
+  - go_no_go=`TBD: E-001 prerequisites mostly passed; launch draft exists but resource/save-resume remain Data Gate`。
+- P0 FullHeads interface draft 已完成：
+  - `starVLA/model/modules/mowa/p0_heads.py` 新增 `MoWAP0FullHeads`、`MoWAP0FullHeadsConfig`、`P0FutureFeatures`。
+  - `configs/mowa/mowa_p0_fullheads_interface.yaml` 记录七类固定 head、当前 constructible heads、mask 缺失 head 和 launch blockers。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 已通过 2 项测试，用时 232.065s。
+- E-001 launch draft 已创建：
+  - `configs/mowa/mowa_e001_launch_draft.yaml` 明确 `launch_ready=false`、`training_started=false`。
+  - 草案记录数据 split、FullHeads 策略、训练/资源/checkpoint/logging 待确认字段和 launch blockers。
+- E-001 runtime policy draft 已创建：
+  - `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 明确 `policy_confirmed=false`、`launch_ready=false`。
+  - 草案记录 checkpoint target、resume target、logging target 和资源预算 TBD，不修改 checkpoint/resume/save 代码。
 
 ## 进行中的任务
-- 2026-07-01 已完成 10 个 target/human/atomic core 任务下载、G0 复验和 P0 one-step smoke。
-- 当前没有启动 P0/P1 主训练；本轮仅完成 G0 复验与 P0 one-step smoke。
+- 2026-07-01 已完成 10 个 target/human/atomic core 任务下载、G0 复验、production-entry preflight、P0 one-step smoke 和 E-001 readiness smoke。
+- 当前没有启动 P0/P1 主训练；本轮仅完成训练前工程 smoke。
 
 ## 下一步
-- 若继续推进 P0，先明确 E-001 是否从 smoke 进入主训练；主训练前仍需复验 production dataloader workers、train/val split、distributed sampler。
+- 若继续推进 P0，先确认是否将 `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 与 `configs/mowa/mowa_e001_launch_draft.yaml` 从不可执行草案推进为可执行配置；主训练前仍需确认资源预算和 checkpoint/save/resume 策略。
 - 训练入口必须显式引用 G0 temporal profile，但不得把 WAM Hz/window 当作已冻结结论。
 - 真实 Wan latent cache builder 仍需单独放行。

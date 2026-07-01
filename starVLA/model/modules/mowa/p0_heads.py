@@ -8,12 +8,45 @@ from typing import Any, Mapping
 
 
 MOWA_P0_CONSTRUCTIBLE_HEADS = ("task_progress", "action_outcome_class")
+MOWA_P0_FULL_HEADS = (
+    "task_progress",
+    "manipulation_readiness",
+    "failure_risk",
+    "next_best_view_score",
+    "subgoal_feasibility",
+    "object_visibility_future",
+    "action_outcome_class",
+)
+
+MOWA_P0_HEAD_OUTPUT_DIMS = {
+    "task_progress": 1,
+    "manipulation_readiness": 1,
+    "failure_risk": 1,
+    "next_best_view_score": 1,
+    "subgoal_feasibility": 1,
+    "object_visibility_future": 1,
+    "action_outcome_class": 2,
+}
 
 
 @dataclass(frozen=True)
 class MoWAP0ConstructibleHeadsConfig:
     input_dim: int = 4
     hidden_dim: int = 32
+
+
+@dataclass(frozen=True)
+class MoWAP0FullHeadsConfig:
+    input_dim: int = 4
+    hidden_dim: int = 32
+
+
+@dataclass(frozen=True)
+class P0FutureFeatures:
+    hidden_features: Any
+    head_outputs: Mapping[str, Any]
+    active_heads: tuple[str, ...]
+    masked_heads: tuple[str, ...]
 
 
 def mowa_manual_sgd_step(model: Any, lr: float) -> None:
@@ -82,6 +115,77 @@ class MoWAP0ConstructibleHeads:
                 return total, losses, outputs
 
         return _TorchMoWAP0ConstructibleHeads(*args, **kwargs)
+
+
+class MoWAP0FullHeads:
+    """Seven-head P0 interface with mask-controlled loss.
+
+    该模块固定七类 P0 heads；缺失标签必须通过 mask 关闭，不新增替代 head。
+    """
+
+    def __new__(cls, *args: Any, **kwargs: Any):
+        import torch.nn as nn
+
+        class _TorchMoWAP0FullHeads(nn.Module):
+            def __init__(self, config: MoWAP0FullHeadsConfig | None = None):
+                super().__init__()
+                self.config = config or MoWAP0FullHeadsConfig()
+                self.trunk = nn.Sequential(
+                    nn.Linear(self.config.input_dim, self.config.hidden_dim),
+                    nn.ReLU(),
+                )
+                self.heads = nn.ModuleDict(
+                    {
+                        head: nn.Linear(self.config.hidden_dim, output_dim)
+                        for head, output_dim in MOWA_P0_HEAD_OUTPUT_DIMS.items()
+                    }
+                )
+
+            def forward(self, features):
+                hidden = self.trunk(features)
+                outputs = {}
+                for head, module in self.heads.items():
+                    value = module(hidden)
+                    outputs[head] = value.squeeze(-1) if value.shape[-1] == 1 else value
+                return outputs
+
+            def future_features(self, features, masks: Mapping[str, Any]) -> P0FutureFeatures:
+                hidden = self.trunk(features)
+                outputs = {}
+                for head, module in self.heads.items():
+                    value = module(hidden)
+                    outputs[head] = value.squeeze(-1) if value.shape[-1] == 1 else value
+                active_heads = tuple(head for head in MOWA_P0_FULL_HEADS if bool(masks.get(head, False)))
+                masked_heads = tuple(head for head in MOWA_P0_FULL_HEADS if not bool(masks.get(head, False)))
+                return P0FutureFeatures(
+                    hidden_features=hidden,
+                    head_outputs=outputs,
+                    active_heads=active_heads,
+                    masked_heads=masked_heads,
+                )
+
+            def compute_loss(self, features, targets: Mapping[str, Any], masks: Mapping[str, Any]):
+                import torch
+                import torch.nn.functional as F
+
+                outputs = self(features)
+                losses = {}
+                active_losses = []
+                for head in MOWA_P0_FULL_HEADS:
+                    if not bool(masks.get(head, False)):
+                        continue
+                    if head not in targets:
+                        raise KeyError(f"MoWA P0 FullHeads active head missing target: {head}")
+                    loss = F.mse_loss(outputs[head], targets[head])
+                    losses[head] = loss
+                    active_losses.append(loss)
+                if not active_losses:
+                    raise ValueError("MoWA P0 FullHeads loss requires at least one active mask.")
+                total = torch.stack(active_losses).sum()
+                losses["total"] = total
+                return total, losses, outputs
+
+        return _TorchMoWAP0FullHeads(*args, **kwargs)
 
 
 def build_mowa_p0_constructible_batch_from_smoke(

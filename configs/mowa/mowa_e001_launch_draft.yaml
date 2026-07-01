@@ -1,0 +1,86 @@
+project_short_name: MoWA
+stage: P0
+experiment_id: E-001
+experiment_name: P0-FullHeads vs VLA baseline
+config_role: launch_draft_not_executable
+
+launch:
+  launch_ready: false
+  training_started: false
+  requires_human_confirmation: true
+  reason: runtime policy exists but is not confirmed
+
+references:
+  interface_config: configs/mowa/mowa_p0_fullheads_interface.yaml
+  runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
+  readiness_report: docs_zh/mowa/mowa_e001_readiness_smoke.json
+  production_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json
+  p0_train_smoke_report: docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json
+
+data:
+  recipe_name: mowa_robocasa365_target_human_atomic_core_v1
+  split: target
+  source: human
+  task_type: atomic
+  train_episode_count: 4544
+  val_episode_count: 511
+  split_strategy: episode_index_modulo
+  val_every: 10
+  split_status: smoke_passed
+  production_preflight: smoke_passed
+
+model:
+  type: MoWAP0FullHeads
+  heads:
+    full:
+      - task_progress
+      - manipulation_readiness
+      - failure_risk
+      - next_best_view_score
+      - subgoal_feasibility
+      - object_visibility_future
+      - action_outcome_class
+    active_for_initial_launch_draft:
+      - task_progress
+      - action_outcome_class
+    masked_until_data_gate:
+      - manipulation_readiness
+      - failure_risk
+      - next_best_view_score
+      - subgoal_feasibility
+      - object_visibility_future
+  label_policy: mask_missing_heads
+  class_mapping_status: Data Gate
+
+training:
+  counted_in_experiment_budget: true
+  max_train_steps: TBD
+  per_device_batch_size: TBD
+  gradient_accumulation_steps: TBD
+  learning_rate: TBD
+  wam_hz: Data Gate
+  history_window: Data Gate
+  future_window: Data Gate
+  action_chunk_steps: Data Gate
+  expected_vram: TBD
+  expected_runtime: TBD
+
+checkpoint:
+  runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
+  run_root_dir: TBD
+  save_interval: target_1000
+  resume_policy: target_resume_latest_complete_only
+  checkpoint_format: target_lightweight
+  delete_or_overwrite_policy: no_delete_without_confirmation
+
+logging:
+  wandb_mode: TBD
+  wandb_project: TBD
+  logging_frequency: TBD
+
+launch_blockers:
+  - SOT docs 00/01/02 are not available in docs_zh/mowa
+  - production WAM Hz/window remain Data Gate
+  - class_mapping_status remains Data Gate
+  - runtime policy draft not confirmed
+  - training command not created

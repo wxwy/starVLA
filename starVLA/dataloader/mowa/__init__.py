@@ -36,6 +36,11 @@ from starVLA.dataloader.mowa.p0_label_builder import (
     build_mowa_p0_constructible_label_smoke,
     build_mowa_p0_label_smoke_sample,
 )
+from starVLA.dataloader.mowa.production_preflight import (
+    MoWAProductionPreflightSample,
+    MoWAProductionPreflightSmoke,
+    build_mowa_atomic_core_production_preflight_smoke,
+)
 from starVLA.dataloader.mowa.robocasa365_adapter import (
     MOWA_P0_HEADS,
     ROBOCASA365_REQUIRED_PARQUET_COLUMNS,
@@ -90,6 +95,8 @@ __all__ = [
     "MoWAP0HeadCoverage",
     "MoWAP0LabelCoverageReport",
     "MoWAP0LabelSmokeSample",
+    "MoWAProductionPreflightSample",
+    "MoWAProductionPreflightSmoke",
     "MoWARoboCasa365DatasetSmoke",
     "MoWARoboCasa365EpisodeSchema",
     "MoWARoboCasa365ProfileSmoke",
@@ -108,6 +115,7 @@ __all__ = [
     "build_mowa_latent_cache_manifest_smoke",
     "build_mowa_p0_constructible_label_smoke",
     "build_mowa_p0_label_smoke_sample",
+    "build_mowa_atomic_core_production_preflight_smoke",
     "build_mowa_robocasa365_local_smoke_report",
     "inspect_mowa_p0_label_coverage",
     "inspect_mowa_robocasa365_atomic_core_recipe",

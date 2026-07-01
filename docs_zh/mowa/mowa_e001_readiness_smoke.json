@@ -1,0 +1,52 @@
+{
+  "stage": "P0",
+  "experiment_id": "E-001",
+  "experiment_name": "P0-FullHeads vs VLA baseline",
+  "training_started": false,
+  "reports": {
+    "recipe": "docs_zh/mowa/mowa_g0_robocasa365_atomic_core_recipe_smoke.json",
+    "production_preflight": "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json",
+    "p0_train_smoke": "docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json"
+  },
+  "checks": {
+    "recipe_available": true,
+    "production_preflight_passed": true,
+    "p0_one_step_smoke_passed": true,
+    "p0_fullheads_interface_created": true,
+    "e001_launch_draft_created": true,
+    "e001_launch_ready_false": true,
+    "runtime_policy_draft_created": true,
+    "runtime_policy_confirmed_false": true
+  },
+  "observed": {
+    "task_count": 10,
+    "available_task_count": 10,
+    "train_episode_count": 4544,
+    "val_episode_count": 511,
+    "split_overlap_count": 0,
+    "distributed_overlap_count": 0,
+    "worker_sample_count": 16,
+    "failed_sample_count": 0,
+    "p0_smoke_sample_count": 30,
+    "loss_before": 0.024293631315231323,
+    "loss_after": 0.024045661091804504,
+    "class_mapping_status": "Data Gate",
+    "p0_fullheads_interface_config": "configs/mowa/mowa_p0_fullheads_interface.yaml",
+    "e001_launch_draft_config": "configs/mowa/mowa_e001_launch_draft.yaml",
+    "e001_runtime_policy_draft_config": "configs/mowa/mowa_e001_runtime_policy_draft.yaml"
+  },
+  "unresolved_items": [
+    "SOT docs 00/01/02 are not available in docs_zh/mowa",
+    "E-001 launch draft is not executable",
+    "production WAM Hz/window remain Data Gate",
+    "class_mapping_status remains Data Gate",
+    "runtime policy draft not confirmed",
+    "resource budget remains TBD"
+  ],
+  "go_no_go": "TBD: E-001 prerequisites mostly passed; launch draft exists but resource/save-resume remain Data Gate",
+  "notes": [
+    "This report does not start training and does not consume E-001.",
+    "Existing QwenOFT RoboCasa365 scripts are baseline/walk-through scripts, not MoWA E-001 launch config.",
+    "E-001 launch requires explicit user confirmation before modifying training entry points or checkpoint logic."
+  ]
+}

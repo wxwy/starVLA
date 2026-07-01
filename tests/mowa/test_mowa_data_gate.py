@@ -14,6 +14,7 @@ from starVLA.dataloader.mowa import (
     MoWAWindowSample,
     build_mowa_atomic_core_batch_dataloader_smoke,
     build_mowa_atomic_core_leakage_gate_smoke,
+    build_mowa_atomic_core_production_preflight_smoke,
     build_mowa_atomic_core_temporal_profile,
     build_mowa_g0_report_skeleton,
     build_mowa_latent_cache_manifest_smoke,
@@ -479,6 +480,39 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertEqual(report["action_shapes"], ((12,),))
         self.assertEqual(report["history_window_status"], DATA_GATE)
         self.assertEqual(report["future_window_status"], DATA_GATE)
+
+    def test_atomic_core_production_preflight_checks_split_workers_and_ranks(self):
+        try:
+            import pyarrow  # noqa: F401
+        except ImportError:
+            self.skipTest("pyarrow is not available")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            for relative_path in MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS.values():
+                dataset_path = root / relative_path
+                self._write_minimal_robocasa_parquet_dataset(dataset_path, lengths=(6, 7, 8))
+            report = build_mowa_atomic_core_production_preflight_smoke(
+                root,
+                val_every=2,
+                worker_count=1,
+                rank_count=2,
+                max_worker_samples=4,
+                window_config=MoWAWindowConfig(history_steps=3, future_steps=2, action_chunk_steps=2),
+            ).to_dict()
+
+        self.assertEqual(report["task_count"], len(MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS))
+        self.assertGreater(report["train_episode_count"], 0)
+        self.assertGreater(report["val_episode_count"], 0)
+        self.assertEqual(report["split_overlap_count"], 0)
+        self.assertEqual(report["distributed_overlap_count"], 0)
+        self.assertEqual(report["worker_sample_count"], 4)
+        self.assertEqual(report["failed_sample_count"], 0)
+        self.assertEqual(report["split_status"], "smoke_passed")
+        self.assertEqual(report["worker_status"], "smoke_passed")
+        self.assertEqual(report["distributed_sampler_status"], "smoke_passed")
+        self.assertEqual(report["future_action_leakage_status"], "smoke_passed")
+        self.assertIn("explicit E-001", report["go_no_go"])
 
     def test_latent_cache_manifest_smoke_checks_video_paths_without_encoding(self):
         with tempfile.TemporaryDirectory() as tmpdir:

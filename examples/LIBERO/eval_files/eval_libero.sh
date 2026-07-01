@@ -12,6 +12,8 @@ PORT=${PORT:-${BASE_PORT:-6694}}
 TASK_SUITE_NAME=${TASK_SUITE_NAME:-libero_goal}
 NUM_TRIALS_PER_TASK=${NUM_TRIALS_PER_TASK:-50}
 MAX_TASKS=${MAX_TASKS:-}
+REPLAN_INTERVAL=${REPLAN_INTERVAL:-}
+RESUME_EVAL=${RESUME_EVAL:-}
 MUJOCO_GL_VALUE=${MUJOCO_GL_VALUE:-egl}
 PYOPENGL_PLATFORM_VALUE=${PYOPENGL_PLATFORM_VALUE:-egl}
 
@@ -66,6 +68,8 @@ echo "CKPT=${CKPT}"
 echo "TASK_SUITE_NAME=${TASK_SUITE_NAME}"
 echo "NUM_TRIALS_PER_TASK=${NUM_TRIALS_PER_TASK}"
 echo "MAX_TASKS=${MAX_TASKS:-<all>}"
+echo "REPLAN_INTERVAL=${REPLAN_INTERVAL:-<full_chunk>}"
+echo "RESUME_EVAL=${RESUME_EVAL:-false}"
 echo "VIDEO_OUT_PATH=${VIDEO_OUT_PATH}"
 
 CMD=(
@@ -80,6 +84,24 @@ CMD=(
 
 if [[ -n "${MAX_TASKS}" ]]; then
     CMD+=(--args.max-tasks "${MAX_TASKS}")
+fi
+
+if [[ -n "${REPLAN_INTERVAL}" ]]; then
+    CMD+=(--args.replan-interval "${REPLAN_INTERVAL}")
+fi
+
+if [[ -n "${RESUME_EVAL}" ]]; then
+    case "${RESUME_EVAL}" in
+        1|true|TRUE|True|yes|YES|Yes|on|ON|On)
+            CMD+=(--args.resume-eval)
+            ;;
+        0|false|FALSE|False|no|NO|No|off|OFF|Off)
+            ;;
+        *)
+            echo "Invalid RESUME_EVAL value: ${RESUME_EVAL}"
+            exit 1
+            ;;
+    esac
 fi
 
 "${CMD[@]}"

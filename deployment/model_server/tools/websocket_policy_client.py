@@ -67,9 +67,21 @@ class WebsocketClientPolicy:
 
     @override
     def predict_action(self, query_info: Dict) -> Dict:
+        roundtrip_start = time.perf_counter()
         data = self._packer.pack(query_info)
+        send_done = time.perf_counter()
         self._ws.send(data)
         response = self._ws.recv()
+        recv_done = time.perf_counter()
         if isinstance(response, str):
             raise RuntimeError(f"Error in inference server:\n{response}")
-        return msgpack_numpy.unpackb(response)
+        unpack_start = time.perf_counter()
+        payload = msgpack_numpy.unpackb(response)
+        unpack_done = time.perf_counter()
+        payload["_client_timings"] = {
+            "pack_and_queue_sec": send_done - roundtrip_start,
+            "server_roundtrip_sec": recv_done - send_done,
+            "unpack_sec": unpack_done - unpack_start,
+            "total_client_call_sec": unpack_done - roundtrip_start,
+        }
+        return payload

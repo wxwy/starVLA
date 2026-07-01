@@ -186,13 +186,27 @@ class PolicyServerWrapper:
                     f"predict_action: unnorm_key not specified and no default set. "
                     f"Pass one of {self._available_unnorm_keys}."
                 )
+        overall_start = time.perf_counter()
         proc = self._get_processor(effective_key)
 
+        framework_start = time.perf_counter()
         out = self._framework.predict_action(examples=examples, **kwargs)
+        framework_done = time.perf_counter()
         normalized = np.asarray(out["normalized_actions"])  # (B, T, D)
 
+        unnorm_start = time.perf_counter()
         unnorm = np.stack(
             [proc.unapply_actions(normalized[b]) for b in range(normalized.shape[0])],
             axis=0,
         )
-        return {"actions": unnorm}
+        unnorm_done = time.perf_counter()
+        framework_timings = out.get("timings", {}) if isinstance(out, dict) else {}
+        return {
+            "actions": unnorm,
+            "timings": {
+                "server_total_sec": unnorm_done - overall_start,
+                "framework_sec": framework_done - framework_start,
+                "unnorm_sec": unnorm_done - unnorm_start,
+                **framework_timings,
+            },
+        }

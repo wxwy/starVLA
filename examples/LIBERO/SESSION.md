@@ -55,6 +55,21 @@
 | 产物 | `eval_report.json`、各 task rollout 视频、`run.log`、`policy_server.log` |
 | 结论 | 这组 checkpoint 已完成标准化评测，可作为后续其他 step 的对照基线 |
 
+## 2026-06-30 — P0-M6 baseline 标准化评测启动（22:18 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| checkpoint | `playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_20000` |
+| 输出目录 | `playground/eval_results/libero_goal/std_P0-M6-mlp-baseline-4in1_steps_20000` |
+| 任务集 | `libero_goal` |
+| 正式设置 | `NUM_TRIALS_PER_TASK=50`，`MAX_TASKS=-1`，预期 10 任务共 500 episodes |
+| 后台 PID | `234300` |
+| 服务端 PID | `234337`，启动阶段 CPU 约 `16.6%`，尚未占 GPU |
+| GPU | `0MiB / 24258MiB`，GPU-Util `0%` |
+| 系统资源 | `503Gi` 总内存，`83Gi` 已用，`415Gi` 可用；`/gemini/code` 使用率 `51%` |
+| 日志 | `run.log`、`policy_server.log` |
+| 状态 | 已启动；policy server 正在导入与加载模型 |
+
 ## 2026-06-21 — P1 continuous_head build / forward-backward / 10-step smoke
 
 | 字段 | 值 |
@@ -6586,3 +6601,57 @@
 - 已同步导出 `ACCELERATE_GRADIENT_ACCUMULATION_STEPS=${GRADIENT_ACCUMULATION_STEPS}`，修正单卡直接运行时 Accelerator 实际梯度累积退回 `1` 的问题。
 - 已同步更新 `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` 的默认数据集、run_id、步数和日志/保存间隔。
 - 已验证 `bash -n examples/LIBERO/train_files/run_starflow_train_ready.sh` 通过。
+
+## 2026-07-01 — LIBERO 标准化评测重启状态
+
+- 当前标准评测口径保持不变：
+- `TASK_SUITE_NAME=libero_goal`
+- `NUM_TRIALS_PER_TASK=50`
+- `MAX_TASKS=-1`
+- `P0-M5-ft32-goal` 不在本轮执行范围内
+- `P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_20000` 在服务器断电后已重新启动
+- 结果目录：`playground/eval_results/libero_goal/std_P0-M6-mlp-baseline-4in1_steps_20000`
+- 为兼容旧脚本依赖，已恢复软链：
+- `/disk/rl/starVLA/playground/Pretrained_models/Qwen3-VL-4B-Instruct -> /gemini/pretrain/Qwen3-VL-4B-Instruct`
+- 2026-07-01 13:03:21 检查状态：
+- `server_policy.py` PID `290695` 仍在运行，`etime=02:13`，`%CPU≈7.3`，`RSS≈465MB`
+- `nvidia-smi` 未看到任何 GPU 进程，说明重启后的 server 尚未进入实际 CUDA 推理阶段
+- `run.log` / `policy_server.log` 只有启动配置，尚无 rollout 记录
+- `eval_report.json` 时间戳仍是 `2026-06-30 23:14:48 +0800`，内容仍为断电前遗留进度：`178 / 500`、`0` 成功
+- 结论：当前进程已启动，但评测尚未恢复推进；需要继续监控 server 是否完成加载并真正进入 rollout
+
+## 2026-07-01 — LIBERO 推理分阶段耗时埋点
+
+- 已补最小推理耗时埋点，覆盖当前 `P0-M6` 使用的 `QwenOFT + MLP action head` 评测链路
+- 修改文件：
+- `deployment/model_server/tools/websocket_policy_client.py`
+- `deployment/model_server/policy_wrapper.py`
+- `examples/LIBERO/eval_files/model2libero_interface.py`
+- `examples/LIBERO/eval_files/eval_libero.py`
+- `starVLA/model/framework/VLM4A/QwenOFT.py`
+- 当前新增可观测项：
+- 环境侧：`obs_prepare`、`env.step`
+- client 侧：`resize`、`client_pack`、`client_roundtrip`、`client_unpack`、`client_total`
+- server 侧：`server_total`、`framework_total`、`unnorm`
+- framework 侧：`prepare_inputs`、`build_qwen_inputs`、`qwen_forward`、`gather_action_tokens`、`action_head`、`to_numpy`
+- 日志策略：
+- 仅在真实 chunk 请求时打印一次完整分项耗时
+- 当前 `action_chunk_size=8`，因此不是每个 env step 都会打印
+- 已执行 `python -m py_compile` 校验通过
+- 注意：这些埋点不会注入到当前已在运行的旧进程，需在下一次重启评测后才能产出新耗时日志
+
+## 2026-07-01 — LIBERO 评测支持断点续跑
+
+- 已为 `examples/LIBERO/eval_files/eval_libero.py` 增加参数：
+- `resume_eval: bool = False`
+- 打开后会读取 `video_out_path/eval_report.json`
+- 继续口径：
+- 校验 `checkpoint_path` 与 `task_suite_name` 一致
+- 恢复已有 `episodes` / `total_episodes` / `total_successes`
+- 跳过已完成的 `(task_id, episode_idx)`，从未完成条目继续
+- 已在 `examples/LIBERO/eval_files/eval_libero.sh` 增加环境变量透传：
+- `RESUME_EVAL=true|false`
+- 已在 `examples/LIBERO/eval_files/starflow_eval_report.py` 增加 `load_eval_report()`
+- 已执行语法校验：
+- `python -m py_compile examples/LIBERO/eval_files/starflow_eval_report.py examples/LIBERO/eval_files/eval_libero.py`
+- `bash -n examples/LIBERO/eval_files/eval_libero.sh`

@@ -21,6 +21,7 @@ Note: How to add special tokens to Qwen2.5:
 """
 
 from dataclasses import dataclass, field
+import time
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -227,6 +228,7 @@ class Qwenvl_OFT(baseframework):
             dict:
                 normalized_actions (np.ndarray): Shape [B, T, action_dim], diffusion-sampled normalized actions.
         """
+        overall_start = time.perf_counter()
         if type(examples) is not list:
             examples = [examples]
         batch_images = [to_pil_preserve(example["image"]) for example in examples]  #  [B，[PLT]]
@@ -243,6 +245,7 @@ class Qwenvl_OFT(baseframework):
         train_obs_image_size = getattr(self.config.datasets.vla_data, "obs_image_size", None)
         if train_obs_image_size:
             batch_images = resize_images(batch_images, target_size=train_obs_image_size)
+        prepare_inputs_done = time.perf_counter()
 
         # step 0: add special action token to instruction
         action_tokens = (
@@ -252,7 +255,9 @@ class Qwenvl_OFT(baseframework):
         instructions = [instruction + prompt_suffix for instruction in instructions]
 
         # Step 1: QWenVL input format
+        build_qwen_inputs_start = time.perf_counter()
         qwen_inputs = self.qwen_vl_interface.build_qwenvl_inputs(images=batch_images, instructions=instructions)
+        build_qwen_inputs_done = time.perf_counter()
         with torch.autocast("cuda", dtype=torch.bfloat16):
             qwenvl_outputs = self.qwen_vl_interface(
                 **qwen_inputs,
@@ -262,6 +267,7 @@ class Qwenvl_OFT(baseframework):
             )
             # last_hidden_state: [B, seq_len, H]
             last_hidden = qwenvl_outputs.hidden_states[-1]  # [B, L, H]
+        qwen_forward_done = time.perf_counter()
 
         # Step 4: Action Expert Forward and Loss
         with torch.autocast("cuda", dtype=torch.float32):
@@ -270,10 +276,24 @@ class Qwenvl_OFT(baseframework):
             action_queries = self._gather_action_token_embeddings(
                 last_hidden, input_ids, action_token_id=self.action_token_id
             )  # [B, chunk_len, H]
+            gather_action_tokens_done = time.perf_counter()
             pred_actions = self.action_model.predict_action(action_queries)  # (B, chunk_len, action_dim)
+        action_head_done = time.perf_counter()
 
         normalized_actions = pred_actions.detach().cpu().numpy()
-        return {"normalized_actions": normalized_actions}
+        to_numpy_done = time.perf_counter()
+        return {
+            "normalized_actions": normalized_actions,
+            "timings": {
+                "framework_prepare_inputs_sec": prepare_inputs_done - overall_start,
+                "framework_build_qwen_inputs_sec": build_qwen_inputs_done - build_qwen_inputs_start,
+                "framework_qwen_forward_sec": qwen_forward_done - build_qwen_inputs_done,
+                "framework_gather_action_tokens_sec": gather_action_tokens_done - qwen_forward_done,
+                "framework_action_head_sec": action_head_done - gather_action_tokens_done,
+                "framework_to_numpy_sec": to_numpy_done - action_head_done,
+                "framework_total_sec": to_numpy_done - overall_start,
+            },
+        }
 
     def _gather_action_token_embeddings(
         self,

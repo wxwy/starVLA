@@ -34,6 +34,7 @@ from examples.LIBERO.eval_files.starflow_eval_report import (
     build_eval_report,
     infer_failure_category,
     load_eval_metadata,
+    load_eval_report,
     write_eval_report,
 )
 
@@ -62,6 +63,8 @@ class Args:
     num_steps_wait: int = 10  # Number of steps to wait for objects to stabilize i n sim
     num_trials_per_task: int = 50  # Number of rollouts per task
     max_tasks: int = -1  # If > 0, limit the number of tasks evaluated (smoke / quick check). -1 = run all.
+    replan_interval: int | None = None  # None = use full action chunk; 1/2/4/... = replan cadence in env steps
+    resume_eval: bool = False  # If true, continue from an existing eval_report.json in video_out_path
 
     #################################################################################################################
     # Utils
@@ -114,15 +117,52 @@ def eval_libero(args: Args) -> None:
         host=args.host,
         port=args.port,
         unnorm_key=args.unnorm_key,
+        replan_interval=args.replan_interval,
     )
 
     # Optional smoke-test cap (still useful for quick verification with -1 = full run).
     n_eval_tasks = num_tasks_in_suite if args.max_tasks <= 0 else min(args.max_tasks, num_tasks_in_suite)
     logging.info(f"Evaluating {n_eval_tasks} of {num_tasks_in_suite} tasks (max_tasks={args.max_tasks})")
 
-    # Start evaluation
+    # Resume from existing report when explicitly requested.
     total_episodes, total_successes = 0, 0
     episode_records = []
+    completed_episodes: set[tuple[int, int]] = set()
+    resumed_task_rollup: dict[int, tuple[int, int]] = {}
+    if args.resume_eval:
+        existing_report = load_eval_report(args.video_out_path)
+        if existing_report is not None:
+            existing_ckpt = existing_report.get("checkpoint_path")
+            if existing_ckpt and pathlib.Path(existing_ckpt) != pathlib.Path(args.pretrained_path):
+                raise RuntimeError(
+                    f"resume_eval checkpoint mismatch: report={existing_ckpt} current={args.pretrained_path}"
+                )
+            if existing_report.get("task_suite_name") != args.task_suite_name:
+                raise RuntimeError(
+                    f"resume_eval task_suite mismatch: report={existing_report.get('task_suite_name')} "
+                    f"current={args.task_suite_name}"
+                )
+            episode_records = list(existing_report.get("episodes", []))
+            total_episodes = int(existing_report.get("total_episodes", len(episode_records)))
+            total_successes = int(existing_report.get("total_successes", 0))
+            for record in episode_records:
+                task_id = int(record["task_id"])
+                episode_idx = int(record["episode_idx"])
+                completed_episodes.add((task_id, episode_idx))
+                episodes_done, successes_done = resumed_task_rollup.get(task_id, (0, 0))
+                resumed_task_rollup[task_id] = (
+                    episodes_done + 1,
+                    successes_done + int(bool(record.get("success"))),
+                )
+            logging.info(
+                "Resuming eval from %s: total_episodes=%d total_successes=%d completed_pairs=%d",
+                pathlib.Path(args.video_out_path) / "eval_report.json",
+                total_episodes,
+                total_successes,
+                len(completed_episodes),
+            )
+
+    # Start evaluation
     for task_id in tqdm.tqdm(range(n_eval_tasks)):
         # Get task
         task = task_suite.get_task(task_id)
@@ -134,8 +174,10 @@ def eval_libero(args: Args) -> None:
         env, task_description = _get_libero_env(task, LIBERO_ENV_RESOLUTION, args.seed)
 
         # Start episodes
-        task_episodes, task_successes = 0, 0
+        task_episodes, task_successes = resumed_task_rollup.get(task_id, (0, 0))
         for episode_idx in tqdm.tqdm(range(args.num_trials_per_task)):
+            if (task_id, episode_idx) in completed_episodes:
+                continue
             logging.info(f"\nTask: {task_description}")
 
             # Reset environment
@@ -161,10 +203,15 @@ def eval_libero(args: Args) -> None:
                     # IMPORTANT: Do nothing for the first few timesteps because the simulator drops objects
                     # and we need to wait for them to fall
                     if t < args.num_steps_wait:
+                        wait_step_start = time.perf_counter()
                         obs, reward, done, info = env.step(LIBERO_DUMMY_ACTION)
+                        wait_step_elapsed = time.perf_counter() - wait_step_start
+                        if t == 0:
+                            logging.info("Warmup env.step_sec=%.4f", wait_step_elapsed)
                         t += 1
                         continue
 
+                    obs_prepare_start = time.perf_counter()
                     # IMPORTANT: rotate 180 degrees to match train preprocessing
                     img = np.ascontiguousarray(obs["agentview_image"][::-1, ::-1])
                     wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
@@ -192,13 +239,14 @@ def eval_libero(args: Args) -> None:
                         "image": [observation["observation.primary"][0], observation["observation.wrist_image"][0]],
                         "lang": observation["instruction"][0],
                     }
+                    obs_prepare_elapsed = time.perf_counter() - obs_prepare_start
 
-                    start_time = time.time()
+                    infer_start = time.perf_counter()
                     response = client_model.step(example=example_dict, step=step)
-                    end_time = time.time()
-                    del start_time, end_time
+                    infer_elapsed = time.perf_counter() - infer_start
 
                     raw_action = response["raw_action"]
+                    response_timings = response.get("timings", {})
 
                     world_vector_delta = np.asarray(raw_action.get("world_vector"), dtype=np.float32).reshape(-1)
                     rotation_delta = np.asarray(raw_action.get("rotation_delta"), dtype=np.float32).reshape(-1)
@@ -219,7 +267,37 @@ def eval_libero(args: Args) -> None:
                     delta_action = np.concatenate([world_vector_delta, rotation_delta, gripper], axis=0)
                     full_actions.append(delta_action)
 
+                    env_step_start = time.perf_counter()
                     obs, reward, done, info = env.step(delta_action.tolist())
+                    env_step_elapsed = time.perf_counter() - env_step_start
+                    if response_timings.get("cache_refresh"):
+                        chunk_timings = response_timings.get("chunk_request") or {}
+                        logging.info(
+                            "Timing step=%d obs_prepare=%.4fs infer_total=%.4fs resize=%.4fs "
+                            "client_pack=%.4fs client_roundtrip=%.4fs client_unpack=%.4fs client_total=%.4fs "
+                            "server_total=%.4fs "
+                            "framework_total=%.4fs prepare_inputs=%.4fs build_qwen_inputs=%.4fs "
+                            "qwen_forward=%.4fs gather_action_tokens=%.4fs action_head=%.4fs "
+                            "to_numpy=%.4fs unnorm=%.4fs env_step=%.4fs",
+                            step,
+                            obs_prepare_elapsed,
+                            infer_elapsed,
+                            chunk_timings.get("resize_sec") or 0.0,
+                            chunk_timings.get("client_pack_and_queue_sec") or 0.0,
+                            chunk_timings.get("client_server_roundtrip_sec") or 0.0,
+                            chunk_timings.get("client_unpack_sec") or 0.0,
+                            chunk_timings.get("client_total_call_sec") or 0.0,
+                            chunk_timings.get("server_total_sec") or 0.0,
+                            chunk_timings.get("framework_total_sec") or 0.0,
+                            chunk_timings.get("framework_prepare_inputs_sec") or 0.0,
+                            chunk_timings.get("framework_build_qwen_inputs_sec") or 0.0,
+                            chunk_timings.get("framework_qwen_forward_sec") or 0.0,
+                            chunk_timings.get("framework_gather_action_tokens_sec") or 0.0,
+                            chunk_timings.get("framework_action_head_sec") or 0.0,
+                            chunk_timings.get("framework_to_numpy_sec") or 0.0,
+                            chunk_timings.get("server_unnorm_sec") or 0.0,
+                            env_step_elapsed,
+                        )
                     if done:
                         task_successes += 1
                         total_successes += 1

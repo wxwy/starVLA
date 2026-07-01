@@ -181,3 +181,10 @@ def write_eval_report(video_out_path: str | Path, report: dict[str, Any]) -> Pat
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return output_path
+
+
+def load_eval_report(video_out_path: str | Path) -> dict[str, Any] | None:
+    output_path = Path(video_out_path) / REPORT_FILENAME
+    if not output_path.exists():
+        return None
+    return json.loads(output_path.read_text(encoding="utf-8"))

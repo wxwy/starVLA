@@ -434,8 +434,12 @@ P0 label coverage 初判：
 | labels_source | G0 smoke labels |
 | update_step | 手写 one-step SGD；不使用 `torch.optim` |
 | expected_vram | 0；默认 CPU 运行，不调用 `.cuda()` |
-| smoke_report_json | TBD，待当前推理任务结束后运行 |
+| smoke_report_json | `docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json` |
+| sample_count | 30 |
+| input_shape | `[30, 4]` |
+| loss_before | 0.024293631315231323 |
+| loss_after | 0.024045661091804504 |
 | class_mapping_status | Data Gate |
-| go_no_go | `TBD: entry prepared; train smoke not executed in this session` |
+| go_no_go | `TBD: train smoke passed; production training remains Data Gate` |
 
-当前结论：P0 ConstructibleHeads 最小训练入口已经具备代码和配置草案，但本轮未执行完整 torch smoke。原因是当前用户同步运行推理，`import torch` 阶段会触发本机 PyTorch 库加载 I/O；为避免干扰推理，本轮只完成 `py_compile` 验证，训练 smoke 报告仍保持 TBD。
+当前结论：P0 ConstructibleHeads 最小训练入口已完成 one-step smoke：当前 G0 已可构造的 `task_progress` 与 `action_outcome_class` 两个 head 可以完成 forward / loss / backward / one-step update，loss 在一次手写 SGD step 后下降。该结果不计入 E-001，不放开其他五类 P0 head，不等价于 production dataloader / train-val split / distributed sampler / P0 主训练放行；`class_mapping_status`、WAM Hz 和 window 仍保持 Data Gate。

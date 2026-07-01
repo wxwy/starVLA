@@ -70,6 +70,28 @@
 | 日志 | `run.log`、`policy_server.log` |
 | 状态 | 已启动；policy server 正在导入与加载模型 |
 
+## 2026-06-22 — starflow_vla 当前实验配置排查
+
+| 字段 | 值 |
+| --- | --- |
+| 任务 | 排查 W&B 上 M6 baseline 与 P1 continuous_head loss 曲线过近；本机只确认当前运行的 M6，其他机器上的 run 需在各自机器核对实际命令与保存配置 |
+| 结论 | M6 `P0-M6-H2-total-baseline...mlp_260621_1421` 有问题：保存配置里 `framework.name=StarFlowVLA`，实际走 `QwenPI_v3` / `LayerwiseFM` 路径，不是真正 `QwenOFT` + MLP baseline |
+| 根因 | `examples/LIBERO/train_files/run_starflow_train_ready.sh` 默认 `FRAMEWORK_NAME=StarFlowVLA`，并通过 `--framework.name "${FRAMEWORK_NAME}"` 覆盖 `configs/starflow_vla/stage2_mlp_baseline.yaml` 中的 `framework.name: QwenOFT` |
+| 代码证据 | `StarFlowVLA` 继承 `Qwen_PI_v3`；`QwenPI_v3` 从 `LayerwiseFM_ActionHeader` 导入 `get_action_model`；该 factory 固定返回 `LayerwiseFlowmatchingActionHead` |
+| checkpoint 证据 | 本机 M6 `steps_250/model.safetensors.index.json` 含 504 个 `action_model.model.transformer_blocks.*`、`action_model.future_tokens`、`project_layers`，没有 `action_model.net.*` MLP 头键；本机存在的其他 run 目录只作为已保存/同步产物参考，不代表当前都在本机运行 |
+| 影响 | M6 名义为 `mlp`，但实际不是 MLP baseline；M6 与 P1 continuous_head 的主要差异只剩 `state_mode`：M6 默认 `discretized_instruction`，P1 为 `continuous_head` |
+| 建议 | 真正重跑 MLP baseline 时需显式设置 `FRAMEWORK_NAME=QwenOFT`，或修正启动脚本避免默认框架覆盖 YAML；旧 M6 run 不应作为 MLP baseline 结论使用 |
+
+## 2026-06-22 — run_starflow_train_ready 框架覆盖修复
+
+| 字段 | 值 |
+| --- | --- |
+| 任务 | 修复 `run_starflow_train_ready.sh` 默认覆盖 YAML `framework.name` 导致 M6 MLP baseline 跑成 StarFlowVLA 的问题 |
+| 改动 | `FRAMEWORK_NAME` 默认改为空；`TRAIN_ARGS` 默认不再传 `--framework.name`；仅当用户显式设置 `FRAMEWORK_NAME=...` 时才追加命令行覆盖 |
+| 影响 | M5/M7/P1 的 YAML 本身均为 `StarFlowVLA`，新启动仍正常；M6 的 `stage2_mlp_baseline.yaml` 将自然保留 `QwenOFT`，也可显式传 `FRAMEWORK_NAME=QwenOFT` |
+| 验证 | `bash -n examples/LIBERO/train_files/run_starflow_train_ready.sh` 通过；`/opt/conda/envs/starVLA/bin/python tests/test_starflow_train_ready.py -v` 通过 |
+| 注意 | 当前已运行的错误 M6 进程不会被脚本改动自动修正；需要人工停止旧 run，并用新 run_id 重启真正 MLP baseline |
+
 ## 2026-06-21 — P1 continuous_head build / forward-backward / 10-step smoke
 
 | 字段 | 值 |

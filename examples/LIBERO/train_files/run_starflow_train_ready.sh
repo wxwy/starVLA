@@ -22,7 +22,7 @@ BASE_VLM=${BASE_VLM:-${STARVLA_DIR}/playground/Pretrained_models/Qwen3-VL-4B-Ins
 LIBERO_DATA_ROOT=${LIBERO_DATA_ROOT:-${STARVLA_DIR}/playground/Datasets/LEROBOT_LIBERO_DATA}
 DATA_MIX=${DATA_MIX:-libero_all}
 CONFIG_YAML=${CONFIG_YAML:-configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml}
-FRAMEWORK_NAME=${FRAMEWORK_NAME:-StarFlowVLA}
+FRAMEWORK_NAME=${FRAMEWORK_NAME:-}
 FREEZE_MODULES=${FREEZE_MODULES:-qwen_vl_interface}
 NUM_WORKERS=${NUM_WORKERS:-1}
 PER_DEVICE_BATCH_SIZE=${PER_DEVICE_BATCH_SIZE:-4}
@@ -124,7 +124,6 @@ fi
 TRAIN_ARGS=(
     starVLA/training/train_starvla.py
     --config_yaml "${CONFIG_YAML}"
-    --framework.name "${FRAMEWORK_NAME}"
     --framework.qwenvl.base_vlm "${BASE_VLM}"
     --datasets.vla_data.data_root_dir "${LIBERO_DATA_ROOT}"
     --datasets.vla_data.data_mix "${DATA_MIX}"
@@ -152,6 +151,10 @@ TRAIN_ARGS=(
     --trainer.is_resume "${IS_RESUME}"
     "$@"
 )
+
+if [[ -n "${FRAMEWORK_NAME}" ]]; then
+    TRAIN_ARGS+=(--framework.name "${FRAMEWORK_NAME}")
+fi
 
 if [[ "${NUM_PROCESSES}" -gt 1 || "${FORCE_DEEPSPEED}" == "true" ]]; then
     accelerate launch \

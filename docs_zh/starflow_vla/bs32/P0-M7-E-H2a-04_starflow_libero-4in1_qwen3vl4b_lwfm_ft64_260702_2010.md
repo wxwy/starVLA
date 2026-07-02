@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中  
 > **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
 > **启动时间**: 2026-07-02 20:16:02 CST  
-> **当前更新**: 2026-07-03 01:28:00 CST  
+> **当前更新**: 2026-07-03 02:16:00 CST  
 > **tmux 会话**: `train`（attached）  
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_64.yaml`
 
@@ -92,19 +92,19 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 训练进度
 
-> 最后更新：2026-07-03 01:28:00 CST
+> 最后更新：2026-07-03 02:16:00 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **~2026 / 80000**（2.5%，估算） |
-| **完成比例** | 2.5% |
+| **当前 Step** | **~2335 / 80000**（2.9%，估算） |
+| **完成比例** | 2.9% |
 | **单步耗时** | ~9.2 s/it（历史数据） |
 | **数据加载耗时** | 无法获取（远端机器） |
 | **模型前向/反向耗时** | 无法获取（远端机器） |
-| **已运行时间** | 约 5 小时 12 分钟 |
-| **预计剩余时间** | ~199 小时（约 8.3 天） |
-| **最新 checkpoint** | `steps_2000`（01:24） |
-| **上一个 checkpoint** | `steps_1750`（00:46） |
+| **已运行时间** | 约 6 小时 |
+| **预计剩余时间** | ~198 小时（约 8.3 天） |
+| **最新 checkpoint** | `steps_2250`（02:03） |
+| **上一个 checkpoint** | `steps_2000`（01:24） |
 
 ### Loss 记录（部分）
 
@@ -201,7 +201,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 │   ├── steps_1250/
 │   ├── steps_1500/
 │   ├── steps_1750/
-│   └── steps_2000/
+│   ├── steps_2000/
+│   └── steps_2250/
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅

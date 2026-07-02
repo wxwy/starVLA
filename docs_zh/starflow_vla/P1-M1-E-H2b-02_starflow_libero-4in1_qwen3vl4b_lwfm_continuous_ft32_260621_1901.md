@@ -1,11 +1,11 @@
 # P1-M1-E-H2b-02: StarFlow LIBERO 4-in-1 Qwen3VL-4B continuous_head ft=32
 
 > **实验代号**: E-H2b-02 / P1-M1  
-> **状态**: 🟢 训练运行中（step 36/80000，约 0.05%）  
+> **状态**: 🟢 训练运行中（step 15392/80000，约 19.2%）  
 > **启动时间**: 2026-06-21 19:01:16 CST  
-> **最后训练日志**: 2026-06-21 19:06:30 CST，step 36  
-> **当前更新**: 2026-06-21 19:06:30 CST  
-> **tmux 会话**: `train-2`（运行本实验）  
+> **最后训练日志**: 2026-07-02 12:17:19 CST，step 15392  
+> **当前更新**: 2026-07-02 12:17:19 CST  
+> **tmux 会话**: `train-0`（当前恢复后运行）  
 > **配置来源**: `configs/starflow_vla/state/continuous_head.yaml`
 
 ---
@@ -89,55 +89,57 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 ## 训练进度
 
-> 最后更新：2026-06-23 00:07:33 CST
+> 最后更新：2026-07-02 12:17:19 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | 15434 / 80000 |
-| **完成比例** | 19.0% |
-| **单步耗时** | ~6.70 s/it |
-| **数据加载耗时** | 0.001 s |
-| **模型前向/反向耗时** | 1.665 s |
-| **已运行时间** | 1天 5小时 5分钟 |
-| **预计剩余时间** | 5天 0小时 9分钟 |
-| **预计总耗时** | 6天 5小时 15分钟 |
+| **当前 Step** | 15392 / 80000 |
+| **完成比例** | 19.2% |
+| **单步耗时** | ~7.55 s/it |
+| **数据加载耗时** | 0.000 s |
+| **模型前向/反向耗时** | 0.230 s |
+| **已运行时间** | 约 0 小时 18 分钟（本次恢复后） |
+| **预计剩余时间** | 约 135 小时 32 分钟 |
+| **预计总耗时** | 约 135 小时 50 分钟（本次恢复后预估） |
 
 ---
 
 ## 系统资源占用
 
-> 最后更新：2026-06-30 21:48:44 CST
+> 最后更新：2026-07-02 12:17:19 CST
 
-### 4.1 GPU（NVIDIA A100-SXM4-80GB）
+### 4.1 GPU（NVIDIA GeForce RTX 4090）
 
 | 指标 | 值 |
 |------|-----|
-| **GPU 利用率** | 0% |
-| **显存使用** | 0 MiB / 81920 MiB (0.0%) |
-| **显存空闲** | 81153 MiB |
-| **功耗** | 61.22 W / 400.00 W |
-| **温度** | 27°C |
+| **GPU 利用率** | 47% |
+| **显存使用** | 22988 MiB / 24564 MiB (93.6%) |
+| **显存空闲** | 1094 MiB |
+| **功耗** | 288.88 W / 450.00 W |
+| **温度** | 68°C |
 
 ### 4.2 CPU / 内存
 
 | 指标 | 值 |
 |------|-----|
-| **CPU 使用率** | %Cpu(s):  4.3 us,  1.1 sy,  0.0 ni, 94.6 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st |
-| **内存总量** | 1007.5 GiB |
-| **内存已用** | 62.5 GiB |
-| **内存可用** | 945.0 GiB |
+| **CPU 使用率** | 待更新 |
+| **内存总量** | 待更新 |
+| **内存已用** | 待更新 |
+| **内存可用** | 待更新 |
 
 ---
 
 ## 成本估算
 
-> 最后更新：2026-06-30 21:48:44 CST
+> 最后更新：2026-07-02 12:17:19 CST
 
 | 项目 | 计算 |
 |------|------|
-| **已产生成本** | 0小时 0分钟 × 5.58 元/h ≈ **0.00 元** |
-| **预计总成本** | 等待训练进度信息... |
-| **剩余预计成本** | 等待训练进度信息... |
+| **本次恢复后已产生成本** | 本地 4090，暂不记录 |
+| **按当前速度完整训练预估成本** | 本地 4090，暂不记录 |
+| **剩余预计成本** | 本地 4090，暂不记录 |
+
+> 注：本次为从 `steps_15250` 恢复训练，上表成本仅统计当前 tmux 会话（恢复后）的耗时。历史会话已产生的累计成本未计入。 |
 
 ---
 
@@ -183,6 +185,76 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 ---
 
+## 恢复训练记录（Resume，2026-07-02）
+
+因计算卡切换为 **NVIDIA GeForce RTX 4090**，在 tmux 会话 `train-0` 中重新 resume 训练。有效全局 batch 仍保持 **32** 不变，调整为 `per_device_batch_size=1` × `gradient_accumulation_steps=32`。
+
+| 字段 | 值 |
+| --- | --- |
+| tmux 会话名 | `train-0` |
+| tmux 创建时间 | 2026-07-02 11:57:44 CST |
+| 主机 | `bitahub-a20206348704935936956761` |
+| GPU | `NVIDIA GeForce RTX 4090`（24564 MiB） |
+| 单价 | 本地 4090，暂不记录 |
+| 训练状态 | 运行中（attached） |
+| 恢复源 checkpoint | `steps_15250` |
+| resume 时间 | 2026-07-02 11:59:16 CST |
+| 当前配置 | `configs/starflow_vla/state/continuous_head.yaml` |
+| `is_resume` | `True` |
+
+### 变更后的训练参数
+
+| 字段 | 原值（A100 80G） | 本次 resume（4090） |
+| --- | --- | --- |
+| per_device_batch_size | 8 | 1 |
+| gradient_accumulation_steps | 4 | 32 |
+| 有效全局 batch | 32 | 32 |
+| save_interval | 250 | 250 |
+| eval_interval | 500 | 500 |
+| logging_frequency | 20 | 20 |
+| num_workers | 6 | 2 |
+| local_checkpoint_root | 未设置 | `/localdisk-tmp` |
+| local_checkpoint_keep_count | 未设置 | 2 |
+
+> 有效全局 batch 保持 32 不变（8×4 → 1×32）。
+
+### Resume 启动命令
+
+```bash
+cd /disk/rl/starVLA
+tmux attach -t train-0
+# 在 tmux 会话内执行
+IS_RESUME=True \
+RUN_ID="P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260621_1901" \
+CONFIG_YAML=configs/starflow_vla/state/continuous_head.yaml \
+DATA_MIX=libero_all \
+MAX_TRAIN_STEPS=80000 \
+SAVE_INTERVAL=250 \
+LOGGING_FREQUENCY=20 \
+EVAL_INTERVAL=500 \
+NUM_PROCESSES=1 \
+GRADIENT_ACCUMULATION_STEPS=32 \
+PER_DEVICE_BATCH_SIZE=1 \
+NUM_WORKERS=2 \
+STARVLA_PYTHON=/opt/conda/envs/starVLA/bin/python \
+WANDB_MODE=online \
+WANDB_PROJECT=starflow_vla \
+WANDB_ENTITY=silencewx-harbin-institute-of-technology \
+LOCAL_CHECKPOINT_ROOT=/localdisk-tmp \
+LOCAL_CHECKPOINT_KEEP_COUNT=2 \
+ENABLE_LOCAL_CHECKPOINT_STAGING=True \
+bash examples/LIBERO/train_files/run_starflow_train_ready.sh
+```
+
+### Resume 关键事件
+
+- 2026-07-02 11:57：创建 tmux 会话 `train-0`。
+- 2026-07-02 11:59：从 `steps_15250` resume，设备切换为 `NVIDIA GeForce RTX 4090`，训练参数同步调整。
+- 2026-07-02 11:59：成功写入 `config.yaml` / `config.full.yaml`，训练正常推进。
+- 当前进度：step **15392 / 80000**（约 19.2%），速度约 **7.55 s/it**，已运行约 18 分钟。
+
+---
+
 ## 备注
 
 - 本实验验证 `state_mode=continuous_head` 与默认 `discretized_instruction` 的状态条件注入路径差异。
@@ -197,14 +269,18 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 | 字段 | 值 |
 | --- | --- |
-| 监控时间 | 2026-06-30 21:48:44 CST |
-| 训练状态 | 🟡 未检测到活跃进度条 |
+| 监控时间 | 2026-07-02 12:17:19 CST |
+| 训练状态 | 🟢 运行中（来自 tmux `train-0`） |
 | run_id | `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260621_1901` |
-| tmux 会话 | `train-2` |
-| 当前步数 | 15250 / 80000（来自最新 checkpoint） |
+| tmux 会话 | `train-0` |
+| 当前步数 | **15392 / 80000** |
 | 最新完整 checkpoint | `steps_15250` |
-| GPU | NVIDIA A100-SXM4-80GB |
-| GPU 利用率 | 0% |
-| 显存使用 | 0 MiB / 81920 MiB (0.0%) |
-| 功耗 | 61.22 W / 400.00 W |
-| 温度 | 27°C |
+| GPU | NVIDIA GeForce RTX 4090 |
+| GPU 利用率 | 47% |
+| 显存使用 | 22988 MiB / 24564 MiB (93.6%) |
+| 功耗 | 288.88 W / 450.00 W |
+| 温度 | 68°C |
+| 有效全局 batch | 32（1 × 32） |
+| 每 step 成本 | 本地 4090，暂不记录 |
+| 已产生成本（本次 resume） | 暂不记录 |
+| 完整训练预估成本 | 暂不记录 |

@@ -146,6 +146,70 @@ tmux attach -t train
 - 2026-06-21 12:44：从 `steps_7875` resume，设备切换为 A100(80G)，训练参数同步调整。
 - 2026-06-21 12:45：成功写入 `config.yaml` / `config.full.yaml`，训练正常推进。
 
+## 第二次恢复训练记录（Resume，2026-07-02）
+
+因计算卡切换为 **NVIDIA GeForce RTX 4090**，在 tmux 会话 `train` 中重新 resume 训练。有效全局 batch 仍保持 **32** 不变，调整为 `per_device_batch_size=1` × `gradient_accumulation_steps=32`。
+
+| 字段 | 值 |
+| --- | --- |
+| tmux 会话名 | `train` |
+| tmux 创建时间 | 2026-07-02 12:02:17 CST |
+| tmux 窗口 | `bash`（pane PID 465） |
+| 主机 | `bitahub-a20205015879249920489293` |
+| GPU | `NVIDIA GeForce RTX 4090`（24564 MiB） |
+| 单价 | 本地 4090，暂不记录 |
+| 训练状态 | 运行中（attached） |
+| 恢复源 checkpoint | `steps_33250` |
+| resume 时间 | 2026-07-02 12:03:19 CST |
+| 当前配置 | `configs/starflow_vla/ablations/future_tokens_0.yaml` |
+| `is_resume` | `True` |
+
+### 变更后的训练参数
+
+| 字段 | 上次 resume（A100 80G） | 本次 resume（4090） |
+| --- | --- | --- |
+| per_device_batch_size | 8 | 1 |
+| gradient_accumulation_steps | 4 | 32 |
+| 有效全局 batch | 32 | 32 |
+| save_interval | 250 | 250 |
+| eval_interval | 500 | 500 |
+| logging_frequency | 20 | 20 |
+| num_workers | 3 | 2 |
+| local_checkpoint_root | `/localdisk-tmp` | `/localdisk-tmp` |
+| local_checkpoint_keep_count | 2 | 2 |
+
+> 有效全局 batch 保持 32 不变（8×4 → 1×32）。
+
+### Resume 启动命令
+
+```bash
+cd /disk/rl/starVLA
+tmux attach -t train
+# 在 tmux 会话内执行
+IS_RESUME=True \
+RUN_ID="P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048" \
+CONFIG_YAML=configs/starflow_vla/ablations/future_tokens_0.yaml \
+MAX_TRAIN_STEPS=80000 \
+SAVE_INTERVAL=250 \
+LOGGING_FREQUENCY=20 \
+EVAL_INTERVAL=500 \
+NUM_PROCESSES=1 \
+GRADIENT_ACCUMULATION_STEPS=32 \
+PER_DEVICE_BATCH_SIZE=1 \
+NUM_WORKERS=2 \
+LOCAL_CHECKPOINT_KEEP_COUNT=2 \
+LOCAL_CHECKPOINT_ROOT=/localdisk-tmp \
+STARVLA_PYTHON=/opt/conda/envs/starVLA/bin/python \
+bash examples/LIBERO/train_files/run_starflow_train_ready.sh
+```
+
+### Resume 关键事件
+
+- 2026-07-02 12:02：创建 tmux 会话 `train`。
+- 2026-07-02 12:03：从 `steps_33250` resume，设备切换为 `NVIDIA GeForce RTX 4090`，训练参数同步调整。
+- 2026-07-02 12:03：成功写入 `config.yaml` / `config.full.yaml`，训练正常推进。
+- 当前进度：step **33339 / 80000**（约 41.7%），速度约 **7.30 s/it**，已运行约 10 分 40 秒。
+
 ## 风险提醒
 
 当前有两个训练进程同时以相同 `run_id` 运行并写入同一 checkpoint 目录：
@@ -167,27 +231,27 @@ tmux attach -t train
 
 | 字段 | 值 |
 | --- | --- |
-| 监控时间 | 2026-06-21 20:46:31 CST |
+| 监控时间 | 2026-07-02 12:14:02 CST |
 | 训练状态 | 🟢 运行中（来自 tmux `train`） |
 | run_id | `P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048` |
-| 当前步数 | **13597 / 80000** |
-| 完成比例 | 17.0% |
-| 训练速度 | ~4.96 s/it |
+| 当前步数 | **33339 / 80000** |
+| 完成比例 | 41.7% |
+| 训练速度 | ~7.30 s/it |
 | data_time | 0.0 s |
-| model_time | 1.218 s |
-| 已运行时间 | 8:01:18 |
-| 预计剩余时间 | 91:34:32 |
-| 最新完整 checkpoint | `steps_13500` |
-| GPU | NVIDIA A100-SXM4-80GB |
-| GPU 利用率 | 89% |
-| 显存使用 | 48939 MiB / 81920 MiB (59.7%) |
-| 功耗 | 218.75 W / 400.00 W |
+| model_time | 0.214 s |
+| 已运行时间（本次 resume） | 10:40 |
+| 预计剩余时间 | 约 94:36:00 |
+| 预计总耗时（本次 resume） | 约 94:47:00 |
+| 最新完整 checkpoint | `steps_33250` |
+| GPU | NVIDIA GeForce RTX 4090 |
+| GPU 利用率 | 79% |
+| 显存使用 | 23834 MiB / 24564 MiB (97.0%) |
+| 功耗 | 262.29 W / 450.00 W |
 | 温度 | 58°C |
-| 内存总量 | 1.0Ti |
-| 内存已用 | 67Gi |
-| 内存空闲 | 33Gi |
-| 存储 `/disk/rl` | 562T / 700T (81% 已用) |
-| 存储 `/localdisk-tmp` | 1.3T / 3.5T (38% 已用) |
-| 每 step 成本 | ~0.0077 元 |
-| 已产生成本 | ~44.76 元 |
-| 完整训练预估成本 | ~615.04 元 |
+| 内存总量 | 503 GiB |
+| 内存已用 | 50 GiB |
+| 内存可用 | 435 GiB |
+| 有效全局 batch | 32（1 × 32） |
+| 每 step 成本 | 本地 4090，暂不记录 |
+| 已产生成本（本次 resume） | 暂不记录 |
+| 完整训练预估成本 | 暂不记录 |

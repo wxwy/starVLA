@@ -1,12 +1,13 @@
 # P0-M6-H2-total-baseline-fixed: StarFlow LIBERO 4-in-1 Qwen3VL-4B MLP Baseline（修正版）
 
 > **实验代号**: H2-total-baseline-fixed / P0-M6-MLP-4in1  
-> **状态**: 🟢 训练运行中（step 34933/80000，约 43.7%）  
+> **状态**: 🟢 训练运行中（step 39521/80000，约 49.4%）  
 > **启动时间**: 2026-06-22 11:48:42 CST  
-> **最后训练日志**: 2026-06-22 22:37:00 CST，step 34920  
-> **当前更新**: 2026-06-22 22:37:30 CST  
+> **最后训练日志**: 2026-07-02 12:17:19 CST，step 39520  
+> **当前更新**: 2026-07-02 12:18:00 CST  
 > **tmux 会话**: `train`（本实验正在运行中）  
-> **配置来源**: `configs/starflow_vla/stage2_mlp_baseline.yaml`
+> **配置来源**: `configs/starflow_vla/stage2_mlp_baseline.yaml`  
+> **当前设备**: NVIDIA GeForce RTX 4090（2026-07-02 自 A100 80G 切换，resume 继续训练）
 
 ---
 
@@ -96,18 +97,19 @@
 
 ## 训练进度
 
-> 最后更新：2026-06-22 14:37:30 CST
+> 最后更新：2026-07-02 12:18:00 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | 34933 / 80000 |
-| **完成比例** | 43.7% |
-| **单步耗时** | ~1.11 s/it |
+| **当前 Step** | 39521 / 80000 |
+| **完成比例** | 49.4% |
+| **单步耗时** | ~3.50 s/it（4090，per_device_batch_size=1，gradient_accumulation_steps=32） |
 | **数据加载耗时** | ~0.000 s |
-| **模型前向/反向耗时** | ~0.29 s |
-| **已运行时间** | 10 小时 48 分钟 |
-| **预计剩余时间** | ~13 小时 54 分钟 |
-| **预计总耗时** | ~24 小时 42 分钟 |
+| **模型前向/反向耗时** | ~0.10 s |
+| **自 2026-06-22 启动以来累计运行** | 约 10 小时 48 分钟（A100 阶段）+ 本次 4090 resume 持续中 |
+| **4090 resume 后已运行** | 约 15 分钟 |
+| **4090 resume 后预计剩余时间** | 约 39 小时 |
+| **最新完整 checkpoint** | `steps_39500` |
 
 ### Loss 记录
 
@@ -123,7 +125,7 @@
 | 6000 | — | ✅ checkpoint |
 | 7000 | — | ✅ checkpoint |
 | 8000 | — | ✅ checkpoint |
-| 9000 | — | ✅ 最新 checkpoint |
+| 9000 | — | ✅ checkpoint |
 | 9080 | 0.2206 | |
 | 9100 | 0.2252 | |
 | 9120 | 0.2083 | |
@@ -142,15 +144,40 @@
 | … | … | 中间步骤省略 |
 | 34880 | 0.1760 | |
 | 34900 | 0.1336 | |
-| 34920 | 0.2008 | 🔵 当前最新 step |
+| 34920 | 0.2008 | A100 阶段最后记录 step |
+| … | … | 中间步骤省略 |
+| 39260 | 0.1948 | 4090 resume 后 |
+| 39300 | 0.2222 | |
+| 39400 | 0.1884 | |
+| 39500 | 0.2908 | ✅ checkpoint |
+| 39520 | 0.0482 | 🔵 当前最新 step |
 
 ---
 
 ## 系统资源占用
 
-> 最后更新：2026-06-22 12:37:30 CST
+> 最后更新：2026-07-02 12:18:00 CST
 
-### GPU（NVIDIA A100-SXM4-80GB）
+### GPU（NVIDIA GeForce RTX 4090）
+
+| 指标 | 值 |
+|------|-----|
+| **GPU 利用率** | 26% |
+| **显存使用** | 10,330 MiB / 24,564 MiB (42.1%) |
+| **显存空闲** | 13,752 MiB |
+| **功耗** | 136.73 W / 450.00 W |
+| **温度** | 46°C |
+
+### CPU / 内存
+
+| 指标 | 值 |
+|------|-----|
+| **CPU 核心数** | 待更新 |
+| **内存总量** | 503 GiB |
+| **内存已用** | 50 GiB |
+| **内存可用** | 435 GiB |
+
+### 历史资源占用（A100 80G 阶段，2026-06-22）
 
 | 指标 | 值 |
 |------|-----|
@@ -159,12 +186,6 @@
 | **显存空闲** | 68,583 MiB |
 | **功耗** | 447.89 W / 400.00 W |
 | **温度** | 43°C |
-
-### CPU / 内存
-
-| 指标 | 值 |
-|------|-----|
-| **CPU 核心数** | 13 |
 | **内存总量** | 1007.5 GiB |
 | **内存已用** | ~224 GiB |
 | **内存可用** | ~783 GiB |
@@ -173,15 +194,94 @@
 
 ## 成本估算
 
+### A100 阶段（2026-06-22，已结束）
+
 > 单价：5.58 元/小时（A100-SXM4-80GB）
 
 | 项目 | 计算 |
 |------|------|
 | **每 step 耗时** | ~1.11 秒 |
 | **每 step 成本** | 5.58 / 3600 × 1.11 ≈ **0.0017 元** |
-| **已产生成本** | 10.81 h × 5.58 ≈ **60.32 元** |
-| **剩余 45067 steps 预估** | 45067 × 1.11s ≈ 13.9h ≈ **77.52 元** |
-| **完整 80000 steps 预估** | 80000 × 1.11s ≈ 24.7h ≈ **137.83 元** |
+| **A100 阶段已产生成本** | 10.81 h × 5.58 ≈ **60.32 元** |
+| **A100 阶段完成 step** | ~34920 |
+
+### RTX 4090 阶段（2026-07-02 resume 起，本地卡，暂不记录费用）
+
+| 项目 | 计算 |
+|------|------|
+| **每 step 耗时** | ~3.50 秒 |
+| **每 step 成本** | 本地 4090，暂不记录 |
+| **已产生成本** | 暂不记录 |
+| **剩余 ~40479 steps 预估** | 40479 × 3.50s ≈ 39.3h |
+| **完整 80000 steps 预估（4090 速度）** | 80000 × 3.50s ≈ 77.8h |
+
+> 注：4090 为本地设备，费用按 0 计算；上表仅按当前速度估算时间。
+
+---
+
+## 切换 RTX 4090 继续训练（2026-07-02）
+
+因计算卡切换为 **NVIDIA GeForce RTX 4090**，在 tmux 会话 `train` 中自 `steps_39250` resume 继续训练。有效全局 batch 保持 **32** 不变，调整为 `per_device_batch_size=1` × `gradient_accumulation_steps=32`。
+
+### 关键信息
+
+| 字段 | 值 |
+| --- | --- |
+| tmux 会话名 | `train` |
+| tmux 创建时间 | 2026-07-02 11:59:50 CST |
+| GPU | `NVIDIA GeForce RTX 4090`（24564 MiB） |
+| 单价 | 本地 4090，暂不记录 |
+| 训练状态 | 运行中（attached） |
+| 恢复源 checkpoint | `steps_39250` |
+| resume 时间 | 2026-07-02 12:01:49 CST |
+| 当前配置 | `configs/starflow_vla/stage2_mlp_baseline.yaml` |
+| `is_resume` | `True` |
+
+### 参数变更
+
+| 字段 | A100 80G 阶段 | RTX 4090 resume 阶段 |
+| --- | --- | --- |
+| `per_device_batch_size` | 8 | 1 |
+| `gradient_accumulation_steps` | 4 | 32 |
+| **有效全局 batch** | **32** | **32** |
+| `save_interval` | 1000 | 250 |
+| `eval_interval` | 500 | 500 |
+| `logging_frequency` | 20 | 20 |
+| `num_workers` | 6 | 2 |
+| `local_checkpoint_root` | `/localdisk-tmp` | `/localdisk-tmp` |
+| `local_checkpoint_keep_count` | 未设置 | 2 |
+
+> 有效全局 batch 保持 32 不变（8×4 → 1×32）。`save_interval` 从 1000 下调为 250，便于本地训练期间更频繁保存。
+
+### Resume 启动命令
+
+```bash
+cd /disk/rl/starVLA
+tmux attach -t train
+# 在 tmux 会话内执行
+RUN_ID="P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148" \
+CONFIG_YAML=configs/starflow_vla/stage2_mlp_baseline.yaml \
+DATA_MIX=libero_all \
+MAX_TRAIN_STEPS=80000 \
+SAVE_INTERVAL=250 \
+LOGGING_FREQUENCY=20 \
+EVAL_INTERVAL=500 \
+NUM_PROCESSES=1 \
+GRADIENT_ACCUMULATION_STEPS=32 \
+PER_DEVICE_BATCH_SIZE=1 \
+NUM_WORKERS=2 \
+LOCAL_CHECKPOINT_KEEP_COUNT=2 \
+LOCAL_CHECKPOINT_ROOT=/localdisk-tmp \
+bash examples/LIBERO/train_files/run_starflow_train_ready.sh
+```
+
+### Resume 关键事件
+
+- 2026-07-02 11:59：创建 tmux 会话 `train`。
+- 2026-07-02 12:01：自 `steps_39250` resume，设备切换为 `NVIDIA GeForce RTX 4090`，训练参数同步调整。
+- 2026-07-02 12:02：成功写入 `config.yaml` / `config.full.yaml`，训练正常推进。
+- 2026-07-02 12:15：成功保存 checkpoint `steps_39500` 并启动后台同步。
+- 当前进度：step **39521 / 80000**（约 49.4%），速度约 **3.50 s/it**。
 
 ---
 
@@ -234,6 +334,8 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 - SAVE_INTERVAL 从 250 调整为 1000，减少 checkpoint I/O 开销。
 - MLP 结构使单步训练速度约 1.12 s/it，显著快于 LayerwiseFM 结构的 ~7 s/it。
 - 训练从 scratch 开始，无预训练 checkpoint。
+- 2026-07-02 设备由 A100-SXM4-80GB 切换为本地 **NVIDIA GeForce RTX 4090**，自 `steps_39250` resume 继续训练；`per_device_batch_size` 从 8 降至 1，`gradient_accumulation_steps` 从 4 升至 32，**有效全局 batch 保持 32 不变**。
+- 4090 阶段单步速度约 3.50 s/it，较 A100 阶段（~1.11 s/it）下降，主要因为单卡 batch 减小、gradient accumulation 步数增加。
 - 初版 P0-M6（`mlp_260621_1421`）训练至 step 9750 后停止，详见 [P0-M6 初版 tracker](P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_260621_1421.md)。
 
 ---
@@ -244,23 +346,25 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 | 字段 | 值 |
 | --- | --- |
-| 监控时间 | 2026-06-22 22:37:30 CST |
+| 监控时间 | 2026-07-02 12:18:00 CST |
 | 训练状态 | 🟢 运行中（来自 tmux `train`） |
 | run_id | `P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148` |
 | tmux 会话 | `train` |
-| 当前步数 | **34933 / 80000** |
-| 完成比例 | 43.7% |
-| 训练速度 | ~1.11 s/it |
+| 当前步数 | **39521 / 80000** |
+| 完成比例 | 49.4% |
+| 训练速度 | ~3.50 s/it |
 | data_time | 0.000 s |
-| model_time | 0.290 s |
-| 已运行时间 | 10:48:29 |
-| 预计剩余时间 | 13:54:00 |
-| 最新完整 checkpoint | `steps_5000` |
-| GPU | NVIDIA A100-SXM4-80GB |
-| GPU 利用率 | 30% |
-| 显存使用 | 12573 MiB / 81920 MiB (15.3%) |
-| 功耗 | 447.89 W / 400.00 W |
-| 温度 | 43°C |
-| 每 step 成本 | ~0.0017 元 |
-| 已产生成本 | ~60.32 元 |
-| 完整训练预估成本 | ~137.83 元 |
+| model_time | 0.108 s |
+| 4090 resume 后已运行 | ~15 分钟 |
+| 预计剩余时间 | ~39 小时 |
+| 最新完整 checkpoint | `steps_39500` |
+| GPU | NVIDIA GeForce RTX 4090 |
+| GPU 利用率 | 26% |
+| 显存使用 | 10330 MiB / 24564 MiB (42.1%) |
+| 功耗 | 136.73 W / 450.00 W |
+| 温度 | 46°C |
+| 有效全局 batch | 32（1 × 32） |
+| 每 step 成本 | 本地 4090，暂不记录 |
+| 已产生成本（A100 阶段） | ~60.32 元 |
+| 已产生成本（4090 阶段） | 暂不记录 |
+| 完整训练预估成本 | 暂不记录 |

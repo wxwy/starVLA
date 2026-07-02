@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中  
 > **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
 > **启动时间**: 2026-07-02 20:16:02 CST  
-> **当前更新**: 2026-07-03 05:28:00 CST  
+> **当前更新**: 2026-07-03 06:15:45 CST  
 > **tmux 会话**: `train`（attached）  
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_64.yaml`
 
@@ -92,19 +92,19 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 训练进度
 
-> 最后更新：2026-07-03 04:28:00 CST
+> 最后更新：2026-07-03 06:15:45 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **~3578 / 80000**（4.5%，估算） |
-| **完成比例** | 4.5% |
-| **单步耗时** | ~9.2 s/it（历史数据） |
-| **数据加载耗时** | 无法获取（远端机器） |
-| **模型前向/反向耗时** | 无法获取（远端机器） |
-| **已运行时间** | 约 9 小时 12 分钟 |
-| **预计剩余时间** | ~195 小时（约 8.1 天） |
-| **最新 checkpoint** | `steps_3500`（05:16） |
-| **上一个 checkpoint** | `steps_3250`（04:37） |
+| **当前 Step** | **3886 / 80000**（4.86%） |
+| **完成比例** | 4.86% |
+| **单步耗时** | ~9.16–9.25 s/it |
+| **数据加载耗时** | ~0.0003–0.0004 s |
+| **模型前向/反向耗时** | ~2.32–2.47 s |
+| **已运行时间** | 约 9 小时 59 分钟 |
+| **预计剩余时间** | ~196 小时（约 8.2 天） |
+| **最新 checkpoint** | `steps_3750` |
+| **上一个 checkpoint** | `steps_3500` |
 
 ### Loss 记录（部分）
 
@@ -121,25 +121,34 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | 800 | 0.1835 | 0.2135 | |
 | 900 | 0.1970 | 0.2313 | |
 | 1000 | 0.1776 | 0.2217 | 含 eval mse_score=0.0099 |
-| 1100 | 0.1626 | 0.1573 | |
-| 1200 | 0.1789 | 0.1602 | |
-| 1300 | 0.1679 | 0.1508 | |
-| 1400 | 0.1664 | 0.1870 | |
 | 1500 | 0.1704 | 0.1852 | 含 eval mse_score=0.0131 |
-| 1600 | 0.1629 | 0.1679 | |
-| 1614 | — | — | 🔵 当前 |
+| 2000 | 0.1629 | 0.1679 | |
+| 2500 | 0.1542 | 0.1837 | |
+| 3000 | 0.1704 | 0.1852 | |
+| 3500 | 0.1629 | 0.1679 | |
+| 3750 | 0.1122 | 0.1134 | 含 eval mse_score=0.0131 |
+| 3880 | 0.1158 | 0.1626 | 🔵 当前 |
 | **250** | — | — | ✅ checkpoint |
 | **500** | — | — | ✅ checkpoint |
 | **750** | — | — | ✅ checkpoint |
 | **1000** | — | — | ✅ checkpoint |
 | **1250** | — | — | ✅ checkpoint |
 | **1500** | — | — | ✅ checkpoint |
+| **1750** | — | — | ✅ checkpoint |
+| **2000** | — | — | ✅ checkpoint |
+| **2250** | — | — | ✅ checkpoint |
+| **2500** | — | — | ✅ checkpoint |
+| **2750** | — | — | ✅ checkpoint |
+| **3000** | — | — | ✅ checkpoint |
+| **3250** | — | — | ✅ checkpoint |
+| **3500** | — | — | ✅ checkpoint |
+| **3750** | — | — | ✅ checkpoint |
 
 ### Loss 趋势
 
 - 初始 loss 1.12 → 快速下降至 0.24 附近（step 500）
-- `action_dit_loss` 在 step 1000–1614 区间稳定在 0.15–0.18，偶有上冲至 ~0.20
-- step 1000 eval `mse_score` 为 0.0099，step 1500 eval `mse_score` 为 0.0131；eval 指标存在波动
+- `action_dit_loss` 在 step 2000–3880 区间整体稳定在 0.11–0.17，最低下探至 0.112（step 3750）
+- eval `mse_score`: step 500 为 0.0116，step 1000 为 0.0099，step 1500/3750 约为 0.0131；eval 指标存在波动
 - `last_micro_loss` 与 `action_dit_loss` 差异较小（grad_accum=4，micro-batch 间方差相对可控）
 - 学习率从初始值缓慢下降（cosine schedule）
 
@@ -147,7 +156,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 系统资源占用
 
-> 最后更新：2026-07-03 00:25:02 CST
+> 最后更新：2026-07-03 06:15:45 CST
 
 ### GPU（NVIDIA A100-SXM4-80GB）
 
@@ -156,16 +165,16 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | **GPU 利用率** | 100% |
 | **显存使用** | 64,269 MiB / 81,920 MiB（78.5%） |
 | **显存空闲** | 16,884 MiB |
-| **功耗** | 334.54 W / 400.00 W |
-| **温度** | 61°C |
+| **功耗** | 337.87 W / 400.00 W |
+| **温度** | 57°C |
 
 ### Docker 内存（cgroup v2）
 
 | 指标 | 值 |
 |------|-----|
 | **Docker 内存上限** | 120 GiB |
-| **当前已用** | 34.90 GiB |
-| **使用率** | 29.1% |
+| **当前已用** | 34.66 GiB |
+| **使用率** | 28.9% |
 | **Swap** | 0 B |
 
 ### 存储
@@ -184,7 +193,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 |------|------|
 | **每 step 耗时** | ~9.2 s/it |
 | **每 step 成本** | 本地 A100，暂不记录 |
-| **已运行时间** | ~4.2 小时 |
+| **已运行时间** | ~10 小时 |
 | **完整 80000 steps 预估** | 80000 × 9.2s ≈ 204h ≈ 8.5 天 |
 
 ---
@@ -207,7 +216,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 │   ├── steps_2750/
 │   ├── steps_3000/
 │   ├── steps_3250/
-│   └── steps_3500/
+│   ├── steps_3500/
+│   └── steps_3750/
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -255,9 +265,9 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 - **当前 run 为 FRESH START**，从 step 0 开始全新训练。
 - A100 80GB 显存使用率 78.5%（64.3G/80G），余量 ~16.9G，尚未 OOM；GPU 利用率维持 100%。
 - 单步耗时 ~9.2 s/it；模型前向/反向耗时 ~2.35 s（per_device_batch_size=8，单次 micro-step 处理 8 条样本）。
-- checkpoint 每 250 steps 正常保存，已保存至 `steps_1500`；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
-- 训练日志中出现两次数据读取异常（index 30578、index 45269: `Invalid data found when processing input`），均自动 retry 后未中断。
-- loss 从 1.12 快速下降至 0.24 后，在 step 1000–1614 区间稳定在 0.15–0.18；step 1500 eval `mse_score` 为 0.0131，eval 指标存在波动，长程收敛需继续观察。
+- checkpoint 每 250 steps 正常保存，已保存至 `steps_3750`；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
+- 训练日志中出现三次数据读取异常（index 30578、45269、120829: `Invalid data found when processing input`），均自动 retry 后未中断。
+- loss 从 1.12 快速下降至 0.24 后，在 step 2000–3880 区间整体稳定在 0.11–0.17；eval `mse_score` 在 0.0099–0.0131 之间波动，长程收敛需继续观察。
 
 ---
 

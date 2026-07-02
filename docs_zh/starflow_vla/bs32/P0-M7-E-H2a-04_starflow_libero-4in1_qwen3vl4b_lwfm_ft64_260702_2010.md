@@ -1,0 +1,243 @@
+# P0-M7-E-H2a-04: StarFlow LIBERO 4-in-1 Qwen3VL-4B future_tokens=64（bs32）
+
+> **实验代号**: E-H2a-04 / P0-M7  
+> **状态**: 🟢 训练运行中  
+> **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
+> **启动时间**: 2026-07-02 20:16:02 CST  
+> **当前更新**: 2026-07-02 22:48:59 CST  
+> **tmux 会话**: `train`（attached）  
+> **配置来源**: `configs/starflow_vla/ablations/future_tokens_64.yaml`
+
+---
+
+## 实验概述
+
+P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `num_target_vision_tokens` 从默认 32 提升至 **64**，验证更多目标视觉 token 对 LIBERO 4-in-1 连续动作学习的收敛与显存影响。
+
+本 run 为 **从 scratch 全新训练**（`is_resume=False`），使用 A100 bs32 配置（per_device_batch_size=8 × gradient_accumulation_steps=4）。
+
+---
+
+## 训练参数
+
+### 脚本级参数
+
+| 参数 | 值 |
+|------|-----|
+| `RUN_ID` | `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010` |
+| `CONFIG_YAML` | `configs/starflow_vla/ablations/future_tokens_64.yaml` |
+| `DATA_MIX` | `libero_all` |
+| `MAX_TRAIN_STEPS` | 80,000 |
+| `SAVE_INTERVAL` | 250 |
+| `EVAL_INTERVAL` | 500 |
+| `LOGGING_FREQUENCY` | 20 |
+| `NUM_PROCESSES` | 1 |
+| `GRADIENT_ACCUMULATION_STEPS` | **4** |
+| `PER_DEVICE_BATCH_SIZE` | **8** |
+| `NUM_WORKERS` | 8 |
+| `BASE_VLM` | `/disk/rl/starVLA/playground/Pretrained_models/Qwen3-VL-4B-Instruct` |
+| `LIBERO_DATA_ROOT` | `/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA` |
+| `WANDB_PROJECT` | `starflow_vla` |
+| `WANDB_ENTITY` | `silencewx-harbin-institute-of-technology` |
+| `is_resume` | **`False`**（从 scratch） |
+| 设备 | NVIDIA A100-SXM4-80GB（81920 MiB） |
+| 单价 | 本地 A100，暂不记录 |
+
+### 模型 / 优化器参数
+
+| 参数 | 值 |
+|------|-----|
+| **框架** | StarFlowVLA |
+| **Base VLM** | Qwen3-VL-4B-Instruct |
+| **Action Model** | LayerwiseFM (DiT, 36 layers, 1024 hidden) |
+| **Action Dim** | 7 |
+| **State Dim** | 8 |
+| **Action Horizon** | 8 |
+| **Future Action Window Size** | 7 |
+| **Num Target Vision Tokens** | **64** |
+| **DiT Attention Heads** | 16 |
+| **DiT Params** | 532,326,426 |
+| **Dropout** | 0.2 |
+| **Total Params** | 5,071.121 M |
+| **Trainable Params** | 633.305 M |
+| **Frozen Modules** | `qwen_vl_interface` |
+| **Learning Rate (action_model)** | 1.0e-4 |
+| **Learning Rate (base)** | 2.5e-5 |
+| **Learning Rate (qwen_vl_interface)** | 1.0e-5 |
+| **LR Scheduler** | cosine_with_min_lr |
+| **Min LR** | 1.0e-6 |
+| **Warmup Steps** | 0 |
+| **Optimizer** | AdamW (β=(0.9, 0.95), eps=1e-8, wd=1e-8) |
+| **Max Grad Norm** | 1.0 |
+| **Gradient Checkpointing** | true |
+| **Mixed Precision** | no |
+| **Effective Global Batch** | **32**（8 × 4） |
+| **Checkpoint Format** | lightweight |
+| **Save Format** | safetensors |
+| **local_checkpoint_root** | `/localdisk-tmp` |
+| **local_checkpoint_keep_count** | 2 |
+| **Seed** | 42 |
+
+### 数据集
+
+| 数据集 | 样本数 | embodiment |
+|--------|--------|------------|
+| `libero_object_no_noops_1.0.0_lerobot` | 66,984 | FRANKA |
+| `libero_goal_no_noops_1.0.0_lerobot` | 52,042 | FRANKA |
+| `libero_spatial_no_noops_1.0.0_lerobot` | 52,970 | FRANKA |
+| `libero_10_no_noops_1.0.0_lerobot` | 101,469 | FRANKA |
+| **合计** | **273,465** | — |
+
+---
+
+## 训练进度
+
+> 最后更新：2026-07-02 22:48:59 CST
+
+| 指标 | 值 |
+|------|-----|
+| **当前 Step** | **992 / 80000**（1.24%） |
+| **完成比例** | 1.24% |
+| **单步耗时** | ~9.18–9.22 s/it |
+| **数据加载耗时** | ~0.0003–0.001 s |
+| **模型前向/反向耗时** | ~2.33–2.37 s |
+| **已运行时间** | 约 2 小时 33 分钟 |
+| **预计剩余时间** | ~202 小时（约 8.4 天） |
+| **最新 checkpoint** | `steps_750` |
+| **上一个 checkpoint** | `steps_500` |
+
+### Loss 记录（部分）
+
+| Step | action_dit_loss | last_micro_loss | 备注 |
+|------|----------------|-----------------|------|
+| 20 | 1.1153 | 1.0858 | 初始 |
+| 100 | 0.5190 | 0.6180 | |
+| 200 | 0.3668 | 0.3663 | |
+| 300 | 0.2850 | 0.3069 | |
+| 400 | 0.2944 | 0.2652 | |
+| 500 | 0.2416 | 0.2043 | 含 eval mse_score=0.0116 |
+| 600 | 0.2089 | 0.2109 | |
+| 700 | 0.2308 | 0.1945 | |
+| 800 | 0.1835 | 0.2135 | |
+| 900 | 0.1970 | 0.2313 | |
+| 960 | 0.1949 | 0.2000 | |
+| 980 | 0.1948 | 0.1745 | 🔵 当前 |
+| **250** | — | — | ✅ checkpoint |
+| **500** | — | — | ✅ checkpoint |
+| **750** | — | — | ✅ checkpoint |
+
+### Loss 趋势
+
+- 初始 loss 1.12 → 快速下降至 0.24 附近（step 500）
+- `action_dit_loss` 在 step 600–980 区间波动于 0.18–0.23
+- `last_micro_loss` 与 `action_dit_loss` 差异较小（grad_accum=4，micro-batch 间方差相对可控）
+- 学习率从初始值缓慢下降（cosine schedule）
+
+---
+
+## 系统资源占用
+
+> 最后更新：2026-07-02 22:48:59 CST
+
+### GPU（NVIDIA A100-SXM4-80GB）
+
+| 指标 | 值 |
+|------|-----|
+| **GPU 利用率** | 100% |
+| **显存使用** | 64,269 MiB / 81,920 MiB（78.5%） |
+| **显存空闲** | 16,884 MiB |
+| **功耗** | 316.92 W / 400.00 W |
+| **温度** | 53°C |
+
+### Docker 内存（cgroup v2）
+
+| 指标 | 值 |
+|------|-----|
+| **Docker 内存上限** | 120 GiB |
+| **当前已用** | 39.50 GiB |
+| **使用率** | 32.9% |
+| **Swap** | 0 B |
+
+### 存储
+
+| 挂载点 | 容量 | 已用 | 可用 | 使用率 |
+|--------|------|------|------|--------|
+| `/` (overlay) | 30G | 16G | 15G | 53% |
+| `/localdisk-tmp` | 100G | 31G | 70G | 31% |
+| `/disk/rl` | 700T | 548T | 153T | 79% |
+
+---
+
+## 成本估算
+
+| 项目 | 计算 |
+|------|------|
+| **每 step 耗时** | ~9.2 s/it |
+| **每 step 成本** | 本地 A100，暂不记录 |
+| **已运行时间** | ~2.5 小时 |
+| **完整 80000 steps 预估** | 80000 × 9.2s ≈ 204h ≈ 8.5 天 |
+
+---
+
+## 输出目录
+
+```
+/disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/
+├── checkpoints/
+│   ├── steps_250/
+│   ├── steps_500/
+│   └── steps_750/
+├── config.full.yaml          ✅
+├── config.yaml               ✅
+├── dataset_statistics.json   ✅
+├── summary.jsonl             ✅
+└── wandb/                    ✅
+```
+
+本地暂存：`/localdisk-tmp/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/`
+
+---
+
+## 相关链接
+
+- **WandB Run**: [260702_2010](https://wandb.ai/silencewx-harbin-institute-of-technology/starflow_vla/runs/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010)
+- **tmux 会话**: `train`
+
+---
+
+## 启动命令
+
+```bash
+cd /disk/rl/starVLA
+RUN_ID="P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_$(date +%y%m%d_%H%M)" \
+CONFIG_YAML=configs/starflow_vla/ablations/future_tokens_64.yaml \
+DATA_MIX=libero_all \
+MAX_TRAIN_STEPS=80000 \
+SAVE_INTERVAL=250 \
+LOGGING_FREQUENCY=20 \
+EVAL_INTERVAL=500 \
+NUM_PROCESSES=1 \
+GRADIENT_ACCUMULATION_STEPS=4 \
+PER_DEVICE_BATCH_SIZE=8 \
+NUM_WORKERS=8 \
+LOCAL_CHECKPOINT_KEEP_COUNT=2 \
+LOCAL_CHECKPOINT_ROOT=/localdisk-tmp \
+STARVLA_PYTHON=/opt/conda/envs/starVLA/bin/python \
+bash examples/LIBERO/train_files/run_starflow_train_ready.sh
+```
+
+---
+
+## 备注
+
+- 本实验验证 `num_target_vision_tokens=64`（默认 32）对 StarFlowVLA 动作学习的影响。
+- **当前 run 为 FRESH START**，从 step 0 开始全新训练。
+- A100 80GB 显存使用率 78.5%（64.3G/80G），余量 ~16.9G，尚未 OOM。
+- 单步耗时 ~9.2 s/it；模型前向/反向耗时 ~2.35 s（per_device_batch_size=8，单次 micro-step 处理 8 条样本）。
+- checkpoint 每 250 steps 正常保存，`/localdisk-tmp` → `/disk/rl` 后台同步正常。
+- 训练日志中出现一次数据读取异常：`Attempt 1/10 failed for index 30578: Invalid data found when processing input`，自动 retry 后未中断。
+- loss 从 1.12 快速下降至 0.24 后，在 0.18–0.23 区间震荡，需继续观察长程收敛。
+
+---
+
+*本文档将持续更新。*

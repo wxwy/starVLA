@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中  
 > **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
 > **启动时间**: 2026-07-02 20:16:02 CST  
-> **当前更新**: 2026-07-02 23:36:26 CST  
+> **当前更新**: 2026-07-03 00:28:00 CST  
 > **tmux 会话**: `train`（attached）  
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_64.yaml`
 
@@ -92,19 +92,19 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 训练进度
 
-> 最后更新：2026-07-02 23:36:26 CST
+> 最后更新：2026-07-03 00:25:02 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **1298 / 80000**（1.62%） |
-| **完成比例** | 1.62% |
-| **单步耗时** | ~9.19–9.25 s/it |
+| **当前 Step** | **1614 / 80000**（2.02%） |
+| **完成比例** | 2.02% |
+| **单步耗时** | ~9.17–9.25 s/it |
 | **数据加载耗时** | ~0.0003–0.001 s |
 | **模型前向/反向耗时** | ~2.33–2.46 s |
-| **已运行时间** | 约 3 小时 20 分钟 |
-| **预计剩余时间** | ~201 小时（约 8.4 天） |
-| **最新 checkpoint** | `steps_1250` |
-| **上一个 checkpoint** | `steps_1000` |
+| **已运行时间** | 约 4 小时 9 分钟 |
+| **预计剩余时间** | ~200 小时（约 8.3 天） |
+| **最新 checkpoint** | `steps_1500` |
+| **上一个 checkpoint** | `steps_1250` |
 
 ### Loss 记录（部分）
 
@@ -123,13 +123,17 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | 1000 | 0.1776 | 0.2217 | 含 eval mse_score=0.0099 |
 | 1100 | 0.1626 | 0.1573 | |
 | 1200 | 0.1789 | 0.1602 | |
-| 1240 | 0.1542 | 0.1837 | |
-| 1280 | 0.1513 | 0.1504 | 🔵 当前 |
+| 1300 | 0.1679 | 0.1508 | |
+| 1400 | 0.1664 | 0.1870 | |
+| 1500 | 0.1704 | 0.1852 | 含 eval mse_score=0.0131 |
+| 1600 | 0.1629 | 0.1679 | |
+| 1614 | — | — | 🔵 当前 |
 | **250** | — | — | ✅ checkpoint |
 | **500** | — | — | ✅ checkpoint |
 | **750** | — | — | ✅ checkpoint |
 | **1000** | — | — | ✅ checkpoint |
 | **1250** | — | — | ✅ checkpoint |
+| **1500** | — | — | ✅ checkpoint |
 
 ### Loss 趋势
 
@@ -194,7 +198,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 │   ├── steps_500/
 │   ├── steps_750/
 │   ├── steps_1000/
-│   └── steps_1250/
+│   ├── steps_1250/
+│   └── steps_1500/
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -242,7 +247,7 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 - **当前 run 为 FRESH START**，从 step 0 开始全新训练。
 - A100 80GB 显存使用率 78.5%（64.3G/80G），余量 ~16.9G，尚未 OOM；GPU 利用率维持 100%。
 - 单步耗时 ~9.2 s/it；模型前向/反向耗时 ~2.35 s（per_device_batch_size=8，单次 micro-step 处理 8 条样本）。
-- checkpoint 每 250 steps 正常保存，已保存至 `steps_1250`；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
+- checkpoint 每 250 steps 正常保存，已保存至 `steps_1500`（通过共享文件系统确认）；实验在另一台 A100 机器上运行，实时 GPU/内存/loss 指标无法从本机采集。；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
 - 训练日志中出现一次数据读取异常：`Attempt 1/10 failed for index 30578: Invalid data found when processing input`，自动 retry 后未中断。
 - loss 从 1.12 快速下降至 0.24 后，在 step 1000–1280 区间进一步波动下降至 0.15–0.18；eval `mse_score` 从 0.0116 降至 0.0099，长程收敛需继续观察。
 

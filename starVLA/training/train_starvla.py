@@ -800,9 +800,11 @@ def _convert_deepspeed_optimizer_state_to_plain(optimizer_state, target_optimize
                 "exp_avg": ds_exp_avg[start : start + numel].view_as(param).clone(),
                 "exp_avg_sq": ds_exp_avg_sq[start : start + numel].view_as(param).clone(),
             }
-            # Ensure state tensors live on the same device/dtype as the target parameter.
+            # Keep Adam moments in their checkpoint dtype (normally fp32). Fused
+            # AdamW requires matching devices, but downcasting exp_avg/exp_avg_sq
+            # to bf16 loses optimizer precision after resume.
             for key in ("exp_avg", "exp_avg_sq"):
-                new_state[id(param)][key] = new_state[id(param)][key].to(param.device, dtype=param.dtype)
+                new_state[id(param)][key] = new_state[id(param)][key].to(param.device)
 
         # Reconstruct the param group with current parameter ids but preserved hyperparameters.
         # Force fused=False because the converted state does not satisfy the strict requirements
@@ -1177,15 +1179,17 @@ class VLATrainer(TrainerUtils):
                 self.optimizer.load_state_dict(optimizer_state)
                 # The underlying AdamW was created with fused=True. Old checkpoints
                 # saved during fused=False runs persist fused=False in param_groups.
-                # For plain (non-DeepSpeed) checkpoints, move optimizer state tensors
-                # to the same device as their parameters and restore fused=True.
+                # For plain (non-DeepSpeed) checkpoints, move optimizer state
+                # tensors to the same device as their parameters and restore
+                # fused=True. Preserve Adam state dtype, which should remain fp32
+                # even when model parameters are bf16.
                 for group in self.optimizer.param_groups:
                     for p in group["params"]:
                         if p in self.optimizer.state:
                             state = self.optimizer.state[p]
                             for key in ("exp_avg", "exp_avg_sq", "step"):
                                 if key in state and isinstance(state[key], torch.Tensor):
-                                    state[key] = state[key].to(p.device, dtype=p.dtype)
+                                    state[key] = state[key].to(p.device)
                     group["fused"] = True
             del optimizer_state
         logger.info(f"[1/{total_stages}] lightweight optimizer 状态加载完成")
@@ -1434,21 +1438,37 @@ class VLATrainer(TrainerUtils):
         self._finalize_training()
 
     def eval_action_model(self, step_metrics: dict = None) -> float:
-        """Run simple action-eval on current batch and attach score to metrics."""
-        examples = self._get_next_batch()
-        actions = [example["action"] for example in examples]
-        output_dict = self.accelerator.unwrap_model(self.model).predict_action(
-            examples=examples, use_ddim=True, num_ddim_steps=20
-        )
+        """Run simple action-eval over multiple batches and attach score to metrics.
 
-        if self.accelerator.is_main_process:
-            normalized_actions = output_dict["normalized_actions"]
-            actions = np.array(actions)
-            num_pots = np.prod(actions.shape)
-            score = TrainerUtils.euclidean_distance(normalized_actions, actions)
-            step_metrics["mse_score"] = score / num_pots
+        The number of eval batches is read from ``config.trainer.eval_num_batches``
+        (default 1).  When per_device_batch_size is small (e.g. 1 on a 4090) set
+        this to 8–16 to get a stable mse_score estimate.
+        """
+        eval_num_batches = getattr(self.config.trainer, "eval_num_batches", 1)
+        total_score = 0.0
+        total_pots = 0
 
-        del examples
+        for _ in range(eval_num_batches):
+            examples = self._get_next_batch()
+            actions = [example["action"] for example in examples]
+            output_dict = self.accelerator.unwrap_model(self.model).predict_action(
+                examples=examples, use_ddim=True, num_ddim_steps=20
+            )
+
+            if self.accelerator.is_main_process:
+                normalized_actions = output_dict["normalized_actions"]
+                actions_np = np.array(actions)
+                num_pots = int(np.prod(actions_np.shape))
+                score = TrainerUtils.euclidean_distance(normalized_actions, actions_np)
+                total_score += score
+                total_pots += num_pots
+
+            del examples, actions, output_dict
+
+        if self.accelerator.is_main_process and total_pots > 0:
+            step_metrics["mse_score"] = total_score / total_pots
+            step_metrics["eval_num_samples"] = total_pots
+
         if dist.is_initialized():
             dist.barrier()
         return step_metrics
@@ -1465,16 +1485,20 @@ class VLATrainer(TrainerUtils):
     def _train_step(self, batch_vla, batch_vlm=None):
         """Execute single training step."""
         with self.accelerator.accumulate(self.model):
-            self.optimizer.zero_grad()
-
             with torch.autocast("cuda", dtype=torch.bfloat16):
                 output_dict = self.model.forward(batch_vla)
                 action_loss = output_dict["action_loss"]
                 total_loss = action_loss
 
+            action_loss_item = action_loss.item()
+            if not hasattr(self, "_loss_accum"):
+                self._loss_accum = {"action_dit_loss": 0.0, "count": 0}
+            self._loss_accum["action_dit_loss"] += action_loss_item
+            self._loss_accum["count"] += 1
+
             self.accelerator.backward(total_loss)
 
-            if self.config.trainer.gradient_clipping is not None:
+            if self.accelerator.sync_gradients and self.config.trainer.gradient_clipping is not None:
                 self.accelerator.clip_grad_norm_(self.model.parameters(), self.config.trainer.gradient_clipping)
 
             self.optimizer.step()
@@ -1485,9 +1509,19 @@ class VLATrainer(TrainerUtils):
             # at min_lr well before max_train_steps is reached.
             if self.accelerator.sync_gradients:
                 self.lr_scheduler.step()
+                self.optimizer.zero_grad()
+
+            if self.accelerator.sync_gradients:
+                metrics = {
+                    "action_dit_loss": self._loss_accum["action_dit_loss"] / max(self._loss_accum["count"], 1),
+                    "action_dit_loss_last_micro": action_loss_item,
+                    "train_accumulation_micro_steps": self._loss_accum["count"],
+                }
+                self._loss_accum = {"action_dit_loss": 0.0, "count": 0}
+                return metrics
 
         return {
-            "action_dit_loss": action_loss.item(),
+            "action_dit_loss_last_micro": action_loss_item,
         }
 
     def _finalize_training(self):

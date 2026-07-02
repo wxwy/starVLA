@@ -138,8 +138,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 ### Loss 趋势
 
 - 初始 loss 1.12 → 快速下降至 0.24 附近（step 500）
-- `action_dit_loss` 在 step 1000–1280 区间进一步波动下降至 0.15–0.18
-- step 1000 eval `mse_score` 为 0.0099，较 step 500 的 0.0116 有所下降
+- `action_dit_loss` 在 step 1000–1614 区间稳定在 0.15–0.18，偶有上冲至 ~0.20
+- step 1000 eval `mse_score` 为 0.0099，step 1500 eval `mse_score` 为 0.0131；eval 指标存在波动
 - `last_micro_loss` 与 `action_dit_loss` 差异较小（grad_accum=4，micro-batch 间方差相对可控）
 - 学习率从初始值缓慢下降（cosine schedule）
 
@@ -147,7 +147,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 系统资源占用
 
-> 最后更新：2026-07-02 22:48:59 CST
+> 最后更新：2026-07-03 00:25:02 CST
 
 ### GPU（NVIDIA A100-SXM4-80GB）
 
@@ -156,16 +156,16 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | **GPU 利用率** | 100% |
 | **显存使用** | 64,269 MiB / 81,920 MiB（78.5%） |
 | **显存空闲** | 16,884 MiB |
-| **功耗** | 391.80 W / 400.00 W |
-| **温度** | 56°C |
+| **功耗** | 334.54 W / 400.00 W |
+| **温度** | 61°C |
 
 ### Docker 内存（cgroup v2）
 
 | 指标 | 值 |
 |------|-----|
 | **Docker 内存上限** | 120 GiB |
-| **当前已用** | 36.68 GiB |
-| **使用率** | 30.6% |
+| **当前已用** | 34.90 GiB |
+| **使用率** | 29.1% |
 | **Swap** | 0 B |
 
 ### 存储
@@ -184,7 +184,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 |------|------|
 | **每 step 耗时** | ~9.2 s/it |
 | **每 step 成本** | 本地 A100，暂不记录 |
-| **已运行时间** | ~3.3 小时 |
+| **已运行时间** | ~4.2 小时 |
 | **完整 80000 steps 预估** | 80000 × 9.2s ≈ 204h ≈ 8.5 天 |
 
 ---
@@ -247,9 +247,9 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 - **当前 run 为 FRESH START**，从 step 0 开始全新训练。
 - A100 80GB 显存使用率 78.5%（64.3G/80G），余量 ~16.9G，尚未 OOM；GPU 利用率维持 100%。
 - 单步耗时 ~9.2 s/it；模型前向/反向耗时 ~2.35 s（per_device_batch_size=8，单次 micro-step 处理 8 条样本）。
-- checkpoint 每 250 steps 正常保存，已保存至 `steps_1500`（通过共享文件系统确认）；实验在另一台 A100 机器上运行，实时 GPU/内存/loss 指标无法从本机采集。；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
-- 训练日志中出现一次数据读取异常：`Attempt 1/10 failed for index 30578: Invalid data found when processing input`，自动 retry 后未中断。
-- loss 从 1.12 快速下降至 0.24 后，在 step 1000–1280 区间进一步波动下降至 0.15–0.18；eval `mse_score` 从 0.0116 降至 0.0099，长程收敛需继续观察。
+- checkpoint 每 250 steps 正常保存，已保存至 `steps_1500`；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
+- 训练日志中出现两次数据读取异常（index 30578、index 45269: `Invalid data found when processing input`），均自动 retry 后未中断。
+- loss 从 1.12 快速下降至 0.24 后，在 step 1000–1614 区间稳定在 0.15–0.18；step 1500 eval `mse_score` 为 0.0131，eval 指标存在波动，长程收敛需继续观察。
 
 ---
 

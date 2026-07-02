@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中  
 > **run_id**: `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021`  
 > **启动时间**: 2026-07-02 20:24:19 CST  
-> **当前更新**: 2026-07-03 01:14:57 CST
+> **当前更新**: 2026-07-03 01:24:49 CST
 > **tmux 会话**: `train`（attached）  
 > **配置来源**: `configs/starflow_vla/state/continuous_head.yaml`
 
@@ -92,18 +92,18 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 ## 训练进度
 
-> 最后更新：2026-07-03 01:14:57 CST
+> 最后更新：2026-07-03 01:24:49 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **1938 / 80000**（2.4%） |
-| **完成比例** | 2.4% |
-| **单步耗时** | ~9.17 s/it |
-| **数据加载耗时** | ~0.001 s |
-| **模型前向/反向耗时** | ~2.436 s |
+| **当前 Step** | **2001 / 80000**（2.5%） |
+| **完成比例** | 2.5% |
+| **单步耗时** | ~14.04 s/it |
+| **数据加载耗时** | ~0.000 s |
+| **模型前向/反向耗时** | ~2.152 s |
 | **已运行时间** | 约 3 小时 12 分钟 |
 | **预计剩余时间** | ~151 小时（约 6.3 天） |
-| **最新 checkpoint** | `steps_2250` |
+| **最新 checkpoint** | `steps_2500` |
 | **最近 checkpoint** | `steps_1250` |
 
 ### Loss 记录（部分）
@@ -129,7 +129,7 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 ## 系统资源占用
 
-> 最后更新：2026-07-03 01:14:57 CST
+> 最后更新：2026-07-03 01:24:49 CST
 
 ### GPU（NVIDIA GeForce RTX 4090）
 
@@ -138,7 +138,7 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 | **GPU 利用率** | 100% |
 | **显存使用** | 64269 MiB / 81920 MiB（78.5%）
 | **显存空闲** | 1,404 MiB |
-| **功耗** | 340.65 W / 400.00 W |
+| **功耗** | 385.62 W / 400.00 W |
 | **温度** | 57°C |
 
 ### Docker 内存
@@ -146,8 +146,8 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 | 指标 | 值 |
 |------|-----|
 | **Docker 内存总量** | 1.0Ti
-| **Docker 内存已用** | ~60 GiB
-| **Docker 内存可用** | ~938 GiB
+| **Docker 内存已用** | ~61 GiB
+| **Docker 内存可用** | ~937 GiB
 | **Docker 缓存** | ~427 GiB |
 | **Swap** | 0 B |
 

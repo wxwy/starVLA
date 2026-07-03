@@ -22,20 +22,25 @@ candidate_batches:
   max_smoke_steps_per_candidate: 3
 
 measurements:
-  peak_vram_gb: TBD
-  step_time_sec: TBD
-  samples_per_sec: TBD
-  dataloader_wait_sec: TBD
-  stable_candidate: TBD
+  peak_vram_gb: 0.04040336608886719
+  step_time_sec: 0.14424942016601563
+  samples_per_sec: 443.6759601968788
+  dataloader_wait_sec: 0.5222041020169854
+  stable_candidate:
+    per_device_batch_size: 8
+    gradient_accumulation_steps: 8
+    effective_batch_size: 64
+  measurement_scope: MoWAP0FullHeads_plus_MoWAActionBridge_only
+  production_training_status: not_measured
 
 guardrails:
   launch_ready: false
   training_started: false
-  dry_run_until_on_a100: true
+  dry_run_until_on_a100: false
   save_checkpoint_during_smoke: false
   modify_checkpoint_logic: false
-  claim_runtime_without_a100_measurement: false
+  claim_runtime_without_full_e001_training_measurement: false
 
 expected_output:
   report_path: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
-  status_before_a100: Data Gate
+  status_after_a100: smoke_passed_not_production_training

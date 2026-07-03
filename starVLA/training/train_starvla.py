@@ -693,6 +693,111 @@ def prepare_data(cfg, accelerator, output_dir) -> DataLoader:
     return vla_train_dataloader
 
 
+def _is_full_path_dry_run(cfg) -> bool:
+    return bool(getattr(cfg.trainer, "full_path_dry_run_only", False))
+
+
+def _summarize_batch(batch) -> dict:
+    if batch is None:
+        return {"fetched": False}
+    summary = {
+        "fetched": True,
+        "type": type(batch).__name__,
+    }
+    if isinstance(batch, (list, tuple)):
+        summary["length"] = len(batch)
+        if batch:
+            first = batch[0]
+            summary["first_item_type"] = type(first).__name__
+            if isinstance(first, dict):
+                summary["first_item_keys"] = sorted(str(key) for key in first.keys())
+                for key in ("image", "lang", "action", "state"):
+                    if key in first:
+                        value = first[key]
+                        value_summary = {"type": type(value).__name__}
+                        if hasattr(value, "shape"):
+                            value_summary["shape"] = list(value.shape)
+                        elif isinstance(value, (list, tuple)):
+                            value_summary["length"] = len(value)
+                        summary[f"first_item_{key}"] = value_summary
+    elif isinstance(batch, dict):
+        summary["keys"] = sorted(str(key) for key in batch.keys())
+    return summary
+
+
+def _write_full_path_dry_run_report(
+    cfg,
+    *,
+    output_dir: Path,
+    model,
+    dataloader,
+    optimizer,
+    trainer,
+    batch_summary: dict | None,
+) -> None:
+    report_path = Path(
+        getattr(
+            cfg.trainer,
+            "full_path_dry_run_report",
+            "docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json",
+        )
+    )
+    trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
+    total_params = sum(param.numel() for param in model.parameters())
+    payload = {
+        "stage": "P0",
+        "experiment_id": getattr(cfg, "experiment_id", "E-001"),
+        "entrypoint": "starVLA/training/train_starvla.py",
+        "full_path_dry_run_only": True,
+        "training_started": False,
+        "checkpoint_saved": False,
+        "wandb_started": False,
+        "config_yaml": getattr(cfg, "config_yaml", None),
+        "run_id": cfg.run_id,
+        "output_dir": str(output_dir),
+        "framework": {
+            "name": cfg.framework.name,
+            "total_params": int(total_params),
+            "trainable_params": int(trainable_params),
+            "mowa_action_bridge_probe_enabled": bool(
+                getattr(model, "mowa_action_bridge_probe_enabled", False)
+            ),
+        },
+        "data": {
+            "dataset_py": cfg.datasets.vla_data.dataset_py,
+            "data_mix": cfg.datasets.vla_data.data_mix,
+            "data_root_dir": str(cfg.datasets.vla_data.data_root_dir),
+            "per_device_batch_size": int(cfg.datasets.vla_data.per_device_batch_size),
+            "dataloader_type": type(dataloader).__name__,
+            "dataloader_length": len(dataloader) if hasattr(dataloader, "__len__") else None,
+            "batch_summary": batch_summary or {"fetched": False},
+        },
+        "optimizer": {
+            "type": type(optimizer).__name__,
+            "param_group_count": len(optimizer.param_groups),
+            "param_group_names": [group.get("name", str(index)) for index, group in enumerate(optimizer.param_groups)],
+        },
+        "trainer": {
+            "max_train_steps": int(cfg.trainer.max_train_steps),
+            "gradient_accumulation_steps": int(getattr(cfg.trainer, "gradient_accumulation_steps", 1)),
+            "total_batch_size": int(trainer.total_batch_size),
+            "checkpoint_format": getattr(cfg.trainer, "checkpoint_format", None),
+            "save_interval": int(cfg.trainer.save_interval),
+            "eval_interval": int(cfg.trainer.eval_interval),
+        },
+        "go_no_go": "TBD: train_starvla full-path dry-run passed; training remains gated",
+        "notes": [
+            "This dry-run stops before prepare_training(), wandb, checkpoint loading, checkpoint saving, and train().",
+            "It validates StarVLA build/data/optimizer/trainer wiring only.",
+            "MoWA heads/bridge integration into the action path remains a separate gated step.",
+        ],
+    }
+    if accelerator.is_main_process:
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        logger.info(f"MoWA E-001 train_starvla full-path dry-run report saved at {report_path}")
+
+
 def setup_optimizer_and_scheduler(model, cfg) -> Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
     """Set optimizer and scheduler."""
     param_groups = build_param_lr_groups(model=model, cfg=cfg)
@@ -1925,7 +2030,9 @@ def main(cfg) -> None:
     cfg = wrap_config(cfg)
     logger.info("✅ Configuration wrapped for access tracking")
 
-    _launch_startup_checkpoint_stage(cfg)
+    full_path_dry_run_only = _is_full_path_dry_run(cfg)
+    if not full_path_dry_run_only:
+        _launch_startup_checkpoint_stage(cfg)
     output_dir = setup_directories(cfg=cfg)
     vla = build_framework(cfg)
     vla_train_dataloader = prepare_data(cfg=cfg, accelerator=accelerator, output_dir=output_dir)
@@ -1939,6 +2046,25 @@ def main(cfg) -> None:
         lr_scheduler=lr_scheduler,
         accelerator=accelerator,
     )
+
+    if full_path_dry_run_only:
+        batch_summary = None
+        if bool(getattr(cfg.trainer, "full_path_dry_run_fetch_batch", False)):
+            batch_summary = _summarize_batch(next(iter(vla_train_dataloader)))
+        _write_full_path_dry_run_report(
+            cfg,
+            output_dir=output_dir,
+            model=vla,
+            dataloader=vla_train_dataloader,
+            optimizer=optimizer,
+            trainer=trainer,
+            batch_summary=batch_summary,
+        )
+        logger.info("MoWA E-001 train_starvla full-path dry-run complete; training skipped.")
+        if dist.is_initialized():
+            dist.barrier()
+            dist.destroy_process_group()
+        return
 
     trainer.prepare_training()
     trainer.train()

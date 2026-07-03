@@ -17,6 +17,7 @@ references:
   production_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json
   production_window_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
   p0_train_smoke_report: docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json
+  a100_throughput_smoke_report: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
 
 data:
   recipe_name: mowa_robocasa365_target_human_atomic_core_v1
@@ -71,8 +72,11 @@ training:
   action_chunk_steps: 10
   temporal_policy_status: confirmed_for_e001_initial_target
   temporal_policy_evidence: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
-  expected_vram: TBD
-  expected_runtime: TBD
+  per_device_batch_size_smoke_observed: 8
+  gradient_accumulation_steps_smoke_observed: 8
+  effective_batch_size_smoke_observed: 64
+  expected_vram: smoke_observed_peak_0.041GB_not_full_vla
+  expected_runtime: TBD_full_e001_training
 
 checkpoint:
   runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
@@ -91,5 +95,5 @@ launch_blockers:
   - SOT docs 00/01/02 are not available in docs_zh/mowa
   - class_mapping_status remains Data Gate
   - runtime policy draft not confirmed
-  - batch size, expected VRAM and runtime remain TBD
+  - batch size / expected VRAM / runtime are smoke-observed only, not production-confirmed
   - training command not created

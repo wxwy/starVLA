@@ -46,9 +46,18 @@
   - `tools/mowa/e001_readiness_smoke.py` 已重跑，报告显示 `production_window_5hz_preflight_passed=true`；E-001 仍不启动。
 - E-001 launch / throughput 草案已补齐：
   - `configs/mowa/mowa_e001_training_command_draft.yaml` 记录 dry-run-only 的单卡 accelerate 命令草案，`launch_ready=false`、`training_started=false`。
-  - `configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml` 记录 A100 80G throughput smoke 计划，候选 batch 为 1/2/4/8，当前只作计划，不在 4090 24G 上写实测结论。
+  - 当前机器已确认为 `NVIDIA A100-SXM4-80GB`，`tools/mowa/e001_a100_throughput_smoke.py` 已完成 heads/bridge 级 throughput smoke。
+  - `docs_zh/mowa/mowa_e001_a100_throughput_smoke.json` 显示候选 batch/grad_accum 1/2/4/8 全部通过；stable smoke candidate 为 per_device_batch_size=8、gradient_accumulation_steps=8、effective_batch_size=64、step_time_sec=0.14424942016601563、samples_per_sec=443.6759601968788、peak_vram_gb=0.04040336608886719。
+  - 该结果只覆盖 `MoWAP0FullHeads+MoWAActionBridge` smoke，不代表完整 VLA E-001 主训练吞吐；runtime policy 已记录为 smoke-observed，`policy_confirmed=false`、`launch_ready=false` 保持不变。
+  - `configs/mowa/mowa_e001_training_smoke.yaml` 已新增为 training-config smoke，不启动训练、不保存 checkpoint，显式引用 A100 throughput 报告、5Hz production-window preflight 和 runtime policy。
+  - `tools/mowa/e001_training_config_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_training_config_smoke.json`：`training_started=false`、`launch_ready=false`，所有 config wiring 检查通过；完整 E-001 training entrypoint 仍为 TBD。
+  - `train_starvla.py` 已新增 `trainer.full_path_dry_run_only` 分支；`configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml` 已在 A100 上完成 full-path dry-run，覆盖 `setup_directories -> build_framework(QwenOFT) -> prepare_data(RoboCasa365 OpenDrawer) -> setup_optimizer_and_scheduler -> trainer init -> fetch one batch`，随后停止。
+  - `docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json` 显示 `training_started=false`、`checkpoint_saved=false`、`wandb_started=false`；该 dry-run 验证 StarVLA/QwenOFT RoboCasa365 主入口连通性，不等于 MoWA bridge 已接入 action path。
+  - `tools/mowa/e001_train_starvla_full_path_dry_run_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run_smoke.json`，并接入 readiness：`train_starvla_full_path_dry_run_smoke_passed=true`。
   - `tools/mowa/e001_launch_draft_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_launch_draft_smoke.json`，确认 training command draft、A100 throughput plan、runtime policy 均存在且保持不可执行。
-  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 已通过 5 项测试，用时 4.015s。
+  - `QwenOFT` 已新增默认关闭的 MoWA action bridge probe；在 dry-run 配置中显式启用后，从 Qwen action-token hidden state 派生 `P0FutureFeatures`，经 `MoWAActionBridge` 生成 bridge tokens，不读取 future action label，不改变 `action_loss`，不接入 `LayerwiseFM_ActionHeader.py` 内部逻辑。
+  - `docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json` 最新显示 `framework.mowa_action_bridge_probe_enabled=true`、`training_started=false`、`checkpoint_saved=false`、`wandb_started=false`。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 7 项测试。
 - M5-001 MoWAActionBridge interface draft 已完成：
   - `starVLA/model/modules/mowa/action_bridge.py` 新增 `MoWAActionBridge`、`MoWAActionBridgeConfig`、`MoWAActionBridgeOutput`。
   - `configs/mowa/mowa_action_bridge_interface.yaml` 记录 bridge 输出为 `layerwise_condition_features`，默认仅作为 LayerwiseFM 条件侧 token 接口，不改 `LayerwiseFM_ActionHeader.py` 内部逻辑。
@@ -67,7 +76,7 @@
 
 ## 下一步
 - 若继续推进 P0，先确认是否将 `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 与 `configs/mowa/mowa_e001_launch_draft.yaml` 从不可执行草案推进为可执行配置；主训练前仍需确认资源预算和 checkpoint/save/resume 策略。
-- 在 4090 24G 上不确认 A100 batch/显存/吞吐；切到 A100 后先运行 throughput smoke，再填写 batch size、expected VRAM、expected runtime。
+- A100 heads/bridge 级 throughput smoke、training-config smoke、`train_starvla.py` full-path dry-run、QwenOFT action bridge probe dry-run 已完成；下一步是决定是否把 probe 从 no-op/dry-run 观测推进到真实 MoWA FullHeads supervision/coupling。
 - 若继续推进 M5/E-006，必须先有可评测 checkpoint/runtime；在 action 指标收益声明前必须完成 feature removal / shuffle 证据。
 - 训练入口必须显式引用 G0 temporal profile 与 5Hz production-window preflight；batch size、显存、训练时长仍需 throughput smoke 后确认。
 - 真实 Wan latent cache builder 仍需单独放行。

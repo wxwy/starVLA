@@ -10,17 +10,17 @@ launch_guard:
   requires_human_confirmation: true
 
 command_template:
-  entrypoint: starVLA/training/train_starvla.py
-  launcher: accelerate
+  entrypoint: TBD_full_e001_training_entrypoint
+  launcher: accelerate_target
   num_processes: 1
   mixed_precision: bf16
-  config_yaml: configs/mowa/mowa_e001_launch_draft.yaml
+  config_yaml: configs/mowa/mowa_e001_training_smoke.yaml
   command: >-
-    .venv/bin/accelerate launch
+    TBD .venv/bin/accelerate launch
     --num_processes 1
     --mixed_precision bf16
-    starVLA/training/train_starvla.py
-    --config_yaml configs/mowa/mowa_e001_launch_draft.yaml
+    TBD_FULL_E001_ENTRYPOINT
+    --config_yaml configs/mowa/mowa_e001_training_smoke.yaml
 
 runtime_targets:
   gpu_type: A100_80G
@@ -30,9 +30,9 @@ runtime_targets:
   history_steps: 10
   future_steps: 5
   action_chunk_steps: 10
-  per_device_batch_size: TBD
-  gradient_accumulation_steps: TBD
-  effective_batch_size: TBD
+  per_device_batch_size: smoke_observed_8
+  gradient_accumulation_steps: smoke_observed_8
+  effective_batch_size: smoke_observed_64
   max_train_steps: TBD
 
 checkpoint_policy:
@@ -46,5 +46,5 @@ checkpoint_policy:
 
 notes:
   - This is a command draft, not an executable launch config.
-  - The config_yaml path is a placeholder until MoWA E-001 has a real training config.
-  - Batch size, VRAM and runtime must be confirmed on A100 80G before launch_ready can become true.
+  - The config_yaml path points to a training-config smoke, not a full training config.
+  - Batch size, VRAM and runtime are observed on heads/bridge smoke only; full E-001 path remains TBD.

@@ -6,12 +6,17 @@ config_role: runtime_policy_draft_not_confirmed
 resource_budget:
   gpu_type: A100_80G
   num_gpus: 1
-  per_device_batch_size: TBD
-  gradient_accumulation_steps: TBD
-  effective_batch_size: TBD
+  per_device_batch_size: smoke_observed_8
+  gradient_accumulation_steps: smoke_observed_8
+  effective_batch_size: smoke_observed_64
   max_train_steps: TBD
-  expected_vram: TBD
-  expected_runtime: TBD
+  expected_vram: smoke_observed_peak_0.041GB
+  expected_runtime: TBD_full_e001_training
+  throughput_smoke_report: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
+  throughput_smoke_scope: MoWAP0FullHeads_plus_MoWAActionBridge_only
+  throughput_smoke_step_time_sec: 0.14424942016601563
+  throughput_smoke_samples_per_sec: 443.6759601968788
+  throughput_smoke_status: smoke_passed_not_production_training
 
 temporal_policy:
   raw_action_hz: 20
@@ -59,6 +64,7 @@ status:
   notes:
     - Values marked target are engineering defaults for review, not measured results.
     - Resource target is single A100 80G as confirmed by user.
+    - A100 throughput smoke has run on P0 FullHeads plus ActionBridge only; it is not full VLA E-001 throughput.
     - Temporal policy is confirmed for E-001 initial target by production-window preflight, not by full training throughput.
     - This policy does not modify checkpoint/resume/save code.
     - E-001 must not start until policy_confirmed and launch_ready are explicitly true.

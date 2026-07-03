@@ -204,7 +204,11 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_a100_throughput_smoke_plan.yaml").write_text(
-                "dry_run_until_on_a100: true\n",
+                "dry_run_until_on_a100: false\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_a100_throughput_smoke.json").write_text(
+                json.dumps({"training_started": False, "checkpoint_saved": False}),
                 encoding="utf-8",
             )
             (root / "docs_zh" / "mowa" / "mowa_e001_readiness_smoke.json").write_text(
@@ -219,4 +223,80 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertFalse(report["training_started"])
         self.assertFalse(report["launch_ready"])
         self.assertTrue(report["checks"]["training_command_dry_run_only"])
-        self.assertTrue(report["checks"]["a100_smoke_dry_run_until_a100"])
+        self.assertTrue(report["checks"]["a100_smoke_no_longer_waiting_for_a100"])
+        self.assertTrue(report["checks"]["a100_throughput_report_created"])
+
+    def test_e001_train_starvla_full_path_dry_run_smoke_keeps_training_disabled(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_train_starvla_full_path_dry_run.yaml").write_text(
+                "trainer:\n  full_path_dry_run_only: true\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_train_starvla_full_path_dry_run.json").write_text(
+                json.dumps(
+                    {
+                        "entrypoint": "starVLA/training/train_starvla.py",
+                        "full_path_dry_run_only": True,
+                        "training_started": False,
+                        "checkpoint_saved": False,
+                        "wandb_started": False,
+                        "framework": {"name": "QwenOFT"},
+                        "data": {
+                            "data_mix": "robocasa365_open_drawer_target_human",
+                            "batch_summary": {"fetched": True},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_train_starvla_full_path_dry_run_smoke import (
+                build_train_starvla_full_path_dry_run_smoke,
+            )
+
+            report = build_train_starvla_full_path_dry_run_smoke(root)
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(report["checks"]["training_not_started"])
+        self.assertTrue(report["checks"]["checkpoint_not_saved"])
+        self.assertTrue(report["checks"]["batch_fetched"])
+
+    def test_qwenoft_mowa_bridge_probe_uses_action_hidden_without_label_input(self):
+        try:
+            import torch
+            import torch.nn as nn
+            from omegaconf import OmegaConf
+        except ImportError:
+            self.skipTest("torch or omegaconf is not available")
+
+        from starVLA.model.framework.VLM4A.QwenOFT import Qwenvl_OFT
+
+        cfg = OmegaConf.create(
+            {
+                "framework": {
+                    "action_model": {"action_hidden_dim": 8},
+                    "mowa": {
+                        "enable_action_bridge_probe": True,
+                        "action_hidden_dim": 16,
+                        "num_action_layers": 3,
+                        "num_bridge_tokens": 2,
+                    },
+                }
+            }
+        )
+        probe_owner = object.__new__(Qwenvl_OFT)
+        nn.Module.__init__(probe_owner)
+        probe_owner.config = cfg
+        probe_owner._setup_mowa_action_bridge_probe()
+
+        action_queries = torch.randn(4, 5, 8)
+        probe = probe_owner._maybe_run_mowa_action_bridge_probe(action_queries)
+
+        self.assertIsNotNone(probe)
+        self.assertEqual(probe["token_shape"], (4, 2, 16))
+        self.assertEqual(probe["active_heads"], ("qwen_action_token_probe",))
+        self.assertEqual(probe["masked_heads"], ())
+        self.assertTrue(torch.isfinite(probe["probe_loss"]))

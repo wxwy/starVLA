@@ -22,7 +22,12 @@
     "action_bridge_interface_created": true,
     "training_command_draft_created": true,
     "training_command_dry_run_only": true,
-    "a100_throughput_smoke_plan_created": true
+    "training_smoke_config_created": true,
+    "training_config_smoke_passed": true,
+    "train_starvla_full_path_dry_run_config_created": true,
+    "train_starvla_full_path_dry_run_smoke_passed": true,
+    "a100_throughput_smoke_plan_created": true,
+    "a100_throughput_smoke_executed": true
   },
   "observed": {
     "task_count": 10,
@@ -49,15 +54,34 @@
     "e001_runtime_policy_draft_config": "configs/mowa/mowa_e001_runtime_policy_draft.yaml",
     "mowa_action_bridge_interface_config": "configs/mowa/mowa_action_bridge_interface.yaml",
     "e001_training_command_draft_config": "configs/mowa/mowa_e001_training_command_draft.yaml",
-    "e001_a100_throughput_smoke_plan_config": "configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml"
+    "e001_training_smoke_config": "configs/mowa/mowa_e001_training_smoke.yaml",
+    "e001_training_config_smoke_report": "docs_zh/mowa/mowa_e001_training_config_smoke.json",
+    "e001_train_starvla_full_path_dry_run_config": "configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml",
+    "e001_train_starvla_full_path_dry_run_smoke_report": "docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run_smoke.json",
+    "e001_a100_throughput_smoke_plan_config": "configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml",
+    "e001_a100_throughput_smoke_report": "docs_zh/mowa/mowa_e001_a100_throughput_smoke.json",
+    "a100_throughput_stable_candidate": {
+      "per_device_batch_size": 8,
+      "gradient_accumulation_steps": 8,
+      "effective_batch_size": 64,
+      "status": "ok",
+      "optimizer_steps": 3,
+      "micro_steps": 24,
+      "step_time_sec": 0.14424942016601563,
+      "wall_step_time_sec": 0.14429347364542386,
+      "samples_per_sec": 443.6759601968788,
+      "peak_vram_gb": 0.04040336608886719,
+      "peak_reserved_gb": 0.060546875,
+      "loss": 0.03417038917541504
+    }
   },
   "unresolved_items": [
     "SOT docs 00/01/02 are not available in docs_zh/mowa",
     "E-001 launch draft is not executable",
     "class_mapping_status remains Data Gate",
     "runtime policy draft not confirmed",
-    "batch size, expected VRAM and runtime remain TBD",
-    "A100 throughput smoke not executed on current 4090 24G machine"
+    "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
+    "E-001 full executable MoWA action-bridge training integration still missing"
   ],
   "go_no_go": "TBD: E-001 prerequisites mostly passed; launch draft exists but runtime/batch/save-resume remain Data Gate",
   "notes": [

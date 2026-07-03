@@ -23,7 +23,14 @@ E001_LAUNCH_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_launch_draft.yaml")
 E001_RUNTIME_POLICY_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
 MOWA_ACTION_BRIDGE_INTERFACE_CONFIG = Path("configs/mowa/mowa_action_bridge_interface.yaml")
 E001_TRAINING_COMMAND_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_training_command_draft.yaml")
+E001_TRAINING_SMOKE_CONFIG = Path("configs/mowa/mowa_e001_training_smoke.yaml")
+E001_TRAINING_CONFIG_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_training_config_smoke.json")
+E001_TRAIN_STARVLA_DRY_RUN_CONFIG = Path("configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml")
+E001_TRAIN_STARVLA_DRY_RUN_SMOKE_REPORT = Path(
+    "docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run_smoke.json"
+)
 E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG = Path("configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml")
+E001_A100_THROUGHPUT_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput_smoke.json")
 
 
 def parse_args() -> argparse.Namespace:
@@ -104,9 +111,24 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             root / E001_TRAINING_COMMAND_DRAFT_CONFIG,
             "dry_run_only: true",
         ),
+        "training_smoke_config_created": (root / E001_TRAINING_SMOKE_CONFIG).is_file(),
+        "training_config_smoke_passed": _training_config_smoke_passed(
+            root / E001_TRAINING_CONFIG_SMOKE_REPORT
+        ),
+        "train_starvla_full_path_dry_run_config_created": (
+            root / E001_TRAIN_STARVLA_DRY_RUN_CONFIG
+        ).is_file(),
+        "train_starvla_full_path_dry_run_smoke_passed": (
+            _train_starvla_full_path_dry_run_smoke_passed(
+                root / E001_TRAIN_STARVLA_DRY_RUN_SMOKE_REPORT
+            )
+        ),
         "a100_throughput_smoke_plan_created": (
             root / E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG
         ).is_file(),
+        "a100_throughput_smoke_executed": _a100_throughput_smoke_passed(
+            root / E001_A100_THROUGHPUT_SMOKE_REPORT
+        ),
     }
 
     unresolved_items = []
@@ -119,8 +141,8 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "E-001 launch draft is not executable",
             "class_mapping_status remains Data Gate",
             "runtime policy draft not confirmed",
-            "batch size, expected VRAM and runtime remain TBD",
-            "A100 throughput smoke not executed on current 4090 24G machine",
+            "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
+            "E-001 full executable MoWA action-bridge training integration still missing",
         ]
     )
 
@@ -157,7 +179,19 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "e001_runtime_policy_draft_config": str(E001_RUNTIME_POLICY_DRAFT_CONFIG),
             "mowa_action_bridge_interface_config": str(MOWA_ACTION_BRIDGE_INTERFACE_CONFIG),
             "e001_training_command_draft_config": str(E001_TRAINING_COMMAND_DRAFT_CONFIG),
+            "e001_training_smoke_config": str(E001_TRAINING_SMOKE_CONFIG),
+            "e001_training_config_smoke_report": str(E001_TRAINING_CONFIG_SMOKE_REPORT),
+            "e001_train_starvla_full_path_dry_run_config": str(E001_TRAIN_STARVLA_DRY_RUN_CONFIG),
+            "e001_train_starvla_full_path_dry_run_smoke_report": str(
+                E001_TRAIN_STARVLA_DRY_RUN_SMOKE_REPORT
+            ),
             "e001_a100_throughput_smoke_plan_config": str(E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG),
+            "e001_a100_throughput_smoke_report": str(E001_A100_THROUGHPUT_SMOKE_REPORT),
+            "a100_throughput_stable_candidate": (
+                (_read_json(root / E001_A100_THROUGHPUT_SMOKE_REPORT) or {}).get(
+                    "stable_candidate"
+                )
+            ),
         },
         "unresolved_items": unresolved_items,
         "go_no_go": (
@@ -194,6 +228,38 @@ def _sot_docs_available(root: Path) -> bool:
             "02_detailed_design.md",
         )
     )
+
+
+def _a100_throughput_smoke_passed(path: Path) -> bool:
+    payload = _read_json(path)
+    if payload is None:
+        return False
+    return (
+        payload.get("benchmark") == "a100_throughput_smoke"
+        and payload.get("training_started") is False
+        and payload.get("checkpoint_saved") is False
+        and payload.get("stable_candidate") is not None
+        and "A100" in str((payload.get("gpu") or {}).get("name", ""))
+    )
+
+
+def _training_config_smoke_passed(path: Path) -> bool:
+    payload = _read_json(path)
+    if payload is None:
+        return False
+    return (
+        payload.get("training_started") is False
+        and payload.get("launch_ready") is False
+        and all((payload.get("checks") or {}).values())
+    )
+
+
+def _train_starvla_full_path_dry_run_smoke_passed(path: Path) -> bool:
+    payload = _read_json(path)
+    if payload is None:
+        return False
+    checks = payload.get("checks") or {}
+    return payload.get("training_started") is False and all(checks.values())
 
 
 if __name__ == "__main__":

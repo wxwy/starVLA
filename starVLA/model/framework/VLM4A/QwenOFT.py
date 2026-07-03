@@ -41,6 +41,7 @@ IGNORE_INDEX = -100
 from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.framework.share_tools import add_discretized_state_to_instruction, merge_framework_config
 from starVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
+from starVLA.model.modules.mowa import MoWAActionBridge, MoWAActionBridgeConfig, P0FutureFeatures
 from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 
@@ -135,6 +136,7 @@ class Qwenvl_OFT(baseframework):
 
         # L1 loss
         self.l1_loss = nn.L1Loss()
+        self._setup_mowa_action_bridge_probe()
 
     def forward(
         self,
@@ -199,6 +201,7 @@ class Qwenvl_OFT(baseframework):
                 last_hidden, input_ids, action_token_id=self.action_token_id
             )  # [B, chunk_len, H]
             pred_actions = self.action_model.predict_action(action_queries)  # (B, chunk_len, action_dim)
+            mowa_probe = self._maybe_run_mowa_action_bridge_probe(action_queries)
 
             # Label alignment: take the last chunk_len segment
             actions = torch.tensor(
@@ -209,7 +212,11 @@ class Qwenvl_OFT(baseframework):
             # Compute L1 loss
             action_loss = self.l1_loss(pred_actions, actions_target)
 
-        return {"action_loss": action_loss}
+        output = {"action_loss": action_loss}
+        if mowa_probe is not None:
+            output["mowa_bridge_probe_loss"] = mowa_probe["probe_loss"]
+            output["mowa_bridge_probe_token_shape"] = mowa_probe["token_shape"]
+        return output
 
     @torch.inference_mode()
     def predict_action(
@@ -348,6 +355,50 @@ class Qwenvl_OFT(baseframework):
         expanded_index = selected_pos.unsqueeze(-1).expand(-1, -1, H)  # [B, chunk_len, H]
         action_queries = last_hidden.gather(dim=1, index=expanded_index)  # [B, chunk_len, H]
         return action_queries
+
+    def _setup_mowa_action_bridge_probe(self) -> None:
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        self.mowa_action_bridge_probe_enabled = bool(
+            getattr(mowa_cfg, "enable_action_bridge_probe", False)
+        )
+        self.mowa_action_bridge_probe = None
+        if not self.mowa_action_bridge_probe_enabled:
+            return
+
+        action_hidden_dim = int(self.config.framework.action_model.action_hidden_dim)
+        bridge_hidden_dim = int(getattr(mowa_cfg, "action_hidden_dim", action_hidden_dim))
+        num_action_layers = int(getattr(mowa_cfg, "num_action_layers", 1))
+        num_bridge_tokens = int(getattr(mowa_cfg, "num_bridge_tokens", 1))
+        self.mowa_action_bridge_probe = MoWAActionBridge(
+            MoWAActionBridgeConfig(
+                wam_feature_dim=action_hidden_dim,
+                action_hidden_dim=bridge_hidden_dim,
+                num_action_layers=num_action_layers,
+                num_bridge_tokens=num_bridge_tokens,
+            )
+        )
+
+    def _maybe_run_mowa_action_bridge_probe(self, action_queries: torch.Tensor) -> dict | None:
+        if not self.mowa_action_bridge_probe_enabled:
+            return None
+        if self.mowa_action_bridge_probe is None:
+            raise RuntimeError("MoWA action bridge probe is enabled but not initialized.")
+
+        hidden_features = action_queries.mean(dim=1)
+        future_features = P0FutureFeatures(
+            hidden_features=hidden_features,
+            head_outputs={},
+            active_heads=("qwen_action_token_probe",),
+            masked_heads=(),
+        )
+        bridge_output = self.mowa_action_bridge_probe(future_features)
+        first_layer_tokens = bridge_output.layerwise_condition_features[0]
+        return {
+            "probe_loss": first_layer_tokens.float().square().mean() * 0.0,
+            "token_shape": tuple(first_layer_tokens.shape),
+            "active_heads": bridge_output.active_heads,
+            "masked_heads": bridge_output.masked_heads,
+        }
 
     # Discretised state → instruction prefix (π₀.5 style); shared with QwenPI_v3.
     add_discretized_state_to_instruction = staticmethod(add_discretized_state_to_instruction)

@@ -13,22 +13,24 @@
     "runtime_policy_unconfirmed": true,
     "checkpoint_logic_unchanged": true,
     "training_command_dry_run_only": true,
-    "a100_smoke_dry_run_until_a100": true,
+    "a100_smoke_no_longer_waiting_for_a100": true,
+    "a100_throughput_report_created": true,
     "readiness_training_not_started": true
   },
   "drafts": {
     "launch_draft": "configs/mowa/mowa_e001_launch_draft.yaml",
     "runtime_policy": "configs/mowa/mowa_e001_runtime_policy_draft.yaml",
     "training_command_draft": "configs/mowa/mowa_e001_training_command_draft.yaml",
-    "a100_throughput_plan": "configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml"
+    "a100_throughput_plan": "configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml",
+    "a100_throughput_report": "docs_zh/mowa/mowa_e001_a100_throughput_smoke.json"
   },
   "unresolved_items": [
     "class_mapping_status remains Data Gate",
-    "batch size, expected VRAM and runtime require A100 throughput smoke",
+    "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
     "runtime policy remains unconfirmed",
     "real MoWA E-001 training config is not executable"
   ],
-  "go_no_go": "TBD: launch drafts available; A100 throughput and runtime policy remain Data Gate",
+  "go_no_go": "TBD: launch drafts available; A100 smoke passed but runtime policy remains Data Gate",
   "notes": [
     "This smoke does not start training.",
     "Training command draft is dry-run-only and keeps launch_ready=false."

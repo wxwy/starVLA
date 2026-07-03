@@ -1,0 +1,59 @@
+{
+  "stage": "P0",
+  "experiment_id": "E-001",
+  "training_started": false,
+  "launch_ready": false,
+  "checks": {
+    "training_smoke_config_created": true,
+    "training_command_draft_created": true,
+    "runtime_policy_created": true,
+    "a100_throughput_report_created": true,
+    "launch_ready_false": true,
+    "training_started_false": true,
+    "dry_run_only_true": true,
+    "checkpoint_save_disabled": true,
+    "checkpoint_logic_unchanged": true,
+    "command_points_to_training_smoke_config": true,
+    "command_still_tbd_entrypoint": true,
+    "runtime_policy_unconfirmed": true,
+    "a100_smoke_passed": true,
+    "readiness_training_not_started": true
+  },
+  "configs": {
+    "training_smoke_config": "configs/mowa/mowa_e001_training_smoke.yaml",
+    "training_command_draft": "configs/mowa/mowa_e001_training_command_draft.yaml",
+    "runtime_policy": "configs/mowa/mowa_e001_runtime_policy_draft.yaml",
+    "a100_throughput_report": "docs_zh/mowa/mowa_e001_a100_throughput_smoke.json"
+  },
+  "observed": {
+    "stable_candidate": {
+      "per_device_batch_size": 8,
+      "gradient_accumulation_steps": 8,
+      "effective_batch_size": 64,
+      "status": "ok",
+      "optimizer_steps": 3,
+      "micro_steps": 24,
+      "step_time_sec": 0.14424942016601563,
+      "wall_step_time_sec": 0.14429347364542386,
+      "samples_per_sec": 443.6759601968788,
+      "peak_vram_gb": 0.04040336608886719,
+      "peak_reserved_gb": 0.060546875,
+      "loss": 0.03417038917541504
+    },
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "throughput_scope": "MoWAP0FullHeads+MoWAActionBridge"
+  },
+  "unresolved_items": [
+    "full E-001 training entrypoint remains TBD",
+    "runtime policy draft not confirmed",
+    "checkpoint/save/resume policy not confirmed for launch",
+    "class_mapping_status remains Data Gate",
+    "full VLA E-001 throughput is not measured"
+  ],
+  "go_no_go": "TBD: training config smoke passed; full E-001 launch remains gated",
+  "notes": [
+    "This smoke validates config wiring only and does not start training.",
+    "The command draft intentionally keeps the full training entrypoint as TBD.",
+    "No checkpoint is saved and checkpoint/resume logic is not modified."
+  ]
+}

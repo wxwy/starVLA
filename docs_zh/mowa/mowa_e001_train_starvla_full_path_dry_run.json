@@ -1,0 +1,75 @@
+{
+  "stage": "P0",
+  "experiment_id": "E-001",
+  "entrypoint": "starVLA/training/train_starvla.py",
+  "full_path_dry_run_only": true,
+  "training_started": false,
+  "checkpoint_saved": false,
+  "wandb_started": false,
+  "config_yaml": "configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml",
+  "run_id": "MoWA-E-001_train_starvla_full_path_dry_run",
+  "output_dir": "playground/Checkpoints/mowa/MoWA-E-001_train_starvla_full_path_dry_run",
+  "framework": {
+    "name": "QwenOFT",
+    "total_params": 4510023180,
+    "trainable_params": 4510023180,
+    "mowa_action_bridge_probe_enabled": true
+  },
+  "data": {
+    "dataset_py": "lerobot_datasets",
+    "data_mix": "robocasa365_open_drawer_target_human",
+    "data_root_dir": "playground/Datasets/robocasa365",
+    "per_device_batch_size": 1,
+    "dataloader_type": "DataLoader",
+    "dataloader_length": 137431,
+    "batch_summary": {
+      "fetched": true,
+      "type": "list",
+      "length": 1,
+      "first_item_type": "dict",
+      "first_item_keys": [
+        "action",
+        "image",
+        "lang",
+        "robot_tag"
+      ],
+      "first_item_image": {
+        "type": "list",
+        "length": 3
+      },
+      "first_item_lang": {
+        "type": "str"
+      },
+      "first_item_action": {
+        "type": "ndarray",
+        "shape": [
+          16,
+          12
+        ]
+      }
+    }
+  },
+  "optimizer": {
+    "type": "AdamW",
+    "param_group_count": 3,
+    "param_group_names": [
+      "qwen_vl_interface",
+      "action_model",
+      "base"
+    ]
+  },
+  "trainer": {
+    "max_train_steps": 1,
+    "gradient_accumulation_steps": 1,
+    "total_batch_size": 1,
+    "checkpoint_format": "lightweight",
+    "save_interval": 1000,
+    "eval_interval": 1000
+  },
+  "go_no_go": "TBD: train_starvla full-path dry-run passed; training remains gated",
+  "notes": [
+    "This dry-run stops before prepare_training(), wandb, checkpoint loading, checkpoint saving, and train().",
+    "It validates StarVLA build/data/optimizer/trainer wiring only.",
+    "MoWA heads/bridge integration into the action path remains a separate gated step."
+  ]
+}

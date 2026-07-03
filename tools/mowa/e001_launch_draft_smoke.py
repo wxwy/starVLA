@@ -13,6 +13,7 @@ RUNTIME_POLICY = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
 TRAINING_COMMAND_DRAFT = Path("configs/mowa/mowa_e001_training_command_draft.yaml")
 A100_THROUGHPUT_PLAN = Path("configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml")
 READINESS_REPORT = Path("docs_zh/mowa/mowa_e001_readiness_smoke.json")
+A100_THROUGHPUT_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput_smoke.json")
 
 
 def parse_args() -> argparse.Namespace:
@@ -48,10 +49,11 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             "checkpoint_logic_change_allowed: false",
         ),
         "training_command_dry_run_only": _text_contains(root / TRAINING_COMMAND_DRAFT, "dry_run_only: true"),
-        "a100_smoke_dry_run_until_a100": _text_contains(
+        "a100_smoke_no_longer_waiting_for_a100": _text_contains(
             root / A100_THROUGHPUT_PLAN,
-            "dry_run_until_on_a100: true",
+            "dry_run_until_on_a100: false",
         ),
+        "a100_throughput_report_created": (root / A100_THROUGHPUT_REPORT).is_file(),
         "readiness_training_not_started": readiness.get("training_started") is False,
     }
     return {
@@ -65,15 +67,16 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             "runtime_policy": str(RUNTIME_POLICY),
             "training_command_draft": str(TRAINING_COMMAND_DRAFT),
             "a100_throughput_plan": str(A100_THROUGHPUT_PLAN),
+            "a100_throughput_report": str(A100_THROUGHPUT_REPORT),
         },
         "unresolved_items": [
             "class_mapping_status remains Data Gate",
-            "batch size, expected VRAM and runtime require A100 throughput smoke",
+            "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
             "runtime policy remains unconfirmed",
             "real MoWA E-001 training config is not executable",
         ],
         "go_no_go": (
-            "TBD: launch drafts available; A100 throughput and runtime policy remain Data Gate"
+            "TBD: launch drafts available; A100 smoke passed but runtime policy remains Data Gate"
             if all(checks.values())
             else "No-Go: launch draft prerequisites incomplete"
         ),

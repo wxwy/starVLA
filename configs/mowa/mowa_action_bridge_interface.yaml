@@ -12,9 +12,27 @@ bridge:
   output: layerwise_condition_features
   attention_mask: generated_bool_mask
 integration_boundary:
-  target_action_head: LayerwiseFM
-  modify_layerwisefm_internal_logic: false
-  default_injection: append_bridge_tokens_to_condition_side
+  adapter_type: MoWAActionHeadAdapter
+  target_action_head: configurable
+  supported_action_heads:
+    LayerwiseFM:
+      condition_kind: layerwise_condition_features
+      injection_mode: append_bridge_tokens_to_condition_side
+      implemented: true
+    MLP:
+      condition_kind: action_hidden_features
+      injection_mode: hidden_feature_fusion
+      implemented: false
+    DiT-B:
+      condition_kind: single_condition_sequence
+      injection_mode: append_bridge_tokens_to_condition_side
+      implemented: false
+    DiT-L:
+      condition_kind: single_condition_sequence
+      injection_mode: append_bridge_tokens_to_condition_side
+      implemented: false
+  modify_action_head_internal_logic: false
+  default_injection: adapter_selected_by_action_model_type
 data_gate:
   p0_future_features: interface_ready
   p1_future_features: Data Gate

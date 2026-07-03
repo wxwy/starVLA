@@ -150,6 +150,66 @@ class MoWAP0HeadsTest(unittest.TestCase):
         )
         self.assertIn("failure_risk", bridge_output.masked_heads)
 
+    def test_action_head_binding_resolves_without_hardcoding_layerwisefm_only(self):
+        from starVLA.model.modules.mowa import resolve_mowa_action_head_binding
+
+        layerwise = resolve_mowa_action_head_binding("LayerwiseFM")
+        mlp = resolve_mowa_action_head_binding("MLP")
+        dit = resolve_mowa_action_head_binding("DiT-B")
+
+        self.assertTrue(layerwise.implemented)
+        self.assertEqual(layerwise.injection_mode, "append_bridge_tokens_to_condition_side")
+        self.assertFalse(mlp.implemented)
+        self.assertEqual(mlp.injection_mode, "hidden_feature_fusion")
+        self.assertFalse(dit.implemented)
+        self.assertEqual(dit.condition_kind, "single_condition_sequence")
+
+    def test_layerwise_adapter_appends_bridge_tokens_and_attention_mask(self):
+        try:
+            import torch
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.modules.mowa import (
+            MoWAActionBridge,
+            MoWAActionBridgeConfig,
+            P0FutureFeatures,
+            append_layerwise_bridge_tokens,
+        )
+
+        torch.manual_seed(0)
+        vl_embs_list = [torch.randn(2, 3, 4), torch.randn(2, 3, 4)]
+        encoder_attention_mask = torch.ones(2, 3, dtype=torch.bool)
+        bridge = MoWAActionBridge(
+            MoWAActionBridgeConfig(
+                wam_feature_dim=6,
+                action_hidden_dim=4,
+                num_action_layers=2,
+                num_bridge_tokens=2,
+            )
+        )
+        bridge_output = bridge(
+            P0FutureFeatures(
+                hidden_features=torch.randn(2, 6),
+                head_outputs={},
+                active_heads=("task_progress",),
+                masked_heads=(),
+            )
+        )
+
+        adapted, adapted_mask = append_layerwise_bridge_tokens(
+            vl_embs_list,
+            encoder_attention_mask,
+            bridge_output,
+        )
+
+        self.assertEqual(len(adapted), 2)
+        self.assertEqual(adapted[0].shape, (2, 5, 4))
+        self.assertEqual(adapted[1].shape, (2, 5, 4))
+        self.assertEqual(adapted_mask.shape, (2, 5))
+        self.assertTrue(torch.equal(adapted_mask[:, :3], encoder_attention_mask))
+        self.assertTrue(adapted_mask[:, 3:].all())
+
     def test_e006_coupling_eval_plan_smoke_keeps_eval_disabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

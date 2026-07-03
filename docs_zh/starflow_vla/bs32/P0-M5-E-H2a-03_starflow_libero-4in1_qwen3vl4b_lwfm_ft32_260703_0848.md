@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中
 > **run_id**: `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848`
 > **启动时间**: 2026-07-03 08:48 CST
-> **当前更新**: 2026-07-03 15:14:17 CST
+> **当前更新**: 2026-07-03 16:22 CST
 > **tmux 会话**: `train-0`
 > **配置来源**: `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml`
 
@@ -92,32 +92,37 @@ P0-M5 **Stage 1 StarFlowVLA 默认路径**：使用 LayerwiseFM (DiT) action mod
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **3244 / 80000**（4.1%） |
-| **完成比例** | 4.1% |
-| **单步耗时** | ~7.09 s/it |
+| **当前 Step** | **3800 / 80000**（4.8%） |
+| **完成比例** | 4.8% |
+| **单步耗时** | ~7.0 s/it |
 | **数据加载耗时** | ~0.000 s |
 | **模型前向/反向耗时** | ~0.232 s |
-| **已运行时间** | 约 1 小时 28 分钟 |
-| **预计剩余时间** | ~162 小时（约 6.7 天） |
-| **最新 checkpoint** | `steps_3000` |
+| **已运行时间** | 约 7 小时 34 分钟（08:48 → 16:22） |
+| **预计剩余时间** | ~148 小时（约 6.2 天） |
+| **最新 checkpoint** | `steps_3750` |
 
 ### Loss 记录（部分）
 
 | Step | action_dit_loss | action_dit_loss_last_micro | 备注 |
 |------|----------------|---------------------------|------|
-| 620 | 0.2403 | 0.4572 | |
-| 640 | 0.2341 | 0.1699 | |
-| 660 | 0.2261 | 0.2531 | |
-| 680 | 0.2196 | 0.1365 | |
-| 700 | 0.2201 | 0.1500 | |
-| 720 | 0.2034 | 0.7509 | last_micro 方差大 |
-| **737** | — | — | 🔵 当前 |
+| Step | action_dit_loss | 备注 |
+|------|----------------|------|
+| 1000 | 0.1776 | eval mse_score=0.0099 |
+| 1500 | 0.1704 | eval mse_score=0.0131 |
+| 2000 | ~0.16 | |
+| 2500 | ~0.15 | |
+| 3000 | ~0.17 | |
+| 3200 | 0.1130 | |
+| 3500 | ~0.13 | checkpoint |
+| 3760 | 0.1309 | |
+| 3780 | 0.1261 | |
+| **3800** | **0.1333** | 🟢 当前 |
 
 ### Loss 趋势
+- Step 1000→3800：loss 从 0.18 逐步降至 0.11–0.13，收敛正常
+- last_micro_loss 方差大（0.14–0.75），说明 bs=1 micro-batch 方差大
+- lr 平稳衰减：action_model 9.97e-5，base 2.49e-5
 
-- 初始 loss 约 0.20–0.24，与旧 run 在 A100 上的表现基本一致
-- `last_micro_loss` 波动大（0.14–0.75），`action_dit_loss`（32 micro-step mean）平滑稳定
-- 学习率处于 warmup 后的初始阶段：action_model 1.0e-4，base 2.5e-5
 
 ---
 
@@ -129,7 +134,7 @@ P0-M5 **Stage 1 StarFlowVLA 默认路径**：使用 LayerwiseFM (DiT) action mod
 
 | 指标 | 值 |
 |------|-----|
-| **GPU 利用率** | 27% |
+| **GPU 利用率** | 36% |
 | **显存使用** | 23640 MiB / 24564 MiB（96.2%） |
 | **显存空闲** | 442 MiB |
 | **温度** | 58°C |
@@ -139,7 +144,7 @@ P0-M5 **Stage 1 StarFlowVLA 默认路径**：使用 LayerwiseFM (DiT) action mod
 | 指标 | 值 |
 |------|-----|
 | **Docker 内存总量** | 56.0 GiB |
-| **Docker 内存已用** | ~58Gi |
+| **Docker 内存已用** | 27.6 GiB |
 | **Docker 内存可用** | 28.2 GiB |
 | **Swap** | 0 B |
 
@@ -157,7 +162,7 @@ P0-M5 **Stage 1 StarFlowVLA 默认路径**：使用 LayerwiseFM (DiT) action mod
 
 | checkpoint | 时间 | 备注 |
 |------------|------|------|
-| `steps_250` | 预计 ~09:18 | ⏳ 进行中 |
+| `steps_250`  | 09:18 | ✅ |
 
 ---
 
@@ -167,7 +172,7 @@ P0-M5 **Stage 1 StarFlowVLA 默认路径**：使用 LayerwiseFM (DiT) action mod
 |------|------|
 | **每 step 耗时** | ~7.34 s/it |
 | **每 step 成本** | 本地 4090，暂不记录 |
-| **已运行时间** | ~1.5 小时 |
+| **已运行时间** | 约 7 小时 34 分钟（08:48 → 16:22） |
 | **完整 80000 steps 预估** | 80000 × 7.34s ≈ 163h ≈ 6.8 天 |
 
 ---
@@ -231,7 +236,6 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 - 本实验为 P0-M5 默认 StarFlowVLA 配置，使用 LayerwiseFM + Qwen3-VL-4B。
 - **从 scratch 全新训练**，不从旧 run resume，避免 WandB step 回退问题。
 - 显存使用率 96.2%（23.6G/24G），余量仅 442 MiB，接近 OOM 边界。
-- `last_micro_loss` 波动大（0.14–0.75），说明 bs=1 micro-batch 方差大，gradient accumulation=32 的必要性得到验证。
 - Docker 内存用量 27.8 GiB / 56.0 GiB（cgroup 实际用量）。
 - gradient accumulation fix（commit `abe1e46`）已应用。
 

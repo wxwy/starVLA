@@ -29,6 +29,10 @@ E001_TRAIN_STARVLA_DRY_RUN_CONFIG = Path("configs/mowa/mowa_e001_train_starvla_f
 E001_TRAIN_STARVLA_DRY_RUN_SMOKE_REPORT = Path(
     "docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run_smoke.json"
 )
+E001_STARFLOW_FT0_DRY_RUN_CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml")
+E001_STARFLOW_FT0_DRY_RUN_SMOKE_REPORT = Path(
+    "docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run_smoke.json"
+)
 E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG = Path("configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml")
 E001_A100_THROUGHPUT_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput_smoke.json")
 
@@ -123,6 +127,14 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
                 root / E001_TRAIN_STARVLA_DRY_RUN_SMOKE_REPORT
             )
         ),
+        "starflow_ft0_full_path_dry_run_config_created": (
+            root / E001_STARFLOW_FT0_DRY_RUN_CONFIG
+        ).is_file(),
+        "starflow_ft0_full_path_dry_run_smoke_passed": (
+            _train_starvla_full_path_dry_run_smoke_passed(
+                root / E001_STARFLOW_FT0_DRY_RUN_SMOKE_REPORT
+            )
+        ),
         "a100_throughput_smoke_plan_created": (
             root / E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG
         ).is_file(),
@@ -184,6 +196,10 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "e001_train_starvla_full_path_dry_run_config": str(E001_TRAIN_STARVLA_DRY_RUN_CONFIG),
             "e001_train_starvla_full_path_dry_run_smoke_report": str(
                 E001_TRAIN_STARVLA_DRY_RUN_SMOKE_REPORT
+            ),
+            "e001_starflow_ft0_full_path_dry_run_config": str(E001_STARFLOW_FT0_DRY_RUN_CONFIG),
+            "e001_starflow_ft0_full_path_dry_run_smoke_report": str(
+                E001_STARFLOW_FT0_DRY_RUN_SMOKE_REPORT
             ),
             "e001_a100_throughput_smoke_plan_config": str(E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG),
             "e001_a100_throughput_smoke_report": str(E001_A100_THROUGHPUT_SMOKE_REPORT),

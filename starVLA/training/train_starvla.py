@@ -781,6 +781,9 @@ def _write_full_path_dry_run_report(
         "output_dir": str(output_dir),
         "framework": {
             "name": cfg.framework.name,
+            "action_model_type": getattr(cfg.framework.action_model, "action_model_type", None),
+            "num_target_vision_tokens": getattr(cfg.framework.action_model, "num_target_vision_tokens", None),
+            "state_mode": getattr(cfg.framework, "state_mode", None),
             "total_params": int(total_params),
             "trainable_params": int(trainable_params),
             "mowa_action_bridge_probe_enabled": bool(

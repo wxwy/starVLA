@@ -290,6 +290,61 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["forward_has_mowa_p0_supervision_loss"])
         self.assertTrue(report["checks"]["batch_fetched"])
 
+    def test_e001_starflow_ft0_full_path_dry_run_smoke_keeps_training_disabled(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_starflow_ft0_full_path_dry_run.yaml").write_text(
+                "trainer:\n  full_path_dry_run_only: true\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_starflow_ft0_full_path_dry_run.json").write_text(
+                json.dumps(
+                    {
+                        "entrypoint": "starVLA/training/train_starvla.py",
+                        "full_path_dry_run_only": True,
+                        "training_started": False,
+                        "checkpoint_saved": False,
+                        "wandb_started": False,
+                        "framework": {
+                            "name": "StarFlowVLA",
+                            "action_model_type": "LayerwiseFM",
+                            "num_target_vision_tokens": 0,
+                        },
+                        "data": {
+                            "data_mix": "robocasa365_open_drawer_target_human",
+                            "mowa_p0_labels_enabled": True,
+                            "batch_summary": {
+                                "first_item_keys": [
+                                    "action",
+                                    "image",
+                                    "lang",
+                                    "mowa_p0_masks",
+                                    "mowa_p0_targets",
+                                    "state",
+                                ],
+                            },
+                        },
+                        "forward": {"evaluated": True, "keys": ["action_loss"]},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_starflow_ft0_full_path_dry_run_smoke import (
+                build_starflow_ft0_full_path_dry_run_smoke,
+            )
+
+            report = build_starflow_ft0_full_path_dry_run_smoke(root)
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(report["checks"]["training_not_started"])
+        self.assertTrue(report["checks"]["framework_starflow"])
+        self.assertTrue(report["checks"]["action_head_layerwisefm"])
+        self.assertTrue(report["checks"]["future_tokens_ft0"])
+        self.assertTrue(report["checks"]["forward_has_action_loss"])
+
     def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
         try:
             import torch

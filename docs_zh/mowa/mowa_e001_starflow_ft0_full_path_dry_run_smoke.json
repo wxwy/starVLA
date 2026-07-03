@@ -1,0 +1,141 @@
+{
+  "stage": "P0",
+  "experiment_id": "E-001",
+  "training_started": false,
+  "checks": {
+    "dry_run_config_created": true,
+    "dry_run_report_created": true,
+    "entrypoint_is_train_starvla": true,
+    "full_path_dry_run_only": true,
+    "training_not_started": true,
+    "checkpoint_not_saved": true,
+    "wandb_not_started": true,
+    "framework_starflow": true,
+    "action_head_layerwisefm": true,
+    "future_tokens_ft0": true,
+    "robocasa_data_mix": true,
+    "state_included": true,
+    "mowa_p0_labels_enabled": true,
+    "batch_has_mowa_p0_targets": true,
+    "batch_has_mowa_p0_masks": true,
+    "forward_evaluated": true,
+    "forward_has_action_loss": true
+  },
+  "reports": {
+    "dry_run_config": "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
+    "dry_run_report": "docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json"
+  },
+  "observed": {
+    "run_id": "MoWA-E-001_starflow_ft0_full_path_dry_run",
+    "framework": {
+      "name": "StarFlowVLA",
+      "action_model_type": "LayerwiseFM",
+      "num_target_vision_tokens": 0,
+      "state_mode": "discretized_instruction",
+      "total_params": 5071073830,
+      "trainable_params": 5071073830,
+      "mowa_action_bridge_probe_enabled": false,
+      "mowa_p0_supervision_probe_enabled": false,
+      "mowa_p0_supervision_active_heads": [],
+      "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run"
+    },
+    "data": {
+      "dataset_py": "lerobot_datasets",
+      "data_mix": "robocasa365_open_drawer_target_human",
+      "data_root_dir": "playground/Datasets/robocasa365",
+      "per_device_batch_size": 1,
+      "dataloader_type": "DataLoader",
+      "dataloader_length": 137431,
+      "mowa_p0_labels_enabled": true,
+      "batch_summary": {
+        "fetched": true,
+        "type": "list",
+        "length": 1,
+        "first_item_type": "dict",
+        "first_item_keys": [
+          "action",
+          "image",
+          "lang",
+          "mowa_p0_masks",
+          "mowa_p0_metadata",
+          "mowa_p0_targets",
+          "robot_tag",
+          "state"
+        ],
+        "first_item_image": {
+          "type": "list",
+          "length": 3
+        },
+        "first_item_lang": {
+          "type": "str"
+        },
+        "first_item_action": {
+          "type": "ndarray",
+          "shape": [
+            16,
+            12
+          ]
+        },
+        "first_item_state": {
+          "type": "ndarray",
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "first_item_mowa_p0_targets": {
+          "type": "dict",
+          "keys": [
+            "action_outcome_class",
+            "task_progress"
+          ]
+        },
+        "first_item_mowa_p0_masks": {
+          "type": "dict",
+          "keys": [
+            "action_outcome_class",
+            "failure_risk",
+            "manipulation_readiness",
+            "next_best_view_score",
+            "object_visibility_future",
+            "subgoal_feasibility",
+            "task_progress"
+          ]
+        },
+        "first_item_mowa_p0_metadata": {
+          "type": "dict",
+          "keys": [
+            "base_index",
+            "class_mapping_status",
+            "constructible_heads",
+            "label_status",
+            "masked_heads",
+            "row_index",
+            "trajectory_id"
+          ]
+        }
+      }
+    },
+    "forward": {
+      "evaluated": true,
+      "keys": [
+        "action_loss"
+      ],
+      "action_loss": 1.5335015058517456
+    },
+    "trainer": {
+      "max_train_steps": 1,
+      "gradient_accumulation_steps": 1,
+      "total_batch_size": 1,
+      "checkpoint_format": "lightweight",
+      "save_interval": 1000,
+      "eval_interval": 1000
+    }
+  },
+  "unresolved_items": [
+    "This validates StarFlowVLA ft0 + RoboCasa full-path forward smoke only.",
+    "MoWA bridge tokens are not yet coupled into LayerwiseFM.",
+    "No checkpoint/save/resume launch policy is confirmed."
+  ],
+  "go_no_go": "TBD: StarFlow ft0 full-path dry-run smoke passed; MoWA bridge coupling remains gated"
+}

@@ -1,0 +1,132 @@
+{
+  "stage": "P0",
+  "experiment_id": "E-001",
+  "entrypoint": "starVLA/training/train_starvla.py",
+  "full_path_dry_run_only": true,
+  "training_started": false,
+  "checkpoint_saved": false,
+  "wandb_started": false,
+  "config_yaml": "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
+  "run_id": "MoWA-E-001_starflow_ft0_full_path_dry_run",
+  "output_dir": "playground/Checkpoints/mowa/MoWA-E-001_starflow_ft0_full_path_dry_run",
+  "framework": {
+    "name": "StarFlowVLA",
+    "action_model_type": "LayerwiseFM",
+    "num_target_vision_tokens": 0,
+    "state_mode": "discretized_instruction",
+    "total_params": 5071073830,
+    "trainable_params": 5071073830,
+    "mowa_action_bridge_probe_enabled": false,
+    "mowa_p0_supervision_probe_enabled": false,
+    "mowa_p0_supervision_active_heads": [],
+    "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run"
+  },
+  "data": {
+    "dataset_py": "lerobot_datasets",
+    "data_mix": "robocasa365_open_drawer_target_human",
+    "data_root_dir": "playground/Datasets/robocasa365",
+    "per_device_batch_size": 1,
+    "dataloader_type": "DataLoader",
+    "dataloader_length": 137431,
+    "mowa_p0_labels_enabled": true,
+    "batch_summary": {
+      "fetched": true,
+      "type": "list",
+      "length": 1,
+      "first_item_type": "dict",
+      "first_item_keys": [
+        "action",
+        "image",
+        "lang",
+        "mowa_p0_masks",
+        "mowa_p0_metadata",
+        "mowa_p0_targets",
+        "robot_tag",
+        "state"
+      ],
+      "first_item_image": {
+        "type": "list",
+        "length": 3
+      },
+      "first_item_lang": {
+        "type": "str"
+      },
+      "first_item_action": {
+        "type": "ndarray",
+        "shape": [
+          16,
+          12
+        ]
+      },
+      "first_item_state": {
+        "type": "ndarray",
+        "shape": [
+          1,
+          32
+        ]
+      },
+      "first_item_mowa_p0_targets": {
+        "type": "dict",
+        "keys": [
+          "action_outcome_class",
+          "task_progress"
+        ]
+      },
+      "first_item_mowa_p0_masks": {
+        "type": "dict",
+        "keys": [
+          "action_outcome_class",
+          "failure_risk",
+          "manipulation_readiness",
+          "next_best_view_score",
+          "object_visibility_future",
+          "subgoal_feasibility",
+          "task_progress"
+        ]
+      },
+      "first_item_mowa_p0_metadata": {
+        "type": "dict",
+        "keys": [
+          "base_index",
+          "class_mapping_status",
+          "constructible_heads",
+          "label_status",
+          "masked_heads",
+          "row_index",
+          "trajectory_id"
+        ]
+      }
+    }
+  },
+  "optimizer": {
+    "type": "AdamW",
+    "param_group_count": 3,
+    "param_group_names": [
+      "qwen_vl_interface",
+      "action_model",
+      "base"
+    ]
+  },
+  "trainer": {
+    "max_train_steps": 1,
+    "gradient_accumulation_steps": 1,
+    "total_batch_size": 1,
+    "checkpoint_format": "lightweight",
+    "save_interval": 1000,
+    "eval_interval": 1000
+  },
+  "forward": {
+    "evaluated": true,
+    "keys": [
+      "action_loss"
+    ],
+    "action_loss": 1.5335015058517456
+  },
+  "go_no_go": "TBD: train_starvla full-path dry-run passed; training remains gated",
+  "notes": [
+    "This dry-run stops before prepare_training(), wandb, checkpoint loading, checkpoint saving, and train().",
+    "It validates StarVLA build/data/optimizer/trainer wiring only.",
+    "MoWA P0 supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
+    "MoWA bridge coupling into LayerwiseFM action generation remains a separate gated step."
+  ]
+}

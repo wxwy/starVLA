@@ -241,7 +241,13 @@ class Qwen_PI_v3(baseframework):
                 f"Layer number mismatch: got {len(vl_embs_list)} VL layers, "
                 f"but project_layers has {len(self.project_layers)} layers."
             )
-        return [proj(vl_h) for proj, vl_h in zip(self.project_layers, vl_embs_list)]
+        projected = []
+        for proj, vl_h in zip(self.project_layers, vl_embs_list):
+            first_param = next(proj.parameters(), None)
+            if first_param is not None:
+                vl_h = vl_h.to(dtype=first_param.dtype)
+            projected.append(proj(vl_h))
+        return projected
 
     def _encode_vl_hidden_states(
         self, batch_images: List, instructions: List[str]

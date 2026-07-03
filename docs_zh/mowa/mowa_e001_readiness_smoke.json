@@ -26,6 +26,8 @@
     "training_config_smoke_passed": true,
     "train_starvla_full_path_dry_run_config_created": true,
     "train_starvla_full_path_dry_run_smoke_passed": true,
+    "starflow_ft0_full_path_dry_run_config_created": true,
+    "starflow_ft0_full_path_dry_run_smoke_passed": true,
     "a100_throughput_smoke_plan_created": true,
     "a100_throughput_smoke_executed": true
   },
@@ -58,6 +60,8 @@
     "e001_training_config_smoke_report": "docs_zh/mowa/mowa_e001_training_config_smoke.json",
     "e001_train_starvla_full_path_dry_run_config": "configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml",
     "e001_train_starvla_full_path_dry_run_smoke_report": "docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run_smoke.json",
+    "e001_starflow_ft0_full_path_dry_run_config": "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
+    "e001_starflow_ft0_full_path_dry_run_smoke_report": "docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run_smoke.json",
     "e001_a100_throughput_smoke_plan_config": "configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml",
     "e001_a100_throughput_smoke_report": "docs_zh/mowa/mowa_e001_a100_throughput_smoke.json",
     "a100_throughput_stable_candidate": {

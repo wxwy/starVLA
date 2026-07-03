@@ -240,6 +240,7 @@ wandb/*
 !examples/**/README.md
 !examples/LIBERO/train_files/*.md
 !docs_zh/starflow_vla/*.md
+!docs_zh/starflow_vla/bs32/*.md
 
 # Whitelist specific docs that should be tracked
 !.github/PULL_REQUEST_TEMPLATE.md

@@ -120,7 +120,7 @@
     "keys": [
       "action_loss"
     ],
-    "action_loss": 1.5335015058517456
+    "action_loss": 1.6337733268737793
   },
   "go_no_go": "TBD: train_starvla full-path dry-run passed; training remains gated",
   "notes": [

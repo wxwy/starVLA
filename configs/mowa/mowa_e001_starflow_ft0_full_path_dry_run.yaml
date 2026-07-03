@@ -39,6 +39,8 @@ framework:
       norm_type: ada_norm
       positional_embeddings: null
       attention_head_dim: 64
+  mowa:
+    enable_qwenpi_projector_dtype_alignment: true
 
 datasets:
   vla_data:

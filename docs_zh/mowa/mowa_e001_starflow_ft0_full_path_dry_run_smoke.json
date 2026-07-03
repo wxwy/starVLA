@@ -121,7 +121,7 @@
       "keys": [
         "action_loss"
       ],
-      "action_loss": 1.5335015058517456
+      "action_loss": 1.6337733268737793
     },
     "trainer": {
       "max_train_steps": 1,

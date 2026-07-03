@@ -241,10 +241,12 @@ class Qwen_PI_v3(baseframework):
                 f"Layer number mismatch: got {len(vl_embs_list)} VL layers, "
                 f"but project_layers has {len(self.project_layers)} layers."
             )
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        align_dtype = bool(getattr(mowa_cfg, "enable_qwenpi_projector_dtype_alignment", False))
         projected = []
         for proj, vl_h in zip(self.project_layers, vl_embs_list):
-            first_param = next(proj.parameters(), None)
-            if first_param is not None:
+            first_param = next(proj.parameters(), None) if align_dtype else None
+            if align_dtype and first_param is not None:
                 vl_h = vl_h.to(dtype=first_param.dtype)
             projected.append(proj(vl_h))
         return projected

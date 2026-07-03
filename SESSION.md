@@ -61,10 +61,10 @@
   - dry-run 配置已启用 P0 labels 和 one-batch no-backward forward；`docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json` 最新显示 `framework.mowa_action_bridge_probe_enabled=true`、`framework.mowa_p0_supervision_probe_enabled=true`、`framework.mowa_p0_supervision_label_status=forward_evaluated_in_full_path_dry_run`、`data.mowa_p0_labels_enabled=true`、`training_started=false`、`checkpoint_saved=false`、`wandb_started=false`。
   - 最新 forward smoke 观测：`action_loss=0.8124334216117859`、`mowa_p0_supervision_loss=1.241126298904419`、active heads 为 `task_progress` 和 `action_outcome_class`；P0 loss 仍未加入 `action_loss`。
   - `StarFlowVLA ft0 + RoboCasa365` 已新增独立 full-path dry-run：`configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml`，使用 `LayerwiseFM`、`num_target_vision_tokens=0`、RoboCasa 12D action/16D state、P0 label/mask 开关。
-  - `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json` 显示 `framework.name=StarFlowVLA`、`action_model_type=LayerwiseFM`、`num_target_vision_tokens=0`、`training_started=false`、`checkpoint_saved=false`、`wandb_started=false`；one-batch no-backward forward 观测 `action_loss=1.5335015058517456`。
-  - 为支持 StarFlow ft0 forward smoke，`QwenPI_v3._project_vl_hidden_for_action` 已做最小 dtype 对齐，修复 BF16 VLM hidden 进入 FP32 projection layer 的 mismatch。
+  - `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json` 显示 `framework.name=StarFlowVLA`、`action_model_type=LayerwiseFM`、`num_target_vision_tokens=0`、`training_started=false`、`checkpoint_saved=false`、`wandb_started=false`；最新 one-batch no-backward forward 观测 `action_loss=1.6337733268737793`。
+  - 为支持 MoWA StarFlow ft0 forward smoke，`QwenPI_v3._project_vl_hidden_for_action` 已新增默认关闭的 `framework.mowa.enable_qwenpi_projector_dtype_alignment` 开关；只有 MoWA 配置显式开启时才做 BF16 VLM hidden 到 FP32 projection layer 的 dtype 对齐，StarFlow 原 ft0 配置默认不受影响。
   - `tools/mowa/e001_starflow_ft0_full_path_dry_run_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run_smoke.json`，并接入 readiness：`starflow_ft0_full_path_dry_run_smoke_passed=true`。
-  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 9 项测试；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 已通过 10 项测试。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 9 项测试；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 已通过 11 项测试，其中包含 dtype alignment opt-in 边界测试。
 - M5-001 MoWAActionBridge interface draft 已完成：
   - `starVLA/model/modules/mowa/action_bridge.py` 新增 `MoWAActionBridge`、`MoWAActionBridgeConfig`、`MoWAActionBridgeOutput`。
   - `configs/mowa/mowa_action_bridge_interface.yaml` 记录 bridge 输出为 `layerwise_condition_features`，默认仅作为 LayerwiseFM 条件侧 token 接口，不改 `LayerwiseFM_ActionHeader.py` 内部逻辑。

@@ -38,6 +38,12 @@ def _minimal_config(state_mode=None) -> SimpleNamespace:
     )
 
 
+def _minimal_config_with_mowa_dtype_alignment(enabled: bool) -> SimpleNamespace:
+    cfg = _minimal_config()
+    cfg.framework.mowa = SimpleNamespace(enable_qwenpi_projector_dtype_alignment=enabled)
+    return cfg
+
+
 class StarFlowVLAReuseTest(unittest.TestCase):
     def test_starflow_vla_inherits_qwenpi_without_copying_main_paths(self):
         self.assertTrue(issubclass(StarFlowVLA, Qwen_PI_v3))
@@ -74,6 +80,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
 
     def test_default_state_mode_keeps_discretized_instruction_path(self):
         model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
         model.config = _minimal_config()
         instructions = ["open the drawer"]
         states = [np.array([[0.0, 0.5, -0.5, 1.0, -1.0, 0.25, -0.25]], dtype=np.float32)]
@@ -120,6 +127,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
 
     def test_default_forward_does_not_pass_state_to_action_head(self):
         model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
         model.config = _minimal_config()
         model.config.trainer = {"repeated_diffusion_steps": 2}
         model.action_horizon = 8
@@ -173,6 +181,31 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertEqual(mapping["state_mode"], "continuous_head")
         self.assertFalse(mapping["state_enters_instruction"])
         self.assertTrue(mapping["state_enters_action_head"])
+
+    def test_mowa_dtype_alignment_is_opt_in(self):
+        class CaptureDtype(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.weight = torch.nn.Parameter(torch.ones(1, dtype=torch.float32))
+                self.seen_dtype = None
+
+            def forward(self, x):
+                self.seen_dtype = x.dtype
+                return x
+
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.config = _minimal_config()
+        default_projector = CaptureDtype()
+        model.project_layers = torch.nn.ModuleList([default_projector])
+        model._project_vl_hidden_for_action([torch.ones(1, 1, 1, dtype=torch.bfloat16)])
+        self.assertEqual(default_projector.seen_dtype, torch.bfloat16)
+
+        model.config = _minimal_config_with_mowa_dtype_alignment(True)
+        aligned_projector = CaptureDtype()
+        model.project_layers = torch.nn.ModuleList([aligned_projector])
+        model._project_vl_hidden_for_action([torch.ones(1, 1, 1, dtype=torch.bfloat16)])
+        self.assertEqual(aligned_projector.seen_dtype, torch.float32)
 
 
 if __name__ == "__main__":

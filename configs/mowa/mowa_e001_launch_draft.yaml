@@ -96,4 +96,4 @@ launch_blockers:
   - class_mapping_status remains Data Gate
   - runtime policy draft not confirmed
   - batch size / expected VRAM / runtime are smoke-observed only, not production-confirmed
-  - training command not created
+  - full executable training command not created

@@ -44,11 +44,20 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         "launch_ready_false": _text_contains(root / LAUNCH_DRAFT, "launch_ready: false"),
         "training_started_false": _text_contains(root / LAUNCH_DRAFT, "training_started: false"),
         "runtime_policy_unconfirmed": _text_contains(root / RUNTIME_POLICY, "policy_confirmed: false"),
+        "runtime_policy_launch_ready_false": _text_contains(root / RUNTIME_POLICY, "launch_ready: false"),
         "checkpoint_logic_unchanged": _text_contains(
             root / RUNTIME_POLICY,
             "checkpoint_logic_change_allowed: false",
         ),
         "training_command_dry_run_only": _text_contains(root / TRAINING_COMMAND_DRAFT, "dry_run_only: true"),
+        "training_command_entrypoint_tbd": _text_contains(
+            root / TRAINING_COMMAND_DRAFT,
+            "TBD_FULL_E001_ENTRYPOINT",
+        ),
+        "full_executable_training_command_absent": _text_contains(
+            root / LAUNCH_DRAFT,
+            "full executable training command not created",
+        ),
         "a100_smoke_no_longer_waiting_for_a100": _text_contains(
             root / A100_THROUGHPUT_PLAN,
             "dry_run_until_on_a100: false",
@@ -74,6 +83,7 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
             "runtime policy remains unconfirmed",
             "real MoWA E-001 training config is not executable",
+            "full executable training command remains TBD",
         ],
         "go_no_go": (
             "TBD: launch drafts available; A100 smoke passed but runtime policy remains Data Gate"

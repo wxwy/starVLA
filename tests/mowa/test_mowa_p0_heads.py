@@ -340,15 +340,20 @@ class MoWAP0HeadsTest(unittest.TestCase):
             (root / "configs" / "mowa").mkdir(parents=True)
             (root / "docs_zh" / "mowa").mkdir(parents=True)
             (root / "configs" / "mowa" / "mowa_e001_launch_draft.yaml").write_text(
-                "launch_ready: false\ntraining_started: false\n",
+                (
+                    "launch_ready: false\n"
+                    "training_started: false\n"
+                    "launch_blockers:\n"
+                    "  - full executable training command not created\n"
+                ),
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
-                "policy_confirmed: false\ncheckpoint_logic_change_allowed: false\n",
+                "policy_confirmed: false\nlaunch_ready: false\ncheckpoint_logic_change_allowed: false\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_training_command_draft.yaml").write_text(
-                "dry_run_only: true\n",
+                "dry_run_only: true\ncommand: TBD_FULL_E001_ENTRYPOINT\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_a100_throughput_smoke_plan.yaml").write_text(
@@ -371,6 +376,8 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertFalse(report["training_started"])
         self.assertFalse(report["launch_ready"])
         self.assertTrue(report["checks"]["training_command_dry_run_only"])
+        self.assertTrue(report["checks"]["training_command_entrypoint_tbd"])
+        self.assertTrue(report["checks"]["full_executable_training_command_absent"])
         self.assertTrue(report["checks"]["a100_smoke_no_longer_waiting_for_a100"])
         self.assertTrue(report["checks"]["a100_throughput_report_created"])
 

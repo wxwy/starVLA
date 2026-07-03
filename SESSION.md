@@ -36,6 +36,8 @@
 - E-001 launch draft 已创建：
   - `configs/mowa/mowa_e001_launch_draft.yaml` 明确 `launch_ready=false`、`training_started=false`。
   - 草案记录数据 split、FullHeads 策略、训练/资源/checkpoint/logging 待确认字段和 launch blockers。
+  - 最新 launch blocker 已修正为 `full executable training command not created`；现有 `configs/mowa/mowa_e001_training_command_draft.yaml` 仍是 dry-run-only 草案，不是可执行训练命令。
+  - `tools/mowa/e001_launch_draft_smoke.py` 已增强不可启动门禁检查：`runtime_policy_launch_ready_false`、`training_command_entrypoint_tbd`、`full_executable_training_command_absent` 均必须为 true；最新 `docs_zh/mowa/mowa_e001_launch_draft_smoke.json` 无失败检查。
 - E-001 runtime policy draft 已创建：
   - `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 明确 `policy_confirmed=false`、`launch_ready=false`。
   - 草案记录 checkpoint target、resume target、logging target 和资源预算 TBD，不修改 checkpoint/resume/save 代码。

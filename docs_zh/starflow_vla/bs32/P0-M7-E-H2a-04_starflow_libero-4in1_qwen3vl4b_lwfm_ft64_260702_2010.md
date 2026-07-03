@@ -1,7 +1,7 @@
 # P0-M7-E-H2a-04: StarFlow LIBERO 4-in-1 Qwen3VL-4B future_tokens=64（bs32）
 
 > **实验代号**: E-H2a-04 / P0-M7  
-> **状态**: 🔴 已停止（被 H2a-02 ft16 替代）  
+> **状态**: 🔴 已停止（被 H2a-01 ft0 替代）  
 > **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
 > **启动时间**: 2026-07-02 20:16:02 CST  
 > **停止时间**: 2026-07-03 ~10:24 CST（steps_5500 checkpoint 保存后 kill）  
@@ -16,7 +16,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 本 run 为 **从 scratch 全新训练**（`is_resume=False`），使用 bs32 配置（per_device_batch_size=8 × gradient_accumulation_steps=4）。
 
-> ⚠️ 本实验于 2026-07-03 ~10:20 被手动停止，为 H2a-02（future_tokens=16, per_device_batch_size=1, grad_accum=32）腾出 GPU 资源。最终 step = **5480**（6.9%），未跑完目标 80000 steps。
+> ⚠️ 本实验于 2026-07-03 ~10:20 被手动停止，为 H2a-01（future_tokens=0, per_device_batch_size=1, grad_accum=32）腾出 GPU 资源。最终 step = **5480**（6.9%），未跑完目标 80000 steps。
 
 ---
 
@@ -98,7 +98,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 | 指标 | 值 |
 |------|-----|
-| **最终 Step** | **5480 / 80000**（6.9%） |
+| **最终 Step** | **5500 / 80000**（6.9%） |
 | **完成比例** | 6.9% |
 | **单步耗时** | ~9.2 s/it（全程稳定） |
 | **模型前向/反向耗时** | ~2.35 s（per micro-step） |
@@ -232,6 +232,18 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 > ⚠️ **更正**：原日志错误标注 Docker 上限为 120 GiB，实际 cgroup v2 `memory.max` = **56 GiB**。
 
+### 当前机器状态（2026-07-03 ~10:45 CST，H2a-01 ft0 运行中）
+
+| 指标 | 值 |
+|------|-----|
+| **GPU 利用率** | 71% |
+| **显存使用** | 24,032 MiB / 24,564 MiB (97.8%) |
+| **GPU 功耗** | ~252 W / 450 W |
+| **GPU 温度** | 71°C |
+| **Docker 内存已用** | ~32 GiB / 56 GiB (~57%) |
+
+> 以上为当前在 tmux `train` 中运行的 H2a-01（future_tokens=0）占用资源。H2a-04 已完全释放 GPU 资源。
+
 ### 存储
 
 | 挂载点 | 容量 | 已用 | 可用 | 使用率 |
@@ -248,7 +260,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 |------|------|
 | **每 step 耗时** | ~9.2 s/it |
 | **已运行时间** | ~14 小时 |
-| **完成 step 数** | 5,480 |
+| **完成 step 数** | 5,500 |
 | **完整 80000 steps 预估** | 80000 × 9.2s ≈ 204h ≈ 8.5 天 |
 | **每 step 成本** | 本地 RTX 4090，免费 |
 
@@ -326,7 +338,7 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 - 本实验验证 `num_target_vision_tokens=64`（默认 32）对 StarFlowVLA 动作学习的影响。
 - **当前 run 为 FRESH START**，从 step 0 开始全新训练。
-- **于 2026-07-03 ~10:24 被手动停止**（最后 WandB 日志 step 5480），为 H2a-02（ft16）腾出 GPU 资源。最终完成 6.9%。
+- **于 2026-07-03 ~10:24 被手动停止**（最后 WandB 日志 step 5480），为 H2a-01（ft0）腾出 GPU 资源。最终完成 6.9%。
 - RTX 4090 24GB 显存使用率 96.9%，全程未 OOM；per_device_batch_size=8 已接近显存上限。
 - 单步耗时 ~9.2 s/it，模型前向/反向耗时 ~2.35 s（per micro-step，8 条样本）。
 - checkpoint 每 250 steps 正常保存，共 22 个；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
@@ -336,4 +348,4 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 ---
 
-*本文档已停止更新（实验已终止，被 H2a-02 替代）。*
+*本文档已停止更新（实验已终止，被 H2a-01 ft0 替代）。*

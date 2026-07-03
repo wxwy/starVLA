@@ -32,7 +32,9 @@
     "starflow_ft0_training_throughput_smoke_passed": true,
     "a100_throughput_smoke_plan_created": true,
     "a100_throughput_smoke_executed": true,
-    "e006_coupling_intervention_smoke_passed": true
+    "e006_coupling_intervention_smoke_passed": true,
+    "e006_eval_load_smoke_config_created": true,
+    "e006_eval_load_smoke_passed": true
   },
   "observed": {
     "task_count": 10,
@@ -70,6 +72,8 @@
     "e001_a100_throughput_smoke_plan_config": "configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml",
     "e001_a100_throughput_smoke_report": "docs_zh/mowa/mowa_e001_a100_throughput_smoke.json",
     "e006_coupling_intervention_smoke_report": "docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json",
+    "e006_eval_load_smoke_config": "configs/mowa/mowa_e006_eval_load_smoke.yaml",
+    "e006_eval_load_smoke_report": "docs_zh/mowa/mowa_e006_eval_load_smoke.json",
     "a100_throughput_stable_candidate": {
       "per_device_batch_size": 8,
       "gradient_accumulation_steps": 8,

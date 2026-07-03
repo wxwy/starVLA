@@ -663,6 +663,64 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["resume_trainer_state_step_2"])
         self.assertTrue(report["checks"]["command_runs_succeeded"])
 
+    def test_e006_eval_load_smoke_validates_checkpoint_sidecars(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_save_resume_smoke_test"
+                / "checkpoints"
+                / "steps_2"
+            )
+            final_model = checkpoint.parents[1] / "final_model"
+            (root / "configs" / "mowa").mkdir(parents=True)
+            checkpoint.mkdir(parents=True)
+            final_model.mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e006_eval_load_smoke.yaml").write_text(
+                "checkpoint:\n  checkpoint_root_policy: playground/mowa_ckpt\n",
+                encoding="utf-8",
+            )
+            (checkpoint / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 2}),
+                encoding="utf-8",
+            )
+            (checkpoint / "starflow_mapping.json").write_text(
+                json.dumps({"framework_name": "StarFlowVLA", "action_head": "LayerwiseFM"}),
+                encoding="utf-8",
+            )
+            for name in (
+                "model.safetensors.index.json",
+                "config.full.yaml",
+                "dataset_statistics.json",
+                "optimizer_rank_00000.pt",
+                "scheduler.pt",
+                "random_states_0.pkl",
+            ):
+                (checkpoint / name).write_bytes(b"placeholder")
+            (checkpoint / "model-00001.safetensors").write_bytes(b"placeholder")
+
+            from tools.mowa.e006_eval_load_smoke import build_e006_eval_load_smoke
+
+            report = build_e006_eval_load_smoke(
+                root,
+                checkpoint=Path(
+                    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2"
+                ),
+                final_model=Path(
+                    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/final_model"
+                ),
+                execute_load=False,
+            )
+
+        self.assertTrue(report["checks"]["checkpoint_under_mowa_ckpt"])
+        self.assertTrue(report["checks"]["model_shards_exist"])
+        self.assertTrue(report["checks"]["trainer_state_step_2"])
+        self.assertTrue(report["checks"]["mapping_framework_starflow"])
+        self.assertTrue(report["checks"]["mapping_action_head_layerwisefm"])
+        self.assertTrue(report["checks"]["model_load_executed_or_not_required"])
+
     def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
         try:
             import torch

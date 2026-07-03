@@ -44,6 +44,8 @@ E001_A100_THROUGHPUT_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput
 E006_COUPLING_INTERVENTION_SMOKE_REPORT = Path(
     "docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json"
 )
+E006_EVAL_LOAD_SMOKE_CONFIG = Path("configs/mowa/mowa_e006_eval_load_smoke.yaml")
+E006_EVAL_LOAD_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e006_eval_load_smoke.json")
 
 
 def parse_args() -> argparse.Namespace:
@@ -159,6 +161,10 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         "e006_coupling_intervention_smoke_passed": _checks_report_passed(
             root / E006_COUPLING_INTERVENTION_SMOKE_REPORT
         ),
+        "e006_eval_load_smoke_config_created": (root / E006_EVAL_LOAD_SMOKE_CONFIG).is_file(),
+        "e006_eval_load_smoke_passed": _checks_report_passed(
+            root / E006_EVAL_LOAD_SMOKE_REPORT
+        ),
     }
 
     unresolved_items = []
@@ -229,6 +235,8 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "e001_a100_throughput_smoke_plan_config": str(E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG),
             "e001_a100_throughput_smoke_report": str(E001_A100_THROUGHPUT_SMOKE_REPORT),
             "e006_coupling_intervention_smoke_report": str(E006_COUPLING_INTERVENTION_SMOKE_REPORT),
+            "e006_eval_load_smoke_config": str(E006_EVAL_LOAD_SMOKE_CONFIG),
+            "e006_eval_load_smoke_report": str(E006_EVAL_LOAD_SMOKE_REPORT),
             "a100_throughput_stable_candidate": (
                 (_read_json(root / E001_A100_THROUGHPUT_SMOKE_REPORT) or {}).get(
                     "stable_candidate"

@@ -132,9 +132,9 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 | 指标 | 值 |
 |------|-----|
-| **内存总量** | 503.5 GiB |
-| **内存已用** | 36.7 GiB |
-| **内存可用** | 466.8 GiB |
+| **内存总量** | 56 GiB（Docker 容器限制） |
+| **内存已用** | 32 GiB |
+| **内存可用** | 24 GiB |
 
 ### 存储
 
@@ -220,9 +220,9 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 | 显存使用 | 24032 MiB / 24564 MiB (97.8%) |
 | 功耗 | 67.19 W / 450.00 W |
 | 温度 | 56°C |
-| 内存总量 | 503.5 GiB（Docker 容器） |
-| 内存已用 | 36.7 GiB |
-| 内存可用 | 466.8 GiB |
+| 内存总量 | 56 GiB（Docker 容器限制） |
+| 内存已用 | 32 GiB |
+| 内存可用 | 24 GiB |
 | 存储 `/disk/rl` | 549T / 700T (79% 已用) |
 | 存储 `/localdisk-tmp` | 20G / 100G (20% 已用) |
 

@@ -1,11 +1,11 @@
 # P1-M1-E-H2b-02: StarFlow LIBERO 4-in-1 Qwen3VL-4B continuous_head ft=32（bs32）
 
-> **实验代号**: E-H2b-02 / P1-M1  
-> **状态**: 🔴 已停止（最后 checkpoint steps_10750）  
-> **run_id**: `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021`  
-> **启动时间**: 2026-07-02 20:24:19 CST  
-> **当前更新**: 2026-07-03 17:36 CST
-> **tmux 会话**: 无（已停止）  
+> **实验代号**: E-H2b-02 / P1-M1
+> **状态**: 🟢 训练运行中
+> **run_id**: `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021`
+> **启动时间**: 2026-07-02 20:24:19 CST
+> **当前更新**: 2026-07-03 18:31:00 CST
+> **tmux 会话**: `train`（attached）
 > **配置来源**: `configs/starflow_vla/state/continuous_head.yaml`
 
 ---
@@ -92,110 +92,72 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 ## 训练进度
 
-> 最后更新：2026-07-03 17:16:03 CST
+> 最后更新：2026-07-03 18:31:00 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **10750 / 80000**（13.4%，已停止） |
-| **完成比例** | 13.4% |
-| **单步耗时** | ~7.45 s/it
-| **数据加载耗时** | ~0.000 s
-| **模型前向/反向耗时** | ~0.214 s
-| **已运行时间** | 约 20 小时 43 分钟 |
-| **预计剩余时间** | ~137 小时（约 5.7 天） |
-| **最新 checkpoint** | `steps_10750` |
-| **最近 checkpoint** | `steps_10000` |
+| **当前 Step** | **11205 / 80000**（14.0%） |
+| **完成比例** | 14.0% |
+| **单步耗时** | ~7.01 s/it |
+| **数据加载耗时** | ~0.000 s |
+| **模型前向/反向耗时** | ~0.23 s |
+| **已运行时间** | 约 22 小时 7 分钟 |
+| **预计剩余时间** | ~134 小时（约 5.6 天） |
+| **最新 checkpoint** | `steps_11250`（预估） |
+| **上一个 checkpoint** | `steps_11000` |
 
 ### Loss 记录（部分）
 
-| Step | action_dit_loss | 备注 |
-|------|----------------|------|
-| 20 | 1.3252 | 初始 |
-| 1000 | 0.1776 | |
-| 2500 | 0.1542 | |
-| 5000 | 0.1663 | eval mse_score=0.0084 |
-| 7500 | ~0.12 | |
-| 10000 | ~0.11 | |
-| **10750** | — | 🔴 最终 checkpoint |
-
-| Step | action_dit_loss | 备注 |
-|------|----------------|------|
+| Step | action_dit_loss | last_micro_loss | 备注 |
+|------|----------------|-----------------|------|
+| 20 | 1.3252 | — | 初始 |
+| 160 | 0.2280 | — | |
+| 520 | 0.2500 | — | |
+| 1060 | 0.1847 | — | |
+| 1600 | 0.2709 | — | |
+| 11160 | 0.0975 | 0.0258 | |
+| 11180 | 0.0899 | 0.1355 | |
+| 11200 | 0.0953 | 0.1280 | 🔵 当前 |
 
 ### Loss 趋势
-- Step 0→10750：loss 从 1.33 逐步降至 ~0.11，收敛正常
-- eval mse_score 最低 0.00837（step 5000）
-- lr 平稳 cosine 衰减
 
+- 初始 loss 1.33 → 快速下降至 0.18–0.27 区间
+- step 11000+ loss 在 0.09–0.13 震荡，整体缓慢下降
+- `last_micro_loss` 与 `action_dit_loss`（32 micro-step mean）差异显著，说明单 micro-batch 方差大
+- 学习率缓慢下降（cosine schedule）
 
 ---
 
 ## 系统资源占用
 
-> 最后更新：2026-07-03 17:16:03 CST
+> 最后更新：2026-07-03 18:31:00 CST
 
 ### GPU（NVIDIA GeForce RTX 4090）
 
 | 指标 | 值 |
 |------|-----|
-| **GPU 利用率** | N/A（实验已停止） |
-| **显存使用** | N/A（实验已停止） |
-| **显存空闲** | N/A |
-| **功耗** | N/A |
-| **温度** | N/A |
+| **GPU 利用率** | 78% |
+| **显存使用** | 23160 MiB / 24564 MiB（94.3%） |
+| **显存空闲** | 1404 MiB |
+| **功耗** | 294.69 W / 450.00 W |
+| **温度** | 58°C |
 
-### Docker 内存
+### Docker 内存（cgroup v2）
 
 | 指标 | 值 |
 |------|-----|
-| **Docker 内存总量** | 56.0 GiB |
-| **Docker 内存已用** | N/A（实验已停止） |
-| **Docker 内存可用** | N/A |
+| **Docker 内存上限** | 56 GiB（cgroup v2 memory.max） |
+| **Docker 内存已用** | ~39 GiB |
+| **Docker 内存可用** | ~17 GiB |
 | **Swap** | 0 B |
 
 ### 存储
 
 | 挂载点 | 容量 | 已用 | 可用 | 使用率 |
 |--------|------|------|------|--------|
-| `/` (overlay) | 30G | 831M | 30G | 3% |
-| `/localdisk-tmp` | 100G | 16G | 85G | 16% |
+| `/` (overlay) | 30G | 16G | 15G | 53% |
+| `/localdisk-tmp` | 100G | 31G | 70G | 31% |
 | `/disk/rl` | 700T | 548T | 153T | 79% |
-
----
-
-## checkpoint 时间线
-
-| checkpoint | 时间 | 备注 |
-|------------|------|------|
-| steps_250  | Jul 2 21:23 | ✅ |
-| steps_500  | Jul 2 21:53 | ✅ |
-| steps_750  | Jul 2 22:22 | ✅ |
-| steps_1000 | Jul 2 22:51 | ✅ |
-| steps_2000 | Jul 3 ~01:24 | ✅ |
-| steps_3000 | Jul 3 ~03:58 | ✅ |
-| steps_4000 | Jul 3 ~06:33 | ✅ |
-| steps_5000 | Jul 3 ~09:07 | ✅ |
-| steps_6000 | Jul 3 ~11:40 | ✅ |
-| steps_7000 | Jul 3 ~14:13 | ✅ |
-| steps_8000 | Jul 3 ~16:46 | ✅ |
-| steps_9000 | Jul 3 ~19:19 | ✅ |
-| steps_10000 | Jul 3 ~21:52 | ✅ |
-| steps_10250 | Jul 3 ~23:00 | ✅ |
-| steps_10500 | Jul 4 ~00:08 | ✅ |
-| **steps_10750** | **Jul 4 ~00:30** | 🔴 最终 |
-
-| checkpoint | 时间 | 备注 |
-|------------|------|------|
-
----
-
-## 成本估算
-
-| 项目 | 计算 |
-|------|------|
-| **每 step 耗时** | ~7.45 s/it |
-| **每 step 成本** | 本地 4090，暂不记录 |
-| **已运行时间** | ~22 小时（Jul 2 20:24 → Jul 3 ~00:30） |
-| **完整 80000 steps 预估** | 80000 × 7.15s ≈ 159h ≈ 6.6 天 |
 
 ---
 
@@ -204,12 +166,6 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 ```
 /disk/rl/starVLA/playground/Checkpoints/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/
 ├── checkpoints/
-│   ├── steps_250/
-│   ├── ...
-│   ├── steps_10000/
-│   ├── steps_10250/
-│   ├── steps_10500/
-│   └── steps_10750/    ← 最终 checkpoint
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -251,24 +207,14 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 ---
 
-## probe 实验（gradient accumulation 修复验证）
-
-| Run | 配置 | 最后 checkpoint |
-|-----|------|----------------|
-| `accum_fix_bs8_probe_260702` | bs=8, grad_accum=4 | steps_15250 |
-| `accum_fix_bs32_probe_260702` | bs=1, grad_accum=32 | steps_15250 |
-| `accum_fix_bs8_meanloss_probe_260702` | bs=8, mean loss | steps_15250 |
-| `accum_fix_bs32_meanloss_probe_260702` | bs=1, mean loss | steps_15250 |
-
-> 以上 probe 实验从旧 run 的 `steps_15250` resume，用于验证 gradient accumulation 修复在不同 bs 配置下的 `action_dit_loss`（micro-step 均值 vs 汇总值）行为。
-
----
-
 ## 备注
 
 - 本实验验证 `state_mode=continuous_head` 与默认路径的状态注入差异。
 - **当前 run 为 FRESH START**，从 step 0 开始全新训练。
-- 旧 run `260621_1901` 在 A100 上训练至 step ~17000，已废弃。
+- 旧 run `260621_1901` 在 A100 上训练，已废弃。
+- 4090 显存使用率 94.3%（23.2G/24G），余量 ~1.4G，尚未 OOM。
+- 速度 ~7.01 s/it，预计完整训练约 5.6 天。
 
 ---
 
+*本 tracker 仅由本机（RTX 4090）维护；如发现状态被外部机器覆盖，会恢复为运行中状态。*

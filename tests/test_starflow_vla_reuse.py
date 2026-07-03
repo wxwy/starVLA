@@ -55,12 +55,13 @@ def _minimal_config_with_mowa_dtype_alignment(enabled: bool) -> SimpleNamespace:
 def _minimal_config_with_mowa_layerwise_coupling(
     enabled: bool,
     intervention: str = "baseline",
+    action_hidden_dim: int = 4,
 ) -> SimpleNamespace:
     cfg = _minimal_config()
     cfg.framework.mowa = SimpleNamespace(
         enable_layerwise_bridge_token_coupling=enabled,
         wam_feature_dim=4,
-        action_hidden_dim=4,
+        action_hidden_dim=action_hidden_dim,
         num_bridge_tokens=2,
         layerwise_bridge_token_intervention=intervention,
     )
@@ -259,9 +260,21 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertTrue(output["mowa_layerwise_bridge_coupled"])
         self.assertEqual(output["mowa_layerwise_bridge_token_shape"], (2, 2, 4))
         self.assertEqual(output["mowa_layerwise_bridge_intervention"], "baseline")
+        self.assertTrue(output["mowa_layerwise_bridge_intervention_applied"])
+        self.assertIsNone(output["mowa_layerwise_bridge_intervention_note"])
         self.assertEqual(output["mowa_layerwise_bridge_attention_mask_shape"], (2, 5))
         self.assertEqual(action_model.captured_vl_shapes, [(2, 5, 4), (2, 5, 4)])
         self.assertEqual(action_model.captured_attention_mask_shape, (2, 5))
+
+    def test_mowa_layerwise_bridge_coupling_fails_fast_on_hidden_dim_mismatch(self):
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.config = _minimal_config_with_mowa_layerwise_coupling(True, action_hidden_dim=8)
+        model.action_dit_hidden_dim = 4
+        model.num_action_dit_layers = 2
+
+        with self.assertRaisesRegex(ValueError, "action_hidden_dim.*action_dit_hidden_dim"):
+            model._setup_mowa_layerwise_bridge_coupling()
 
     def test_mowa_layerwise_bridge_interventions_are_explicit(self):
         def run_forward(intervention):
@@ -312,6 +325,38 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertEqual(
             head_mask_output["mowa_layerwise_bridge_active_heads"],
             ("task_progress", "action_outcome_class"),
+        )
+
+    def test_mowa_batch_shuffle_intervention_reports_single_sample_noop(self):
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.config = _minimal_config_with_mowa_layerwise_coupling(True, "batch_shuffle")
+        model.config.trainer = {"repeated_diffusion_steps": 1}
+        model.action_horizon = 8
+        model.action_dit_hidden_dim = 4
+        model.num_action_dit_layers = 2
+        model._setup_mowa_layerwise_bridge_coupling()
+        model.action_model = _CaptureActionModel()
+        model._encode_vl_hidden_states = lambda images, instructions: (
+            [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
+            torch.ones(1, 3, dtype=torch.bool),
+        )
+
+        output = model.forward(
+            [
+                {
+                    "image": [],
+                    "lang": "open the drawer",
+                    "action": np.zeros((8, 7), dtype=np.float32),
+                }
+            ]
+        )
+
+        self.assertEqual(output["mowa_layerwise_bridge_intervention"], "batch_shuffle")
+        self.assertFalse(output["mowa_layerwise_bridge_intervention_applied"])
+        self.assertEqual(
+            output["mowa_layerwise_bridge_intervention_note"],
+            "batch_shuffle_not_applied_due_to_batch_size",
         )
 
 

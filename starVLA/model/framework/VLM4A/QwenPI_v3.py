@@ -287,6 +287,12 @@ class Qwen_PI_v3(baseframework):
         num_bridge_tokens = int(getattr(mowa_cfg, "num_bridge_tokens", 1))
         wam_feature_dim = int(getattr(mowa_cfg, "wam_feature_dim", self.action_dit_hidden_dim))
         action_hidden_dim = int(getattr(mowa_cfg, "action_hidden_dim", self.action_dit_hidden_dim))
+        if action_hidden_dim != self.action_dit_hidden_dim:
+            raise ValueError(
+                "MoWA layerwise bridge coupling requires bridge action_hidden_dim to match "
+                "the projected action condition hidden dim: "
+                f"action_hidden_dim={action_hidden_dim}, action_dit_hidden_dim={self.action_dit_hidden_dim}."
+            )
         self.mowa_layerwise_bridge_feature_projector = (
             nn.Identity()
             if wam_feature_dim == self.action_dit_hidden_dim
@@ -304,40 +310,59 @@ class Qwen_PI_v3(baseframework):
     def _apply_mowa_layerwise_bridge_intervention(
         self,
         bridge_output: MoWAActionBridgeOutput,
-    ) -> MoWAActionBridgeOutput:
+    ) -> tuple[MoWAActionBridgeOutput, dict]:
         intervention = getattr(self, "mowa_layerwise_bridge_token_intervention", "baseline")
+        metadata = {
+            "intervention": intervention,
+            "intervention_applied": intervention == "baseline",
+            "intervention_note": None,
+        }
         if intervention == "baseline":
-            return bridge_output
+            return bridge_output, metadata
         if intervention == "zero":
-            return MoWAActionBridgeOutput(
-                layerwise_condition_features=tuple(
-                    torch.zeros_like(layer_features)
-                    for layer_features in bridge_output.layerwise_condition_features
+            metadata["intervention_applied"] = True
+            return (
+                MoWAActionBridgeOutput(
+                    layerwise_condition_features=tuple(
+                        torch.zeros_like(layer_features)
+                        for layer_features in bridge_output.layerwise_condition_features
+                    ),
+                    attention_mask=bridge_output.attention_mask,
+                    active_heads=bridge_output.active_heads,
+                    masked_heads=bridge_output.masked_heads,
                 ),
-                attention_mask=bridge_output.attention_mask,
-                active_heads=bridge_output.active_heads,
-                masked_heads=bridge_output.masked_heads,
+                metadata,
             )
         if intervention == "batch_shuffle":
             batch_size = bridge_output.layerwise_condition_features[0].shape[0]
             if batch_size <= 1:
-                return bridge_output
-            return MoWAActionBridgeOutput(
-                layerwise_condition_features=tuple(
-                    torch.roll(layer_features, shifts=1, dims=0)
-                    for layer_features in bridge_output.layerwise_condition_features
+                metadata["intervention_applied"] = False
+                metadata["intervention_note"] = "batch_shuffle_not_applied_due_to_batch_size"
+                return bridge_output, metadata
+            metadata["intervention_applied"] = True
+            return (
+                MoWAActionBridgeOutput(
+                    layerwise_condition_features=tuple(
+                        torch.roll(layer_features, shifts=1, dims=0)
+                        for layer_features in bridge_output.layerwise_condition_features
+                    ),
+                    attention_mask=torch.roll(bridge_output.attention_mask, shifts=1, dims=0),
+                    active_heads=bridge_output.active_heads,
+                    masked_heads=bridge_output.masked_heads,
                 ),
-                attention_mask=torch.roll(bridge_output.attention_mask, shifts=1, dims=0),
-                active_heads=bridge_output.active_heads,
-                masked_heads=bridge_output.masked_heads,
+                metadata,
             )
         if intervention == "head_mask_control":
             active_heads = ("task_progress", "action_outcome_class")
-            return MoWAActionBridgeOutput(
-                layerwise_condition_features=bridge_output.layerwise_condition_features,
-                attention_mask=bridge_output.attention_mask,
-                active_heads=active_heads,
-                masked_heads=tuple(head for head in MOWA_P0_FULL_HEADS if head not in active_heads),
+            metadata["intervention_applied"] = True
+            return (
+                MoWAActionBridgeOutput(
+                    layerwise_condition_features=bridge_output.layerwise_condition_features,
+                    attention_mask=bridge_output.attention_mask,
+                    active_heads=active_heads,
+                    masked_heads=tuple(head for head in MOWA_P0_FULL_HEADS if head not in active_heads),
+                ),
+                metadata,
             )
         raise RuntimeError(f"Unhandled MoWA layerwise bridge token intervention: {intervention}")
 
@@ -360,7 +385,7 @@ class Qwen_PI_v3(baseframework):
             masked_heads=(),
         )
         bridge_output = self.mowa_layerwise_bridge(future_features)
-        bridge_output = self._apply_mowa_layerwise_bridge_intervention(bridge_output)
+        bridge_output, intervention_metadata = self._apply_mowa_layerwise_bridge_intervention(bridge_output)
         adapted_vl_embs_list, adapted_attention_mask = append_layerwise_bridge_tokens(
             vl_embs_list,
             encoder_attention_mask,
@@ -369,7 +394,6 @@ class Qwen_PI_v3(baseframework):
         first_layer_tokens = bridge_output.layerwise_condition_features[0]
         metadata = {
             "coupled": True,
-            "intervention": getattr(self, "mowa_layerwise_bridge_token_intervention", "baseline"),
             "token_shape": tuple(first_layer_tokens.shape),
             "attention_mask_shape": (
                 tuple(adapted_attention_mask.shape) if adapted_attention_mask is not None else None
@@ -377,6 +401,7 @@ class Qwen_PI_v3(baseframework):
             "active_heads": bridge_output.active_heads,
             "masked_heads": bridge_output.masked_heads,
         }
+        metadata.update(intervention_metadata)
         return adapted_vl_embs_list, adapted_attention_mask, metadata
 
     def _project_vl_hidden_for_action(self, vl_embs_list: List[torch.Tensor]) -> List[torch.Tensor]:
@@ -485,6 +510,12 @@ class Qwen_PI_v3(baseframework):
         if mowa_bridge_metadata is not None:
             output["mowa_layerwise_bridge_coupled"] = mowa_bridge_metadata["coupled"]
             output["mowa_layerwise_bridge_intervention"] = mowa_bridge_metadata["intervention"]
+            output["mowa_layerwise_bridge_intervention_applied"] = mowa_bridge_metadata[
+                "intervention_applied"
+            ]
+            output["mowa_layerwise_bridge_intervention_note"] = mowa_bridge_metadata[
+                "intervention_note"
+            ]
             output["mowa_layerwise_bridge_token_shape"] = mowa_bridge_metadata["token_shape"]
             output["mowa_layerwise_bridge_attention_mask_shape"] = mowa_bridge_metadata[
                 "attention_mask_shape"

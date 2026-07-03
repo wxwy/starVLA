@@ -81,9 +81,11 @@
   - `configs/mowa/mowa_e006_coupling_eval_plan.yaml` 记录 baseline、feature removal、batch shuffle、head mask control 四类 intervention。
   - `tools/mowa/e006_coupling_eval_plan_smoke.py` 生成 `docs_zh/mowa/mowa_e006_coupling_eval_plan_smoke.json`，确认 plan/readiness/bridge 前置项存在，且 `training_started=false`、`eval_started=false`。
   - `QwenPI_v3` 的 MoWA layerwise bridge coupling 已新增默认 `baseline` 的 `framework.mowa.layerwise_bridge_token_intervention`，支持 `zero`、`batch_shuffle`、`head_mask_control` 三类 E-006 smoke intervention；默认路径不启用 coupling，MoWA dry-run 默认仍为 baseline。
+  - `QwenPI_v3._setup_mowa_layerwise_bridge_coupling` 已新增 layerwise bridge hidden dim 预检：`mowa.action_hidden_dim` 必须等于投影后的 `action_dit_hidden_dim`，避免延迟到 adapter 拼接时才报 shape mismatch。
+  - `batch_shuffle` intervention 在 batch_size<=1 时会在 forward metadata 中标记 `mowa_layerwise_bridge_intervention_applied=false` 与 `batch_shuffle_not_applied_due_to_batch_size`，避免单样本 smoke 被误读为已完成 shuffle 消融。
   - `tools/mowa/e006_coupling_intervention_smoke.py` 已生成 `docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json`，使用合成 StarFlowVLA forward batch 验证 baseline coupled、zero tokens zeroed、batch shuffle swaps samples、head mask control keeps constructible heads；`training_started=false`、`eval_started=false`。
   - StarFlow future-token variant 支持已恢复为配置化：`configs/starflow_vla/stage3_future_token_ablation.yaml` 的 `num_target_vision_tokens_values=[0, 8, 16, 32, 64]`；`starVLA/model/modules/starflow_vla/mapping.py` 记录 `starflow_ft_variant`，MoWA StarFlow dry-run smoke 不再把 ft0 写死为唯一合法路径。
-  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 12 项测试；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 最新已通过 13 项测试，其中包含 intervention 边界测试。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 13 项测试；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 最新已通过 15 项测试，其中包含 intervention 边界、hidden dim 预检和 batch_shuffle 单样本 metadata 测试。
   - E-006 仍需要训练 checkpoint 或 smoke-compatible action checkpoint 才能做真实 policy eval；当前 synthetic intervention smoke 不声明 action 指标收益、不启动 eval、不计入训练。
 
 ## 进行中的任务

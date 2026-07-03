@@ -27,6 +27,8 @@
         "action_loss": 0.0,
         "mowa_layerwise_bridge_coupled": true,
         "mowa_layerwise_bridge_intervention": "baseline",
+        "mowa_layerwise_bridge_intervention_applied": true,
+        "mowa_layerwise_bridge_intervention_note": null,
         "mowa_layerwise_bridge_token_shape": [
           2,
           2,
@@ -57,6 +59,8 @@
         "action_loss": 0.0,
         "mowa_layerwise_bridge_coupled": true,
         "mowa_layerwise_bridge_intervention": "zero",
+        "mowa_layerwise_bridge_intervention_applied": true,
+        "mowa_layerwise_bridge_intervention_note": null,
         "mowa_layerwise_bridge_token_shape": [
           2,
           2,
@@ -87,6 +91,8 @@
         "action_loss": 0.0,
         "mowa_layerwise_bridge_coupled": true,
         "mowa_layerwise_bridge_intervention": "batch_shuffle",
+        "mowa_layerwise_bridge_intervention_applied": true,
+        "mowa_layerwise_bridge_intervention_note": null,
         "mowa_layerwise_bridge_token_shape": [
           2,
           2,
@@ -117,6 +123,8 @@
         "action_loss": 0.0,
         "mowa_layerwise_bridge_coupled": true,
         "mowa_layerwise_bridge_intervention": "head_mask_control",
+        "mowa_layerwise_bridge_intervention_applied": true,
+        "mowa_layerwise_bridge_intervention_note": null,
         "mowa_layerwise_bridge_token_shape": [
           2,
           2,

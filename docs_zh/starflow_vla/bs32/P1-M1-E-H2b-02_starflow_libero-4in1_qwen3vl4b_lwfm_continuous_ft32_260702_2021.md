@@ -1,11 +1,11 @@
 # P1-M1-E-H2b-02: StarFlow LIBERO 4-in-1 Qwen3VL-4B continuous_head ft=32（bs32）
 
 > **实验代号**: E-H2b-02 / P1-M1  
-> **状态**: 🟢 训练运行中  
+> **状态**: 🔴 已停止（最后 checkpoint steps_10750）  
 > **run_id**: `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021`  
 > **启动时间**: 2026-07-02 20:24:19 CST  
-> **当前更新**: 2026-07-03 17:16:03 CST
-> **tmux 会话**: `train`（attached）  
+> **当前更新**: 2026-07-03 17:36 CST
+> **tmux 会话**: 无（已停止）  
 > **配置来源**: `configs/starflow_vla/state/continuous_head.yaml`
 
 ---
@@ -96,14 +96,14 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **10702 / 80000**（13.4%）
-| **完成比例** | 13.4%
+| **当前 Step** | **10750 / 80000**（13.4%，已停止） |
+| **完成比例** | 13.4% |
 | **单步耗时** | ~7.45 s/it
 | **数据加载耗时** | ~0.000 s
 | **模型前向/反向耗时** | ~0.214 s
 | **已运行时间** | 约 20 小时 43 分钟 |
 | **预计剩余时间** | ~137 小时（约 5.7 天） |
-| **最新 checkpoint** | `steps_9750`
+| **最新 checkpoint** | `steps_10750` |
 | **最近 checkpoint** | `steps_10000` |
 
 ### Loss 记录（部分）
@@ -111,19 +111,21 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 | Step | action_dit_loss | 备注 |
 |------|----------------|------|
 | 20 | 1.3252 | 初始 |
-| 160 | 0.2280 | |
-| 520 | 0.2500 | |
-| 600 | 0.2117 | |
-| 1060 | 0.1847 | |
-| 1600 | 0.2709 | |
-| **1620** | **0.2298** | 🔵 当前 |
-| **1628** | 检查点中 | `steps_250`–`steps_1500` ✅ |
+| 1000 | 0.1776 | |
+| 2500 | 0.1542 | |
+| 5000 | 0.1663 | eval mse_score=0.0084 |
+| 7500 | ~0.12 | |
+| 10000 | ~0.11 | |
+| **10750** | — | 🔴 最终 checkpoint |
+
+| Step | action_dit_loss | 备注 |
+|------|----------------|------|
 
 ### Loss 趋势
+- Step 0→10750：loss 从 1.33 逐步降至 ~0.11，收敛正常
+- eval mse_score 最低 0.00837（step 5000）
+- lr 平稳 cosine 衰减
 
-- 初始 loss 1.33 → 快速下降至 0.18–0.27 区间
-- 2% 完成，loss 正常波动，无明显发散
-- 学习率缓慢下降（cosine schedule）：action_model 9.99e-5 → 9.99e-5，base 2.50e-5 → 2.50e-5
 
 ---
 
@@ -135,19 +137,19 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 | 指标 | 值 |
 |------|-----|
-| **GPU 利用率** | 84%
-| **显存使用** | 23160 MiB / 24564 MiB（94.3%）
-| **显存空闲** | 1404 MiB |
-| **功耗** | 290.78 W / 450.00 W
-| **温度** | 61°C
+| **GPU 利用率** | N/A（实验已停止） |
+| **显存使用** | N/A（实验已停止） |
+| **显存空闲** | N/A |
+| **功耗** | N/A |
+| **温度** | N/A |
 
 ### Docker 内存
 
 | 指标 | 值 |
 |------|-----|
-| **Docker 内存总量** | 56 GiB
-| **Docker 内存已用** | ~39.5 GiB（70.5%）
-| **Docker 内存可用** | ~17 GiB |
+| **Docker 内存总量** | 56.0 GiB |
+| **Docker 内存已用** | N/A（实验已停止） |
+| **Docker 内存可用** | N/A |
 | **Swap** | 0 B |
 
 ### 存储
@@ -164,12 +166,25 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 | checkpoint | 时间 | 备注 |
 |------------|------|------|
-| `steps_250` | 21:23 | ✅ |
-| `steps_500` | 21:53 | ✅ |
-| `steps_750` | 22:22 | ✅ |
-| `steps_1000` | 22:51 | ✅ |
-| `steps_1250` | 23:21 | ✅ |
-| **`steps_1500`** | **23:51** | ✅ 最新 |
+| steps_250  | Jul 2 21:23 | ✅ |
+| steps_500  | Jul 2 21:53 | ✅ |
+| steps_750  | Jul 2 22:22 | ✅ |
+| steps_1000 | Jul 2 22:51 | ✅ |
+| steps_2000 | Jul 3 ~01:24 | ✅ |
+| steps_3000 | Jul 3 ~03:58 | ✅ |
+| steps_4000 | Jul 3 ~06:33 | ✅ |
+| steps_5000 | Jul 3 ~09:07 | ✅ |
+| steps_6000 | Jul 3 ~11:40 | ✅ |
+| steps_7000 | Jul 3 ~14:13 | ✅ |
+| steps_8000 | Jul 3 ~16:46 | ✅ |
+| steps_9000 | Jul 3 ~19:19 | ✅ |
+| steps_10000 | Jul 3 ~21:52 | ✅ |
+| steps_10250 | Jul 3 ~23:00 | ✅ |
+| steps_10500 | Jul 4 ~00:08 | ✅ |
+| **steps_10750** | **Jul 4 ~00:30** | 🔴 最终 |
+
+| checkpoint | 时间 | 备注 |
+|------------|------|------|
 
 ---
 
@@ -177,9 +192,9 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 | 项目 | 计算 |
 |------|------|
-| **每 step 耗时** | ~7.15 s/it |
+| **每 step 耗时** | ~7.45 s/it |
 | **每 step 成本** | 本地 4090，暂不记录 |
-| **已运行时间** | ~2.1 小时 |
+| **已运行时间** | ~22 小时（Jul 2 20:24 → Jul 3 ~00:30） |
 | **完整 80000 steps 预估** | 80000 × 7.15s ≈ 159h ≈ 6.6 天 |
 
 ---
@@ -190,9 +205,11 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 /disk/rl/starVLA/playground/Checkpoints/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/
 ├── checkpoints/
 │   ├── steps_250/
-│   ├── steps_500/
-│   ├── steps_750/
-│   └── steps_1000/
+│   ├── ...
+│   ├── steps_10000/
+│   ├── steps_10250/
+│   ├── steps_10500/
+│   └── steps_10750/    ← 最终 checkpoint
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -252,11 +269,6 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 - 本实验验证 `state_mode=continuous_head` 与默认路径的状态注入差异。
 - **当前 run 为 FRESH START**，从 step 0 开始全新训练。
 - 旧 run `260621_1901` 在 A100 上训练至 step ~17000，已废弃。
-- 4090 显存使用率 94.3%（23.2G/24G），余量 ~1.4G，尚未 OOM。
-- checkpoint 每 250 steps 正常保存，`/localdisk-tmp` → `/disk/rl` 后台同步正常。
-- `last_micro_loss` 与 `action_dit_loss`（32 micro-step mean）差异显著，说明单 micro-batch 方差大，gradient accumulation 有效平滑。
-- 速度 ~7.15 s/it，预计完整训练约 6.6 天。
 
 ---
 
-*本文档将持续更新。*

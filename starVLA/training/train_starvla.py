@@ -789,6 +789,14 @@ def _write_full_path_dry_run_report(
             "mowa_action_bridge_probe_enabled": bool(
                 getattr(model, "mowa_action_bridge_probe_enabled", False)
             ),
+            "mowa_layerwise_bridge_coupling_enabled": bool(
+                getattr(model, "mowa_layerwise_bridge_coupling_enabled", False)
+            ),
+            "mowa_layerwise_bridge_coupling_status": (
+                "forward_coupled_in_full_path_dry_run"
+                if "mowa_layerwise_bridge_coupled" in ((forward_summary or {}).get("keys") or [])
+                else "not_coupled_in_full_path_dry_run"
+            ),
             "mowa_p0_supervision_probe_enabled": bool(
                 getattr(model, "mowa_p0_supervision_probe_enabled", False)
             ),
@@ -830,7 +838,7 @@ def _write_full_path_dry_run_report(
             "This dry-run stops before prepare_training(), wandb, checkpoint loading, checkpoint saving, and train().",
             "It validates StarVLA build/data/optimizer/trainer wiring only.",
             "MoWA P0 supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
-            "MoWA bridge coupling into LayerwiseFM action generation remains a separate gated step.",
+            "MoWA bridge coupling into LayerwiseFM action generation is only active when the MoWA gated config enables it.",
         ],
     }
     if accelerator.is_main_process:

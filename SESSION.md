@@ -61,10 +61,12 @@
   - dry-run 配置已启用 P0 labels 和 one-batch no-backward forward；`docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json` 最新显示 `framework.mowa_action_bridge_probe_enabled=true`、`framework.mowa_p0_supervision_probe_enabled=true`、`framework.mowa_p0_supervision_label_status=forward_evaluated_in_full_path_dry_run`、`data.mowa_p0_labels_enabled=true`、`training_started=false`、`checkpoint_saved=false`、`wandb_started=false`。
   - 最新 forward smoke 观测：`action_loss=0.8124334216117859`、`mowa_p0_supervision_loss=1.241126298904419`、active heads 为 `task_progress` 和 `action_outcome_class`；P0 loss 仍未加入 `action_loss`。
   - `StarFlowVLA ft0 + RoboCasa365` 已新增独立 full-path dry-run：`configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml`，使用 `LayerwiseFM`、`num_target_vision_tokens=0`、RoboCasa 12D action/16D state、P0 label/mask 开关。
-  - `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json` 显示 `framework.name=StarFlowVLA`、`action_model_type=LayerwiseFM`、`num_target_vision_tokens=0`、`training_started=false`、`checkpoint_saved=false`、`wandb_started=false`；最新 one-batch no-backward forward 观测 `action_loss=1.6337733268737793`。
+  - `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json` 显示 `framework.name=StarFlowVLA`、`action_model_type=LayerwiseFM`、`num_target_vision_tokens=0`、`training_started=false`、`checkpoint_saved=false`、`wandb_started=false`；最新 one-batch no-backward forward 观测 `action_loss=1.9165695905685425`。
   - 为支持 MoWA StarFlow ft0 forward smoke，`QwenPI_v3._project_vl_hidden_for_action` 已新增默认关闭的 `framework.mowa.enable_qwenpi_projector_dtype_alignment` 开关；只有 MoWA 配置显式开启时才做 BF16 VLM hidden 到 FP32 projection layer 的 dtype 对齐，StarFlow 原 ft0 配置默认不受影响。
+  - `QwenPI_v3` 已新增默认关闭的 `framework.mowa.enable_layerwise_bridge_token_coupling` 开关；仅 MoWA StarFlow ft0 dry-run 配置显式开启时，才通过 `MoWAActionBridge` 生成 bridge tokens，并调用 `append_layerwise_bridge_tokens` 拼到每层 `vl_embs_list[layer_idx]`，同时扩展 `encoder_attention_mask`；不修改 `LayerwiseFM_ActionHeader.py` 内部逻辑，不影响 StarFlow 原 ft0 启动指令。
+  - 最新 StarFlow ft0 dry-run 报告显示 `framework.mowa_layerwise_bridge_coupling_enabled=true`、`mowa_layerwise_bridge_coupling_status=forward_coupled_in_full_path_dry_run`，forward keys 包含 `mowa_layerwise_bridge_coupled`，bridge token shape=`[1, 2, 1024]`，attention mask shape=`[1, 341]`。
   - `tools/mowa/e001_starflow_ft0_full_path_dry_run_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run_smoke.json`，并接入 readiness：`starflow_ft0_full_path_dry_run_smoke_passed=true`。
-  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 9 项测试；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 已通过 11 项测试，其中包含 dtype alignment opt-in 边界测试。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 11 项测试；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 已通过 12 项测试，其中包含 dtype alignment opt-in 和 MoWA layerwise bridge coupling opt-in 边界测试。
 - M5-001 MoWAActionBridge interface draft 已完成：
   - `starVLA/model/modules/mowa/action_bridge.py` 新增 `MoWAActionBridge`、`MoWAActionBridgeConfig`、`MoWAActionBridgeOutput`。
   - `configs/mowa/mowa_action_bridge_interface.yaml` 记录 bridge 输出为 `layerwise_condition_features`，并通过 `MoWAActionHeadAdapter` 按 `action_model_type` 选择注入方式，不改 action head 内部逻辑。
@@ -72,7 +74,7 @@
   - `append_layerwise_bridge_tokens` 已通过单测验证会扩展每层 `vl_embs_list[layer_idx]` 和 `encoder_attention_mask`，为后续 B 方案 coupling smoke 提供可插拔接入点。
   - `.venv/bin/python -m py_compile starVLA/model/modules/mowa/action_bridge.py starVLA/model/modules/mowa/__init__.py tests/mowa/test_mowa_p0_heads.py tools/mowa/e001_readiness_smoke.py` 已通过。
   - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 11 项测试。
-  - `tools/mowa/e001_readiness_smoke.py` 已重跑，报告显示 `action_bridge_interface_created=true`；E-001 仍因 runtime policy / 资源预算 / WAM Hz-window 等保持不可启动。
+  - `tools/mowa/e001_readiness_smoke.py` 已重跑，报告显示 `action_bridge_interface_created=true`；E-001 仍因 runtime policy / checkpoint/save/resume 策略和 coupling 消融保持不可启动。
 - M5-002 E-006 coupling / feature removal eval plan 已完成：
   - `configs/mowa/mowa_e006_coupling_eval_plan.yaml` 记录 baseline、feature removal、batch shuffle、head mask control 四类 intervention。
   - `tools/mowa/e006_coupling_eval_plan_smoke.py` 生成 `docs_zh/mowa/mowa_e006_coupling_eval_plan_smoke.json`，确认 plan/readiness/bridge 前置项存在，且 `training_started=false`、`eval_started=false`。
@@ -85,7 +87,7 @@
 
 ## 下一步
 - 若继续推进 P0，先确认是否将 `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 与 `configs/mowa/mowa_e001_launch_draft.yaml` 从不可执行草案推进为可执行配置；主训练前仍需确认资源预算和 checkpoint/save/resume 策略。
-- A100 heads/bridge 级 throughput smoke、training-config smoke、QwenOFT full-path forward dry-run、P0 supervision probe、生产 dataloader P0 label/mask 开关、StarFlowVLA ft0 + RoboCasa365 full-path forward dry-run、MoWA action-head adapter 边界已完成；下一步应在 StarFlowVLA/LayerwiseFM 路径上调用 adapter 实现 gated MoWA bridge-token coupling smoke。
+- A100 heads/bridge 级 throughput smoke、training-config smoke、QwenOFT full-path forward dry-run、P0 supervision probe、生产 dataloader P0 label/mask 开关、StarFlowVLA ft0 + RoboCasa365 full-path forward dry-run、MoWA action-head adapter 边界、StarFlowVLA/LayerwiseFM gated MoWA bridge-token coupling smoke 已完成；下一步应补 zero/shuffle/mask 消融与正式训练 launch/runtime policy。
 - 若继续推进 M5/E-006，必须先有可评测 checkpoint/runtime；在 action 指标收益声明前必须完成 feature removal / shuffle 证据。
 - 训练入口必须显式引用 G0 temporal profile 与 5Hz production-window preflight；batch size、显存、训练时长仍需 throughput smoke 后确认。
 - 真实 Wan latent cache builder 仍需单独放行。

@@ -41,6 +41,10 @@ framework:
       attention_head_dim: 64
   mowa:
     enable_qwenpi_projector_dtype_alignment: true
+    enable_layerwise_bridge_token_coupling: true
+    wam_feature_dim: 1024
+    action_hidden_dim: 1024
+    num_bridge_tokens: 2
 
 datasets:
   vla_data:

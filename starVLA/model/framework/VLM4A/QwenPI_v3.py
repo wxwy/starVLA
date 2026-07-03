@@ -53,6 +53,13 @@ from deployment.model_server.tools.image_tools import to_pil_preserve
 from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.framework.share_tools import merge_framework_config, populate_layerwise_dit_cfg
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import LayerwiseFlowmatchingActionHead, get_action_model
+from starVLA.model.modules.mowa import (
+    MoWAActionBridge,
+    MoWAActionBridgeConfig,
+    P0FutureFeatures,
+    append_layerwise_bridge_tokens,
+    resolve_mowa_action_head_binding,
+)
 from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.model.tools import FRAMEWORK_REGISTRY
 from starVLA.training.trainer_utils import initialize_overwatch
@@ -233,6 +240,82 @@ class Qwen_PI_v3(baseframework):
         # are normalised upstream by `share_tools.apply_config_compat`, so we
         # only ever read `action_horizon` here.
         self.action_horizon = int(self.config.framework.action_model.action_horizon)
+        self._setup_mowa_layerwise_bridge_coupling()
+
+    def _setup_mowa_layerwise_bridge_coupling(self) -> None:
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        self.mowa_layerwise_bridge_coupling_enabled = bool(
+            getattr(mowa_cfg, "enable_layerwise_bridge_token_coupling", False)
+        )
+        self.mowa_layerwise_bridge = None
+        if not self.mowa_layerwise_bridge_coupling_enabled:
+            return
+
+        action_head_type = getattr(self.config.framework.action_model, "action_model_type", None)
+        binding = resolve_mowa_action_head_binding(action_head_type)
+        if not binding.implemented:
+            raise ValueError(
+                "MoWA layerwise bridge coupling is not implemented for "
+                f"action_model_type={action_head_type}."
+            )
+        if binding.injection_mode != "append_bridge_tokens_to_condition_side":
+            raise ValueError(
+                "MoWA layerwise bridge coupling expects condition-side token append, "
+                f"got injection_mode={binding.injection_mode}."
+            )
+
+        num_bridge_tokens = int(getattr(mowa_cfg, "num_bridge_tokens", 1))
+        wam_feature_dim = int(getattr(mowa_cfg, "wam_feature_dim", self.action_dit_hidden_dim))
+        action_hidden_dim = int(getattr(mowa_cfg, "action_hidden_dim", self.action_dit_hidden_dim))
+        self.mowa_layerwise_bridge_feature_projector = (
+            nn.Identity()
+            if wam_feature_dim == self.action_dit_hidden_dim
+            else nn.Linear(self.action_dit_hidden_dim, wam_feature_dim)
+        )
+        self.mowa_layerwise_bridge = MoWAActionBridge(
+            MoWAActionBridgeConfig(
+                wam_feature_dim=wam_feature_dim,
+                action_hidden_dim=action_hidden_dim,
+                num_action_layers=self.num_action_dit_layers,
+                num_bridge_tokens=num_bridge_tokens,
+            )
+        )
+
+    def _maybe_apply_mowa_layerwise_bridge_coupling(
+        self,
+        vl_embs_list: List[torch.Tensor],
+        encoder_attention_mask: Optional[torch.Tensor],
+    ) -> tuple[List[torch.Tensor], Optional[torch.Tensor], dict | None]:
+        if not getattr(self, "mowa_layerwise_bridge_coupling_enabled", False):
+            return vl_embs_list, encoder_attention_mask, None
+        if self.mowa_layerwise_bridge is None:
+            raise RuntimeError("MoWA layerwise bridge coupling is enabled but not initialized.")
+
+        hidden_features = vl_embs_list[-1].mean(dim=1)
+        hidden_features = self.mowa_layerwise_bridge_feature_projector(hidden_features)
+        future_features = P0FutureFeatures(
+            hidden_features=hidden_features,
+            head_outputs={},
+            active_heads=("starflow_condition_probe",),
+            masked_heads=(),
+        )
+        bridge_output = self.mowa_layerwise_bridge(future_features)
+        adapted_vl_embs_list, adapted_attention_mask = append_layerwise_bridge_tokens(
+            vl_embs_list,
+            encoder_attention_mask,
+            bridge_output,
+        )
+        first_layer_tokens = bridge_output.layerwise_condition_features[0]
+        metadata = {
+            "coupled": True,
+            "token_shape": tuple(first_layer_tokens.shape),
+            "attention_mask_shape": (
+                tuple(adapted_attention_mask.shape) if adapted_attention_mask is not None else None
+            ),
+            "active_heads": bridge_output.active_heads,
+            "masked_heads": bridge_output.masked_heads,
+        }
+        return adapted_vl_embs_list, adapted_attention_mask, metadata
 
     def _project_vl_hidden_for_action(self, vl_embs_list: List[torch.Tensor]) -> List[torch.Tensor]:
         """Project layer-wise VL hidden states to the hidden space expected by Action DiT."""
@@ -323,6 +406,12 @@ class Qwen_PI_v3(baseframework):
                 state = torch.tensor(np.array(state), device=base_hidden.device, dtype=base_hidden.dtype)
                 state_repeated = state.repeat(repeated_diffusion_steps, 1, 1)
 
+            vl_embs_list_repeated, backbone_attention_mask, mowa_bridge_metadata = (
+                self._maybe_apply_mowa_layerwise_bridge_coupling(
+                    vl_embs_list_repeated,
+                    backbone_attention_mask,
+                )
+            )
             action_loss = self.action_model(
                 vl_embs_list_repeated,
                 actions_target_repeated,
@@ -330,7 +419,16 @@ class Qwen_PI_v3(baseframework):
                 encoder_attention_mask=backbone_attention_mask,
             )
 
-        return {"action_loss": action_loss}
+        output = {"action_loss": action_loss}
+        if mowa_bridge_metadata is not None:
+            output["mowa_layerwise_bridge_coupled"] = mowa_bridge_metadata["coupled"]
+            output["mowa_layerwise_bridge_token_shape"] = mowa_bridge_metadata["token_shape"]
+            output["mowa_layerwise_bridge_attention_mask_shape"] = mowa_bridge_metadata[
+                "attention_mask_shape"
+            ]
+            output["mowa_layerwise_bridge_active_heads"] = mowa_bridge_metadata["active_heads"]
+            output["mowa_layerwise_bridge_masked_heads"] = mowa_bridge_metadata["masked_heads"]
+        return output
 
     @torch.inference_mode()
     def predict_action(

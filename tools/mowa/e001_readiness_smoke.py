@@ -154,7 +154,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "class_mapping_status remains Data Gate",
             "runtime policy draft not confirmed",
             "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
-            "E-001 full executable MoWA action-bridge training integration still missing",
+            "E-001 full executable MoWA training launch and coupling ablations still missing",
         ]
     )
 

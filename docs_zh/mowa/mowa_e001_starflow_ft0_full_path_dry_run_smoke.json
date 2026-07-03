@@ -19,7 +19,10 @@
     "batch_has_mowa_p0_targets": true,
     "batch_has_mowa_p0_masks": true,
     "forward_evaluated": true,
-    "forward_has_action_loss": true
+    "forward_has_action_loss": true,
+    "mowa_layerwise_bridge_coupling_enabled": true,
+    "mowa_layerwise_bridge_forward_coupled": true,
+    "forward_has_mowa_layerwise_bridge_coupled": true
   },
   "reports": {
     "dry_run_config": "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
@@ -32,9 +35,11 @@
       "action_model_type": "LayerwiseFM",
       "num_target_vision_tokens": 0,
       "state_mode": "discretized_instruction",
-      "total_params": 5071073830,
-      "trainable_params": 5071073830,
+      "total_params": 5073246758,
+      "trainable_params": 5073246758,
       "mowa_action_bridge_probe_enabled": false,
+      "mowa_layerwise_bridge_coupling_enabled": true,
+      "mowa_layerwise_bridge_coupling_status": "forward_coupled_in_full_path_dry_run",
       "mowa_p0_supervision_probe_enabled": false,
       "mowa_p0_supervision_active_heads": [],
       "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run"
@@ -119,9 +124,28 @@
     "forward": {
       "evaluated": true,
       "keys": [
-        "action_loss"
+        "action_loss",
+        "mowa_layerwise_bridge_active_heads",
+        "mowa_layerwise_bridge_attention_mask_shape",
+        "mowa_layerwise_bridge_coupled",
+        "mowa_layerwise_bridge_masked_heads",
+        "mowa_layerwise_bridge_token_shape"
       ],
-      "action_loss": 1.6337733268737793
+      "action_loss": 1.9165695905685425,
+      "mowa_layerwise_bridge_coupled": true,
+      "mowa_layerwise_bridge_token_shape": [
+        1,
+        2,
+        1024
+      ],
+      "mowa_layerwise_bridge_attention_mask_shape": [
+        1,
+        341
+      ],
+      "mowa_layerwise_bridge_active_heads": [
+        "starflow_condition_probe"
+      ],
+      "mowa_layerwise_bridge_masked_heads": []
     },
     "trainer": {
       "max_train_steps": 1,
@@ -134,7 +158,7 @@
   },
   "unresolved_items": [
     "This validates StarFlowVLA ft0 + RoboCasa full-path forward smoke only.",
-    "MoWA bridge tokens are not yet coupled into LayerwiseFM.",
+    "MoWA bridge tokens are coupled only in the explicit MoWA gated dry-run config.",
     "No checkpoint/save/resume launch policy is confirmed."
   ],
   "go_no_go": "TBD: StarFlow ft0 full-path dry-run smoke passed; MoWA bridge coupling remains gated"

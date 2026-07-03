@@ -371,6 +371,8 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "name": "StarFlowVLA",
                             "action_model_type": "LayerwiseFM",
                             "num_target_vision_tokens": 0,
+                            "mowa_layerwise_bridge_coupling_enabled": True,
+                            "mowa_layerwise_bridge_coupling_status": "forward_coupled_in_full_path_dry_run",
                         },
                         "data": {
                             "data_mix": "robocasa365_open_drawer_target_human",
@@ -386,7 +388,13 @@ class MoWAP0HeadsTest(unittest.TestCase):
                                 ],
                             },
                         },
-                        "forward": {"evaluated": True, "keys": ["action_loss"]},
+                        "forward": {
+                            "evaluated": True,
+                            "keys": [
+                                "action_loss",
+                                "mowa_layerwise_bridge_coupled",
+                            ],
+                        },
                     }
                 ),
                 encoding="utf-8",
@@ -404,6 +412,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["action_head_layerwisefm"])
         self.assertTrue(report["checks"]["future_tokens_ft0"])
         self.assertTrue(report["checks"]["forward_has_action_loss"])
+        self.assertTrue(report["checks"]["mowa_layerwise_bridge_coupling_enabled"])
+        self.assertTrue(report["checks"]["mowa_layerwise_bridge_forward_coupled"])
+        self.assertTrue(report["checks"]["forward_has_mowa_layerwise_bridge_coupled"])
 
     def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
         try:

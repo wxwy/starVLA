@@ -85,7 +85,7 @@
     "class_mapping_status remains Data Gate",
     "runtime policy draft not confirmed",
     "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
-    "E-001 full executable MoWA action-bridge training integration still missing"
+    "E-001 full executable MoWA training launch and coupling ablations still missing"
   ],
   "go_no_go": "TBD: E-001 prerequisites mostly passed; launch draft exists but runtime/batch/save-resume remain Data Gate",
   "notes": [

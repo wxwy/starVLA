@@ -14,9 +14,11 @@
     "action_model_type": "LayerwiseFM",
     "num_target_vision_tokens": 0,
     "state_mode": "discretized_instruction",
-    "total_params": 5071073830,
-    "trainable_params": 5071073830,
+    "total_params": 5073246758,
+    "trainable_params": 5073246758,
     "mowa_action_bridge_probe_enabled": false,
+    "mowa_layerwise_bridge_coupling_enabled": true,
+    "mowa_layerwise_bridge_coupling_status": "forward_coupled_in_full_path_dry_run",
     "mowa_p0_supervision_probe_enabled": false,
     "mowa_p0_supervision_active_heads": [],
     "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run"
@@ -118,15 +120,34 @@
   "forward": {
     "evaluated": true,
     "keys": [
-      "action_loss"
+      "action_loss",
+      "mowa_layerwise_bridge_active_heads",
+      "mowa_layerwise_bridge_attention_mask_shape",
+      "mowa_layerwise_bridge_coupled",
+      "mowa_layerwise_bridge_masked_heads",
+      "mowa_layerwise_bridge_token_shape"
     ],
-    "action_loss": 1.6337733268737793
+    "action_loss": 1.9165695905685425,
+    "mowa_layerwise_bridge_coupled": true,
+    "mowa_layerwise_bridge_token_shape": [
+      1,
+      2,
+      1024
+    ],
+    "mowa_layerwise_bridge_attention_mask_shape": [
+      1,
+      341
+    ],
+    "mowa_layerwise_bridge_active_heads": [
+      "starflow_condition_probe"
+    ],
+    "mowa_layerwise_bridge_masked_heads": []
   },
   "go_no_go": "TBD: train_starvla full-path dry-run passed; training remains gated",
   "notes": [
     "This dry-run stops before prepare_training(), wandb, checkpoint loading, checkpoint saving, and train().",
     "It validates StarVLA build/data/optimizer/trainer wiring only.",
     "MoWA P0 supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
-    "MoWA bridge coupling into LayerwiseFM action generation remains a separate gated step."
+    "MoWA bridge coupling into LayerwiseFM action generation is only active when the MoWA gated config enables it."
   ]
 }

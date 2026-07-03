@@ -57,6 +57,16 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
         "batch_has_mowa_p0_masks": "mowa_p0_masks" in first_item_keys,
         "forward_evaluated": forward.get("evaluated") is True,
         "forward_has_action_loss": "action_loss" in forward_keys,
+        "mowa_layerwise_bridge_coupling_enabled": (
+            framework.get("mowa_layerwise_bridge_coupling_enabled") is True
+        ),
+        "mowa_layerwise_bridge_forward_coupled": (
+            framework.get("mowa_layerwise_bridge_coupling_status")
+            == "forward_coupled_in_full_path_dry_run"
+        ),
+        "forward_has_mowa_layerwise_bridge_coupled": (
+            "mowa_layerwise_bridge_coupled" in forward_keys
+        ),
     }
     return {
         "stage": "P0",
@@ -76,7 +86,7 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
         },
         "unresolved_items": [
             "This validates StarFlowVLA ft0 + RoboCasa full-path forward smoke only.",
-            "MoWA bridge tokens are not yet coupled into LayerwiseFM.",
+            "MoWA bridge tokens are coupled only in the explicit MoWA gated dry-run config.",
             "No checkpoint/save/resume launch policy is confirmed.",
         ],
         "go_no_go": (

@@ -15,9 +15,15 @@ from starVLA.model.framework.VLM4A.StarFlowVLA import StarFlowVLA
 class _CaptureActionModel:
     def __init__(self):
         self.captured_state = None
+        self.captured_vl_shapes = None
+        self.captured_attention_mask_shape = None
 
     def __call__(self, vl_embs_list, actions, state, encoder_attention_mask=None):
         self.captured_state = state
+        self.captured_vl_shapes = [tuple(item.shape) for item in vl_embs_list]
+        self.captured_attention_mask_shape = (
+            tuple(encoder_attention_mask.shape) if encoder_attention_mask is not None else None
+        )
         return torch.tensor(0.0)
 
 
@@ -41,6 +47,17 @@ def _minimal_config(state_mode=None) -> SimpleNamespace:
 def _minimal_config_with_mowa_dtype_alignment(enabled: bool) -> SimpleNamespace:
     cfg = _minimal_config()
     cfg.framework.mowa = SimpleNamespace(enable_qwenpi_projector_dtype_alignment=enabled)
+    return cfg
+
+
+def _minimal_config_with_mowa_layerwise_coupling(enabled: bool) -> SimpleNamespace:
+    cfg = _minimal_config()
+    cfg.framework.mowa = SimpleNamespace(
+        enable_layerwise_bridge_token_coupling=enabled,
+        wam_feature_dim=4,
+        action_hidden_dim=4,
+        num_bridge_tokens=2,
+    )
     return cfg
 
 
@@ -206,6 +223,38 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model.project_layers = torch.nn.ModuleList([aligned_projector])
         model._project_vl_hidden_for_action([torch.ones(1, 1, 1, dtype=torch.bfloat16)])
         self.assertEqual(aligned_projector.seen_dtype, torch.float32)
+
+    def test_mowa_layerwise_bridge_coupling_is_opt_in(self):
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.config = _minimal_config_with_mowa_layerwise_coupling(True)
+        model.config.trainer = {"repeated_diffusion_steps": 2}
+        model.action_horizon = 8
+        model.action_dit_hidden_dim = 4
+        model.num_action_dit_layers = 2
+        model._setup_mowa_layerwise_bridge_coupling()
+        action_model = _CaptureActionModel()
+        model.action_model = action_model
+        model._encode_vl_hidden_states = lambda images, instructions: (
+            [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
+            torch.ones(1, 3, dtype=torch.bool),
+        )
+        examples = [
+            {
+                "image": [],
+                "lang": "open the drawer",
+                "action": np.zeros((8, 7), dtype=np.float32),
+            }
+        ]
+
+        output = model.forward(examples)
+
+        self.assertIn("action_loss", output)
+        self.assertTrue(output["mowa_layerwise_bridge_coupled"])
+        self.assertEqual(output["mowa_layerwise_bridge_token_shape"], (2, 2, 4))
+        self.assertEqual(output["mowa_layerwise_bridge_attention_mask_shape"], (2, 5))
+        self.assertEqual(action_model.captured_vl_shapes, [(2, 5, 4), (2, 5, 4)])
+        self.assertEqual(action_model.captured_attention_mask_shape, (2, 5))
 
 
 if __name__ == "__main__":

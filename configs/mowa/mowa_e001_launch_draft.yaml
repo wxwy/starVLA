@@ -15,6 +15,7 @@ references:
   runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
   readiness_report: docs_zh/mowa/mowa_e001_readiness_smoke.json
   production_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json
+  production_window_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
   p0_train_smoke_report: docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json
 
 data:
@@ -58,10 +59,18 @@ training:
   per_device_batch_size: TBD
   gradient_accumulation_steps: TBD
   learning_rate: TBD
-  wam_hz: Data Gate
-  history_window: Data Gate
-  future_window: Data Gate
-  action_chunk_steps: Data Gate
+  raw_action_hz: 20
+  raw_state_hz: 20
+  wam_hz: 5
+  wam_stride: 4
+  history_window_seconds: 2.0
+  history_steps: 10
+  future_window_seconds: 1.0
+  future_steps: 5
+  action_chunk_seconds: 0.5
+  action_chunk_steps: 10
+  temporal_policy_status: confirmed_for_e001_initial_target
+  temporal_policy_evidence: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
   expected_vram: TBD
   expected_runtime: TBD
 
@@ -80,7 +89,7 @@ logging:
 
 launch_blockers:
   - SOT docs 00/01/02 are not available in docs_zh/mowa
-  - production WAM Hz/window remain Data Gate
   - class_mapping_status remains Data Gate
   - runtime policy draft not confirmed
+  - batch size, expected VRAM and runtime remain TBD
   - training command not created

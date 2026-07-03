@@ -4,14 +4,29 @@ experiment_id: E-001
 config_role: runtime_policy_draft_not_confirmed
 
 resource_budget:
-  gpu_type: TBD
-  num_gpus: TBD
+  gpu_type: A100_80G
+  num_gpus: 1
   per_device_batch_size: TBD
   gradient_accumulation_steps: TBD
   effective_batch_size: TBD
   max_train_steps: TBD
   expected_vram: TBD
   expected_runtime: TBD
+
+temporal_policy:
+  raw_action_hz: 20
+  raw_state_hz: 20
+  raw_hz_evidence: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_temporal_profile.json
+  production_wam_hz: 5
+  wam_stride: 4
+  history_seconds: 2.0
+  history_steps: 10
+  future_seconds: 1.0
+  future_steps: 5
+  action_chunk_seconds: 0.5
+  action_chunk_steps: 10
+  production_window_preflight: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
+  status: confirmed_for_e001_initial_target
 
 checkpoint:
   run_root_dir: TBD
@@ -43,5 +58,7 @@ status:
   launch_ready: false
   notes:
     - Values marked target are engineering defaults for review, not measured results.
+    - Resource target is single A100 80G as confirmed by user.
+    - Temporal policy is confirmed for E-001 initial target by production-window preflight, not by full training throughput.
     - This policy does not modify checkpoint/resume/save code.
     - E-001 must not start until policy_confirmed and launch_ready are explicitly true.

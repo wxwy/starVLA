@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -98,3 +101,122 @@ class MoWAP0HeadsTest(unittest.TestCase):
             ("task_progress", "action_outcome_class"),
         )
         self.assertIn("failure_risk", future_features.masked_heads)
+
+    def test_action_bridge_exports_layerwise_condition_features(self):
+        try:
+            import torch
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.modules.mowa import (
+            MoWAActionBridge,
+            MoWAActionBridgeConfig,
+            MoWAP0FullHeads,
+            MoWAP0FullHeadsConfig,
+        )
+
+        torch.manual_seed(0)
+        p0_model = MoWAP0FullHeads(MoWAP0FullHeadsConfig(input_dim=4, hidden_dim=8))
+        bridge = MoWAActionBridge(
+            MoWAActionBridgeConfig(
+                wam_feature_dim=8,
+                action_hidden_dim=16,
+                num_action_layers=3,
+                num_bridge_tokens=2,
+            )
+        )
+        features = torch.randn(5, 4)
+        masks = {
+            "task_progress": True,
+            "manipulation_readiness": False,
+            "failure_risk": False,
+            "next_best_view_score": False,
+            "subgoal_feasibility": False,
+            "object_visibility_future": False,
+            "action_outcome_class": True,
+        }
+
+        future_features = p0_model.future_features(features, masks)
+        bridge_output = bridge(future_features)
+
+        self.assertEqual(len(bridge_output.layerwise_condition_features), 3)
+        for layer_features in bridge_output.layerwise_condition_features:
+            self.assertEqual(layer_features.shape, (5, 2, 16))
+        self.assertEqual(bridge_output.attention_mask.shape, (5, 2))
+        self.assertEqual(bridge_output.attention_mask.dtype, torch.bool)
+        self.assertEqual(
+            bridge_output.active_heads,
+            ("task_progress", "action_outcome_class"),
+        )
+        self.assertIn("failure_risk", bridge_output.masked_heads)
+
+    def test_e006_coupling_eval_plan_smoke_keeps_eval_disabled(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e006_coupling_eval_plan.yaml").write_text(
+                "config_role: eval_plan_not_launch\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_action_bridge_interface.yaml").write_text(
+                "config_role: interface_draft_not_launch\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_readiness_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "training_started": False,
+                        "checks": {"action_bridge_interface_created": True},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e006_coupling_eval_plan_smoke import (
+                build_e006_coupling_eval_plan_smoke,
+            )
+
+            report = build_e006_coupling_eval_plan_smoke(root)
+
+        self.assertFalse(report["training_started"])
+        self.assertFalse(report["eval_started"])
+        self.assertTrue(report["checks"]["plan_config_created"])
+        self.assertTrue(report["checks"]["readiness_bridge_check_passed"])
+        self.assertIn("feature_removal_bridge_tokens_zeroed", report["interventions"])
+        self.assertFalse(report["guardrails"]["modify_layerwisefm_internal_logic"])
+
+    def test_e001_launch_draft_smoke_keeps_launch_disabled(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_launch_draft.yaml").write_text(
+                "launch_ready: false\ntraining_started: false\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
+                "policy_confirmed: false\ncheckpoint_logic_change_allowed: false\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_training_command_draft.yaml").write_text(
+                "dry_run_only: true\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_a100_throughput_smoke_plan.yaml").write_text(
+                "dry_run_until_on_a100: true\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_readiness_smoke.json").write_text(
+                json.dumps({"training_started": False}),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_launch_draft_smoke import build_e001_launch_draft_smoke
+
+            report = build_e001_launch_draft_smoke(root)
+
+        self.assertFalse(report["training_started"])
+        self.assertFalse(report["launch_ready"])
+        self.assertTrue(report["checks"]["training_command_dry_run_only"])
+        self.assertTrue(report["checks"]["a100_smoke_dry_run_until_a100"])

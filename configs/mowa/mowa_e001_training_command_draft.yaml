@@ -1,0 +1,50 @@
+project_short_name: MoWA
+stage: P0
+experiment_id: E-001
+config_role: training_command_draft_not_executable
+
+launch_guard:
+  launch_ready: false
+  training_started: false
+  dry_run_only: true
+  requires_human_confirmation: true
+
+command_template:
+  entrypoint: starVLA/training/train_starvla.py
+  launcher: accelerate
+  num_processes: 1
+  mixed_precision: bf16
+  config_yaml: configs/mowa/mowa_e001_launch_draft.yaml
+  command: >-
+    .venv/bin/accelerate launch
+    --num_processes 1
+    --mixed_precision bf16
+    starVLA/training/train_starvla.py
+    --config_yaml configs/mowa/mowa_e001_launch_draft.yaml
+
+runtime_targets:
+  gpu_type: A100_80G
+  num_gpus: 1
+  raw_action_hz: 20
+  production_wam_hz: 5
+  history_steps: 10
+  future_steps: 5
+  action_chunk_steps: 10
+  per_device_batch_size: TBD
+  gradient_accumulation_steps: TBD
+  effective_batch_size: TBD
+  max_train_steps: TBD
+
+checkpoint_policy:
+  checkpoint_format: target_lightweight
+  save_interval: target_1000
+  save_checkpoint_as_directory: true
+  local_checkpoint_keep_count: target_1
+  resume_policy: target_resume_latest_complete_only
+  delete_or_overwrite_policy: no_delete_without_confirmation
+  checkpoint_logic_change_allowed: false
+
+notes:
+  - This is a command draft, not an executable launch config.
+  - The config_yaml path is a placeholder until MoWA E-001 has a real training config.
+  - Batch size, VRAM and runtime must be confirmed on A100 80G before launch_ready can become true.

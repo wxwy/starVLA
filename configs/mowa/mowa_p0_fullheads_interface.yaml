@@ -34,15 +34,14 @@ training:
   launch_ready: false
   counted_in_experiment_budget: true
   launch_blockers:
-    - E-001 launch config not created
-    - production WAM Hz/window remain Data Gate
+    - E-001 launch draft not executable
     - class_mapping_status remains Data Gate
     - checkpoint/save/resume strategy not confirmed
-    - resource budget not confirmed
+    - batch size, expected VRAM and runtime not confirmed
 data_gate:
   p0_one_step_smoke: passed
   production_preflight: passed
-  wam_hz: Data Gate
-  history_window: Data Gate
-  future_window: Data Gate
+  wam_hz: 5
+  history_window: 2.0s_10_steps
+  future_window: 1.0s_5_steps
   class_mapping: Data Gate

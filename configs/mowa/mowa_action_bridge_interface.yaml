@@ -1,0 +1,25 @@
+project_short_name: MoWA
+stage: M5
+task_id: M5-001
+config_role: interface_draft_not_launch
+bridge:
+  type: MoWAActionBridge
+  input_feature_source: P0FutureFeatures.hidden_features
+  wam_feature_dim: 32
+  action_hidden_dim: 2048
+  num_action_layers: 36
+  num_bridge_tokens: 4
+  output: layerwise_condition_features
+  attention_mask: generated_bool_mask
+integration_boundary:
+  target_action_head: LayerwiseFM
+  modify_layerwisefm_internal_logic: false
+  default_injection: append_bridge_tokens_to_condition_side
+data_gate:
+  p0_future_features: interface_ready
+  p1_future_features: Data Gate
+  production_wam_hz: 5
+  production_window: confirmed_for_e001_initial_target
+experiment:
+  e006_coupling_eval_required_before_claiming_action_gain: true
+  counted_in_experiment_budget: false

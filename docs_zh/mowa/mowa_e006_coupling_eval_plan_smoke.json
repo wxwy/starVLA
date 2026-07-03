@@ -1,0 +1,46 @@
+{
+  "stage": "M5",
+  "task_id": "M5-002",
+  "experiment_id": "E-006",
+  "experiment_name": "WAM-to-action coupling",
+  "training_started": false,
+  "eval_started": false,
+  "checks": {
+    "plan_config_created": true,
+    "action_bridge_interface_created": true,
+    "readiness_report_created": true,
+    "readiness_bridge_check_passed": true,
+    "training_not_started": true
+  },
+  "interventions": [
+    "baseline_bridge_tokens_enabled",
+    "feature_removal_bridge_tokens_zeroed",
+    "batch_shuffle_bridge_tokens_shuffled_across_batch",
+    "head_mask_control_constructible_heads_only"
+  ],
+  "metrics": {
+    "action_success_delta": "TBD",
+    "action_loss_delta": "TBD",
+    "bridge_token_norm": "TBD",
+    "latency_cost": "TBD",
+    "gpu_memory_delta": "TBD"
+  },
+  "guardrails": {
+    "modify_layerwisefm_internal_logic": false,
+    "future_action_as_wam_input": false,
+    "planner_fsm_rl_scene_graph_baselines": false,
+    "per_head_leave_one_out_sweep": false,
+    "claim_action_gain_without_feature_removal": false
+  },
+  "unresolved_items": [
+    "E-006 eval requires a trained or smoke-compatible action checkpoint",
+    "E-001 launch draft remains not executable",
+    "production WAM Hz/window remain Data Gate",
+    "runtime policy draft not confirmed"
+  ],
+  "go_no_go": "TBD: E-006 eval plan available; checkpoint/runtime remain Data Gate",
+  "notes": [
+    "This smoke only validates the eval plan and does not run E-006.",
+    "Feature removal or shuffle evidence is required before claiming action gains from MoWA bridge features."
+  ]
+}

@@ -1,0 +1,40 @@
+project_short_name: MoWA
+stage: M5
+task_id: M5-002
+experiment_id: E-006
+experiment_name: WAM-to-action coupling
+config_role: eval_plan_not_launch
+
+preconditions:
+  bridge_interface: configs/mowa/mowa_action_bridge_interface.yaml
+  readiness_report: docs_zh/mowa/mowa_e001_readiness_smoke.json
+  requires_training_checkpoint: true
+  launch_ready: false
+
+interventions:
+  baseline:
+    bridge_tokens: enabled
+    expected_role: normal MoWA action condition path
+  feature_removal:
+    bridge_tokens: zeroed
+    expected_role: test whether action path depends on MoWA features
+  batch_shuffle:
+    bridge_tokens: shuffled_across_batch
+    expected_role: test whether coupling is sample-specific rather than constant bias
+  head_mask_control:
+    bridge_tokens: constructible_heads_only
+    expected_role: keep missing P0 heads masked; no per-head sweep
+
+metrics:
+  action_success_delta: TBD
+  action_loss_delta: TBD
+  bridge_token_norm: TBD
+  latency_cost: TBD
+  gpu_memory_delta: TBD
+
+guardrails:
+  modify_layerwisefm_internal_logic: false
+  future_action_as_wam_input: false
+  planner_fsm_rl_scene_graph_baselines: false
+  per_head_leave_one_out_sweep: false
+  claim_action_gain_without_feature_removal: false

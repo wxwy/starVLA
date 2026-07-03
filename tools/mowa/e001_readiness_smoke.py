@@ -13,11 +13,17 @@ REQUIRED_REPORTS = {
     "production_preflight": Path(
         "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json"
     ),
+    "production_window_preflight": Path(
+        "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json"
+    ),
     "p0_train_smoke": Path("docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json"),
 }
 P0_FULLHEADS_INTERFACE_CONFIG = Path("configs/mowa/mowa_p0_fullheads_interface.yaml")
 E001_LAUNCH_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_launch_draft.yaml")
 E001_RUNTIME_POLICY_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
+MOWA_ACTION_BRIDGE_INTERFACE_CONFIG = Path("configs/mowa/mowa_action_bridge_interface.yaml")
+E001_TRAINING_COMMAND_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_training_command_draft.yaml")
+E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG = Path("configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml")
 
 
 def parse_args() -> argparse.Namespace:
@@ -57,6 +63,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
 
     recipe = reports.get("recipe") or {}
     preflight = reports.get("production_preflight") or {}
+    window_preflight = reports.get("production_window_preflight") or {}
     p0_smoke = reports.get("p0_train_smoke") or {}
 
     checks = {
@@ -74,6 +81,12 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             and float(p0_smoke.get("loss_after", 1.0))
             <= float(p0_smoke.get("loss_before", 0.0))
         ),
+        "production_window_5hz_preflight_passed": (
+            window_preflight.get("split_status") == "smoke_passed"
+            and window_preflight.get("worker_status") == "smoke_passed"
+            and window_preflight.get("future_action_leakage_status") == "smoke_passed"
+            and window_preflight.get("failed_sample_count") == 0
+        ),
         "p0_fullheads_interface_created": (root / P0_FULLHEADS_INTERFACE_CONFIG).is_file(),
         "e001_launch_draft_created": (root / E001_LAUNCH_DRAFT_CONFIG).is_file(),
         "e001_launch_ready_false": _text_contains(
@@ -85,6 +98,15 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             root / E001_RUNTIME_POLICY_DRAFT_CONFIG,
             "policy_confirmed: false",
         ),
+        "action_bridge_interface_created": (root / MOWA_ACTION_BRIDGE_INTERFACE_CONFIG).is_file(),
+        "training_command_draft_created": (root / E001_TRAINING_COMMAND_DRAFT_CONFIG).is_file(),
+        "training_command_dry_run_only": _text_contains(
+            root / E001_TRAINING_COMMAND_DRAFT_CONFIG,
+            "dry_run_only: true",
+        ),
+        "a100_throughput_smoke_plan_created": (
+            root / E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG
+        ).is_file(),
     }
 
     unresolved_items = []
@@ -95,10 +117,10 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
     unresolved_items.extend(
         [
             "E-001 launch draft is not executable",
-            "production WAM Hz/window remain Data Gate",
             "class_mapping_status remains Data Gate",
             "runtime policy draft not confirmed",
-            "resource budget remains TBD",
+            "batch size, expected VRAM and runtime remain TBD",
+            "A100 throughput smoke not executed on current 4090 24G machine",
         ]
     )
 
@@ -119,6 +141,13 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "distributed_overlap_count": preflight.get("distributed_overlap_count"),
             "worker_sample_count": preflight.get("worker_sample_count"),
             "failed_sample_count": preflight.get("failed_sample_count"),
+            "production_wam_hz": 5,
+            "raw_action_hz": 20,
+            "wam_stride": 4,
+            "history_steps": (window_preflight.get("window_config") or {}).get("history_steps"),
+            "future_steps": (window_preflight.get("window_config") or {}).get("future_steps"),
+            "action_chunk_steps": (window_preflight.get("window_config") or {}).get("action_chunk_steps"),
+            "production_window_preflight_report": str(REQUIRED_REPORTS["production_window_preflight"]),
             "p0_smoke_sample_count": p0_smoke.get("sample_count"),
             "loss_before": p0_smoke.get("loss_before"),
             "loss_after": p0_smoke.get("loss_after"),
@@ -126,10 +155,13 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "p0_fullheads_interface_config": str(P0_FULLHEADS_INTERFACE_CONFIG),
             "e001_launch_draft_config": str(E001_LAUNCH_DRAFT_CONFIG),
             "e001_runtime_policy_draft_config": str(E001_RUNTIME_POLICY_DRAFT_CONFIG),
+            "mowa_action_bridge_interface_config": str(MOWA_ACTION_BRIDGE_INTERFACE_CONFIG),
+            "e001_training_command_draft_config": str(E001_TRAINING_COMMAND_DRAFT_CONFIG),
+            "e001_a100_throughput_smoke_plan_config": str(E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG),
         },
         "unresolved_items": unresolved_items,
         "go_no_go": (
-            "TBD: E-001 prerequisites mostly passed; launch draft exists but resource/save-resume remain Data Gate"
+            "TBD: E-001 prerequisites mostly passed; launch draft exists but runtime/batch/save-resume remain Data Gate"
             if ready_for_launch
             else "No-Go: E-001 prerequisites incomplete"
         ),

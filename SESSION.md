@@ -16,7 +16,7 @@
   - 10 项 profile / P0 label coverage / latent cache manifest smoke 已逐任务重跑，30 个命令全部通过；latent manifest 的 OpenDrawer 代表性检查 missing_video_count=0。
   - batch dataloader smoke：10 个任务、30 个 sampled windows，通过 future action target-only 检查。
   - metadata leakage gate：5055 个 episode、15165 个 anchor windows、failed_window_count=0。
-  - temporal profile：5055 个 parquet、1342150 行，metadata_total_frames 与 parquet_total_rows 对齐；WAM Hz/window 仍不冻结。
+  - temporal profile：5055 个 parquet、1342150 行，metadata_total_frames 与 parquet_total_rows 对齐；raw action/state Hz 依据 timestamp delta 约 20Hz。
   - production-entry preflight smoke：train_episode_count=4544、val_episode_count=511、split_overlap_count=0、distributed_overlap_count=0、worker_sample_count=16、failed_sample_count=0；仍不启动 E-001。
 - 真实 label builder 阈值 / class mapping、生产 dataloader workers、真实 latent cache 仍为 Data Gate。
 - P0 ConstructibleHeads 最小训练入口已完成代码准备：
@@ -39,6 +39,27 @@
 - E-001 runtime policy draft 已创建：
   - `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 明确 `policy_confirmed=false`、`launch_ready=false`。
   - 草案记录 checkpoint target、resume target、logging target 和资源预算 TBD，不修改 checkpoint/resume/save 代码。
+- E-001 初始 production temporal/resource target 已确认：
+  - 用户确认训练资源为单卡 A100 80G；已记录到 runtime policy 草案，但 batch size、expected VRAM、expected runtime 仍为 TBD。
+  - 初始 temporal policy：raw_action_hz=20、production_wam_hz=5、wam_stride=4、history_seconds=2.0/history_steps=10、future_seconds=1.0/future_steps=5、action_chunk_seconds=0.5/action_chunk_steps=10。
+  - 已用 `g0_production_preflight_smoke.py` 按 10/5/10 窗口生成 `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json`：worker_sample_count=32、failed_sample_count=0、future_action_leakage_status=`smoke_passed`。
+  - `tools/mowa/e001_readiness_smoke.py` 已重跑，报告显示 `production_window_5hz_preflight_passed=true`；E-001 仍不启动。
+- E-001 launch / throughput 草案已补齐：
+  - `configs/mowa/mowa_e001_training_command_draft.yaml` 记录 dry-run-only 的单卡 accelerate 命令草案，`launch_ready=false`、`training_started=false`。
+  - `configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml` 记录 A100 80G throughput smoke 计划，候选 batch 为 1/2/4/8，当前只作计划，不在 4090 24G 上写实测结论。
+  - `tools/mowa/e001_launch_draft_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_launch_draft_smoke.json`，确认 training command draft、A100 throughput plan、runtime policy 均存在且保持不可执行。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 已通过 5 项测试，用时 4.015s。
+- M5-001 MoWAActionBridge interface draft 已完成：
+  - `starVLA/model/modules/mowa/action_bridge.py` 新增 `MoWAActionBridge`、`MoWAActionBridgeConfig`、`MoWAActionBridgeOutput`。
+  - `configs/mowa/mowa_action_bridge_interface.yaml` 记录 bridge 输出为 `layerwise_condition_features`，默认仅作为 LayerwiseFM 条件侧 token 接口，不改 `LayerwiseFM_ActionHeader.py` 内部逻辑。
+  - `.venv/bin/python -m py_compile starVLA/model/modules/mowa/action_bridge.py starVLA/model/modules/mowa/__init__.py tests/mowa/test_mowa_p0_heads.py tools/mowa/e001_readiness_smoke.py` 已通过。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 已通过 3 项测试，用时 8.502s。
+  - `tools/mowa/e001_readiness_smoke.py` 已重跑，报告显示 `action_bridge_interface_created=true`；E-001 仍因 runtime policy / 资源预算 / WAM Hz-window 等保持不可启动。
+- M5-002 E-006 coupling / feature removal eval plan 已完成：
+  - `configs/mowa/mowa_e006_coupling_eval_plan.yaml` 记录 baseline、feature removal、batch shuffle、head mask control 四类 intervention。
+  - `tools/mowa/e006_coupling_eval_plan_smoke.py` 生成 `docs_zh/mowa/mowa_e006_coupling_eval_plan_smoke.json`，确认 plan/readiness/bridge 前置项存在，且 `training_started=false`、`eval_started=false`。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 已通过 4 项测试，用时 3.675s。
+  - E-006 仍需要训练 checkpoint 或 smoke-compatible action checkpoint；当前不启动 eval、不计入训练。
 
 ## 进行中的任务
 - 2026-07-01 已完成 10 个 target/human/atomic core 任务下载、G0 复验、production-entry preflight、P0 one-step smoke 和 E-001 readiness smoke。
@@ -46,5 +67,7 @@
 
 ## 下一步
 - 若继续推进 P0，先确认是否将 `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 与 `configs/mowa/mowa_e001_launch_draft.yaml` 从不可执行草案推进为可执行配置；主训练前仍需确认资源预算和 checkpoint/save/resume 策略。
-- 训练入口必须显式引用 G0 temporal profile，但不得把 WAM Hz/window 当作已冻结结论。
+- 在 4090 24G 上不确认 A100 batch/显存/吞吐；切到 A100 后先运行 throughput smoke，再填写 batch size、expected VRAM、expected runtime。
+- 若继续推进 M5/E-006，必须先有可评测 checkpoint/runtime；在 action 指标收益声明前必须完成 feature removal / shuffle 证据。
+- 训练入口必须显式引用 G0 temporal profile 与 5Hz production-window preflight；batch size、显存、训练时长仍需 throughput smoke 后确认。
 - 真实 Wan latent cache builder 仍需单独放行。

@@ -1,5 +1,10 @@
 """MoWA model modules."""
 
+from .action_bridge import (
+    MoWAActionBridge,
+    MoWAActionBridgeConfig,
+    MoWAActionBridgeOutput,
+)
 from .p0_heads import (
     MOWA_P0_CONSTRUCTIBLE_HEADS,
     MOWA_P0_FULL_HEADS,
@@ -15,6 +20,9 @@ from .p0_heads import (
 __all__ = [
     "MOWA_P0_CONSTRUCTIBLE_HEADS",
     "MOWA_P0_FULL_HEADS",
+    "MoWAActionBridge",
+    "MoWAActionBridgeConfig",
+    "MoWAActionBridgeOutput",
     "P0FutureFeatures",
     "MoWAP0ConstructibleHeads",
     "MoWAP0ConstructibleHeadsConfig",

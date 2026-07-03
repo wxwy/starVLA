@@ -1,0 +1,41 @@
+project_short_name: MoWA
+stage: P0
+experiment_id: E-001
+config_role: a100_throughput_smoke_plan_not_launch
+
+resource_target:
+  gpu_type: A100_80G
+  num_gpus: 1
+
+temporal_policy:
+  raw_action_hz: 20
+  production_wam_hz: 5
+  wam_stride: 4
+  history_steps: 10
+  future_steps: 5
+  action_chunk_steps: 10
+
+candidate_batches:
+  per_device_batch_size_candidates: [1, 2, 4, 8]
+  gradient_accumulation_candidates: [1, 2, 4, 8]
+  stop_on_first_oom: true
+  max_smoke_steps_per_candidate: 3
+
+measurements:
+  peak_vram_gb: TBD
+  step_time_sec: TBD
+  samples_per_sec: TBD
+  dataloader_wait_sec: TBD
+  stable_candidate: TBD
+
+guardrails:
+  launch_ready: false
+  training_started: false
+  dry_run_until_on_a100: true
+  save_checkpoint_during_smoke: false
+  modify_checkpoint_logic: false
+  claim_runtime_without_a100_measurement: false
+
+expected_output:
+  report_path: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
+  status_before_a100: Data Gate

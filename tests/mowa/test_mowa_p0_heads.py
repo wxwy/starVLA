@@ -247,11 +247,28 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "name": "QwenOFT",
                             "mowa_action_bridge_probe_enabled": True,
                             "mowa_p0_supervision_probe_enabled": True,
-                            "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run",
+                            "mowa_p0_supervision_label_status": "forward_evaluated_in_full_path_dry_run",
                         },
                         "data": {
                             "data_mix": "robocasa365_open_drawer_target_human",
-                            "batch_summary": {"fetched": True},
+                            "mowa_p0_labels_enabled": True,
+                            "batch_summary": {
+                                "fetched": True,
+                                "first_item_keys": [
+                                    "action",
+                                    "image",
+                                    "lang",
+                                    "mowa_p0_masks",
+                                    "mowa_p0_targets",
+                                ],
+                            },
+                        },
+                        "forward": {
+                            "evaluated": True,
+                            "keys": [
+                                "action_loss",
+                                "mowa_p0_supervision_loss",
+                            ],
                         },
                     }
                 ),
@@ -268,7 +285,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["training_not_started"])
         self.assertTrue(report["checks"]["checkpoint_not_saved"])
         self.assertTrue(report["checks"]["mowa_p0_supervision_probe_enabled"])
-        self.assertTrue(report["checks"]["mowa_p0_supervision_labels_not_evaluated"])
+        self.assertTrue(report["checks"]["mowa_p0_supervision_labels_forward_evaluated"])
+        self.assertTrue(report["checks"]["batch_has_mowa_p0_targets"])
+        self.assertTrue(report["checks"]["forward_has_mowa_p0_supervision_loss"])
         self.assertTrue(report["checks"]["batch_fetched"])
 
     def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):

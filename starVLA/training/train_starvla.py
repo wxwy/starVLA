@@ -711,7 +711,7 @@ def _summarize_batch(batch) -> dict:
             summary["first_item_type"] = type(first).__name__
             if isinstance(first, dict):
                 summary["first_item_keys"] = sorted(str(key) for key in first.keys())
-                for key in ("image", "lang", "action", "state"):
+                for key in ("image", "lang", "action", "state", "mowa_p0_targets", "mowa_p0_masks", "mowa_p0_metadata"):
                     if key in first:
                         value = first[key]
                         value_summary = {"type": type(value).__name__}
@@ -719,9 +719,32 @@ def _summarize_batch(batch) -> dict:
                             value_summary["shape"] = list(value.shape)
                         elif isinstance(value, (list, tuple)):
                             value_summary["length"] = len(value)
+                        elif isinstance(value, dict):
+                            value_summary["keys"] = sorted(str(item_key) for item_key in value.keys())
                         summary[f"first_item_{key}"] = value_summary
     elif isinstance(batch, dict):
         summary["keys"] = sorted(str(key) for key in batch.keys())
+    return summary
+
+
+def _summarize_forward_output(output_dict: dict | None) -> dict:
+    if output_dict is None:
+        return {"evaluated": False}
+
+    summary = {"evaluated": True, "keys": sorted(str(key) for key in output_dict.keys())}
+    for key, value in output_dict.items():
+        if hasattr(value, "detach"):
+            detached = value.detach()
+            if detached.numel() == 1:
+                summary[key] = float(detached.float().cpu().item())
+            else:
+                summary[key] = {"shape": list(detached.shape)}
+        elif isinstance(value, (list, tuple)):
+            summary[key] = list(value)
+        elif isinstance(value, dict):
+            summary[key] = sorted(str(item_key) for item_key in value.keys())
+        else:
+            summary[key] = value
     return summary
 
 
@@ -734,6 +757,7 @@ def _write_full_path_dry_run_report(
     optimizer,
     trainer,
     batch_summary: dict | None,
+    forward_summary: dict | None,
 ) -> None:
     report_path = Path(
         getattr(
@@ -768,7 +792,11 @@ def _write_full_path_dry_run_report(
             "mowa_p0_supervision_active_heads": list(
                 getattr(model, "mowa_p0_supervision_active_heads", ())
             ),
-            "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run",
+            "mowa_p0_supervision_label_status": (
+                "forward_evaluated_in_full_path_dry_run"
+                if "mowa_p0_supervision_loss" in ((forward_summary or {}).get("keys") or [])
+                else "not_evaluated_in_full_path_dry_run"
+            ),
         },
         "data": {
             "dataset_py": cfg.datasets.vla_data.dataset_py,
@@ -777,6 +805,7 @@ def _write_full_path_dry_run_report(
             "per_device_batch_size": int(cfg.datasets.vla_data.per_device_batch_size),
             "dataloader_type": type(dataloader).__name__,
             "dataloader_length": len(dataloader) if hasattr(dataloader, "__len__") else None,
+            "mowa_p0_labels_enabled": bool(getattr(cfg.datasets.vla_data, "enable_mowa_p0_labels", False)),
             "batch_summary": batch_summary or {"fetched": False},
         },
         "optimizer": {
@@ -792,6 +821,7 @@ def _write_full_path_dry_run_report(
             "save_interval": int(cfg.trainer.save_interval),
             "eval_interval": int(cfg.trainer.eval_interval),
         },
+        "forward": forward_summary or {"evaluated": False},
         "go_no_go": "TBD: train_starvla full-path dry-run passed; training remains gated",
         "notes": [
             "This dry-run stops before prepare_training(), wandb, checkpoint loading, checkpoint saving, and train().",
@@ -2057,8 +2087,14 @@ def main(cfg) -> None:
 
     if full_path_dry_run_only:
         batch_summary = None
+        forward_summary = None
         if bool(getattr(cfg.trainer, "full_path_dry_run_fetch_batch", False)):
-            batch_summary = _summarize_batch(next(iter(vla_train_dataloader)))
+            batch = next(iter(vla_train_dataloader))
+            batch_summary = _summarize_batch(batch)
+            if bool(getattr(cfg.trainer, "full_path_dry_run_forward_batch", False)):
+                vla.eval()
+                with torch.no_grad():
+                    forward_summary = _summarize_forward_output(vla(batch))
         _write_full_path_dry_run_report(
             cfg,
             output_dir=output_dir,
@@ -2067,6 +2103,7 @@ def main(cfg) -> None:
             optimizer=optimizer,
             trainer=trainer,
             batch_summary=batch_summary,
+            forward_summary=forward_summary,
         )
         logger.info("MoWA E-001 train_starvla full-path dry-run complete; training skipped.")
         if dist.is_initialized():

@@ -44,10 +44,12 @@ datasets:
     obs_image_size: [224, 224]
     delete_pause_frame: false
     video_backend: torchvision_av
+    enable_mowa_p0_labels: true
 
 trainer:
   full_path_dry_run_only: true
   full_path_dry_run_fetch_batch: true
+  full_path_dry_run_forward_batch: true
   full_path_dry_run_report: docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json
   max_train_steps: 1
   num_warmup_steps: 0

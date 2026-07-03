@@ -208,6 +208,7 @@ class Qwenvl_OFT(baseframework):
             action_queries = self._gather_action_token_embeddings(
                 last_hidden, input_ids, action_token_id=self.action_token_id
             )  # [B, chunk_len, H]
+            action_queries = action_queries.to(dtype=next(self.action_model.parameters()).dtype)
             pred_actions = self.action_model.predict_action(action_queries)  # (B, chunk_len, action_dim)
             mowa_p0_probe = self._maybe_run_mowa_p0_supervision_probe(action_queries, examples)
             mowa_probe = self._maybe_run_mowa_action_bridge_probe(action_queries)

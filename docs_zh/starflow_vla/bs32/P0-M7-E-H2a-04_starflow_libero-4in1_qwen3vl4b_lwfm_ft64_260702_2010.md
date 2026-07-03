@@ -326,7 +326,7 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 - 本实验验证 `num_target_vision_tokens=64`（默认 32）对 StarFlowVLA 动作学习的影响。
 - **当前 run 为 FRESH START**，从 step 0 开始全新训练。
-- **于 2026-07-03 ~10:20 被手动停止**（最后 WandB 日志 step 5480），为 H2a-02（ft16）腾出 GPU 资源。最终完成 6.9%。
+- **于 2026-07-03 ~10:24 被手动停止**（最后 WandB 日志 step 5480），为 H2a-02（ft16）腾出 GPU 资源。最终完成 6.9%。
 - RTX 4090 24GB 显存使用率 96.9%，全程未 OOM；per_device_batch_size=8 已接近显存上限。
 - 单步耗时 ~9.2 s/it，模型前向/反向耗时 ~2.35 s（per micro-step，8 条样本）。
 - checkpoint 每 250 steps 正常保存，共 22 个；`/localdisk-tmp` → `/disk/rl` 后台同步正常。

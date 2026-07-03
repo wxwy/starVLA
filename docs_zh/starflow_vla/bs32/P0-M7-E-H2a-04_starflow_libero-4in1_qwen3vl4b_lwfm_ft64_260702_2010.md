@@ -1,11 +1,11 @@
 # P0-M7-E-H2a-04: StarFlow LIBERO 4-in-1 Qwen3VL-4B future_tokens=64（bs32）
 
 > **实验代号**: E-H2a-04 / P0-M7  
-> **状态**: 🟢 训练运行中  
+> **状态**: 🔴 已停止（被 H2a-02 ft16 替代）  
 > **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
 > **启动时间**: 2026-07-02 20:16:02 CST  
-> **当前更新**: 2026-07-03 09:28:00 CST  
-> **tmux 会话**: `train`（attached）  
+> **停止时间**: 2026-07-03 10:18:31 CST  
+> **当前更新**: 2026-07-03 10:30:00 CST  
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_64.yaml`
 
 ---
@@ -14,7 +14,9 @@
 
 P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `num_target_vision_tokens` 从默认 32 提升至 **64**，验证更多目标视觉 token 对 LIBERO 4-in-1 连续动作学习的收敛与显存影响。
 
-本 run 为 **从 scratch 全新训练**（`is_resume=False`），使用 A100 bs32 配置（per_device_batch_size=8 × gradient_accumulation_steps=4）。
+本 run 为 **从 scratch 全新训练**（`is_resume=False`），使用 bs32 配置（per_device_batch_size=8 × gradient_accumulation_steps=4）。
+
+> ⚠️ 本实验于 2026-07-03 10:18 左右被手动停止，为 H2a-02（future_tokens=16, per_device_batch_size=1, grad_accum=32）腾出 GPU 资源。最终 step = **5460**（6.8%），未跑完目标 80000 steps。
 
 ---
 
@@ -40,8 +42,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | `WANDB_PROJECT` | `starflow_vla` |
 | `WANDB_ENTITY` | `silencewx-harbin-institute-of-technology` |
 | `is_resume` | **`False`**（从 scratch） |
-| 设备 | NVIDIA A100-SXM4-80GB（81920 MiB） |
-| 单价 | 本地 A100，暂不记录 |
+| 设备 | NVIDIA GeForce RTX 4090（24564 MiB） |
+| 单价 | 本地 RTX 4090，暂不记录 |
 
 ### 模型 / 优化器参数
 
@@ -90,96 +92,143 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ---
 
-## 训练进度
+## 训练进度（最终状态）
 
-> 最后更新：2026-07-03 08:28:00 CST
+> 最后更新：2026-07-03 10:30:00 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **~5137 / 80000**（6.4%，估算） |
-| **完成比例** | 6.4% |
-| **单步耗时** | ~9.2 s/it（历史数据） |
-| **数据加载耗时** | 无法获取（远端机器） |
-| **模型前向/反向耗时** | 无法获取（远端机器） |
-| **已运行时间** | 约 13 小时 12 分钟 |
-| **预计剩余时间** | ~190 小时（约 7.9 天） |
-| **最新 checkpoint** | `steps_5000`（09:07） |
-| **上一个 checkpoint** | `steps_4750`（08:29） |
-| **上一个 checkpoint** | `steps_3500` |
+| **最终 Step** | **5460 / 80000**（6.8%） |
+| **完成比例** | 6.8% |
+| **单步耗时** | ~9.2 s/it（全程稳定） |
+| **模型前向/反向耗时** | ~2.35 s（per micro-step） |
+| **数据加载耗时** | ~0.0003 s（可忽略） |
+| **已运行时间** | 约 14 小时 2 分钟（Jul 2 20:16 → Jul 3 10:18） |
+| **若跑完 80000 steps 需时** | ~204 小时（约 8.5 天） |
+| **最后 checkpoint** | `steps_5250`（09:07） |
+| **最终 logged step** | `5460`（10:18:31） |
 
-### Loss 记录（部分）
+### Loss 记录
 
-| Step | action_dit_loss | last_micro_loss | 备注 |
-|------|----------------|-----------------|------|
-| 20 | 1.1153 | 1.0858 | 初始 |
-| 100 | 0.5190 | 0.6180 | |
-| 200 | 0.3668 | 0.3663 | |
-| 300 | 0.2850 | 0.3069 | |
-| 400 | 0.2944 | 0.2652 | |
-| 500 | 0.2416 | 0.2043 | 含 eval mse_score=0.0116 |
-| 600 | 0.2089 | 0.2109 | |
-| 700 | 0.2308 | 0.1945 | |
-| 800 | 0.1835 | 0.2135 | |
-| 900 | 0.1970 | 0.2313 | |
-| 1000 | 0.1776 | 0.2217 | 含 eval mse_score=0.0099 |
-| 1500 | 0.1704 | 0.1852 | 含 eval mse_score=0.0131 |
-| 2000 | 0.1629 | 0.1679 | |
-| 2500 | 0.1542 | 0.1837 | |
-| 3000 | 0.1704 | 0.1852 | |
-| 3500 | 0.1629 | 0.1679 | |
-| 3750 | 0.1122 | 0.1134 | 含 eval mse_score=0.0131 |
-| 3880 | 0.1158 | 0.1626 | |
-| 3900 | 0.1149 | 0.1319 | |
-| 3920 | 0.1272 | 0.0924 | |
-| 3940 | 0.1397 | 0.1257 | 🔵 当前 |
-| **250** | — | — | ✅ checkpoint |
-| **500** | — | — | ✅ checkpoint |
-| **750** | — | — | ✅ checkpoint |
-| **1000** | — | — | ✅ checkpoint |
-| **1250** | — | — | ✅ checkpoint |
-| **1500** | — | — | ✅ checkpoint |
-| **1750** | — | — | ✅ checkpoint |
-| **2000** | — | — | ✅ checkpoint |
-| **2250** | — | — | ✅ checkpoint |
-| **2500** | — | — | ✅ checkpoint |
-| **2750** | — | — | ✅ checkpoint |
-| **3000** | — | — | ✅ checkpoint |
-| **3250** | — | — | ✅ checkpoint |
-| **3500** | — | — | ✅ checkpoint |
-| **3750** | — | — | ✅ checkpoint |
+| Step | action_dit_loss | 备注 |
+|------|----------------|------|
+| 20 | 1.1153 | 初始 |
+| 100 | 0.5190 | |
+| 200 | 0.3668 | |
+| 300 | 0.2850 | |
+| 400 | 0.2944 | |
+| 500 | 0.2416 | eval mse_score=0.0116 |
+| 600 | 0.2089 | |
+| 700 | 0.2308 | |
+| 800 | 0.1835 | |
+| 900 | 0.1970 | |
+| 1000 | 0.1776 | eval mse_score=0.0099 |
+| 1500 | 0.1704 | eval mse_score=0.0131 |
+| 2000 | 0.1629 | |
+| 2500 | 0.1542 | |
+| 3000 | 0.1704 | |
+| 3500 | 0.1629 | |
+| 3750 | 0.1122 | eval mse_score=0.0131 |
+| 4000 | 0.1319 | checkpoint |
+| 4250 | 0.1089 | checkpoint |
+| 4500 | 0.1153 | checkpoint |
+| 4750 | 0.1222 | checkpoint |
+| 4880 | 0.1267 | |
+| 4900 | 0.1235 | |
+| 4920 | 0.1112 | |
+| 4940 | 0.1036 | |
+| 4960 | 0.1206 | |
+| 4980 | 0.1182 | |
+| **5000** | **0.1663** | ⚠️ spike；eval mse_score=**0.00837**（最佳） |
+| 5020 | 0.1352 | |
+| 5040 | 0.1093 | |
+| 5060 | 0.1261 | |
+| 5080 | 0.1248 | |
+| 5100 | 0.1233 | |
+| 5120 | 0.1229 | |
+| 5140 | 0.1135 | |
+| 5160 | 0.1339 | |
+| 5180 | 0.1191 | |
+| 5200 | 0.1284 | |
+| 5220 | 0.1195 | |
+| 5240 | 0.0996 | |
+| **5250** | — | ✅ checkpoint |
+| 5260 | 0.1322 | |
+| 5280 | 0.1050 | |
+| **5300** | **0.09397** | 🏆 最低 loss |
+| 5320 | 0.1313 | |
+| 5340 | 0.09686 | |
+| 5380 | 0.1137 | |
+| 5400 | 0.1143 | |
+| 5420 | 0.1100 | |
+| 5440 | 0.1241 | |
+| **5460** | **0.1211** | 🔴 最终记录 |
 
-### Loss 趋势
+### 完整 Checkpoint 列表（21 个）
 
-- 初始 loss 1.12 → 快速下降至 0.24 附近（step 500）
-- `action_dit_loss` 在 step 2000–3880 区间整体稳定在 0.11–0.17，最低下探至 0.112（step 3750）
-- eval `mse_score`: step 500 为 0.0116，step 1000 为 0.0099，step 1500/3750 约为 0.0131；eval 指标存在波动
-- `last_micro_loss` 与 `action_dit_loss` 差异较小（grad_accum=4，micro-batch 间方差相对可控）
-- 学习率从初始值缓慢下降（cosine schedule）
+| Step | 保存时间 |
+|------|----------|
+| 250 | Jul 2 20:54 |
+| 500 | Jul 2 21:33 |
+| 750 | Jul 2 22:11 |
+| 1000 | Jul 2 22:50 |
+| 1250 | Jul 2 23:28 |
+| 1500 | Jul 3 00:07 |
+| 1750 | Jul 3 00:46 |
+| 2000 | Jul 3 01:24 |
+| 2250 | Jul 3 02:03 |
+| 2500 | Jul 3 02:41 |
+| 2750 | Jul 3 03:20 |
+| 3000 | Jul 3 03:58 |
+| 3250 | Jul 3 04:37 |
+| 3500 | Jul 3 05:16 |
+| 3750 | Jul 3 05:54 |
+| 4000 | Jul 3 06:33 |
+| 4250 | Jul 3 07:11 |
+| 4500 | Jul 3 07:50 |
+| 4750 | Jul 3 08:29 |
+| 5000 | Jul 3 09:07 |
+| **5250** | Jul 3 ~09:43 |
+
+> 每 250 steps 正常保存，无遗漏。未保存 steps_5460（训练在 5460 之后被 kill，未到 5500 保存点）。
+
+### Loss 趋势分析
+
+- **Phase 1（0–500）**: 快速下降 1.12 → 0.24，网络迅速学习动作分布
+- **Phase 2（500–3750）**: 震荡下降至 0.11–0.17 区间；eval mse_score 在 0.0099–0.0131 之间
+- **Phase 3（3750–5460）**: loss 进一步下探，最低达 **0.09397（step 5300）**，整体在 0.10–0.13 震荡
+- **eval mse_score**: best = **0.00837（step 5000）**；整体在 0.008–0.013 之间波动，呈下降趋势
+- **学习率**: action_model 从 1e-4 缓慢 cosine 衰减至 ~9.89e-5（step ~5400）；base 从 2.5e-5 衰减至 ~2.47e-5
+- **last_micro_loss** 方差中等，grad_accum=4 时 micro-batch 间差异可控
 
 ---
 
-## 系统资源占用
+## 系统资源占用（运行中采样）
 
-> 最后更新：2026-07-03 06:24:51 CST
+> 以下均为 H2a-04 运行期间的资源占用快照。
 
-### GPU（NVIDIA A100-SXM4-80GB）
+### GPU（NVIDIA GeForce RTX 4090）
 
-| 指标 | 值 |
-|------|-----|
+| 指标 | 值（H2a-04 运行中） |
+|------|---------------------|
 | **GPU 利用率** | 100% |
-| **显存使用** | 64,269 MiB / 81,920 MiB（78.5%） |
-| **显存空闲** | 16,884 MiB |
-| **功耗** | 320.57 W / 400.00 W |
-| **温度** | 56°C |
+| **显存使用** | ~23,800 MiB / 24,564 MiB（96.9%） |
+| **显存空闲** | ~800 MiB |
+| **功耗** | ~280–291 W / 300 W |
+| **温度** | ~70°C |
+
+> ⚠️ **更正**：原日志错误标注 GPU 为 "A100-SXM4-80GB"，实为 **NVIDIA GeForce RTX 4090（24564 MiB）**。24GB VRAM 下 bs32（per_device=8 × grad_accum=4）已接近显存上限（96.9%），但全程未 OOM。原日志"64,269 MiB / 81,920 MiB"为错误数据。
 
 ### Docker 内存（cgroup v2）
 
 | 指标 | 值 |
 |------|-----|
-| **Docker 内存上限** | 120 GiB |
-| **当前已用** | 33.62 GiB |
-| **使用率** | 28.0% |
+| **Docker 内存上限** | **56 GiB**（60129542144 bytes） |
+| **H2a-04 运行中已用** | ~33.6 GiB |
+| **使用率** | ~60% |
 | **Swap** | 0 B |
+
+> ⚠️ **更正**：原日志错误标注 Docker 上限为 120 GiB，实际 cgroup v2 `memory.max` = **56 GiB**。
 
 ### 存储
 
@@ -196,9 +245,10 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | 项目 | 计算 |
 |------|------|
 | **每 step 耗时** | ~9.2 s/it |
-| **每 step 成本** | 本地 A100，暂不记录 |
-| **已运行时间** | ~10.1 小时 |
+| **已运行时间** | ~14 小时 |
+| **完成 step 数** | 5,460 |
 | **完整 80000 steps 预估** | 80000 × 9.2s ≈ 204h ≈ 8.5 天 |
+| **每 step 成本** | 本地 RTX 4090，免费 |
 
 ---
 
@@ -226,7 +276,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 │   ├── steps_4250/
 │   ├── steps_4500/
 │   ├── steps_4750/
-│   └── steps_5000/
+│   ├── steps_5000/
+│   └── steps_5250/    ← 最后 checkpoint
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -241,7 +292,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 ## 相关链接
 
 - **WandB Run**: [260702_2010](https://wandb.ai/silencewx-harbin-institute-of-technology/starflow_vla/runs/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010)
-- **tmux 会话**: `train`
+- **后续实验**: H2a-02（future_tokens=16, bs32 via per_device=1 × grad_accum=32），当前在 tmux `train` 中运行
 
 ---
 
@@ -272,12 +323,14 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 - 本实验验证 `num_target_vision_tokens=64`（默认 32）对 StarFlowVLA 动作学习的影响。
 - **当前 run 为 FRESH START**，从 step 0 开始全新训练。
-- A100 80GB 显存使用率 78.5%（64.3G/80G），余量 ~16.9G，尚未 OOM；GPU 利用率维持 100%。
-- 单步耗时 ~9.2 s/it；模型前向/反向耗时 ~2.35 s（per_device_batch_size=8，单次 micro-step 处理 8 条样本）。
-- checkpoint 每 250 steps 正常保存，已保存至 `steps_3750`；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
+- **于 2026-07-03 10:18 被手动停止**（step 5460），为 H2a-02（ft16）腾出 GPU 资源。最终完成 6.8%。
+- RTX 4090 24GB 显存使用率 96.9%，全程未 OOM；per_device_batch_size=8 已接近显存上限。
+- 单步耗时 ~9.2 s/it，模型前向/反向耗时 ~2.35 s（per micro-step，8 条样本）。
+- checkpoint 每 250 steps 正常保存，共 21 个；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
 - 训练日志中出现三次数据读取异常（index 30578、45269、120829: `Invalid data found when processing input`），均自动 retry 后未中断。
-- loss 从 1.12 快速下降至 0.24 后，在 step 2000–3940 区间整体稳定在 0.11–0.17；eval `mse_score` 在 0.0099–0.0131 之间波动，长程收敛需继续观察。
+- loss 从 1.12 快速下降，最低 **0.09397（step 5300）**；eval mse_score 最低 **0.00837（step 5000）**。
+- 本 run 可提供 ft64 在 LIBERO 4-in-1 上的 loss 曲线参考，后续如有需要可从 steps_5250 checkpoint 恢复训练。
 
 ---
 
-*本文档将持续更新。*
+*本文档已停止更新（实验已终止，被 H2a-02 替代）。*

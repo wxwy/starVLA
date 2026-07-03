@@ -17,6 +17,11 @@
     "command_points_to_training_smoke_config": true,
     "command_still_tbd_entrypoint": true,
     "runtime_policy_unconfirmed": true,
+    "checkpoint_policy_confirmed": true,
+    "logging_policy_confirmed": true,
+    "resource_policy_unconfirmed": true,
+    "save_resume_smoke_recorded": true,
+    "eval_load_smoke_recorded": true,
     "a100_smoke_passed": true,
     "readiness_training_not_started": true
   },

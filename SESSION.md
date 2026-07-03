@@ -74,6 +74,8 @@
   - 成功 run_id 为 `MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233947`；报告 `docs_zh/mowa/mowa_e001_starflow_ft0_training_throughput_smoke_check.json` 显示 `first_checkpoint_saved=true`、`resume_checkpoint_saved=true`、`final_model_saved=true`、`first_trainer_state_step_1=true`、`resume_trainer_state_step_2=true`、`command_runs_succeeded=true`。
   - save/resume smoke 首次尝试 `MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233722` 在 checkpoint 保存前失败，根因是 `trainer.disable_wandb=true` 时 `_log_metrics()` 仍调用 `wandb.log`；已修复为禁用 wandb 时不调用 `wandb.log`/`wandb.finish`。用户确认后已删除该失败 run 目录。
   - E-006 eval-load smoke 已完成：`configs/mowa/mowa_e006_eval_load_smoke.yaml` 固定候选 checkpoint 为成功 run 的 `checkpoints/steps_2`；`.venv/bin/python tools/mowa/e006_eval_load_smoke.py --execute-load --output docs_zh/mowa/mowa_e006_eval_load_smoke.json` 已真实构建 StarFlowVLA 并通过 StarVLA 原生 loader 加载 `steps_2` sharded safetensors，`model_load.loaded=true`、`elapsed_sec=43.879772534943186`、`param_count=5073246758`。
+  - E-001 runtime policy 已推进为 prelaunch 部分确认状态：checkpoint/save/resume、`playground/mowa_ckpt`、`disable_wandb=true`、logging_frequency=10、save/resume smoke 与 eval-load smoke 均记录为 confirmed；resource_policy 仍为 false，`policy_confirmed=false`、`launch_ready=false` 保持不变。
+  - `tools/mowa/download_robocasa_remaining.py` 已作为可选数据维护工具纳入：默认 plan-only，不执行外网下载；必须显式传 `--execute` 才会下载/解压 target/composite 剩余任务。该工具不属于当前 target/human/atomic 主 recipe 的必要路径。
   - `tools/mowa/e001_starflow_ft0_full_path_dry_run_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run_smoke.json`，并接入 readiness：`starflow_ft0_full_path_dry_run_smoke_passed=true`。
   - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 17 项测试；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 已通过 12 项测试，其中包含 dtype alignment opt-in 和 MoWA layerwise bridge coupling opt-in 边界测试。
 - M5-001 MoWAActionBridge interface draft 已完成：
@@ -102,7 +104,7 @@
 - 当前没有启动 P0/P1 主训练；本轮仅完成训练前工程 smoke。
 
 ## 下一步
-- 若继续推进 P0，先确认是否将 `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 与 `configs/mowa/mowa_e001_launch_draft.yaml` 从不可执行草案推进为可执行配置；save/resume smoke 已通过，但长训资源预算和正式 launch policy 仍需确认。
+- 若继续推进 P0，runtime policy 的 checkpoint/save/resume 与离线 logging 已完成 prelaunch 确认；还需要完成第 4 步真实 WAM feature 接入，并确认长训资源预算后才能把 `policy_confirmed` / `launch_ready` 置为 true。
 - A100 heads/bridge 级 throughput smoke、training-config smoke、QwenOFT full-path forward dry-run、P0 supervision probe、生产 dataloader P0 label/mask 开关、StarFlowVLA + RoboCasa365 full-path forward dry-run、MoWA action-head adapter 边界、StarFlowVLA/LayerwiseFM gated MoWA bridge-token coupling smoke、E-006 synthetic zero/shuffle/mask intervention smoke、StarFlow ft variant 配置化支持、真实 StarFlow save/resume training smoke、E-006 eval-load smoke 已完成；下一步应确认正式训练 launch/runtime policy，或推进 E-006 baseline/zero/shuffle/head_mask 的真实 policy rollout smoke。
 - 若继续推进 M5/E-006，必须先有可评测 checkpoint/runtime；在 action 指标收益声明前必须完成 feature removal / shuffle 证据。
 - 训练入口必须显式引用 G0 temporal profile 与 5Hz production-window preflight；batch size、显存、训练时长仍需 throughput smoke 后确认。

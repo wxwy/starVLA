@@ -80,6 +80,11 @@ def build_e001_training_config_smoke(repo_root: Path | str) -> dict[str, Any]:
         ),
         "command_still_tbd_entrypoint": _text_contains(command, "TBD_FULL_E001_ENTRYPOINT"),
         "runtime_policy_unconfirmed": _text_contains(runtime_policy, "policy_confirmed: false"),
+        "checkpoint_policy_confirmed": _text_contains(runtime_policy, "checkpoint_policy_confirmed: true"),
+        "logging_policy_confirmed": _text_contains(runtime_policy, "logging_policy_confirmed: true"),
+        "resource_policy_unconfirmed": _text_contains(runtime_policy, "resource_policy_confirmed: false"),
+        "save_resume_smoke_recorded": _text_contains(runtime_policy, "save_resume_smoke_status: passed_steps_1_to_2"),
+        "eval_load_smoke_recorded": _text_contains(runtime_policy, "eval_load_smoke_status: passed_steps_2_model_load"),
         "a100_smoke_passed": (
             throughput.get("benchmark") == "a100_throughput_smoke"
             and throughput.get("training_started") is False

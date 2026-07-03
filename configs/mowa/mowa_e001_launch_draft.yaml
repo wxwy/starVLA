@@ -8,7 +8,7 @@ launch:
   launch_ready: false
   training_started: false
   requires_human_confirmation: true
-  reason: runtime policy exists but is not confirmed
+  reason: checkpoint/save/resume policy is confirmed, but resource policy and final WAM feature source are not confirmed
 
 references:
   interface_config: configs/mowa/mowa_p0_fullheads_interface.yaml
@@ -77,23 +77,28 @@ training:
   effective_batch_size_smoke_observed: 64
   expected_vram: smoke_observed_peak_0.041GB_not_full_vla
   expected_runtime: TBD_full_e001_training
+  initial_full_vla_smoke_batch_size: 1
+  initial_full_vla_target_gradient_accumulation_steps: 8
 
 checkpoint:
   runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
   run_root_dir: playground/mowa_ckpt
-  save_interval: target_1000
-  resume_policy: target_resume_latest_complete_only
-  checkpoint_format: target_lightweight
+  save_interval: initial_target_1000
+  resume_policy: resume_latest_complete_only
+  checkpoint_format: lightweight
   delete_or_overwrite_policy: no_delete_without_confirmation
+  save_resume_smoke_status: passed_steps_1_to_2
+  eval_load_smoke_status: passed_steps_2_model_load
 
 logging:
-  wandb_mode: TBD
+  wandb_mode: disabled_for_initial_training
   wandb_project: TBD
-  logging_frequency: TBD
+  logging_frequency: 10
 
 launch_blockers:
   - SOT docs 00/01/02 are not available in docs_zh/mowa
   - class_mapping_status remains Data Gate
-  - runtime policy draft not confirmed
-  - batch size / expected VRAM / runtime are smoke-observed only, not production-confirmed
+  - resource policy remains unconfirmed for full E-001 long training
+  - final WAM feature source is not integrated; current bridge source is starflow_condition_probe
+  - batch size / expected VRAM / runtime are not production-confirmed
   - full executable training command not created

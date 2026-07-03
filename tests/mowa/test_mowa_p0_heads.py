@@ -403,9 +403,14 @@ class MoWAP0HeadsTest(unittest.TestCase):
             )
             (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
                 "status:\n  policy_confirmed: false\n"
+                "  checkpoint_policy_confirmed: true\n"
+                "  logging_policy_confirmed: true\n"
+                "  resource_policy_confirmed: false\n"
                 "checkpoint:\n"
                 "  run_root_dir: playground/mowa_ckpt\n"
-                "  local_checkpoint_root: playground/mowa_ckpt\n",
+                "  local_checkpoint_root: playground/mowa_ckpt\n"
+                "  save_resume_smoke_status: passed_steps_1_to_2\n"
+                "  eval_load_smoke_status: passed_steps_2_model_load\n",
                 encoding="utf-8",
             )
             (root / "docs_zh" / "mowa" / "mowa_e001_a100_throughput_smoke.json").write_text(
@@ -430,6 +435,11 @@ class MoWAP0HeadsTest(unittest.TestCase):
 
         self.assertTrue(report["checks"]["checkpoint_root_is_mowa_ckpt"])
         self.assertTrue(report["checks"]["checkpoint_save_disabled"])
+        self.assertTrue(report["checks"]["checkpoint_policy_confirmed"])
+        self.assertTrue(report["checks"]["logging_policy_confirmed"])
+        self.assertTrue(report["checks"]["resource_policy_unconfirmed"])
+        self.assertTrue(report["checks"]["save_resume_smoke_recorded"])
+        self.assertTrue(report["checks"]["eval_load_smoke_recorded"])
 
     def test_e001_train_starvla_full_path_dry_run_smoke_keeps_training_disabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:

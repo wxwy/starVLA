@@ -1,22 +1,24 @@
 project_short_name: MoWA
 stage: P0
 experiment_id: E-001
-config_role: runtime_policy_draft_not_confirmed
+config_role: runtime_policy_prelaunch_partial_confirmed
 
 resource_budget:
   gpu_type: A100_80G
   num_gpus: 1
-  per_device_batch_size: smoke_observed_8
-  gradient_accumulation_steps: smoke_observed_8
-  effective_batch_size: smoke_observed_64
-  max_train_steps: TBD
-  expected_vram: smoke_observed_peak_0.041GB
+  per_device_batch_size: initial_full_vla_smoke_1
+  gradient_accumulation_steps: initial_full_vla_target_8
+  effective_batch_size: initial_full_vla_target_8
+  max_train_steps: TBD_long_training
+  expected_vram: TBD_full_vla_long_training
   expected_runtime: TBD_full_e001_training
   throughput_smoke_report: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
   throughput_smoke_scope: MoWAP0FullHeads_plus_MoWAActionBridge_only
   throughput_smoke_step_time_sec: 0.14424942016601563
   throughput_smoke_samples_per_sec: 443.6759601968788
   throughput_smoke_status: smoke_passed_not_production_training
+  full_vla_save_resume_smoke_report: docs_zh/mowa/mowa_e001_starflow_ft0_training_throughput_smoke_check.json
+  full_vla_save_resume_smoke_status: passed_batch1_gradaccum1_save_interval1
 
 temporal_policy:
   raw_action_hz: 20
@@ -36,19 +38,24 @@ temporal_policy:
 checkpoint:
   run_root_dir: playground/mowa_ckpt
   local_checkpoint_root: playground/mowa_ckpt
-  save_interval: target_1000
-  checkpoint_format: target_lightweight
+  save_interval: initial_target_1000
+  checkpoint_format: lightweight
   save_checkpoint_as_directory: true
-  local_checkpoint_keep_count: target_1
-  resume_policy: target_resume_latest_complete_only
-  incomplete_checkpoint_policy: target_ignore_or_prune_incomplete
+  local_checkpoint_keep_count: 1
+  resume_policy: resume_latest_complete_only
+  incomplete_checkpoint_policy: ignore_or_prune_incomplete
   delete_or_overwrite_policy: no_delete_without_confirmation
   checkpoint_logic_change_allowed: false
+  save_resume_smoke_report: docs_zh/mowa/mowa_e001_starflow_ft0_training_throughput_smoke_check.json
+  save_resume_smoke_status: passed_steps_1_to_2
+  eval_load_smoke_report: docs_zh/mowa/mowa_e006_eval_load_smoke.json
+  eval_load_smoke_status: passed_steps_2_model_load
 
 logging:
-  wandb_mode: TBD
-  wandb_project: TBD
-  logging_frequency: target_10
+  wandb_mode: disabled_for_initial_training
+  wandb_project: mowa
+  logging_frequency: 10
+  disable_wandb: true
 
 launch_requirements:
   require_recipe_available: true
@@ -59,12 +66,18 @@ launch_requirements:
   require_human_confirmation_before_training: true
 
 status:
+  checkpoint_policy_confirmed: true
+  logging_policy_confirmed: true
+  save_resume_smoke_passed: true
+  eval_load_smoke_passed: true
+  resource_policy_confirmed: false
   policy_confirmed: false
   launch_ready: false
   notes:
-    - Values marked target are engineering defaults for review, not measured results.
+    - Checkpoint/save/resume and wandb-disabled logging policy are confirmed for prelaunch smoke.
     - Resource target is single A100 80G as confirmed by user.
     - A100 throughput smoke has run on P0 FullHeads plus ActionBridge only; it is not full VLA E-001 throughput.
+    - Full StarFlowVLA save/resume smoke has passed only at per_device_batch_size=1 and gradient_accumulation_steps=1.
     - Temporal policy is confirmed for E-001 initial target by production-window preflight, not by full training throughput.
     - This policy does not modify checkpoint/resume/save code.
-    - E-001 must not start until policy_confirmed and launch_ready are explicitly true.
+    - E-001 long training must not start until resource_policy_confirmed, policy_confirmed, and launch_ready are explicitly true.

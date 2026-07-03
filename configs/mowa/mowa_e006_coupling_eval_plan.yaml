@@ -8,6 +8,7 @@ config_role: eval_plan_not_launch
 preconditions:
   bridge_interface: configs/mowa/mowa_action_bridge_interface.yaml
   readiness_report: docs_zh/mowa/mowa_e001_readiness_smoke.json
+  intervention_smoke_report: docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json
   requires_training_checkpoint: true
   launch_ready: false
 
@@ -38,3 +39,4 @@ guardrails:
   planner_fsm_rl_scene_graph_baselines: false
   per_head_leave_one_out_sweep: false
   claim_action_gain_without_feature_removal: false
+  synthetic_intervention_smoke_is_not_eval: true

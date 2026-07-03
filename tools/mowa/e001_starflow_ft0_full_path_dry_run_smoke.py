@@ -1,4 +1,4 @@
-"""Validate MoWA E-001 StarFlow ft0 full-path dry-run output."""
+"""Validate MoWA E-001 StarFlow full-path dry-run output."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ DRY_RUN_REPORT = Path("docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.jso
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run MoWA E-001 StarFlow ft0 dry-run report smoke.")
+    parser = argparse.ArgumentParser(description="Run MoWA E-001 StarFlow dry-run report smoke.")
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, default=None)
     return parser.parse_args()
@@ -49,7 +49,7 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
         "wandb_not_started": report.get("wandb_started") is False,
         "framework_starflow": framework.get("name") == "StarFlowVLA",
         "action_head_layerwisefm": framework.get("action_model_type") == "LayerwiseFM",
-        "future_tokens_ft0": framework.get("num_target_vision_tokens") == 0,
+        "starflow_ft_variant_configured": _starflow_ft_variant_matches_tokens(framework),
         "robocasa_data_mix": data.get("data_mix") == "robocasa365_open_drawer_target_human",
         "state_included": "state" in first_item_keys,
         "mowa_p0_labels_enabled": data.get("mowa_p0_labels_enabled") is True,
@@ -85,14 +85,14 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
             "trainer": report.get("trainer"),
         },
         "unresolved_items": [
-            "This validates StarFlowVLA ft0 + RoboCasa full-path forward smoke only.",
+            "This validates StarFlowVLA + RoboCasa full-path forward smoke only.",
             "MoWA bridge tokens are coupled only in the explicit MoWA gated dry-run config.",
             "No checkpoint/save/resume launch policy is confirmed.",
         ],
         "go_no_go": (
-            "TBD: StarFlow ft0 full-path dry-run smoke passed; MoWA bridge coupling remains gated"
+            "TBD: StarFlow full-path dry-run smoke passed; MoWA bridge coupling remains gated"
             if all(checks.values())
-            else "No-Go: StarFlow ft0 full-path dry-run smoke incomplete"
+            else "No-Go: StarFlow full-path dry-run smoke incomplete"
         ),
     }
 
@@ -101,6 +101,16 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _starflow_ft_variant_matches_tokens(framework: dict[str, Any]) -> bool:
+    variant = framework.get("starflow_ft_variant") or "config_defined"
+    num_tokens = framework.get("num_target_vision_tokens")
+    if not isinstance(num_tokens, int):
+        return False
+    if variant == "ft0":
+        return num_tokens == 0
+    return variant in {"config_defined", "custom", "ft_custom"} and num_tokens >= 0
 
 
 if __name__ == "__main__":

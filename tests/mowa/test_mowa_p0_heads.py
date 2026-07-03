@@ -246,6 +246,27 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("feature_removal_bridge_tokens_zeroed", report["interventions"])
         self.assertFalse(report["guardrails"]["modify_layerwisefm_internal_logic"])
 
+    def test_e006_coupling_intervention_smoke_runs_without_training(self):
+        try:
+            import torch  # noqa: F401
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from tools.mowa.e006_coupling_intervention_smoke import (
+            build_e006_coupling_intervention_smoke,
+        )
+
+        report = build_e006_coupling_intervention_smoke()
+
+        self.assertFalse(report["training_started"])
+        self.assertFalse(report["eval_started"])
+        self.assertTrue(report["checks"]["baseline_coupled"])
+        self.assertTrue(report["checks"]["zero_tokens_zeroed"])
+        self.assertTrue(report["checks"]["batch_shuffle_swaps_samples"])
+        self.assertTrue(report["checks"]["head_mask_control_keeps_constructible_heads"])
+        self.assertIn("zero", report["interventions"])
+        self.assertIn("batch_shuffle", report["interventions"])
+
     def test_e001_launch_draft_smoke_keeps_launch_disabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -370,7 +391,8 @@ class MoWAP0HeadsTest(unittest.TestCase):
                         "framework": {
                             "name": "StarFlowVLA",
                             "action_model_type": "LayerwiseFM",
-                            "num_target_vision_tokens": 0,
+                            "starflow_ft_variant": "custom",
+                            "num_target_vision_tokens": 8,
                             "mowa_layerwise_bridge_coupling_enabled": True,
                             "mowa_layerwise_bridge_coupling_status": "forward_coupled_in_full_path_dry_run",
                         },
@@ -410,7 +432,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["training_not_started"])
         self.assertTrue(report["checks"]["framework_starflow"])
         self.assertTrue(report["checks"]["action_head_layerwisefm"])
-        self.assertTrue(report["checks"]["future_tokens_ft0"])
+        self.assertTrue(report["checks"]["starflow_ft_variant_configured"])
         self.assertTrue(report["checks"]["forward_has_action_loss"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_coupling_enabled"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_forward_coupled"])

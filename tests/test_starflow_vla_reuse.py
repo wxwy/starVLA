@@ -16,11 +16,13 @@ class _CaptureActionModel:
     def __init__(self):
         self.captured_state = None
         self.captured_vl_shapes = None
+        self.captured_vl_embs_list = None
         self.captured_attention_mask_shape = None
 
     def __call__(self, vl_embs_list, actions, state, encoder_attention_mask=None):
         self.captured_state = state
         self.captured_vl_shapes = [tuple(item.shape) for item in vl_embs_list]
+        self.captured_vl_embs_list = vl_embs_list
         self.captured_attention_mask_shape = (
             tuple(encoder_attention_mask.shape) if encoder_attention_mask is not None else None
         )
@@ -50,13 +52,17 @@ def _minimal_config_with_mowa_dtype_alignment(enabled: bool) -> SimpleNamespace:
     return cfg
 
 
-def _minimal_config_with_mowa_layerwise_coupling(enabled: bool) -> SimpleNamespace:
+def _minimal_config_with_mowa_layerwise_coupling(
+    enabled: bool,
+    intervention: str = "baseline",
+) -> SimpleNamespace:
     cfg = _minimal_config()
     cfg.framework.mowa = SimpleNamespace(
         enable_layerwise_bridge_token_coupling=enabled,
         wam_feature_dim=4,
         action_hidden_dim=4,
         num_bridge_tokens=2,
+        layerwise_bridge_token_intervention=intervention,
     )
     return cfg
 
@@ -252,9 +258,61 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertIn("action_loss", output)
         self.assertTrue(output["mowa_layerwise_bridge_coupled"])
         self.assertEqual(output["mowa_layerwise_bridge_token_shape"], (2, 2, 4))
+        self.assertEqual(output["mowa_layerwise_bridge_intervention"], "baseline")
         self.assertEqual(output["mowa_layerwise_bridge_attention_mask_shape"], (2, 5))
         self.assertEqual(action_model.captured_vl_shapes, [(2, 5, 4), (2, 5, 4)])
         self.assertEqual(action_model.captured_attention_mask_shape, (2, 5))
+
+    def test_mowa_layerwise_bridge_interventions_are_explicit(self):
+        def run_forward(intervention):
+            torch.manual_seed(0)
+            model = object.__new__(StarFlowVLA)
+            torch.nn.Module.__init__(model)
+            model.config = _minimal_config_with_mowa_layerwise_coupling(True, intervention)
+            model.config.trainer = {"repeated_diffusion_steps": 1}
+            model.action_horizon = 8
+            model.action_dit_hidden_dim = 4
+            model.num_action_dit_layers = 2
+            model._setup_mowa_layerwise_bridge_coupling()
+            action_model = _CaptureActionModel()
+            model.action_model = action_model
+            model._encode_vl_hidden_states = lambda images, instructions: (
+                [torch.zeros(2, 3, 4), torch.ones(2, 3, 4)],
+                torch.ones(2, 3, dtype=torch.bool),
+            )
+            examples = [
+                {
+                    "image": [],
+                    "lang": "open the drawer",
+                    "action": np.zeros((8, 7), dtype=np.float32),
+                },
+                {
+                    "image": [],
+                    "lang": "close the drawer",
+                    "action": np.zeros((8, 7), dtype=np.float32),
+                },
+            ]
+            output = model.forward(examples)
+            bridge_tokens = action_model.captured_vl_embs_list[0][:, -2:, :].detach()
+            return output, bridge_tokens
+
+        baseline_output, baseline_tokens = run_forward("baseline")
+        zero_output, zero_tokens = run_forward("zero")
+        shuffle_output, shuffle_tokens = run_forward("batch_shuffle")
+        head_mask_output, head_mask_tokens = run_forward("head_mask_control")
+
+        self.assertEqual(baseline_output["mowa_layerwise_bridge_intervention"], "baseline")
+        self.assertEqual(zero_output["mowa_layerwise_bridge_intervention"], "zero")
+        self.assertEqual(shuffle_output["mowa_layerwise_bridge_intervention"], "batch_shuffle")
+        self.assertEqual(head_mask_output["mowa_layerwise_bridge_intervention"], "head_mask_control")
+        self.assertTrue(torch.allclose(zero_tokens, torch.zeros_like(zero_tokens)))
+        self.assertTrue(torch.allclose(shuffle_tokens[0], baseline_tokens[1]))
+        self.assertTrue(torch.allclose(shuffle_tokens[1], baseline_tokens[0]))
+        self.assertFalse(torch.allclose(head_mask_tokens, torch.zeros_like(head_mask_tokens)))
+        self.assertEqual(
+            head_mask_output["mowa_layerwise_bridge_active_heads"],
+            ("task_progress", "action_outcome_class"),
+        )
 
 
 if __name__ == "__main__":

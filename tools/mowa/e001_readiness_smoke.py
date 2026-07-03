@@ -35,6 +35,9 @@ E001_STARFLOW_FT0_DRY_RUN_SMOKE_REPORT = Path(
 )
 E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG = Path("configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml")
 E001_A100_THROUGHPUT_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput_smoke.json")
+E006_COUPLING_INTERVENTION_SMOKE_REPORT = Path(
+    "docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -141,6 +144,9 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         "a100_throughput_smoke_executed": _a100_throughput_smoke_passed(
             root / E001_A100_THROUGHPUT_SMOKE_REPORT
         ),
+        "e006_coupling_intervention_smoke_passed": _checks_report_passed(
+            root / E006_COUPLING_INTERVENTION_SMOKE_REPORT
+        ),
     }
 
     unresolved_items = []
@@ -154,7 +160,8 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "class_mapping_status remains Data Gate",
             "runtime policy draft not confirmed",
             "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
-            "E-001 full executable MoWA training launch and coupling ablations still missing",
+            "E-001 full executable MoWA training launch still missing",
+            "E-006 policy eval still requires a trained or smoke-compatible checkpoint",
         ]
     )
 
@@ -203,6 +210,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             ),
             "e001_a100_throughput_smoke_plan_config": str(E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG),
             "e001_a100_throughput_smoke_report": str(E001_A100_THROUGHPUT_SMOKE_REPORT),
+            "e006_coupling_intervention_smoke_report": str(E006_COUPLING_INTERVENTION_SMOKE_REPORT),
             "a100_throughput_stable_candidate": (
                 (_read_json(root / E001_A100_THROUGHPUT_SMOKE_REPORT) or {}).get(
                     "stable_candidate"
@@ -276,6 +284,14 @@ def _train_starvla_full_path_dry_run_smoke_passed(path: Path) -> bool:
         return False
     checks = payload.get("checks") or {}
     return payload.get("training_started") is False and all(checks.values())
+
+
+def _checks_report_passed(path: Path) -> bool:
+    payload = _read_json(path)
+    if payload is None:
+        return False
+    checks = payload.get("checks") or {}
+    return bool(checks) and all(checks.values())
 
 
 if __name__ == "__main__":

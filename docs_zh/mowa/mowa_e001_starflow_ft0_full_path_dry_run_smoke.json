@@ -12,7 +12,7 @@
     "wandb_not_started": true,
     "framework_starflow": true,
     "action_head_layerwisefm": true,
-    "future_tokens_ft0": true,
+    "starflow_ft_variant_configured": true,
     "robocasa_data_mix": true,
     "state_included": true,
     "mowa_p0_labels_enabled": true,
@@ -32,6 +32,7 @@
     "run_id": "MoWA-E-001_starflow_ft0_full_path_dry_run",
     "framework": {
       "name": "StarFlowVLA",
+      "starflow_ft_variant": "ft0",
       "action_model_type": "LayerwiseFM",
       "num_target_vision_tokens": 0,
       "state_mode": "discretized_instruction",
@@ -128,11 +129,13 @@
         "mowa_layerwise_bridge_active_heads",
         "mowa_layerwise_bridge_attention_mask_shape",
         "mowa_layerwise_bridge_coupled",
+        "mowa_layerwise_bridge_intervention",
         "mowa_layerwise_bridge_masked_heads",
         "mowa_layerwise_bridge_token_shape"
       ],
-      "action_loss": 1.9165695905685425,
+      "action_loss": 1.8258477449417114,
       "mowa_layerwise_bridge_coupled": true,
+      "mowa_layerwise_bridge_intervention": "baseline",
       "mowa_layerwise_bridge_token_shape": [
         1,
         2,
@@ -157,9 +160,9 @@
     }
   },
   "unresolved_items": [
-    "This validates StarFlowVLA ft0 + RoboCasa full-path forward smoke only.",
+    "This validates StarFlowVLA + RoboCasa full-path forward smoke only.",
     "MoWA bridge tokens are coupled only in the explicit MoWA gated dry-run config.",
     "No checkpoint/save/resume launch policy is confirmed."
   ],
-  "go_no_go": "TBD: StarFlow ft0 full-path dry-run smoke passed; MoWA bridge coupling remains gated"
+  "go_no_go": "TBD: StarFlow full-path dry-run smoke passed; MoWA bridge coupling remains gated"
 }

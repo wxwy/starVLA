@@ -44,6 +44,9 @@ def build_starflow_mapping(
     num_target_vision_tokens = _get_config_value(
         config, ("framework", "action_model", "num_target_vision_tokens"), 32
     )
+    starflow_ft_variant = _get_config_value(
+        config, ("framework", "starflow_ft_variant"), "config_defined"
+    )
     num_inference_timesteps = _get_config_value(
         config, ("framework", "action_model", "num_inference_timesteps"), 4
     )
@@ -60,6 +63,7 @@ def build_starflow_mapping(
         "state_enters_instruction": state_mode == "discretized_instruction",
         "state_enters_action_head": state_mode == "continuous_head",
         "adapter_mode": "future_token_cross_dit",
+        "starflow_ft_variant": _to_jsonable(starflow_ft_variant),
         "flow_condition_runtime": False,
         "perceiver_enabled": False,
         "num_target_vision_tokens": _to_jsonable(num_target_vision_tokens),

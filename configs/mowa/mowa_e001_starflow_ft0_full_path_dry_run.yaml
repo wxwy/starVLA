@@ -9,6 +9,7 @@ version_id: "0.21"
 
 framework:
   name: StarFlowVLA
+  starflow_ft_variant: ft0
   state_mode: discretized_instruction
   qwenvl:
     base_vlm: ./playground/Pretrained_models/Qwen3-VL-4B-Instruct

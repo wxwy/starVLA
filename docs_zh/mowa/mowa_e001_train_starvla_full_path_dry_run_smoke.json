@@ -13,6 +13,8 @@
     "robocasa_data_mix": true,
     "framework_qwenoft": true,
     "mowa_action_bridge_probe_enabled": true,
+    "mowa_p0_supervision_probe_enabled": true,
+    "mowa_p0_supervision_labels_not_evaluated": true,
     "batch_fetched": true
   },
   "reports": {
@@ -23,9 +25,15 @@
     "run_id": "MoWA-E-001_train_starvla_full_path_dry_run",
     "framework": {
       "name": "QwenOFT",
-      "total_params": 4510023180,
-      "trainable_params": 4510023180,
-      "mowa_action_bridge_probe_enabled": true
+      "total_params": 4510105396,
+      "trainable_params": 4510105396,
+      "mowa_action_bridge_probe_enabled": true,
+      "mowa_p0_supervision_probe_enabled": true,
+      "mowa_p0_supervision_active_heads": [
+        "task_progress",
+        "action_outcome_class"
+      ],
+      "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run"
     },
     "data": {
       "dataset_py": "lerobot_datasets",
@@ -72,7 +80,7 @@
   },
   "unresolved_items": [
     "This validates QwenOFT StarVLA full-path wiring, not MoWA action-bridge coupling.",
-    "MoWA heads/bridge are not yet inserted into train_starvla action forward.",
+    "MoWA P0 supervision probe is enabled but not evaluated in this full-path dry-run.",
     "No checkpoint/save/resume launch policy is confirmed."
   ],
   "go_no_go": "TBD: train_starvla full-path dry-run smoke passed; MoWA training integration remains gated"

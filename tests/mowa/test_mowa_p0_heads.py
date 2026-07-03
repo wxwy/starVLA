@@ -243,7 +243,12 @@ class MoWAP0HeadsTest(unittest.TestCase):
                         "training_started": False,
                         "checkpoint_saved": False,
                         "wandb_started": False,
-                        "framework": {"name": "QwenOFT"},
+                        "framework": {
+                            "name": "QwenOFT",
+                            "mowa_action_bridge_probe_enabled": True,
+                            "mowa_p0_supervision_probe_enabled": True,
+                            "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run",
+                        },
                         "data": {
                             "data_mix": "robocasa365_open_drawer_target_human",
                             "batch_summary": {"fetched": True},
@@ -262,7 +267,70 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertFalse(report["training_started"])
         self.assertTrue(report["checks"]["training_not_started"])
         self.assertTrue(report["checks"]["checkpoint_not_saved"])
+        self.assertTrue(report["checks"]["mowa_p0_supervision_probe_enabled"])
+        self.assertTrue(report["checks"]["mowa_p0_supervision_labels_not_evaluated"])
         self.assertTrue(report["checks"]["batch_fetched"])
+
+    def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
+        try:
+            import torch
+            import torch.nn as nn
+            from omegaconf import OmegaConf
+        except ImportError:
+            self.skipTest("torch or omegaconf is not available")
+
+        from starVLA.model.framework.VLM4A.QwenOFT import Qwenvl_OFT
+
+        cfg = OmegaConf.create(
+            {
+                "framework": {
+                    "action_model": {"action_hidden_dim": 8},
+                    "mowa": {
+                        "enable_p0_supervision_probe": True,
+                        "p0_supervision_hidden_dim": 6,
+                        "p0_supervision_active_heads": [
+                            "task_progress",
+                            "action_outcome_class",
+                        ],
+                    },
+                }
+            }
+        )
+        probe_owner = object.__new__(Qwenvl_OFT)
+        nn.Module.__init__(probe_owner)
+        probe_owner.config = cfg
+        probe_owner._setup_mowa_p0_supervision_probe()
+
+        action_queries = torch.randn(4, 5, 8)
+        missing = probe_owner._maybe_run_mowa_p0_supervision_probe(action_queries, [{} for _ in range(4)])
+        self.assertIsNotNone(missing)
+        self.assertFalse(missing["supervision_available"])
+        self.assertIsNone(missing["loss"])
+        self.assertEqual(missing["active_heads"], ())
+
+        examples = [
+            {
+                "mowa_p0_targets": {
+                    "task_progress": 0.25,
+                    "action_outcome_class": [1.0, 0.0],
+                },
+                "mowa_p0_masks": {
+                    "task_progress": True,
+                    "action_outcome_class": True,
+                },
+            }
+            for _ in range(4)
+        ]
+        supervised = probe_owner._maybe_run_mowa_p0_supervision_probe(action_queries, examples)
+
+        self.assertTrue(supervised["supervision_available"])
+        self.assertEqual(
+            supervised["active_heads"],
+            ("task_progress", "action_outcome_class"),
+        )
+        self.assertIn("task_progress", supervised["losses"])
+        self.assertIn("action_outcome_class", supervised["losses"])
+        self.assertTrue(torch.isfinite(supervised["loss"]))
 
     def test_qwenoft_mowa_bridge_probe_uses_action_hidden_without_label_input(self):
         try:

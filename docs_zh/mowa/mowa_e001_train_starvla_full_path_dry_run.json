@@ -11,9 +11,15 @@
   "output_dir": "playground/Checkpoints/mowa/MoWA-E-001_train_starvla_full_path_dry_run",
   "framework": {
     "name": "QwenOFT",
-    "total_params": 4510023180,
-    "trainable_params": 4510023180,
-    "mowa_action_bridge_probe_enabled": true
+    "total_params": 4510105396,
+    "trainable_params": 4510105396,
+    "mowa_action_bridge_probe_enabled": true,
+    "mowa_p0_supervision_probe_enabled": true,
+    "mowa_p0_supervision_active_heads": [
+      "task_progress",
+      "action_outcome_class"
+    ],
+    "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run"
   },
   "data": {
     "dataset_py": "lerobot_datasets",
@@ -70,6 +76,7 @@
   "notes": [
     "This dry-run stops before prepare_training(), wandb, checkpoint loading, checkpoint saving, and train().",
     "It validates StarVLA build/data/optimizer/trainer wiring only.",
-    "MoWA heads/bridge integration into the action path remains a separate gated step."
+    "MoWA P0 supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
+    "MoWA bridge coupling into LayerwiseFM action generation remains a separate gated step."
   ]
 }

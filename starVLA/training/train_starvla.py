@@ -762,6 +762,13 @@ def _write_full_path_dry_run_report(
             "mowa_action_bridge_probe_enabled": bool(
                 getattr(model, "mowa_action_bridge_probe_enabled", False)
             ),
+            "mowa_p0_supervision_probe_enabled": bool(
+                getattr(model, "mowa_p0_supervision_probe_enabled", False)
+            ),
+            "mowa_p0_supervision_active_heads": list(
+                getattr(model, "mowa_p0_supervision_active_heads", ())
+            ),
+            "mowa_p0_supervision_label_status": "not_evaluated_in_full_path_dry_run",
         },
         "data": {
             "dataset_py": cfg.datasets.vla_data.dataset_py,
@@ -789,7 +796,8 @@ def _write_full_path_dry_run_report(
         "notes": [
             "This dry-run stops before prepare_training(), wandb, checkpoint loading, checkpoint saving, and train().",
             "It validates StarVLA build/data/optimizer/trainer wiring only.",
-            "MoWA heads/bridge integration into the action path remains a separate gated step.",
+            "MoWA P0 supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
+            "MoWA bridge coupling into LayerwiseFM action generation remains a separate gated step.",
         ],
     }
     if accelerator.is_main_process:

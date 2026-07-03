@@ -41,7 +41,14 @@ IGNORE_INDEX = -100
 from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.framework.share_tools import add_discretized_state_to_instruction, merge_framework_config
 from starVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
-from starVLA.model.modules.mowa import MoWAActionBridge, MoWAActionBridgeConfig, P0FutureFeatures
+from starVLA.model.modules.mowa import (
+    MOWA_P0_FULL_HEADS,
+    MoWAActionBridge,
+    MoWAActionBridgeConfig,
+    MoWAP0FullHeads,
+    MoWAP0FullHeadsConfig,
+    P0FutureFeatures,
+)
 from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 
@@ -136,6 +143,7 @@ class Qwenvl_OFT(baseframework):
 
         # L1 loss
         self.l1_loss = nn.L1Loss()
+        self._setup_mowa_p0_supervision_probe()
         self._setup_mowa_action_bridge_probe()
 
     def forward(
@@ -201,6 +209,7 @@ class Qwenvl_OFT(baseframework):
                 last_hidden, input_ids, action_token_id=self.action_token_id
             )  # [B, chunk_len, H]
             pred_actions = self.action_model.predict_action(action_queries)  # (B, chunk_len, action_dim)
+            mowa_p0_probe = self._maybe_run_mowa_p0_supervision_probe(action_queries, examples)
             mowa_probe = self._maybe_run_mowa_action_bridge_probe(action_queries)
 
             # Label alignment: take the last chunk_len segment
@@ -213,6 +222,13 @@ class Qwenvl_OFT(baseframework):
             action_loss = self.l1_loss(pred_actions, actions_target)
 
         output = {"action_loss": action_loss}
+        if mowa_p0_probe is not None:
+            output["mowa_p0_supervision_available"] = mowa_p0_probe["supervision_available"]
+            output["mowa_p0_supervision_active_heads"] = mowa_p0_probe["active_heads"]
+            output["mowa_p0_supervision_masked_heads"] = mowa_p0_probe["masked_heads"]
+            if mowa_p0_probe["loss"] is not None:
+                output["mowa_p0_supervision_loss"] = mowa_p0_probe["loss"]
+                output["mowa_p0_supervision_losses"] = mowa_p0_probe["losses"]
         if mowa_probe is not None:
             output["mowa_bridge_probe_loss"] = mowa_probe["probe_loss"]
             output["mowa_bridge_probe_token_shape"] = mowa_probe["token_shape"]
@@ -355,6 +371,79 @@ class Qwenvl_OFT(baseframework):
         expanded_index = selected_pos.unsqueeze(-1).expand(-1, -1, H)  # [B, chunk_len, H]
         action_queries = last_hidden.gather(dim=1, index=expanded_index)  # [B, chunk_len, H]
         return action_queries
+
+    def _setup_mowa_p0_supervision_probe(self) -> None:
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        self.mowa_p0_supervision_probe_enabled = bool(
+            getattr(mowa_cfg, "enable_p0_supervision_probe", False)
+        )
+        self.mowa_p0_supervision_probe = None
+        self.mowa_p0_supervision_active_heads = tuple(
+            getattr(
+                mowa_cfg,
+                "p0_supervision_active_heads",
+                ("task_progress", "action_outcome_class"),
+            )
+        )
+        if not self.mowa_p0_supervision_probe_enabled:
+            return
+
+        action_hidden_dim = int(self.config.framework.action_model.action_hidden_dim)
+        hidden_dim = int(getattr(mowa_cfg, "p0_supervision_hidden_dim", 32))
+        self.mowa_p0_supervision_probe = MoWAP0FullHeads(
+            MoWAP0FullHeadsConfig(input_dim=action_hidden_dim, hidden_dim=hidden_dim)
+        )
+
+    def _maybe_run_mowa_p0_supervision_probe(
+        self,
+        action_queries: torch.Tensor,
+        examples: List[dict],
+    ) -> dict | None:
+        if not self.mowa_p0_supervision_probe_enabled:
+            return None
+        if self.mowa_p0_supervision_probe is None:
+            raise RuntimeError("MoWA P0 supervision probe is enabled but not initialized.")
+
+        hidden_features = action_queries.mean(dim=1)
+        if not examples or not all("mowa_p0_targets" in example for example in examples):
+            return {
+                "supervision_available": False,
+                "loss": None,
+                "losses": {},
+                "active_heads": (),
+                "masked_heads": MOWA_P0_FULL_HEADS,
+            }
+
+        targets = {}
+        masks = {}
+        device = hidden_features.device
+        for head in MOWA_P0_FULL_HEADS:
+            head_active = head in self.mowa_p0_supervision_active_heads and all(
+                bool((example.get("mowa_p0_masks") or {}).get(head, False)) for example in examples
+            )
+            masks[head] = head_active
+            if not head_active:
+                continue
+            values = [example["mowa_p0_targets"][head] for example in examples]
+            targets[head] = torch.as_tensor(values, device=device, dtype=hidden_features.dtype)
+
+        if not any(masks.values()):
+            return {
+                "supervision_available": False,
+                "loss": None,
+                "losses": {},
+                "active_heads": (),
+                "masked_heads": MOWA_P0_FULL_HEADS,
+            }
+
+        loss, losses, _ = self.mowa_p0_supervision_probe.compute_loss(hidden_features, targets, masks)
+        return {
+            "supervision_available": True,
+            "loss": loss,
+            "losses": losses,
+            "active_heads": tuple(head for head in MOWA_P0_FULL_HEADS if bool(masks.get(head, False))),
+            "masked_heads": tuple(head for head in MOWA_P0_FULL_HEADS if not bool(masks.get(head, False))),
+        }
 
     def _setup_mowa_action_bridge_probe(self) -> None:
         mowa_cfg = getattr(self.config.framework, "mowa", None)

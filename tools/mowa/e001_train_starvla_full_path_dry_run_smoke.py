@@ -46,6 +46,13 @@ def build_train_starvla_full_path_dry_run_smoke(repo_root: Path | str) -> dict[s
         "mowa_action_bridge_probe_enabled": (
             (report.get("framework") or {}).get("mowa_action_bridge_probe_enabled") is True
         ),
+        "mowa_p0_supervision_probe_enabled": (
+            (report.get("framework") or {}).get("mowa_p0_supervision_probe_enabled") is True
+        ),
+        "mowa_p0_supervision_labels_not_evaluated": (
+            (report.get("framework") or {}).get("mowa_p0_supervision_label_status")
+            == "not_evaluated_in_full_path_dry_run"
+        ),
         "batch_fetched": ((report.get("data") or {}).get("batch_summary") or {}).get("fetched") is True,
     }
     return {
@@ -65,7 +72,7 @@ def build_train_starvla_full_path_dry_run_smoke(repo_root: Path | str) -> dict[s
         },
         "unresolved_items": [
             "This validates QwenOFT StarVLA full-path wiring, not MoWA action-bridge coupling.",
-            "MoWA heads/bridge are not yet inserted into train_starvla action forward.",
+            "MoWA P0 supervision probe is enabled but not evaluated in this full-path dry-run.",
             "No checkpoint/save/resume launch policy is confirmed.",
         ],
         "go_no_go": (

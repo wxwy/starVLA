@@ -20,6 +20,11 @@ framework:
     future_action_window_size: 15
     past_action_window_size: 0
   mowa:
+    enable_p0_supervision_probe: true
+    p0_supervision_hidden_dim: 32
+    p0_supervision_active_heads:
+      - task_progress
+      - action_outcome_class
     enable_action_bridge_probe: true
     probe_source: qwen_action_token_hidden
     num_action_layers: 1

@@ -73,7 +73,7 @@ training:
 checkpoint:
   save_checkpoint_during_smoke: false
   checkpoint_logic_change_allowed: false
-  run_root_dir: TBD
+  run_root_dir: playground/mowa_ckpt
   save_interval: target_1000
   checkpoint_format: target_lightweight
   local_checkpoint_keep_count: target_1

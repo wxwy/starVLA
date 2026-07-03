@@ -80,7 +80,7 @@ training:
 
 checkpoint:
   runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
-  run_root_dir: TBD
+  run_root_dir: playground/mowa_ckpt
   save_interval: target_1000
   resume_policy: target_resume_latest_complete_only
   checkpoint_format: target_lightweight

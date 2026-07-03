@@ -381,6 +381,56 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["a100_smoke_no_longer_waiting_for_a100"])
         self.assertTrue(report["checks"]["a100_throughput_report_created"])
 
+    def test_e001_training_config_smoke_requires_mowa_ckpt_root(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_training_smoke.yaml").write_text(
+                "launch_guard:\n"
+                "  launch_ready: false\n"
+                "  training_started: false\n"
+                "  dry_run_only: true\n"
+                "checkpoint:\n"
+                "  save_checkpoint_during_smoke: false\n"
+                "  checkpoint_logic_change_allowed: false\n"
+                "  run_root_dir: playground/mowa_ckpt\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_training_command_draft.yaml").write_text(
+                "config: configs/mowa/mowa_e001_training_smoke.yaml\nentrypoint: TBD_FULL_E001_ENTRYPOINT\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
+                "status:\n  policy_confirmed: false\n"
+                "checkpoint:\n"
+                "  run_root_dir: playground/mowa_ckpt\n"
+                "  local_checkpoint_root: playground/mowa_ckpt\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_a100_throughput_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "benchmark": "a100_throughput_smoke",
+                        "training_started": False,
+                        "checkpoint_saved": False,
+                        "stable_candidate": {"status": "ok"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_readiness_smoke.json").write_text(
+                json.dumps({"training_started": False}),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_training_config_smoke import build_e001_training_config_smoke
+
+            report = build_e001_training_config_smoke(root)
+
+        self.assertTrue(report["checks"]["checkpoint_root_is_mowa_ckpt"])
+        self.assertTrue(report["checks"]["checkpoint_save_disabled"])
+
     def test_e001_train_starvla_full_path_dry_run_smoke_keeps_training_disabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -561,6 +611,57 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertEqual(cfg.framework.starflow_ft_variant, "custom")
         self.assertEqual(cfg.framework.action_model.num_target_vision_tokens, 8)
         self.assertEqual(cfg.datasets.vla_data.per_device_batch_size, 2)
+
+    def test_e001_starflow_training_smoke_validates_save_resume_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            run_id = "MoWA-E-001_starflow_ft0_save_resume_smoke_test"
+            run_dir = root / "playground" / "mowa_ckpt" / run_id
+            steps_1 = run_dir / "checkpoints" / "steps_1"
+            steps_2 = run_dir / "checkpoints" / "steps_2"
+            final_model = run_dir / "final_model"
+            (root / "configs" / "mowa").mkdir(parents=True)
+            steps_1.mkdir(parents=True)
+            steps_2.mkdir(parents=True)
+            final_model.mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_starflow_ft0_training_throughput_smoke.yaml").write_text(
+                "run_root_dir: playground/mowa_ckpt\n",
+                encoding="utf-8",
+            )
+            (run_dir / "config.full.yaml").write_text("run_id: test\n", encoding="utf-8")
+            (steps_1 / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 1}),
+                encoding="utf-8",
+            )
+            (steps_2 / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 2}),
+                encoding="utf-8",
+            )
+            for checkpoint_dir in (steps_1, steps_2):
+                (checkpoint_dir / "optimizer_rank_00000.pt").write_bytes(b"placeholder")
+                (checkpoint_dir / "scheduler.pt").write_bytes(b"placeholder")
+                (checkpoint_dir / "random_states_0.pkl").write_bytes(b"placeholder")
+
+            from tools.mowa.e001_starflow_ft0_training_throughput_smoke import (
+                build_starflow_ft0_training_throughput_smoke,
+            )
+
+            report = build_starflow_ft0_training_throughput_smoke(
+                root,
+                run_id,
+                commands=[
+                    {"phase": "first_train", "returncode": 0},
+                    {"phase": "resume", "returncode": 0},
+                ],
+            )
+
+        self.assertTrue(report["checks"]["run_root_is_mowa_ckpt"])
+        self.assertTrue(report["checks"]["first_checkpoint_saved"])
+        self.assertTrue(report["checks"]["resume_checkpoint_saved"])
+        self.assertTrue(report["checks"]["final_model_saved"])
+        self.assertTrue(report["checks"]["first_trainer_state_step_1"])
+        self.assertTrue(report["checks"]["resume_trainer_state_step_2"])
+        self.assertTrue(report["checks"]["command_runs_succeeded"])
 
     def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
         try:

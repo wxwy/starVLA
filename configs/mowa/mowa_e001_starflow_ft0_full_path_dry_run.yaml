@@ -1,5 +1,5 @@
 run_id: MoWA-E-001_starflow_ft0_full_path_dry_run
-run_root_dir: playground/Checkpoints/mowa
+run_root_dir: playground/mowa_ckpt
 experiment_id: E-001
 seed: 42
 wandb_entity: your_wandb_entity

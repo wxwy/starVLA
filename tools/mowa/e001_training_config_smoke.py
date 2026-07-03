@@ -65,6 +65,11 @@ def build_e001_training_config_smoke(repo_root: Path | str) -> dict[str, Any]:
         "training_started_false": _text_contains(config, "training_started: false"),
         "dry_run_only_true": _text_contains(config, "dry_run_only: true"),
         "checkpoint_save_disabled": _text_contains(config, "save_checkpoint_during_smoke: false"),
+        "checkpoint_root_is_mowa_ckpt": (
+            _text_contains(config, "run_root_dir: playground/mowa_ckpt")
+            and _text_contains(runtime_policy, "run_root_dir: playground/mowa_ckpt")
+            and _text_contains(runtime_policy, "local_checkpoint_root: playground/mowa_ckpt")
+        ),
         "checkpoint_logic_unchanged": _text_contains(
             config,
             "checkpoint_logic_change_allowed: false",
@@ -104,6 +109,7 @@ def build_e001_training_config_smoke(repo_root: Path | str) -> dict[str, Any]:
             "full E-001 training entrypoint remains TBD",
             "runtime policy draft not confirmed",
             "checkpoint/save/resume policy not confirmed for launch",
+            "MoWA checkpoint root is reserved as playground/mowa_ckpt and must not be mixed into playground/Checkpoints",
             "class_mapping_status remains Data Gate",
             "full VLA E-001 throughput is not measured",
         ],

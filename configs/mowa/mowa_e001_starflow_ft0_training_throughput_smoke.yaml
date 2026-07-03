@@ -1,4 +1,4 @@
-run_id: MoWA-E-001_train_starvla_full_path_dry_run
+run_id: MoWA-E-001_starflow_ft0_training_throughput_smoke
 run_root_dir: playground/mowa_ckpt
 experiment_id: E-001
 seed: 42
@@ -8,32 +8,49 @@ is_debug: false
 version_id: "0.21"
 
 framework:
-  name: QwenOFT
+  name: StarFlowVLA
+  starflow_ft_variant: ft0
+  state_mode: discretized_instruction
   qwenvl:
     base_vlm: ./playground/Pretrained_models/Qwen3-VL-4B-Instruct
     attn_implementation: flash_attention_2
+    vl_hidden_dim: 2048
+    num_vl_layers: 36
   action_model:
-    action_model_type: MLP
+    action_model_type: LayerwiseFM
     action_dim: 12
     state_dim: 16
     action_horizon: 16
     future_action_window_size: 15
     past_action_window_size: 0
+    repeated_diffusion_steps: 1
+    num_inference_timesteps: 4
+    add_pos_embed: true
+    max_seq_len: 1024
+    num_target_vision_tokens: 0
+    noise_beta_alpha: 1.5
+    noise_beta_beta: 1.0
+    noise_s: 0.999
+    num_timestep_buckets: 1000
+    diffusion_model_cfg:
+      action_dit_hidden_dim: 1024
+      dropout: 0.2
+      final_dropout: true
+      interleave_self_attention: true
+      norm_type: ada_norm
+      positional_embeddings: null
+      attention_head_dim: 64
   mowa:
-    enable_p0_supervision_probe: true
-    p0_supervision_hidden_dim: 32
-    p0_supervision_active_heads:
-      - task_progress
-      - action_outcome_class
-    enable_action_bridge_probe: true
-    probe_source: qwen_action_token_hidden
-    num_action_layers: 1
-    num_bridge_tokens: 1
+    enable_qwenpi_projector_dtype_alignment: true
+    enable_layerwise_bridge_token_coupling: true
+    wam_feature_dim: 1024
+    action_hidden_dim: 1024
+    num_bridge_tokens: 2
 
 datasets:
   vla_data:
     dataset_py: lerobot_datasets
-    include_state: false
+    include_state: true
     data_root_dir: playground/Datasets/robocasa365
     data_mix: robocasa365_open_drawer_target_human
     action_type: delta_ee
@@ -47,14 +64,12 @@ datasets:
     enable_mowa_p0_labels: true
 
 trainer:
-  full_path_dry_run_only: true
-  full_path_dry_run_fetch_batch: true
-  full_path_dry_run_forward_batch: true
-  full_path_dry_run_report: docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json
+  disable_wandb: true
   max_train_steps: 1
   num_warmup_steps: 0
-  save_interval: 1000
-  eval_interval: 1000
+  save_interval: 1
+  eval_interval: 1000000
+  repeated_diffusion_steps: 1
   learning_rate:
     base: 2.5e-05
     qwen_vl_interface: 1.0e-05

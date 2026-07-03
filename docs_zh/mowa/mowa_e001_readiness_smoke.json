@@ -28,6 +28,8 @@
     "train_starvla_full_path_dry_run_smoke_passed": true,
     "starflow_ft0_full_path_dry_run_config_created": true,
     "starflow_ft0_full_path_dry_run_smoke_passed": true,
+    "starflow_ft0_training_throughput_config_created": true,
+    "starflow_ft0_training_throughput_smoke_passed": true,
     "a100_throughput_smoke_plan_created": true,
     "a100_throughput_smoke_executed": true,
     "e006_coupling_intervention_smoke_passed": true
@@ -63,6 +65,8 @@
     "e001_train_starvla_full_path_dry_run_smoke_report": "docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run_smoke.json",
     "e001_starflow_ft0_full_path_dry_run_config": "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
     "e001_starflow_ft0_full_path_dry_run_smoke_report": "docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run_smoke.json",
+    "e001_starflow_ft0_training_throughput_config": "configs/mowa/mowa_e001_starflow_ft0_training_throughput_smoke.yaml",
+    "e001_starflow_ft0_training_throughput_smoke_report": "docs_zh/mowa/mowa_e001_starflow_ft0_training_throughput_smoke_check.json",
     "e001_a100_throughput_smoke_plan_config": "configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml",
     "e001_a100_throughput_smoke_report": "docs_zh/mowa/mowa_e001_a100_throughput_smoke.json",
     "e006_coupling_intervention_smoke_report": "docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json",

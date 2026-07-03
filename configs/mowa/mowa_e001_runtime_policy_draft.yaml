@@ -34,8 +34,8 @@ temporal_policy:
   status: confirmed_for_e001_initial_target
 
 checkpoint:
-  run_root_dir: TBD
-  local_checkpoint_root: TBD
+  run_root_dir: playground/mowa_ckpt
+  local_checkpoint_root: playground/mowa_ckpt
   save_interval: target_1000
   checkpoint_format: target_lightweight
   save_checkpoint_as_directory: true

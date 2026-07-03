@@ -1150,6 +1150,9 @@ class VLATrainer(TrainerUtils):
 
     def _init_wandb(self):
         """Initialize Weights & Biases."""
+        if bool(getattr(self.config.trainer, "disable_wandb", False)):
+            logger.info("W&B disabled by trainer.disable_wandb.")
+            return
         if self.accelerator.is_main_process:
             raw_wandb_run_id = getattr(self.config, "wandb_run_id", None) or self.config.run_id
             wandb_run_id = re.sub(r"[^A-Za-z0-9_.-]", "-", str(raw_wandb_run_id))[:128]
@@ -1585,7 +1588,8 @@ class VLATrainer(TrainerUtils):
                 self.completed_steps * self.accelerator.gradient_accumulation_steps / len(self.vla_train_dataloader),
                 2,
             )
-            wandb.log(metrics, step=self.completed_steps)
+            if not bool(getattr(self.config.trainer, "disable_wandb", False)):
+                wandb.log(metrics, step=self.completed_steps)
             logger.info(f"Step {self.completed_steps}, Loss: {metrics})")
             self._maybe_cleanup_local_resume_checkpoint()
 
@@ -1779,7 +1783,7 @@ class VLATrainer(TrainerUtils):
             logger.info(f"Training complete. Final model saved at {final_checkpoint}")
             self._enqueue_checkpoint_sync(final_checkpoint)
 
-        if self.accelerator.is_main_process:
+        if self.accelerator.is_main_process and not bool(getattr(self.config.trainer, "disable_wandb", False)):
             wandb.finish()
 
         self.accelerator.wait_for_everyone()

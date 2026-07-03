@@ -1,4 +1,4 @@
-"""Action-head adapter boundary for MoWA / ActionMoWA."""
+"""Action-head adapter boundary for MoWA."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ MOWA_ACTION_HEAD_BINDINGS: dict[str, MoWAActionHeadBinding] = {
         implemented=False,
         notes=(
             "MLP heads do not consume condition tokens.",
-            "ActionMoWA must fuse bridge features into action hidden states before predict_action.",
+            "MoWA must fuse bridge features into action hidden states before predict_action.",
         ),
     ),
     "DiT-B": MoWAActionHeadBinding(
@@ -43,7 +43,7 @@ MOWA_ACTION_HEAD_BINDINGS: dict[str, MoWAActionHeadBinding] = {
         implemented=False,
         notes=(
             "GR00T-style DiT heads consume a single condition sequence rather than layerwise features.",
-            "ActionMoWA needs a separate single-sequence adapter before enabling this head.",
+            "MoWA needs a separate single-sequence adapter before enabling this head.",
         ),
     ),
     "DiT-L": MoWAActionHeadBinding(
@@ -53,14 +53,14 @@ MOWA_ACTION_HEAD_BINDINGS: dict[str, MoWAActionHeadBinding] = {
         implemented=False,
         notes=(
             "GR00T-style DiT heads consume a single condition sequence rather than layerwise features.",
-            "ActionMoWA needs a separate single-sequence adapter before enabling this head.",
+            "MoWA needs a separate single-sequence adapter before enabling this head.",
         ),
     ),
 }
 
 
 def resolve_mowa_action_head_binding(action_head_type: str) -> MoWAActionHeadBinding:
-    """Resolve how MoWA / ActionMoWA should bind to a concrete action head."""
+    """Resolve how MoWA should bind to a concrete action head."""
 
     if action_head_type not in MOWA_ACTION_HEAD_BINDINGS:
         supported = ", ".join(sorted(MOWA_ACTION_HEAD_BINDINGS))

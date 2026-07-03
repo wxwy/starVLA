@@ -68,7 +68,7 @@
 - M5-001 MoWAActionBridge interface draft 已完成：
   - `starVLA/model/modules/mowa/action_bridge.py` 新增 `MoWAActionBridge`、`MoWAActionBridgeConfig`、`MoWAActionBridgeOutput`。
   - `configs/mowa/mowa_action_bridge_interface.yaml` 记录 bridge 输出为 `layerwise_condition_features`，并通过 `MoWAActionHeadAdapter` 按 `action_model_type` 选择注入方式，不改 action head 内部逻辑。
-  - `starVLA/model/modules/mowa/action_head_adapter.py` 新增 ActionMoWA action-head adapter 边界：`LayerwiseFM` 当前已实现 condition-side bridge token append；`MLP` 记录为 hidden feature fusion 边界；`DiT-B/DiT-L` 记录为 single condition sequence 边界，后两类未冒充已实现。
+  - `starVLA/model/modules/mowa/action_head_adapter.py` 新增 MoWA action-head adapter 边界：`LayerwiseFM` 当前已实现 condition-side bridge token append；`MLP` 记录为 hidden feature fusion 边界；`DiT-B/DiT-L` 记录为 single condition sequence 边界，后两类未冒充已实现。
   - `append_layerwise_bridge_tokens` 已通过单测验证会扩展每层 `vl_embs_list[layer_idx]` 和 `encoder_attention_mask`，为后续 B 方案 coupling smoke 提供可插拔接入点。
   - `.venv/bin/python -m py_compile starVLA/model/modules/mowa/action_bridge.py starVLA/model/modules/mowa/__init__.py tests/mowa/test_mowa_p0_heads.py tools/mowa/e001_readiness_smoke.py` 已通过。
   - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 11 项测试。
@@ -85,7 +85,7 @@
 
 ## 下一步
 - 若继续推进 P0，先确认是否将 `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 与 `configs/mowa/mowa_e001_launch_draft.yaml` 从不可执行草案推进为可执行配置；主训练前仍需确认资源预算和 checkpoint/save/resume 策略。
-- A100 heads/bridge 级 throughput smoke、training-config smoke、QwenOFT full-path forward dry-run、P0 supervision probe、生产 dataloader P0 label/mask 开关、StarFlowVLA ft0 + RoboCasa365 full-path forward dry-run、ActionMoWA action-head adapter 边界已完成；下一步应在 StarFlowVLA/LayerwiseFM 路径上调用 adapter 实现 gated MoWA bridge-token coupling smoke。
+- A100 heads/bridge 级 throughput smoke、training-config smoke、QwenOFT full-path forward dry-run、P0 supervision probe、生产 dataloader P0 label/mask 开关、StarFlowVLA ft0 + RoboCasa365 full-path forward dry-run、MoWA action-head adapter 边界已完成；下一步应在 StarFlowVLA/LayerwiseFM 路径上调用 adapter 实现 gated MoWA bridge-token coupling smoke。
 - 若继续推进 M5/E-006，必须先有可评测 checkpoint/runtime；在 action 指标收益声明前必须完成 feature removal / shuffle 证据。
 - 训练入口必须显式引用 G0 temporal profile 与 5Hz production-window preflight；batch size、显存、训练时长仍需 throughput smoke 后确认。
 - 真实 Wan latent cache builder 仍需单独放行。

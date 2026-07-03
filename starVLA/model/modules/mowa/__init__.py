@@ -9,6 +9,10 @@ from .action_head_adapter import (
     MOWA_ACTION_HEAD_BINDINGS,
     MoWAActionHeadBinding,
     append_layerwise_bridge_tokens,
+    append_single_sequence_bridge_tokens,
+    append_vla_adapter_bridge_tokens,
+    describe_mowa_action_head_bindings,
+    fuse_mlp_bridge_features,
     resolve_mowa_action_head_binding,
 )
 from .p0_heads import (
@@ -38,6 +42,10 @@ __all__ = [
     "MoWAP0FullHeadsConfig",
     "build_mowa_p0_constructible_batch_from_smoke",
     "append_layerwise_bridge_tokens",
+    "append_single_sequence_bridge_tokens",
+    "append_vla_adapter_bridge_tokens",
+    "describe_mowa_action_head_bindings",
+    "fuse_mlp_bridge_features",
     "mowa_manual_sgd_step",
     "resolve_mowa_action_head_binding",
 ]

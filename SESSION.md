@@ -70,10 +70,12 @@
 - M5-001 MoWAActionBridge interface draft 已完成：
   - `starVLA/model/modules/mowa/action_bridge.py` 新增 `MoWAActionBridge`、`MoWAActionBridgeConfig`、`MoWAActionBridgeOutput`。
   - `configs/mowa/mowa_action_bridge_interface.yaml` 记录 bridge 输出为 `layerwise_condition_features`，并通过 `MoWAActionHeadAdapter` 按 `action_model_type` 选择注入方式，不改 action head 内部逻辑。
-  - `starVLA/model/modules/mowa/action_head_adapter.py` 新增 MoWA action-head adapter 边界：`LayerwiseFM` 当前已实现 condition-side bridge token append；`MLP` 记录为 hidden feature fusion 边界；`DiT-B/DiT-L` 记录为 single condition sequence 边界，后两类未冒充已实现。
+  - `starVLA/model/modules/mowa/action_head_adapter.py` 新增 MoWA action-head adapter 边界：`LayerwiseFM` 支持 layerwise condition token append；`MLP/OFT` 支持 action hidden residual fusion；`DiT-S/DiT-B/DiT-L` 与 GR00T-style single-condition heads 支持 single sequence token append；`VLA_Adapter` 支持在 action-query suffix 前插入 bridge tokens。上述均是 MoWA adapter helper，不修改 StarVLA 固有 action head 内部逻辑。
+  - `configs/mowa/mowa_action_bridge_interface.yaml` 已区分 `adapter_helper` 和 `framework_forward_integrated`；当前只有已接入的 StarFlowVLA/LayerwiseFM dry-run 路径具备 forward coupling smoke，其他 action head 仍需在对应 framework forward 中 gated 调用 adapter。
   - `append_layerwise_bridge_tokens` 已通过单测验证会扩展每层 `vl_embs_list[layer_idx]` 和 `encoder_attention_mask`，为后续 B 方案 coupling smoke 提供可插拔接入点。
+  - `fuse_mlp_bridge_features`、`append_single_sequence_bridge_tokens`、`append_vla_adapter_bridge_tokens` 已通过单测验证 shape 与 action-query suffix 保持，不触碰 action head 内部实现。
   - `.venv/bin/python -m py_compile starVLA/model/modules/mowa/action_bridge.py starVLA/model/modules/mowa/__init__.py tests/mowa/test_mowa_p0_heads.py tools/mowa/e001_readiness_smoke.py` 已通过。
-  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 11 项测试。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 13 项测试。
   - `tools/mowa/e001_readiness_smoke.py` 已重跑，报告显示 `action_bridge_interface_created=true`；E-001 仍因 runtime policy / checkpoint/save/resume 策略和 coupling 消融保持不可启动。
 - M5-002 E-006 coupling / feature removal eval plan 已完成：
   - `configs/mowa/mowa_e006_coupling_eval_plan.yaml` 记录 baseline、feature removal、batch shuffle、head mask control 四类 intervention。

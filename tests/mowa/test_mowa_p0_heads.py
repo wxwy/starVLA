@@ -151,18 +151,27 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("failure_risk", bridge_output.masked_heads)
 
     def test_action_head_binding_resolves_without_hardcoding_layerwisefm_only(self):
-        from starVLA.model.modules.mowa import resolve_mowa_action_head_binding
+        from starVLA.model.modules.mowa import (
+            describe_mowa_action_head_bindings,
+            resolve_mowa_action_head_binding,
+        )
 
         layerwise = resolve_mowa_action_head_binding("LayerwiseFM")
         mlp = resolve_mowa_action_head_binding("MLP")
         dit = resolve_mowa_action_head_binding("DiT-B")
+        vla_adapter = resolve_mowa_action_head_binding("VLA_Adapter")
 
         self.assertTrue(layerwise.implemented)
         self.assertEqual(layerwise.injection_mode, "append_bridge_tokens_to_condition_side")
-        self.assertFalse(mlp.implemented)
-        self.assertEqual(mlp.injection_mode, "hidden_feature_fusion")
-        self.assertFalse(dit.implemented)
+        self.assertTrue(mlp.implemented)
+        self.assertEqual(mlp.injection_mode, "add_bridge_summary_to_action_hidden_state")
+        self.assertTrue(dit.implemented)
         self.assertEqual(dit.condition_kind, "single_condition_sequence")
+        self.assertTrue(vla_adapter.implemented)
+        self.assertEqual(vla_adapter.injection_mode, "insert_bridge_tokens_before_action_queries")
+        binding_report = describe_mowa_action_head_bindings()
+        self.assertIn("LayerwiseFM", {item["action_head_type"] for item in binding_report})
+        self.assertIn("VLA_Adapter", {item["action_head_type"] for item in binding_report})
 
     def test_layerwise_adapter_appends_bridge_tokens_and_attention_mask(self):
         try:
@@ -209,6 +218,64 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertEqual(adapted_mask.shape, (2, 5))
         self.assertTrue(torch.equal(adapted_mask[:, :3], encoder_attention_mask))
         self.assertTrue(adapted_mask[:, 3:].all())
+
+    def test_non_layerwise_adapters_transform_without_modifying_action_heads(self):
+        try:
+            import torch
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.modules.mowa import (
+            MoWAActionBridge,
+            MoWAActionBridgeConfig,
+            P0FutureFeatures,
+            append_single_sequence_bridge_tokens,
+            append_vla_adapter_bridge_tokens,
+            fuse_mlp_bridge_features,
+        )
+
+        torch.manual_seed(0)
+        bridge = MoWAActionBridge(
+            MoWAActionBridgeConfig(
+                wam_feature_dim=6,
+                action_hidden_dim=4,
+                num_action_layers=3,
+                num_bridge_tokens=2,
+            )
+        )
+        bridge_output = bridge(
+            P0FutureFeatures(
+                hidden_features=torch.randn(2, 6),
+                head_outputs={},
+                active_heads=("task_progress",),
+                masked_heads=(),
+            )
+        )
+
+        action_hidden = torch.zeros(2, 5, 4)
+        fused_hidden = fuse_mlp_bridge_features(action_hidden, bridge_output)
+        self.assertEqual(fused_hidden.shape, action_hidden.shape)
+        self.assertFalse(torch.equal(fused_hidden, action_hidden))
+
+        condition = torch.zeros(2, 3, 4)
+        condition_mask = torch.ones(2, 3, dtype=torch.bool)
+        adapted_condition, adapted_condition_mask = append_single_sequence_bridge_tokens(
+            condition,
+            condition_mask,
+            bridge_output,
+        )
+        self.assertEqual(adapted_condition.shape, (2, 5, 4))
+        self.assertEqual(adapted_condition_mask.shape, (2, 5))
+        self.assertTrue(adapted_condition_mask[:, 3:].all())
+
+        vla_hidden = torch.zeros(2, 3, 6, 4)
+        adapted_vla_hidden = append_vla_adapter_bridge_tokens(
+            vla_hidden,
+            bridge_output,
+            action_query_num=2,
+        )
+        self.assertEqual(adapted_vla_hidden.shape, (2, 3, 8, 4))
+        self.assertTrue(torch.equal(adapted_vla_hidden[:, :, -2:, :], vla_hidden[:, :, -2:, :]))
 
     def test_e006_coupling_eval_plan_smoke_keeps_eval_disabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:

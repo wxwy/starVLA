@@ -490,6 +490,18 @@ class MoWAP0HeadsTest(unittest.TestCase):
                                 "action_loss",
                                 "mowa_layerwise_bridge_coupled",
                             ],
+                            "metric_scope": "one_batch_no_backward_forward_dry_run",
+                            "elapsed_sec": 1.0,
+                            "batch_size": 1,
+                            "samples_per_sec": 1.0,
+                            "cuda_available": True,
+                            "cuda_device": "cuda:0",
+                            "cuda_device_name": "NVIDIA A100-SXM4-80GB",
+                            "allocated_vram_gb": 0.1,
+                            "reserved_vram_gb": 0.2,
+                            "peak_vram_gb": 0.1,
+                            "peak_reserved_vram_gb": 0.2,
+                            "vram_metric_scope": "torch_cuda_allocator_in_full_path_dry_run",
                         },
                     }
                 ),
@@ -508,9 +520,47 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["action_head_layerwisefm"])
         self.assertTrue(report["checks"]["starflow_ft_variant_configured"])
         self.assertTrue(report["checks"]["forward_has_action_loss"])
+        self.assertTrue(report["checks"]["forward_metric_scope_one_batch"])
+        self.assertTrue(report["checks"]["forward_has_elapsed_sec"])
+        self.assertTrue(report["checks"]["forward_has_samples_per_sec"])
+        self.assertTrue(report["checks"]["forward_has_allocated_vram_field"])
+        self.assertTrue(report["checks"]["forward_has_reserved_vram_field"])
+        self.assertTrue(report["checks"]["forward_has_peak_vram_field"])
+        self.assertTrue(report["checks"]["forward_has_peak_reserved_vram_field"])
+        self.assertTrue(report["checks"]["forward_vram_metric_scope_recorded"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_coupling_enabled"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_forward_coupled"])
         self.assertTrue(report["checks"]["forward_has_mowa_layerwise_bridge_coupled"])
+
+    def test_e001_starflow_full_path_dry_run_cli_overrides_are_merged(self):
+        try:
+            from omegaconf import OmegaConf
+            from starVLA.model.framework.share_tools import apply_config_compat
+            from starVLA.training.trainer_utils.trainer_tools import normalize_dotlist_args
+        except ImportError:
+            self.skipTest("OmegaConf or StarVLA config helpers are unavailable")
+
+        cfg = OmegaConf.load("configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml")
+        dotlist = normalize_dotlist_args(
+            [
+                "--trainer.full_path_dry_run_report",
+                "docs_zh/mowa/mowa_e001_starflow_cli_override_dry_run.json",
+                "--framework.starflow_ft_variant=custom",
+                "--framework.action_model.num_target_vision_tokens",
+                "8",
+                "--datasets.vla_data.per_device_batch_size",
+                "2",
+            ]
+        )
+        cfg = apply_config_compat(OmegaConf.merge(cfg, OmegaConf.from_dotlist(dotlist)))
+
+        self.assertEqual(
+            cfg.trainer.full_path_dry_run_report,
+            "docs_zh/mowa/mowa_e001_starflow_cli_override_dry_run.json",
+        )
+        self.assertEqual(cfg.framework.starflow_ft_variant, "custom")
+        self.assertEqual(cfg.framework.action_model.num_target_vision_tokens, 8)
+        self.assertEqual(cfg.datasets.vla_data.per_device_batch_size, 2)
 
     def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
         try:

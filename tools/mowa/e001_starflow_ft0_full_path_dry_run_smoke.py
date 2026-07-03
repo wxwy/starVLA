@@ -57,6 +57,18 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
         "batch_has_mowa_p0_masks": "mowa_p0_masks" in first_item_keys,
         "forward_evaluated": forward.get("evaluated") is True,
         "forward_has_action_loss": "action_loss" in forward_keys,
+        "forward_metric_scope_one_batch": (
+            forward.get("metric_scope") == "one_batch_no_backward_forward_dry_run"
+        ),
+        "forward_has_elapsed_sec": _is_positive_number(forward.get("elapsed_sec")),
+        "forward_has_samples_per_sec": _is_positive_number(forward.get("samples_per_sec")),
+        "forward_has_allocated_vram_field": "allocated_vram_gb" in forward,
+        "forward_has_reserved_vram_field": "reserved_vram_gb" in forward,
+        "forward_has_peak_vram_field": "peak_vram_gb" in forward,
+        "forward_has_peak_reserved_vram_field": "peak_reserved_vram_gb" in forward,
+        "forward_vram_metric_scope_recorded": (
+            forward.get("vram_metric_scope") == "torch_cuda_allocator_in_full_path_dry_run"
+        ),
         "mowa_layerwise_bridge_coupling_enabled": (
             framework.get("mowa_layerwise_bridge_coupling_enabled") is True
         ),
@@ -85,7 +97,9 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
             "trainer": report.get("trainer"),
         },
         "unresolved_items": [
-            "This validates StarFlowVLA + RoboCasa full-path forward smoke only.",
+            "This validates StarFlowVLA + RoboCasa one-batch no-backward forward smoke only.",
+            "Full training throughput, step time, and steady-state VRAM are still not measured.",
+            "VRAM fields use torch CUDA allocator state in the pre-prepare dry-run path.",
             "MoWA bridge tokens are coupled only in the explicit MoWA gated dry-run config.",
             "No checkpoint/save/resume launch policy is confirmed.",
         ],
@@ -101,6 +115,10 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _is_positive_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and value > 0
 
 
 def _starflow_ft_variant_matches_tokens(framework: dict[str, Any]) -> bool:

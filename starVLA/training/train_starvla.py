@@ -748,6 +748,69 @@ def _summarize_forward_output(output_dict: dict | None) -> dict:
     return summary
 
 
+def _run_full_path_dry_run_forward(model, batch) -> dict:
+    cuda_device = None
+    if torch.cuda.is_available():
+        try:
+            cuda_device = next(model.parameters()).device
+        except StopIteration:
+            cuda_device = torch.device("cuda")
+        if cuda_device.type != "cuda":
+            cuda_device = torch.device("cuda")
+        cuda_allocated_before = torch.cuda.memory_allocated(cuda_device)
+        cuda_reserved_before = torch.cuda.memory_reserved(cuda_device)
+        torch.cuda.reset_peak_memory_stats(cuda_device)
+        torch.cuda.synchronize(cuda_device)
+    else:
+        cuda_allocated_before = None
+        cuda_reserved_before = None
+    start_time = time.perf_counter()
+    output_dict = model(batch)
+    if torch.cuda.is_available():
+        torch.cuda.synchronize(cuda_device)
+    elapsed_sec = time.perf_counter() - start_time
+
+    summary = _summarize_forward_output(output_dict)
+    batch_size = len(batch) if hasattr(batch, "__len__") else None
+    summary["metric_scope"] = "one_batch_no_backward_forward_dry_run"
+    summary["elapsed_sec"] = float(elapsed_sec)
+    summary["batch_size"] = int(batch_size) if batch_size is not None else None
+    summary["samples_per_sec"] = (
+        float(batch_size / elapsed_sec)
+        if batch_size is not None and elapsed_sec > 0
+        else None
+    )
+    summary["cuda_available"] = bool(torch.cuda.is_available())
+    if torch.cuda.is_available():
+        cuda_allocated_after = torch.cuda.memory_allocated(cuda_device)
+        cuda_reserved_after = torch.cuda.memory_reserved(cuda_device)
+        cuda_peak_allocated = max(
+            torch.cuda.max_memory_allocated(cuda_device),
+            cuda_allocated_before,
+            cuda_allocated_after,
+        )
+        cuda_peak_reserved = max(
+            torch.cuda.max_memory_reserved(cuda_device),
+            cuda_reserved_before,
+            cuda_reserved_after,
+        )
+        summary["cuda_device"] = str(cuda_device)
+        summary["cuda_device_name"] = torch.cuda.get_device_name(cuda_device)
+        summary["allocated_vram_gb"] = float(cuda_allocated_after / (1024**3))
+        summary["reserved_vram_gb"] = float(cuda_reserved_after / (1024**3))
+        summary["peak_vram_gb"] = float(cuda_peak_allocated / (1024**3))
+        summary["peak_reserved_vram_gb"] = float(cuda_peak_reserved / (1024**3))
+    else:
+        summary["cuda_device"] = None
+        summary["cuda_device_name"] = None
+        summary["allocated_vram_gb"] = None
+        summary["reserved_vram_gb"] = None
+        summary["peak_vram_gb"] = None
+        summary["peak_reserved_vram_gb"] = None
+    summary["vram_metric_scope"] = "torch_cuda_allocator_in_full_path_dry_run"
+    return summary
+
+
 def _write_full_path_dry_run_report(
     cfg,
     *,
@@ -2106,7 +2169,7 @@ def main(cfg) -> None:
             if bool(getattr(cfg.trainer, "full_path_dry_run_forward_batch", False)):
                 vla.eval()
                 with torch.no_grad():
-                    forward_summary = _summarize_forward_output(vla(batch))
+                    forward_summary = _run_full_path_dry_run_forward(vla, batch)
         _write_full_path_dry_run_report(
             cfg,
             output_dir=output_dir,

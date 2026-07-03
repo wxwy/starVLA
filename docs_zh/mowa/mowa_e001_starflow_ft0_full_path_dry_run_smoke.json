@@ -20,6 +20,14 @@
     "batch_has_mowa_p0_masks": true,
     "forward_evaluated": true,
     "forward_has_action_loss": true,
+    "forward_metric_scope_one_batch": true,
+    "forward_has_elapsed_sec": true,
+    "forward_has_samples_per_sec": true,
+    "forward_has_allocated_vram_field": true,
+    "forward_has_reserved_vram_field": true,
+    "forward_has_peak_vram_field": true,
+    "forward_has_peak_reserved_vram_field": true,
+    "forward_vram_metric_scope_recorded": true,
     "mowa_layerwise_bridge_coupling_enabled": true,
     "mowa_layerwise_bridge_forward_coupled": true,
     "forward_has_mowa_layerwise_bridge_coupled": true
@@ -130,12 +138,16 @@
         "mowa_layerwise_bridge_attention_mask_shape",
         "mowa_layerwise_bridge_coupled",
         "mowa_layerwise_bridge_intervention",
+        "mowa_layerwise_bridge_intervention_applied",
+        "mowa_layerwise_bridge_intervention_note",
         "mowa_layerwise_bridge_masked_heads",
         "mowa_layerwise_bridge_token_shape"
       ],
-      "action_loss": 1.8258477449417114,
+      "action_loss": 1.4024105072021484,
       "mowa_layerwise_bridge_coupled": true,
       "mowa_layerwise_bridge_intervention": "baseline",
+      "mowa_layerwise_bridge_intervention_applied": true,
+      "mowa_layerwise_bridge_intervention_note": null,
       "mowa_layerwise_bridge_token_shape": [
         1,
         2,
@@ -148,7 +160,19 @@
       "mowa_layerwise_bridge_active_heads": [
         "starflow_condition_probe"
       ],
-      "mowa_layerwise_bridge_masked_heads": []
+      "mowa_layerwise_bridge_masked_heads": [],
+      "metric_scope": "one_batch_no_backward_forward_dry_run",
+      "elapsed_sec": 20.668267000000924,
+      "batch_size": 1,
+      "samples_per_sec": 0.04838335018605843,
+      "cuda_available": true,
+      "cuda_device": "cuda",
+      "cuda_device_name": "NVIDIA A100-SXM4-80GB",
+      "allocated_vram_gb": 0.0,
+      "reserved_vram_gb": 0.0,
+      "peak_vram_gb": 0.0,
+      "peak_reserved_vram_gb": 0.0,
+      "vram_metric_scope": "torch_cuda_allocator_in_full_path_dry_run"
     },
     "trainer": {
       "max_train_steps": 1,
@@ -160,7 +184,9 @@
     }
   },
   "unresolved_items": [
-    "This validates StarFlowVLA + RoboCasa full-path forward smoke only.",
+    "This validates StarFlowVLA + RoboCasa one-batch no-backward forward smoke only.",
+    "Full training throughput, step time, and steady-state VRAM are still not measured.",
+    "VRAM fields use torch CUDA allocator state in the pre-prepare dry-run path.",
     "MoWA bridge tokens are coupled only in the explicit MoWA gated dry-run config.",
     "No checkpoint/save/resume launch policy is confirmed."
   ],

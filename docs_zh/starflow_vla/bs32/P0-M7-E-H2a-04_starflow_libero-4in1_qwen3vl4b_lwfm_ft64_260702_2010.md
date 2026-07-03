@@ -4,8 +4,8 @@
 > **状态**: 🔴 已停止（被 H2a-02 ft16 替代）  
 > **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
 > **启动时间**: 2026-07-02 20:16:02 CST  
-> **停止时间**: 2026-07-03 ~10:20 CST（step 5480 后 kill）  
-> **当前更新**: 2026-07-03 10:32:00 CST  
+> **停止时间**: 2026-07-03 ~10:24 CST（steps_5500 checkpoint 保存后 kill）  
+> **当前更新**: 2026-07-03 10:43:00 CST
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_64.yaml`
 
 ---
@@ -105,7 +105,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | **数据加载耗时** | ~0.0003 s（可忽略） |
 | **已运行时间** | 约 14 小时 4 分钟（Jul 2 20:16 → Jul 3 ~10:20） |
 | **若跑完 80000 steps 需时** | ~204 小时（约 8.5 天） |
-| **最后 checkpoint** | `steps_5250`（09:43） |
+| **最后 checkpoint** | `steps_5500`（10:24，程序收到 kill 信号后仍完成了此 checkpoint 保存） |
 | **最终 WandB logged step** | `5480`（~10:20 CST） |
 
 ### Loss 记录
@@ -165,7 +165,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | **5460** | **0.1211** | |
 | **5480** | **0.1242** | 🔴 最终记录（WandB 最后日志） |
 
-### 完整 Checkpoint 列表（21 个）
+### 完整 Checkpoint 列表（22 个）
 
 | Step | 保存时间 |
 |------|----------|
@@ -189,9 +189,10 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | 4500 | Jul 3 07:50 |
 | 4750 | Jul 3 08:29 |
 | 5000 | Jul 3 09:07 |
-| **5250** | Jul 3 ~09:43 |
+| **5250** | Jul 3 09:43 |
+| **5500** | Jul 3 ~10:20 |
 
-> 每 250 steps 正常保存，无遗漏。未保存 steps_5460（训练在 5460 之后被 kill，未到 5500 保存点）。
+> 每 250 steps 正常保存，无遗漏。steps_5500 为最终 checkpoint。
 
 ### Loss 趋势分析
 
@@ -247,7 +248,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 |------|------|
 | **每 step 耗时** | ~9.2 s/it |
 | **已运行时间** | ~14 小时 |
-| **完成 step 数** | 5,460 |
+| **完成 step 数** | 5,480 |
 | **完整 80000 steps 预估** | 80000 × 9.2s ≈ 204h ≈ 8.5 天 |
 | **每 step 成本** | 本地 RTX 4090，免费 |
 
@@ -278,7 +279,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 │   ├── steps_4500/
 │   ├── steps_4750/
 │   ├── steps_5000/
-│   └── steps_5250/    ← 最后 checkpoint
+│   ├── steps_5250/
+│   └── steps_5500/    ← 最后 checkpoint
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -327,10 +329,10 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 - **于 2026-07-03 ~10:20 被手动停止**（最后 WandB 日志 step 5480），为 H2a-02（ft16）腾出 GPU 资源。最终完成 6.9%。
 - RTX 4090 24GB 显存使用率 96.9%，全程未 OOM；per_device_batch_size=8 已接近显存上限。
 - 单步耗时 ~9.2 s/it，模型前向/反向耗时 ~2.35 s（per micro-step，8 条样本）。
-- checkpoint 每 250 steps 正常保存，共 21 个；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
+- checkpoint 每 250 steps 正常保存，共 22 个；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
 - 训练日志中出现三次数据读取异常（index 30578、45269、120829: `Invalid data found when processing input`），均自动 retry 后未中断。
 - loss 从 1.12 快速下降，最低 **0.09397（step 5300）**；eval mse_score 最低 **0.00837（step 5000）**。
-- 本 run 可提供 ft64 在 LIBERO 4-in-1 上的 loss 曲线参考，后续如有需要可从 steps_5250 checkpoint 恢复训练。
+- 本 run 可提供 ft64 在 LIBERO 4-in-1 上的 loss 曲线参考，后续如有需要可从 steps_5500 checkpoint 恢复训练。
 
 ---
 

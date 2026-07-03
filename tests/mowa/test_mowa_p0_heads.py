@@ -529,6 +529,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "num_target_vision_tokens": 8,
                             "mowa_layerwise_bridge_coupling_enabled": True,
                             "mowa_layerwise_bridge_coupling_status": "forward_coupled_in_full_path_dry_run",
+                            "mowa_layerwise_bridge_feature_source": "mowa_p0_fullheads",
                         },
                         "data": {
                             "data_mix": "robocasa365_open_drawer_target_human",
@@ -548,7 +549,14 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "evaluated": True,
                             "keys": [
                                 "action_loss",
+                                "mowa_layerwise_bridge_active_heads",
                                 "mowa_layerwise_bridge_coupled",
+                                "mowa_layerwise_bridge_feature_source",
+                            ],
+                            "mowa_layerwise_bridge_feature_source": "mowa_p0_fullheads",
+                            "mowa_layerwise_bridge_active_heads": [
+                                "task_progress",
+                                "action_outcome_class",
                             ],
                             "metric_scope": "one_batch_no_backward_forward_dry_run",
                             "elapsed_sec": 1.0,
@@ -591,6 +599,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_coupling_enabled"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_forward_coupled"])
         self.assertTrue(report["checks"]["forward_has_mowa_layerwise_bridge_coupled"])
+        self.assertTrue(report["checks"]["mowa_layerwise_bridge_uses_p0_fullheads"])
+        self.assertTrue(report["checks"]["mowa_layerwise_bridge_active_heads_are_p0"])
+        self.assertTrue(report["checks"]["mowa_layerwise_bridge_not_probe_source"])
 
     def test_e001_starflow_full_path_dry_run_cli_overrides_are_merged(self):
         try:

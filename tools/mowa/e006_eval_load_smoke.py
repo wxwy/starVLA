@@ -12,10 +12,10 @@ from typing import Any
 
 E006_CONFIG = Path("configs/mowa/mowa_e006_eval_load_smoke.yaml")
 DEFAULT_CHECKPOINT = Path(
-    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233947/checkpoints/steps_2"
+    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2"
 )
 DEFAULT_FINAL_MODEL = Path(
-    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233947/final_model"
+    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/final_model"
 )
 
 
@@ -98,7 +98,7 @@ def build_e006_eval_load_smoke(
         "unresolved_items": [
             "This validates checkpoint eval-load readiness only; no policy rollout is started.",
             "E-006 baseline/zero/shuffle/head_mask policy metrics remain pending.",
-            "Bridge feature source is still starflow_condition_probe, not final WAM output.",
+            "Checkpoint uses mowa_p0_fullheads bridge feature source, but action-gain evidence is still pending.",
         ],
         "go_no_go": (
             "TBD: E-006 eval-load smoke passed; policy rollout remains gated"

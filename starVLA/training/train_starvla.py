@@ -861,6 +861,11 @@ def _write_full_path_dry_run_report(
                 if "mowa_layerwise_bridge_coupled" in ((forward_summary or {}).get("keys") or [])
                 else "not_coupled_in_full_path_dry_run"
             ),
+            "mowa_layerwise_bridge_feature_source": getattr(
+                model,
+                "mowa_layerwise_bridge_feature_source",
+                None,
+            ),
             "mowa_p0_supervision_probe_enabled": bool(
                 getattr(model, "mowa_p0_supervision_probe_enabled", False)
             ),

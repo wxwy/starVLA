@@ -43,6 +43,10 @@ framework:
   mowa:
     enable_qwenpi_projector_dtype_alignment: true
     enable_layerwise_bridge_token_coupling: true
+    layerwise_bridge_feature_source: mowa_p0_fullheads
+    layerwise_bridge_active_heads:
+      - task_progress
+      - action_outcome_class
     wam_feature_dim: 1024
     action_hidden_dim: 1024
     num_bridge_tokens: 2

@@ -26,8 +26,8 @@
     "eval_load_smoke_config": "configs/mowa/mowa_e006_eval_load_smoke.yaml"
   },
   "observed": {
-    "checkpoint": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233947/checkpoints/steps_2",
-    "final_model": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233947/final_model",
+    "checkpoint": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
+    "final_model": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/final_model",
     "trainer_state": {
       "completed_steps": 2,
       "save_format": "safetensors",
@@ -58,14 +58,14 @@
     "model_load": {
       "executed": true,
       "loaded": true,
-      "elapsed_sec": 43.879772534943186,
-      "param_count": 5073246758
+      "elapsed_sec": 31.528859380050562,
+      "param_count": 5074304558
     }
   },
   "unresolved_items": [
     "This validates checkpoint eval-load readiness only; no policy rollout is started.",
     "E-006 baseline/zero/shuffle/head_mask policy metrics remain pending.",
-    "Bridge feature source is still starflow_condition_probe, not final WAM output."
+    "Checkpoint uses mowa_p0_fullheads bridge feature source, but action-gain evidence is still pending."
   ],
   "go_no_go": "TBD: E-006 eval-load smoke passed; policy rollout remains gated"
 }

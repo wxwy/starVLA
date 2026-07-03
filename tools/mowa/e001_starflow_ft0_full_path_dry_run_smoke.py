@@ -79,6 +79,17 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
         "forward_has_mowa_layerwise_bridge_coupled": (
             "mowa_layerwise_bridge_coupled" in forward_keys
         ),
+        "mowa_layerwise_bridge_uses_p0_fullheads": (
+            forward.get("mowa_layerwise_bridge_feature_source") == "mowa_p0_fullheads"
+            and framework.get("mowa_layerwise_bridge_feature_source") == "mowa_p0_fullheads"
+        ),
+        "mowa_layerwise_bridge_active_heads_are_p0": (
+            forward.get("mowa_layerwise_bridge_active_heads")
+            == ["task_progress", "action_outcome_class"]
+        ),
+        "mowa_layerwise_bridge_not_probe_source": (
+            "starflow_condition_probe" not in (forward.get("mowa_layerwise_bridge_active_heads") or [])
+        ),
     }
     return {
         "stage": "P0",
@@ -101,6 +112,7 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
             "Full training throughput, step time, and steady-state VRAM are still not measured.",
             "VRAM fields use torch CUDA allocator state in the pre-prepare dry-run path.",
             "MoWA bridge tokens are coupled only in the explicit MoWA gated dry-run config.",
+            "MoWA bridge feature source must be mowa_p0_fullheads before launch, not starflow_condition_probe.",
             "No checkpoint/save/resume launch policy is confirmed.",
         ],
         "go_no_go": (

@@ -57,6 +57,8 @@ from starVLA.model.modules.mowa import (
     MOWA_P0_FULL_HEADS,
     MoWAActionBridge,
     MoWAActionBridgeConfig,
+    MoWAP0FullHeads,
+    MoWAP0FullHeadsConfig,
     MoWAActionBridgeOutput,
     P0FutureFeatures,
     append_layerwise_bridge_tokens,
@@ -258,6 +260,21 @@ class Qwen_PI_v3(baseframework):
             "layerwise_bridge_token_intervention",
             "baseline",
         )
+        self.mowa_layerwise_bridge_feature_source = getattr(
+            mowa_cfg,
+            "layerwise_bridge_feature_source",
+            "starflow_condition_probe",
+        )
+        supported_feature_sources = {
+            "starflow_condition_probe",
+            "mowa_p0_fullheads",
+        }
+        if self.mowa_layerwise_bridge_feature_source not in supported_feature_sources:
+            supported = ", ".join(sorted(supported_feature_sources))
+            raise ValueError(
+                "Unsupported MoWA layerwise bridge feature source: "
+                f"{self.mowa_layerwise_bridge_feature_source}. Supported: {supported}"
+            )
         supported_interventions = {
             "baseline",
             "zero",
@@ -298,6 +315,25 @@ class Qwen_PI_v3(baseframework):
             if wam_feature_dim == self.action_dit_hidden_dim
             else nn.Linear(self.action_dit_hidden_dim, wam_feature_dim)
         )
+        self.mowa_layerwise_bridge_p0_heads = None
+        if self.mowa_layerwise_bridge_feature_source == "mowa_p0_fullheads":
+            active_heads = getattr(
+                mowa_cfg,
+                "layerwise_bridge_active_heads",
+                ("task_progress", "action_outcome_class"),
+            )
+            self.mowa_layerwise_bridge_active_heads = tuple(active_heads)
+            unknown_heads = [
+                head for head in self.mowa_layerwise_bridge_active_heads if head not in MOWA_P0_FULL_HEADS
+            ]
+            if unknown_heads:
+                raise ValueError(f"Unknown MoWA layerwise bridge active heads: {unknown_heads}")
+            self.mowa_layerwise_bridge_p0_heads = MoWAP0FullHeads(
+                MoWAP0FullHeadsConfig(
+                    input_dim=self.action_dit_hidden_dim,
+                    hidden_dim=wam_feature_dim,
+                )
+            )
         self.mowa_layerwise_bridge = MoWAActionBridge(
             MoWAActionBridgeConfig(
                 wam_feature_dim=wam_feature_dim,
@@ -366,6 +402,32 @@ class Qwen_PI_v3(baseframework):
             )
         raise RuntimeError(f"Unhandled MoWA layerwise bridge token intervention: {intervention}")
 
+    def _build_mowa_layerwise_bridge_future_features(self, hidden_features: torch.Tensor) -> P0FutureFeatures:
+        source = getattr(
+            self,
+            "mowa_layerwise_bridge_feature_source",
+            "starflow_condition_probe",
+        )
+        if source == "starflow_condition_probe":
+            hidden_features = self.mowa_layerwise_bridge_feature_projector(hidden_features)
+            return P0FutureFeatures(
+                hidden_features=hidden_features,
+                head_outputs={},
+                active_heads=("starflow_condition_probe",),
+                masked_heads=(),
+            )
+        if source == "mowa_p0_fullheads":
+            if self.mowa_layerwise_bridge_p0_heads is None:
+                raise RuntimeError("MoWA P0 FullHeads feature source is enabled but not initialized.")
+            active_heads = getattr(
+                self,
+                "mowa_layerwise_bridge_active_heads",
+                ("task_progress", "action_outcome_class"),
+            )
+            masks = {head: head in active_heads for head in MOWA_P0_FULL_HEADS}
+            return self.mowa_layerwise_bridge_p0_heads.future_features(hidden_features, masks)
+        raise RuntimeError(f"Unhandled MoWA layerwise bridge feature source: {source}")
+
     def _maybe_apply_mowa_layerwise_bridge_coupling(
         self,
         vl_embs_list: List[torch.Tensor],
@@ -377,13 +439,7 @@ class Qwen_PI_v3(baseframework):
             raise RuntimeError("MoWA layerwise bridge coupling is enabled but not initialized.")
 
         hidden_features = vl_embs_list[-1].mean(dim=1)
-        hidden_features = self.mowa_layerwise_bridge_feature_projector(hidden_features)
-        future_features = P0FutureFeatures(
-            hidden_features=hidden_features,
-            head_outputs={},
-            active_heads=("starflow_condition_probe",),
-            masked_heads=(),
-        )
+        future_features = self._build_mowa_layerwise_bridge_future_features(hidden_features)
         bridge_output = self.mowa_layerwise_bridge(future_features)
         bridge_output, intervention_metadata = self._apply_mowa_layerwise_bridge_intervention(bridge_output)
         adapted_vl_embs_list, adapted_attention_mask = append_layerwise_bridge_tokens(
@@ -398,6 +454,7 @@ class Qwen_PI_v3(baseframework):
             "attention_mask_shape": (
                 tuple(adapted_attention_mask.shape) if adapted_attention_mask is not None else None
             ),
+            "feature_source": self.mowa_layerwise_bridge_feature_source,
             "active_heads": bridge_output.active_heads,
             "masked_heads": bridge_output.masked_heads,
         }
@@ -520,6 +577,7 @@ class Qwen_PI_v3(baseframework):
             output["mowa_layerwise_bridge_attention_mask_shape"] = mowa_bridge_metadata[
                 "attention_mask_shape"
             ]
+            output["mowa_layerwise_bridge_feature_source"] = mowa_bridge_metadata["feature_source"]
             output["mowa_layerwise_bridge_active_heads"] = mowa_bridge_metadata["active_heads"]
             output["mowa_layerwise_bridge_masked_heads"] = mowa_bridge_metadata["masked_heads"]
         return output

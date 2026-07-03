@@ -99,6 +99,6 @@ launch_blockers:
   - SOT docs 00/01/02 are not available in docs_zh/mowa
   - class_mapping_status remains Data Gate
   - resource policy remains unconfirmed for full E-001 long training
-  - final WAM feature source is not integrated; current bridge source is starflow_condition_probe
+  - P0FullHeads bridge feature source is integrated, but action-gain evidence is not validated
   - batch size / expected VRAM / runtime are not production-confirmed
   - full executable training command not created

@@ -4,10 +4,10 @@ experiment_id: E-006
 config_role: eval_load_smoke
 
 checkpoint:
-  run_id: MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233947
-  run_dir: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233947
-  eval_candidate_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233947/checkpoints/steps_2
-  final_model_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233947/final_model
+  run_id: MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657
+  run_dir: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657
+  eval_candidate_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2
+  final_model_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/final_model
   checkpoint_root_policy: playground/mowa_ckpt
 
 eval_load_smoke:
@@ -30,4 +30,4 @@ launch_guard:
 
 unresolved_items:
   - E-006 policy rollout environment/runtime is not launched by this smoke.
-  - Bridge feature source is still starflow_condition_probe, not final WAM output.
+  - Checkpoint uses mowa_p0_fullheads bridge feature source, but action-gain evidence is still pending.

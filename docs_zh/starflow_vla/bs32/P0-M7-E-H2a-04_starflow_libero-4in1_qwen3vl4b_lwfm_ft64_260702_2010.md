@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中  
 > **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
 > **启动时间**: 2026-07-02 20:16:02 CST  
-> **当前更新**: 2026-07-03 16:03:20 CST  
+> **当前更新**: 2026-07-03 16:13:58 CST  
 > **tmux 会话**: `train`（attached）  
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_64.yaml`
 
@@ -94,19 +94,19 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 训练进度
 
-> 最后更新：2026-07-03 16:03:20 CST
+> 最后更新：2026-07-03 16:13:58 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **7695 / 80000**（9.62%） |
-| **完成比例** | 9.62% |
-| **单步耗时** | ~9.17–9.19 s/it |
-| **数据加载耗时** | ~0.0003–0.0007 s |
-| **模型前向/反向耗时** | ~2.31–2.35 s |
-| **已运行时间** | 约 19 小时 47 分钟 |
-| **预计剩余时间** | ~181 小时（约 7.5 天） |
-| **最新 checkpoint** | `steps_7500` |
-| **上一个 checkpoint** | `steps_7250` |
+| **当前 Step** | **7763 / 80000**（9.70%） |
+| **完成比例** | 9.70% |
+| **单步耗时** | ~9.17–9.37 s/it |
+| **数据加载耗时** | ~0.0003–0.0008 s |
+| **模型前向/反向耗时** | ~2.33–2.46 s |
+| **已运行时间** | 约 19 小时 57 分钟 |
+| **预计剩余时间** | ~184 小时（约 7.7 天） |
+| **最新 checkpoint** | `steps_7750` |
+| **上一个 checkpoint** | `steps_7500` |
 
 ### Loss 记录（部分）
 
@@ -131,7 +131,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | 7500 | 0.1122 | 0.1134 | eval mse_score=0.00619 |
 | 7620 | 0.1067 | 0.1023 | |
 | 7680 | 0.1043 | 0.0937 | |
-| 7695 | — | — | 🔵 当前 |
+| 7760 | 0.1005 | 0.1328 | |
+| 7763 | — | — | 🔵 当前 |
 | **250** | — | — | ✅ checkpoint |
 | **500** | — | — | ✅ checkpoint |
 | **750** | — | — | ✅ checkpoint |
@@ -162,6 +163,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | **7000** | — | — | ✅ checkpoint |
 | **7250** | — | — | ✅ checkpoint |
 | **7500** | — | — | ✅ checkpoint |
+| **7750** | — | — | ✅ checkpoint |
+| **7750** | — | — | ✅ checkpoint |
 
 ### Loss 趋势
 
@@ -176,25 +179,25 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 系统资源占用
 
-> 最后更新：2026-07-03 16:03:20 CST
+> 最后更新：2026-07-03 16:13:58 CST
 
 ### GPU（NVIDIA A100-SXM4-80GB）
 
 | 指标 | 值 |
 |------|-----|
-| **GPU 利用率** | 99% |
+| **GPU 利用率** | 74% |
 | **显存使用** | 64,269 MiB / 81,920 MiB（78.5%） |
 | **显存空闲** | 16,884 MiB |
-| **功耗** | 320.24 W / 400.00 W |
-| **温度** | 54°C |
+| **功耗** | 382.17 W / 400.00 W |
+| **温度** | 58°C |
 
 ### Docker 内存（cgroup v2）
 
 | 指标 | 值 |
 |------|-----|
 | **Docker 内存上限** | 120 GiB |
-| **当前已用** | 24.26 GiB |
-| **使用率** | 20.2% |
+| **当前已用** | 27.56 GiB |
+| **使用率** | 23.0% |
 | **Swap** | 0 B |
 
 ### 存储
@@ -252,7 +255,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 │   ├── steps_6750/
 │   ├── steps_7000/
 │   ├── steps_7250/
-│   └── steps_7500/
+│   ├── steps_7500/
+│   └── steps_7750/
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -296,8 +300,8 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 ## 自动监控状态
 
-- 定时任务 `e775fd3e`：每小时 :47 运行监控脚本
-- 上次手动更新：2026-07-03 16:03:20 CST
+- 定时任务 `7d6ce832`：每 2 小时 :07 直接监控 tmux `train` 并更新 tracker（不使用 .py 脚本）
+- 上次手动更新：2026-07-03 16:13:58 CST
 
 ---
 
@@ -307,7 +311,7 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 - **当前 run 为 FRESH START**，从 step 0 开始全新训练；实际训练持续运行中，未在 step 5500 终止。
 - A100 80GB 显存使用率 78.5%（64.3G/80G），余量 ~16.9G，尚未 OOM。
 - 单步耗时 ~9.2 s/it；模型前向/反向耗时 ~2.33 s（per_device_batch_size=8，单次 micro-step 处理 8 条样本）。
-- checkpoint 每 250 steps 正常保存，已保存至 `steps_7500`；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
+- checkpoint 每 250 steps 正常保存，已保存至 `steps_7750`；`/localdisk-tmp` → `/disk/rl` 后台同步正常。
 - 训练日志中出现过数据读取异常（`Invalid data found when processing input`），均自动 retry 后未中断。
 - **最佳 loss**: 0.09397（step 5300）；**最佳 mse**: 0.00549（step 4000）。
 

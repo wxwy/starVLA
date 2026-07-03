@@ -25,7 +25,7 @@ def main():
     cur_step, max_step, speed, data_time, model_time = bars[-1]
 
     # 解析最新 Loss 行
-    loss_lines = re.findall(r"Step (\d+), Loss: \{'action_dit_loss': ([\d.]+)", train_out)
+    loss_lines = re.findall(r"Step (\d+),.*?action_dit_loss':.*?([\d]+\.[\d]+)", train_out, re.DOTALL)
     if not loss_lines:
         print(f'[{NOW}] ⚠️ 未找到 Loss 行')
         return

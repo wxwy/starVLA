@@ -43,13 +43,18 @@ class PolicyServerWrapper:
         device: str = "cuda",
         use_bf16: bool = False,
         unnorm_key: Optional[str] = None,
+        config_overrides: Optional[List[str]] = None,
     ) -> None:
         self._ckpt_path = str(ckpt_path)
+        self._config_overrides = list(config_overrides or [])
         overall_start = time.perf_counter()
 
         logging.info("PolicyServerWrapper: loading framework from %s", self._ckpt_path)
         stage_start = time.perf_counter()
-        framework = baseframework.from_pretrained(self._ckpt_path)
+        framework = baseframework.from_pretrained(
+            self._ckpt_path,
+            config_overrides=self._config_overrides,
+        )
         logging.info(
             "PolicyServerWrapper: baseframework.from_pretrained finished in %.2fs",
             time.perf_counter() - stage_start,
@@ -148,6 +153,7 @@ class PolicyServerWrapper:
         base = {
             "env": "starvla_policy_server",
             "ckpt_path": self._ckpt_path,
+            "config_overrides": self._config_overrides,
             "action_chunk_size": self._action_chunk_size,
             "available_unnorm_keys": self._available_unnorm_keys,
             "default_unnorm_key": self._default_unnorm_key,

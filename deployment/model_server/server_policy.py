@@ -29,6 +29,7 @@ def main(args) -> None:
         ckpt_path=args.ckpt_path,
         device="cuda",
         use_bf16=args.use_bf16,
+        config_overrides=args.config_override,
     )
     logging.info(
         "server_policy.main: PolicyServerWrapper init finished in %.2fs",
@@ -66,6 +67,12 @@ def build_argparser():
     parser.add_argument("--port", type=int, default=10093)
     parser.add_argument("--use_bf16", action="store_true")
     parser.add_argument("--idle_timeout", type=int, default=1800, help="Idle timeout in seconds, -1 means never close")
+    parser.add_argument(
+        "--config_override",
+        action="append",
+        default=[],
+        help="Optional OmegaConf dotlist override applied after loading checkpoint config. Repeat per key=value.",
+    )
     return parser
 
 

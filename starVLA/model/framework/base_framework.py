@@ -14,6 +14,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 import torch
+from omegaconf import OmegaConf
 from transformers import PretrainedConfig, PreTrainedModel
 
 from starVLA.model.framework.share_tools import (
@@ -243,6 +244,18 @@ class baseframework(PreTrainedModel):
             "[from_pretrained] read_mode_config done in %.2fs",
             time.perf_counter() - stage_start,
         )
+        config_overrides = kwargs.pop("config_overrides", None)
+        if config_overrides:
+            stage_start = time.perf_counter()
+            ocfg = OmegaConf.create(model_config)
+            override_cfg = OmegaConf.from_dotlist(list(config_overrides))
+            ocfg = OmegaConf.merge(ocfg, override_cfg)
+            model_config = OmegaConf.to_container(ocfg, resolve=True)
+            logger.info(
+                "[from_pretrained] applied config_overrides=%s in %.2fs",
+                config_overrides,
+                time.perf_counter() - stage_start,
+            )
 
         config = dict_to_namespace(model_config)
         model_config = config

@@ -925,6 +925,116 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("--datasets.vla_data.per_device_batch_size", command)
         self.assertIn("2", command)
 
+    def test_server_policy_accepts_eval_time_config_overrides(self):
+        from deployment.model_server.server_policy import build_argparser
+
+        args = build_argparser().parse_args(
+            [
+                "--ckpt_path",
+                "playground/mowa_ckpt/run/checkpoints/steps_2",
+                "--config_override",
+                "framework.mowa.layerwise_bridge_token_intervention=zero",
+                "--config_override",
+                "framework.mowa.num_bridge_tokens=2",
+            ]
+        )
+
+        self.assertEqual(
+            args.config_override,
+            [
+                "framework.mowa.layerwise_bridge_token_intervention=zero",
+                "framework.mowa.num_bridge_tokens=2",
+            ],
+        )
+
+    def test_e006_policy_rollout_preflight_builds_gated_commands(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_save_resume_smoke_test"
+                / "checkpoints"
+                / "steps_2"
+            )
+            checkpoint.mkdir(parents=True)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "deployment" / "model_server").mkdir(parents=True)
+            (root / "examples" / "Robocasa_365" / "eval_files").mkdir(parents=True)
+            (root / ".venv" / "bin").mkdir(parents=True)
+            (root / ".robocase" / "bin").mkdir(parents=True)
+            (root / "deployment" / "model_server" / "server_policy.py").write_text("", encoding="utf-8")
+            (root / "examples" / "Robocasa_365" / "eval_files" / "simulation_env.py").write_text(
+                "",
+                encoding="utf-8",
+            )
+            (root / "examples" / "Robocasa_365" / "eval_files" / "run_eval.sh").write_text(
+                "#!/usr/bin/env bash\nset -euo pipefail\n",
+                encoding="utf-8",
+            )
+            (root / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
+            (root / ".robocase" / "bin" / "python").write_text("", encoding="utf-8")
+            config = root / "configs" / "mowa" / "mowa_e006_policy_rollout_candidate.yaml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "stage: M5",
+                        "task_id: M5-007",
+                        "experiment_id: E-006",
+                        "experiment_name: test",
+                        "launch_ready: false",
+                        "eval_started: false",
+                        "requires_human_confirmation: true",
+                        "checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2",
+                        "checkpoint_root_policy: playground/mowa_ckpt",
+                        "server:",
+                        "  python: .venv/bin/python",
+                        "  entrypoint: deployment/model_server/server_policy.py",
+                        "  port_base: 5686",
+                        "  use_bf16: true",
+                        "  idle_timeout: 1800",
+                        "client:",
+                        "  python: .robocase/bin/python",
+                        "  module: examples.Robocasa_365.eval_files.simulation_env",
+                        "  env_name: robocasa/OpenDrawer",
+                        "  n_episodes: 1",
+                        "  n_envs: 1",
+                        "  max_episode_steps: 100",
+                        "  n_action_steps: 8",
+                        "  video_out_path: playground/eval_results/mowa_e006_robocasa365_open_drawer_smoke/videos",
+                        "interventions:",
+                        "  - baseline",
+                        "  - zero",
+                        "  - batch_shuffle",
+                        "  - head_mask_control",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e006_policy_rollout_preflight_smoke import (
+                build_e006_policy_rollout_preflight_smoke,
+            )
+
+            report = build_e006_policy_rollout_preflight_smoke(
+                root,
+                Path("configs/mowa/mowa_e006_policy_rollout_candidate.yaml"),
+            )
+
+        self.assertFalse(report["eval_started"])
+        self.assertFalse(report["launch_ready"])
+        self.assertTrue(report["checks"]["checkpoint_under_mowa_ckpt"])
+        self.assertTrue(report["checks"]["all_interventions_have_commands"])
+        self.assertTrue(report["checks"]["non_baseline_commands_use_config_override"])
+        self.assertTrue(report["checks"]["baseline_command_pins_baseline_override"])
+        self.assertIn("--config_override", report["commands"]["zero"]["server_command"])
+        self.assertIn(
+            "framework.mowa.layerwise_bridge_token_intervention=zero",
+            report["commands"]["zero"]["server_command"],
+        )
+
     def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
         try:
             import torch

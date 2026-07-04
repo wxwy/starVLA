@@ -9,6 +9,9 @@ preconditions:
   bridge_interface: configs/mowa/mowa_action_bridge_interface.yaml
   readiness_report: docs_zh/mowa/mowa_e001_readiness_smoke.json
   intervention_smoke_report: docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json
+  checkpoint_forward_report: docs_zh/mowa/mowa_e006_checkpoint_intervention_forward_smoke.json
+  policy_rollout_candidate: configs/mowa/mowa_e006_policy_rollout_candidate.yaml
+  policy_rollout_preflight_report: docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json
   requires_training_checkpoint: true
   launch_ready: false
 

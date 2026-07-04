@@ -11,19 +11,13 @@ from typing import Any
 
 
 E006_CONFIG = Path("configs/mowa/mowa_e006_eval_load_smoke.yaml")
-DEFAULT_CHECKPOINT = Path(
-    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2"
-)
-DEFAULT_FINAL_MODEL = Path(
-    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/final_model"
-)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run MoWA E-006 checkpoint eval-load smoke.")
     parser.add_argument("--repo-root", type=Path, default=Path("."))
-    parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
-    parser.add_argument("--final-model", type=Path, default=DEFAULT_FINAL_MODEL)
+    parser.add_argument("--checkpoint", type=Path, default=None)
+    parser.add_argument("--final-model", type=Path, default=None)
     parser.add_argument("--execute-load", action="store_true")
     parser.add_argument("--output", type=Path, default=None)
     return parser.parse_args()
@@ -48,11 +42,15 @@ def main() -> None:
 def build_e006_eval_load_smoke(
     repo_root: Path | str,
     *,
-    checkpoint: Path = DEFAULT_CHECKPOINT,
-    final_model: Path = DEFAULT_FINAL_MODEL,
+    checkpoint: Path | None = None,
+    final_model: Path | None = None,
     execute_load: bool = False,
 ) -> dict[str, Any]:
     root = Path(repo_root)
+    if checkpoint is None or final_model is None:
+        default_checkpoint, default_final_model = _load_default_checkpoint_paths(root)
+        checkpoint = checkpoint or default_checkpoint
+        final_model = final_model or default_final_model
     checkpoint_path = root / checkpoint
     final_model_path = root / final_model
     trainer_state = _read_json(checkpoint_path / "trainer_state.json") or {}
@@ -145,6 +143,18 @@ def _execute_model_load(checkpoint_path: Path) -> dict[str, Any]:
             "elapsed_sec": time.perf_counter() - start_time,
             "error": repr(exc),
         }
+
+
+def _load_default_checkpoint_paths(repo_root: Path) -> tuple[Path, Path]:
+    from omegaconf import OmegaConf
+
+    config_path = repo_root / E006_CONFIG
+    cfg = OmegaConf.load(config_path)
+    checkpoint_cfg = cfg.checkpoint
+    return (
+        Path(str(checkpoint_cfg.eval_candidate_checkpoint)),
+        Path(str(checkpoint_cfg.final_model_checkpoint)),
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:

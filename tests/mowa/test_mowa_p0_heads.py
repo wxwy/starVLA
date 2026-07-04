@@ -870,6 +870,70 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["mapping_action_head_layerwisefm"])
         self.assertTrue(report["checks"]["model_load_executed_or_not_required"])
 
+    def test_e006_eval_load_defaults_are_read_from_config(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_save_resume_smoke_test"
+                / "checkpoints"
+                / "steps_2"
+            )
+            final_model = checkpoint.parents[1] / "final_model"
+            (root / "configs" / "mowa").mkdir(parents=True)
+            checkpoint.mkdir(parents=True)
+            final_model.mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e006_eval_load_smoke.yaml").write_text(
+                "checkpoint:\n"
+                "  eval_candidate_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2\n"
+                "  final_model_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/final_model\n"
+                "  checkpoint_root_policy: playground/mowa_ckpt\n",
+                encoding="utf-8",
+            )
+            (checkpoint / "trainer_state.json").write_text(json.dumps({"completed_steps": 2}), encoding="utf-8")
+            (checkpoint / "starflow_mapping.json").write_text(
+                json.dumps({"framework_name": "StarFlowVLA", "action_head": "LayerwiseFM"}),
+                encoding="utf-8",
+            )
+            for name in (
+                "model.safetensors.index.json",
+                "config.full.yaml",
+                "dataset_statistics.json",
+                "optimizer_rank_00000.pt",
+                "scheduler.pt",
+                "random_states_0.pkl",
+            ):
+                (checkpoint / name).write_bytes(b"placeholder")
+            (checkpoint / "model-00001.safetensors").write_bytes(b"placeholder")
+
+            from tools.mowa.e006_eval_load_smoke import build_e006_eval_load_smoke
+
+            report = build_e006_eval_load_smoke(root, execute_load=False)
+
+        self.assertEqual(
+            report["observed"]["checkpoint"],
+            "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2",
+        )
+        self.assertTrue(report["checks"]["checkpoint_under_mowa_ckpt"])
+        self.assertTrue(report["checks"]["final_model_dir_exists"])
+
+    def test_action_bridge_interface_records_starflow_candidate_values(self):
+        from omegaconf import OmegaConf
+
+        bridge_cfg = OmegaConf.load("configs/mowa/mowa_action_bridge_interface.yaml")
+        launch_cfg = OmegaConf.load("configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml")
+
+        candidate = bridge_cfg.bridge.starflow_e001_candidate
+        self.assertEqual(candidate.wam_feature_dim, launch_cfg.framework.mowa.wam_feature_dim)
+        self.assertEqual(candidate.action_hidden_dim, launch_cfg.framework.mowa.action_hidden_dim)
+        self.assertEqual(candidate.num_bridge_tokens, launch_cfg.framework.mowa.num_bridge_tokens)
+        self.assertEqual(
+            candidate.num_action_layers,
+            launch_cfg.framework.qwenvl.num_vl_layers,
+        )
+
     def test_e006_checkpoint_intervention_forward_smoke_builds_cli_overrides(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

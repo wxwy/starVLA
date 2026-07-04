@@ -169,7 +169,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 系统资源占用
 
-> 最后更新：2026-07-04 20:15:00 CST
+> 最后更新：2026-07-04 20:30:00 CST
 
 ### GPU（NVIDIA A100-SXM4-80GB）
 
@@ -177,7 +177,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 |------|-----|
 | **GPU 利用率** | 100% |
 | **显存使用** | 64,269 MiB / 81,920 MiB（78.5%） |
-| **功耗** | 390.23 W / 400.00 W |
+| **功耗** | 374.59 W / 400.00 W |
 | **温度** | 57°C |
 
 ### Docker 内存（cgroup v2）
@@ -185,7 +185,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | 指标 | 值 |
 |------|-----|
 | **上限** | 120 GiB |
-| **当前已用** | 26.75 GiB |
+| **当前已用** | 26.73 GiB |
 | **使用率** | 22.3% |
 
 ### 存储
@@ -215,7 +215,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 ## 自动监控状态
 
 - 定时任务 `4288195d`：每小时 :07 直接监控 tmux `train`，自动更新 H2a-04 tracker
-- 上次更新：2026-07-04 20:15:00 CST
+- 上次更新：2026-07-04 20:30:00 CST
 
 ---
 

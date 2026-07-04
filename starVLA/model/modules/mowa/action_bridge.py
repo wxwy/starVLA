@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .p0_heads import P0FutureFeatures
+from .p0_heads import MoWAFutureFeatures
 
 
 @dataclass(frozen=True)
@@ -51,7 +51,7 @@ class MoWAActionBridge:
                 )
                 nn.init.normal_(self.layer_embedding, mean=0.0, std=0.02)
 
-            def forward(self, future_features: P0FutureFeatures) -> MoWAActionBridgeOutput:
+            def forward(self, future_features: MoWAFutureFeatures) -> MoWAActionBridgeOutput:
                 hidden = future_features.hidden_features
                 if hidden.dim() != 2:
                     raise ValueError("MoWAActionBridge expects hidden_features with shape [B, D].")

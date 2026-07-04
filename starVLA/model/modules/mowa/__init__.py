@@ -17,14 +17,24 @@ from .action_head_adapter import (
 )
 from .p0_heads import (
     P0FutureFeatures,
+    MoWAFutureConstructibleHeads,
+    MoWAFutureConstructibleHeadsConfig,
+    MoWAFutureFeatureHeads,
+    MoWAFutureFeatureHeadsConfig,
+    MoWAFutureFeatures,
     MoWAP0ConstructibleHeads,
     MoWAP0ConstructibleHeadsConfig,
     MoWAP0FullHeads,
     MoWAP0FullHeadsConfig,
+    build_mowa_future_constructible_batch_from_smoke,
     build_mowa_p0_constructible_batch_from_smoke,
     mowa_manual_sgd_step,
 )
 from starVLA.mowa_constants import (
+    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_FULL_HEADS,
+    MOWA_FUTURE_HEAD_OUTPUT_DIMS,
+    MOWA_FUTURE_MASKED_HEADS,
     MOWA_P0_CONSTRUCTIBLE_HEADS,
     MOWA_P0_FULL_HEADS,
     MOWA_P0_HEAD_OUTPUT_DIMS,
@@ -32,6 +42,10 @@ from starVLA.mowa_constants import (
 )
 
 __all__ = [
+    "MOWA_FUTURE_CONSTRUCTIBLE_HEADS",
+    "MOWA_FUTURE_FULL_HEADS",
+    "MOWA_FUTURE_HEAD_OUTPUT_DIMS",
+    "MOWA_FUTURE_MASKED_HEADS",
     "MOWA_P0_CONSTRUCTIBLE_HEADS",
     "MOWA_ACTION_HEAD_BINDINGS",
     "MOWA_P0_FULL_HEADS",
@@ -41,11 +55,17 @@ __all__ = [
     "MoWAActionBridgeConfig",
     "MoWAActionBridgeOutput",
     "MoWAActionHeadBinding",
+    "MoWAFutureConstructibleHeads",
+    "MoWAFutureConstructibleHeadsConfig",
+    "MoWAFutureFeatureHeads",
+    "MoWAFutureFeatureHeadsConfig",
+    "MoWAFutureFeatures",
     "P0FutureFeatures",
     "MoWAP0ConstructibleHeads",
     "MoWAP0ConstructibleHeadsConfig",
     "MoWAP0FullHeads",
     "MoWAP0FullHeadsConfig",
+    "build_mowa_future_constructible_batch_from_smoke",
     "build_mowa_p0_constructible_batch_from_smoke",
     "append_layerwise_bridge_tokens",
     "append_single_sequence_bridge_tokens",

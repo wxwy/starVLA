@@ -29,6 +29,44 @@ class MoWAP0HeadsTest(unittest.TestCase):
             tuple(head for head in MOWA_P0_FULL_HEADS if head not in MOWA_P0_CONSTRUCTIBLE_HEADS),
         )
 
+    def test_future_head_aliases_preserve_p0_compatibility(self):
+        from starVLA.model.modules.mowa import (
+            MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+            MOWA_FUTURE_FULL_HEADS,
+            MOWA_FUTURE_HEAD_OUTPUT_DIMS,
+            MOWA_FUTURE_MASKED_HEADS,
+            MOWA_P0_CONSTRUCTIBLE_HEADS,
+            MOWA_P0_FULL_HEADS,
+            MOWA_P0_HEAD_OUTPUT_DIMS,
+            MOWA_P0_MASKED_HEADS,
+            MoWAFutureConstructibleHeads,
+            MoWAFutureConstructibleHeadsConfig,
+            MoWAFutureFeatureHeads,
+            MoWAFutureFeatureHeadsConfig,
+            MoWAFutureFeatures,
+            MoWAP0ConstructibleHeads,
+            MoWAP0ConstructibleHeadsConfig,
+            MoWAP0FullHeads,
+            MoWAP0FullHeadsConfig,
+            P0FutureFeatures,
+            build_mowa_future_constructible_batch_from_smoke,
+            build_mowa_p0_constructible_batch_from_smoke,
+        )
+
+        self.assertIs(MOWA_FUTURE_CONSTRUCTIBLE_HEADS, MOWA_P0_CONSTRUCTIBLE_HEADS)
+        self.assertIs(MOWA_FUTURE_FULL_HEADS, MOWA_P0_FULL_HEADS)
+        self.assertIs(MOWA_FUTURE_MASKED_HEADS, MOWA_P0_MASKED_HEADS)
+        self.assertIs(MOWA_FUTURE_HEAD_OUTPUT_DIMS, MOWA_P0_HEAD_OUTPUT_DIMS)
+        self.assertIs(MoWAFutureConstructibleHeads, MoWAP0ConstructibleHeads)
+        self.assertIs(MoWAFutureConstructibleHeadsConfig, MoWAP0ConstructibleHeadsConfig)
+        self.assertIs(MoWAFutureFeatureHeads, MoWAP0FullHeads)
+        self.assertIs(MoWAFutureFeatureHeadsConfig, MoWAP0FullHeadsConfig)
+        self.assertIs(MoWAFutureFeatures, P0FutureFeatures)
+        self.assertIs(
+            build_mowa_future_constructible_batch_from_smoke,
+            build_mowa_p0_constructible_batch_from_smoke,
+        )
+
     def test_constructible_heads_forward_loss_and_optimizer_step(self):
         try:
             import torch

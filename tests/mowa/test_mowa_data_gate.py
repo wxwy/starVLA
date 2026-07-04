@@ -16,6 +16,8 @@ from starVLA.dataloader.mowa import (
     build_mowa_atomic_core_leakage_gate_smoke,
     build_mowa_atomic_core_production_preflight_smoke,
     build_mowa_atomic_core_temporal_profile,
+    build_mowa_future_latent_cache_contract_smoke,
+    build_mowa_future_latent_cache_manifest_smoke,
     build_mowa_g0_report_skeleton,
     build_mowa_latent_cache_contract_smoke,
     build_mowa_latent_cache_manifest_smoke,
@@ -582,6 +584,16 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertTrue(report["entries"][0]["cache_path"].endswith(".pt"))
         self.assertFalse(report["entries"][0]["cache_exists"])
         self.assertEqual(report["entries"][0]["cache_status"], "planned")
+
+    def test_future_latent_cache_aliases_preserve_contract_smoke(self):
+        self.assertIs(
+            build_mowa_future_latent_cache_manifest_smoke,
+            build_mowa_latent_cache_manifest_smoke,
+        )
+        self.assertIs(
+            build_mowa_future_latent_cache_contract_smoke,
+            build_mowa_latent_cache_contract_smoke,
+        )
 
 
 if __name__ == "__main__":

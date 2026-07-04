@@ -210,6 +210,16 @@ def build_mowa_latent_cache_contract_smoke(
     )
 
 
+# Runtime-facing aliases. Existing latent-cache names are kept for reports and
+# tools that still refer to the P1 experiment stage.
+MoWAFutureLatentCacheManifestEntry = MoWALatentCacheManifestEntry
+MoWAFutureLatentCacheManifestSmoke = MoWALatentCacheManifestSmoke
+MoWAFutureLatentCacheContractEntry = MoWALatentCacheContractEntry
+MoWAFutureLatentCacheContractSmoke = MoWALatentCacheContractSmoke
+build_mowa_future_latent_cache_manifest_smoke = build_mowa_latent_cache_manifest_smoke
+build_mowa_future_latent_cache_contract_smoke = build_mowa_latent_cache_contract_smoke
+
+
 def _cache_key(dataset_path: Path, episode_index: int, video_key: str) -> str:
     payload = f"{dataset_path}:{episode_index}:{video_key}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()[:16]

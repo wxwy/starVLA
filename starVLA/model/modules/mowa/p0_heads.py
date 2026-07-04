@@ -171,6 +171,14 @@ class MoWAP0FullHeads:
         return _TorchMoWAP0FullHeads(*args, **kwargs)
 
 
+# Runtime-facing aliases. P0 names are kept for experiment-stage compatibility.
+MoWAFutureConstructibleHeadsConfig = MoWAP0ConstructibleHeadsConfig
+MoWAFutureFeatureHeadsConfig = MoWAP0FullHeadsConfig
+MoWAFutureFeatures = P0FutureFeatures
+MoWAFutureConstructibleHeads = MoWAP0ConstructibleHeads
+MoWAFutureFeatureHeads = MoWAP0FullHeads
+
+
 def build_mowa_p0_constructible_batch_from_smoke(
     data_root: Path | str,
     *,
@@ -238,3 +246,6 @@ def build_mowa_p0_constructible_batch_from_smoke(
             "source": "G0 smoke labels",
         },
     }
+
+
+build_mowa_future_constructible_batch_from_smoke = build_mowa_p0_constructible_batch_from_smoke

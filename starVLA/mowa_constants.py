@@ -25,3 +25,10 @@ MOWA_P0_HEAD_OUTPUT_DIMS = {
     "object_visibility_future": 1,
     "action_outcome_class": 2,
 }
+
+# Semantic aliases for runtime code. The P0 names remain as compatibility
+# aliases for existing configs, reports and experiment-stage documents.
+MOWA_FUTURE_CONSTRUCTIBLE_HEADS = MOWA_P0_CONSTRUCTIBLE_HEADS
+MOWA_FUTURE_FULL_HEADS = MOWA_P0_FULL_HEADS
+MOWA_FUTURE_MASKED_HEADS = MOWA_P0_MASKED_HEADS
+MOWA_FUTURE_HEAD_OUTPUT_DIMS = MOWA_P0_HEAD_OUTPUT_DIMS

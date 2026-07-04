@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中
 > **run_id**: `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021`
 > **启动时间**: 2026-07-02 20:24:19 CST
-> **当前更新**: 2026-07-04 17:33 CST
+> **当前更新**: 2026-07-04 17:45 CST
 > **tmux 会话**: `train`（attached）
 > **配置来源**: `configs/starflow_vla/state/continuous_head.yaml`
 
@@ -145,11 +145,11 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 | 指标 | 值 |
 |------|-----|
-| **GPU 利用率** | 72%（本机当前） |
+| **GPU 利用率** | 49%（本机当前） |
 | **显存使用** | 23640 MiB / 24564 MiB（96.2%） |
 | **显存空闲** | 1404 MiB |
 | **功耗** | 287.95 W / 450.00 W |
-| **温度** | 58°C |
+| **温度** | 57°C |
 
 ### Docker 内存（cgroup v2）
 

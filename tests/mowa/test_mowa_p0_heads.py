@@ -870,6 +870,61 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["mapping_action_head_layerwisefm"])
         self.assertTrue(report["checks"]["model_load_executed_or_not_required"])
 
+    def test_e006_checkpoint_intervention_forward_smoke_builds_cli_overrides(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_save_resume_smoke_test"
+                / "checkpoints"
+                / "steps_2"
+            )
+            checkpoint.mkdir(parents=True)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_starflow_ft0_full_path_dry_run.yaml").write_text(
+                "trainer:\n  full_path_dry_run_only: true\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e006_checkpoint_intervention_forward_smoke import (
+                build_command,
+                run_or_plan_checkpoint_intervention_forward_smoke,
+            )
+
+            relative_checkpoint = Path(
+                "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2"
+            )
+            report = run_or_plan_checkpoint_intervention_forward_smoke(
+                root,
+                checkpoint=relative_checkpoint,
+                execute=False,
+                batch_size=2,
+            )
+            command = build_command(
+                checkpoint=relative_checkpoint,
+                intervention="batch_shuffle",
+                run_id="test",
+                report_path=Path("docs_zh/mowa/test.json"),
+                batch_size=2,
+            )
+
+        self.assertFalse(report["training_started"])
+        self.assertFalse(report["eval_started"])
+        self.assertTrue(report["checks"]["config_exists"])
+        self.assertTrue(report["checks"]["checkpoint_exists"])
+        self.assertTrue(report["checks"]["checkpoint_under_mowa_ckpt"])
+        self.assertTrue(report["checks"]["batch_size_allows_shuffle"])
+        self.assertIn("--framework.mowa.layerwise_bridge_token_intervention", command)
+        self.assertIn("batch_shuffle", command)
+        self.assertIn("--trainer.full_path_dry_run_load_checkpoint", command)
+        self.assertIn("true", command)
+        self.assertIn("--trainer.full_path_dry_run_checkpoint", command)
+        self.assertIn(str(relative_checkpoint), command)
+        self.assertIn("--datasets.vla_data.per_device_batch_size", command)
+        self.assertIn("2", command)
+
     def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
         try:
             import torch

@@ -811,6 +811,35 @@ def _run_full_path_dry_run_forward(model, batch) -> dict:
     return summary
 
 
+def _load_full_path_dry_run_checkpoint(cfg, model) -> dict:
+    checkpoint = getattr(cfg.trainer, "full_path_dry_run_checkpoint", None)
+    requested = bool(getattr(cfg.trainer, "full_path_dry_run_load_checkpoint", False))
+    if not requested:
+        return {"requested": False, "loaded": False, "path": None}
+    if not checkpoint:
+        raise ValueError("trainer.full_path_dry_run_load_checkpoint=true requires trainer.full_path_dry_run_checkpoint")
+
+    checkpoint_path = Path(checkpoint).expanduser()
+    if not checkpoint_path.is_absolute():
+        checkpoint_path = Path.cwd() / checkpoint_path
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f"full_path_dry_run_checkpoint does not exist: {checkpoint_path}")
+
+    start_time = time.perf_counter()
+    TrainerUtils.load_pretrained_backbones(
+        model,
+        str(checkpoint_path),
+        preferred_format=getattr(cfg.trainer, "save_format", "safetensors"),
+    )
+    return {
+        "requested": True,
+        "loaded": True,
+        "path": str(checkpoint),
+        "resolved_path": str(checkpoint_path),
+        "elapsed_sec": float(time.perf_counter() - start_time),
+    }
+
+
 def _write_full_path_dry_run_report(
     cfg,
     *,
@@ -821,6 +850,7 @@ def _write_full_path_dry_run_report(
     trainer,
     batch_summary: dict | None,
     forward_summary: dict | None,
+    checkpoint_load_summary: dict | None,
 ) -> None:
     report_path = Path(
         getattr(
@@ -838,6 +868,8 @@ def _write_full_path_dry_run_report(
         "full_path_dry_run_only": True,
         "training_started": False,
         "checkpoint_saved": False,
+        "checkpoint_loaded": bool((checkpoint_load_summary or {}).get("loaded", False)),
+        "checkpoint_load": checkpoint_load_summary or {"requested": False, "loaded": False, "path": None},
         "wandb_started": False,
         "config_yaml": getattr(cfg, "config_yaml", None),
         "run_id": cfg.run_id,
@@ -904,7 +936,8 @@ def _write_full_path_dry_run_report(
         "forward": forward_summary or {"evaluated": False},
         "go_no_go": "TBD: train_starvla full-path dry-run passed; training remains gated",
         "notes": [
-            "This dry-run stops before prepare_training(), wandb, checkpoint loading, checkpoint saving, and train().",
+            "This dry-run stops before prepare_training(), wandb, checkpoint saving, and train().",
+            "Checkpoint loading is optional and only runs when trainer.full_path_dry_run_load_checkpoint is true.",
             "It validates StarVLA build/data/optimizer/trainer wiring only.",
             "MoWA P0 supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
             "MoWA bridge coupling into LayerwiseFM action generation is only active when the MoWA gated config enables it.",
@@ -2194,6 +2227,7 @@ def main(cfg) -> None:
         _launch_startup_checkpoint_stage(cfg)
     output_dir = setup_directories(cfg=cfg)
     vla = build_framework(cfg)
+    checkpoint_load_summary = _load_full_path_dry_run_checkpoint(cfg, vla)
     vla_train_dataloader = prepare_data(cfg=cfg, accelerator=accelerator, output_dir=output_dir)
     optimizer, lr_scheduler = setup_optimizer_and_scheduler(model=vla, cfg=cfg)
 
@@ -2225,6 +2259,7 @@ def main(cfg) -> None:
             trainer=trainer,
             batch_summary=batch_summary,
             forward_summary=forward_summary,
+            checkpoint_load_summary=checkpoint_load_summary,
         )
         logger.info("MoWA E-001 train_starvla full-path dry-run complete; training skipped.")
         if dist.is_initialized():

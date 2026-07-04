@@ -55,7 +55,9 @@ from starVLA.model.framework.share_tools import merge_framework_config, populate
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import LayerwiseFlowmatchingActionHead, get_action_model
 from starVLA.model.modules.mowa import (
     MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_FEATURE_SOURCE_ALIASES,
     MOWA_FUTURE_FULL_HEADS,
+    MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE,
     MoWAActionBridge,
     MoWAActionBridgeConfig,
     MoWAActionBridgeOutput,
@@ -264,12 +266,11 @@ class Qwen_PI_v3(baseframework):
         self.mowa_layerwise_bridge_feature_source = getattr(
             mowa_cfg,
             "layerwise_bridge_feature_source",
-            "starflow_condition_probe",
+            MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE,
         )
         supported_feature_sources = {
-            "starflow_condition_probe",
-            "mowa_future_feature_heads",
-            "mowa_p0_fullheads",
+            MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE,
+            *MOWA_FUTURE_FEATURE_SOURCE_ALIASES,
         }
         if self.mowa_layerwise_bridge_feature_source not in supported_feature_sources:
             supported = ", ".join(sorted(supported_feature_sources))
@@ -323,10 +324,7 @@ class Qwen_PI_v3(baseframework):
             else nn.Linear(self.action_dit_hidden_dim, wam_feature_dim)
         )
         self.mowa_layerwise_bridge_p0_heads = None
-        if self.mowa_layerwise_bridge_feature_source in {
-            "mowa_future_feature_heads",
-            "mowa_p0_fullheads",
-        }:
+        if self.mowa_layerwise_bridge_feature_source in MOWA_FUTURE_FEATURE_SOURCE_ALIASES:
             active_heads = getattr(
                 mowa_cfg,
                 "layerwise_bridge_active_heads",
@@ -416,17 +414,17 @@ class Qwen_PI_v3(baseframework):
         source = getattr(
             self,
             "mowa_layerwise_bridge_feature_source",
-            "starflow_condition_probe",
+            MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE,
         )
-        if source == "starflow_condition_probe":
+        if source == MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE:
             hidden_features = self.mowa_layerwise_bridge_feature_projector(hidden_features)
             return MoWAFutureFeatures(
                 hidden_features=hidden_features,
                 head_outputs={},
-                active_heads=("starflow_condition_probe",),
+                active_heads=(MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE,),
                 masked_heads=(),
             )
-        if source in {"mowa_future_feature_heads", "mowa_p0_fullheads"}:
+        if source in MOWA_FUTURE_FEATURE_SOURCE_ALIASES:
             if self.mowa_layerwise_bridge_p0_heads is None:
                 raise RuntimeError("MoWA future feature-head source is enabled but not initialized.")
             active_heads = getattr(

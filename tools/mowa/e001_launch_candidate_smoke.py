@@ -7,14 +7,14 @@ import json
 from pathlib import Path
 from typing import Any
 
+from starVLA.mowa_constants import MOWA_FUTURE_FEATURE_SOURCE_ALIASES
 
 LAUNCH_CANDIDATE_CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml")
 COMMAND_CANDIDATE_CONFIG = Path("configs/mowa/mowa_e001_training_command_candidate.yaml")
 RUNTIME_POLICY = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
 RUNTIME_SWEEP_REPORT = Path("docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json")
-MOWA_FUTURE_FEATURE_SOURCE_PATTERNS = (
-    "layerwise_bridge_feature_source: mowa_future_feature_heads",
-    "layerwise_bridge_feature_source: mowa_p0_fullheads",
+MOWA_FUTURE_FEATURE_SOURCE_PATTERNS = tuple(
+    f"layerwise_bridge_feature_source: {source}" for source in MOWA_FUTURE_FEATURE_SOURCE_ALIASES
 )
 
 

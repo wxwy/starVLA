@@ -32,13 +32,17 @@ class MoWAP0HeadsTest(unittest.TestCase):
     def test_future_head_aliases_preserve_p0_compatibility(self):
         from starVLA.model.modules.mowa import (
             MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+            MOWA_FUTURE_FEATURE_HEADS_SOURCE,
+            MOWA_FUTURE_FEATURE_SOURCE_ALIASES,
             MOWA_FUTURE_FULL_HEADS,
             MOWA_FUTURE_HEAD_OUTPUT_DIMS,
             MOWA_FUTURE_MASKED_HEADS,
+            MOWA_P0_FULLHEADS_FEATURE_SOURCE,
             MOWA_P0_CONSTRUCTIBLE_HEADS,
             MOWA_P0_FULL_HEADS,
             MOWA_P0_HEAD_OUTPUT_DIMS,
             MOWA_P0_MASKED_HEADS,
+            MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE,
             MoWAFutureConstructibleHeads,
             MoWAFutureConstructibleHeadsConfig,
             MoWAFutureFeatureHeads,
@@ -57,6 +61,13 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIs(MOWA_FUTURE_FULL_HEADS, MOWA_P0_FULL_HEADS)
         self.assertIs(MOWA_FUTURE_MASKED_HEADS, MOWA_P0_MASKED_HEADS)
         self.assertIs(MOWA_FUTURE_HEAD_OUTPUT_DIMS, MOWA_P0_HEAD_OUTPUT_DIMS)
+        self.assertEqual(MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE, "starflow_condition_probe")
+        self.assertEqual(MOWA_FUTURE_FEATURE_HEADS_SOURCE, "mowa_future_feature_heads")
+        self.assertEqual(MOWA_P0_FULLHEADS_FEATURE_SOURCE, "mowa_p0_fullheads")
+        self.assertEqual(
+            MOWA_FUTURE_FEATURE_SOURCE_ALIASES,
+            (MOWA_FUTURE_FEATURE_HEADS_SOURCE, MOWA_P0_FULLHEADS_FEATURE_SOURCE),
+        )
         self.assertIs(MoWAFutureConstructibleHeads, MoWAP0ConstructibleHeads)
         self.assertIs(MoWAFutureConstructibleHeadsConfig, MoWAP0ConstructibleHeadsConfig)
         self.assertIs(MoWAFutureFeatureHeads, MoWAP0FullHeads)

@@ -7,13 +7,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from starVLA.mowa_constants import (
+    MOWA_FUTURE_FEATURE_SOURCE_ALIASES,
+    MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE,
+)
 
 DRY_RUN_CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml")
 DRY_RUN_REPORT = Path("docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json")
-MOWA_FUTURE_FEATURE_SOURCES = {
-    "mowa_future_feature_heads",
-    "mowa_p0_fullheads",
-}
 
 
 def parse_args() -> argparse.Namespace:
@@ -84,15 +84,16 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
             "mowa_layerwise_bridge_coupled" in forward_keys
         ),
         "mowa_layerwise_bridge_uses_future_feature_heads": (
-            forward.get("mowa_layerwise_bridge_feature_source") in MOWA_FUTURE_FEATURE_SOURCES
-            and framework.get("mowa_layerwise_bridge_feature_source") in MOWA_FUTURE_FEATURE_SOURCES
+            forward.get("mowa_layerwise_bridge_feature_source") in MOWA_FUTURE_FEATURE_SOURCE_ALIASES
+            and framework.get("mowa_layerwise_bridge_feature_source") in MOWA_FUTURE_FEATURE_SOURCE_ALIASES
         ),
         "mowa_layerwise_bridge_active_heads_are_p0": (
             forward.get("mowa_layerwise_bridge_active_heads")
             == ["task_progress", "action_outcome_class"]
         ),
         "mowa_layerwise_bridge_not_probe_source": (
-            "starflow_condition_probe" not in (forward.get("mowa_layerwise_bridge_active_heads") or [])
+            MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE
+            not in (forward.get("mowa_layerwise_bridge_active_heads") or [])
         ),
     }
     return {

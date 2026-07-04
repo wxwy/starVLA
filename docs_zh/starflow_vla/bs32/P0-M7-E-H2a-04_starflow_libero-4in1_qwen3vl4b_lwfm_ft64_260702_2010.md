@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中  
 > **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
 > **启动时间**: 2026-07-02 20:16:02 CST  
-> **当前更新**: 2026-07-05 00:30:00 CST  
+> **当前更新**: 2026-07-05 01:15:00 CST  
 > **tmux 会话**: `train`（attached）  
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_64.yaml`
 
@@ -69,13 +69,13 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **20291 / 80000**（25.36%） |
+| **当前 Step** | **20606 / 80000**（25.76%） |
 | **单步耗时** | ~9.19 s/it |
-| **已运行时间** | 约 52 小时 10 分钟 |
+| **已运行时间** | 约 52 小时 59 分钟 |
 | **预计剩余时间** | ~152 小时（约 6.3 天） |
-| **最新 checkpoint** | `steps_20250` |
-| **上一个 checkpoint** | `steps_20000` |
-| **下一轮 eval** | `steps_20500`（~209 steps 后） |
+| **最新 checkpoint** | `steps_20500` |
+| **上一个 checkpoint** | `steps_20250` |
+| **下一轮 eval** | `steps_21000`（~394 steps 后） |
 
 ### Loss 记录（部分）
 
@@ -227,8 +227,20 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | 20250 | — | — | ✅ ckpt |
 | 20260 | 0.0709 | 0.0596 | |
 | 20280 | 0.0832 | 0.0769 | |
-| 20291 | — | — | 🔵 当前 |
-| **250–20250** | — | — | ✅ 每 250 steps checkpoint |
+| 20380 | 0.0676 | 0.0557 | |
+| 20400 | 0.0714 | 0.0946 | |
+| 20420 | 0.0655 | 0.0633 | |
+| 20440 | 0.0725 | 0.0637 | |
+| 20460 | 0.0874 | 0.0461 | |
+| 20480 | 0.0756 | 0.0672 | |
+| 20500 | 0.0797 | 0.0716 | eval mse=**0.00594** ✅ ckpt |
+| 20520 | 0.0827 | 0.0840 | |
+| 20540 | 0.0720 | 0.0508 | |
+| 20560 | 0.0717 | 0.0526 | |
+| 20580 | 0.0853 | 0.0624 | |
+| 20600 | 0.0769 | 0.0961 | |
+| 20606 | — | — | 🔵 当前 |
+| **250–20500** | — | — | ✅ 每 250 steps checkpoint |
 
 ### Loss 趋势
 
@@ -237,14 +249,14 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 - step 20000 eval mse=**0.00530**，较 best 有所回升，但仍优于之前多数 eval
 - step 13000–20200 损失在 0.056–0.12 之间震荡，无明显上升
 - 学习率按 cosine schedule 缓慢衰减（当前 base LR ~2.14e-5）
-- step 18000(0.00677) → 18500(0.00594) → 19000(0.00442) → **19500(0.00442)** → 20000(0.00530)
-- 最新 checkpoint **steps_20250** 已于 00:20 保存并同步至持久存储
+- step 18000(0.00677) → 18500(0.00594) → 19000(0.00442) → 19500(0.00442) → 20000(0.00530) → **20500(0.00594)**
+- 最新 checkpoint **steps_20500** 已于 00:58 保存并同步至持久存储
 
 ---
 
 ## 系统资源占用
 
-> 最后更新：2026-07-05 00:30:00 CST
+> 最后更新：2026-07-05 01:15:00 CST
 
 ### GPU（NVIDIA A100-SXM4-80GB）
 
@@ -252,15 +264,15 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 |------|-----|
 | **GPU 利用率** | 100% |
 | **显存使用** | 64,269 MiB / 81,920 MiB（78.5%） |
-| **功耗** | 338.11 W / 400.00 W |
-| **温度** | 54°C |
+| **功耗** | 390.88 W / 400.00 W |
+| **温度** | 58°C |
 
 ### Docker 内存（cgroup v2）
 
 | 指标 | 值 |
 |------|-----|
 | **上限** | 120 GiB |
-| **当前已用** | 27.96 GiB |
+| **当前已用** | 27.97 GiB |
 | **使用率** | 23.3% |
 
 ### 存储
@@ -277,7 +289,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ```
 /disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/
-├── checkpoints/steps_250/ ... steps_20250/  ✅
+├── checkpoints/steps_250/ ... steps_20500/  ✅
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -290,7 +302,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 ## 自动监控状态
 
 - 定时任务 `4288195d`：每小时 :07 直接监控 tmux `train`，自动更新 H2a-04 tracker
-- 上次更新：2026-07-05 00:30:00 CST
+- 上次更新：2026-07-05 01:15:00 CST
 
 ---
 
@@ -299,9 +311,9 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 - 本实验验证 `num_target_vision_tokens=64` 的效果。
 - A100 显存使用率 78.5%，未 OOM。
 - 单步耗时 ~9.18 s/it，模型前向/反向 ~2.35 s。
-- checkpoint 每 250 steps 正常保存至 `steps_20250`。
-- 🔥 最佳 eval mse **0.00442**（19000/19500），step 20000 eval mse=**0.00530**（有回升，属正常波动）
-- 下一轮 eval 在 step 20500。
+- checkpoint 每 250 steps 正常保存至 `steps_20500`。
+- 🔥 最佳 eval mse **0.00442**（19000/19500），step 20500 eval mse=**0.00594**（回升至 18500 水平）
+- 下一轮 eval 在 step 21000。
 - **重要声明**：本 tracker 文件只由本 cron/手动任务维护；之前的 P1-M1 tracker 被 `.monitor_bs32.py` 误写，已单独还原。
 
 ---

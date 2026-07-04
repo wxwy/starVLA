@@ -11,7 +11,8 @@ class MoWAActionHeadBinding:
     action_head_type: str
     condition_kind: str
     injection_mode: str
-    implemented: bool
+    adapter_helper_implemented: bool
+    framework_forward_integrated: bool
     notes: tuple[str, ...]
 
 
@@ -20,7 +21,8 @@ MOWA_ACTION_HEAD_BINDINGS: dict[str, MoWAActionHeadBinding] = {
         action_head_type="LayerwiseFM",
         condition_kind="layerwise_condition_features",
         injection_mode="append_bridge_tokens_to_condition_side",
-        implemented=True,
+        adapter_helper_implemented=True,
+        framework_forward_integrated=True,
         notes=(
             "LayerwiseFM consumes per-layer condition sequences.",
             "MoWA bridge tokens can be appended to each vl_embs_list layer with an expanded attention mask.",
@@ -30,7 +32,8 @@ MOWA_ACTION_HEAD_BINDINGS: dict[str, MoWAActionHeadBinding] = {
         action_head_type="MLP",
         condition_kind="action_hidden_features",
         injection_mode="add_bridge_summary_to_action_hidden_state",
-        implemented=True,
+        adapter_helper_implemented=True,
+        framework_forward_integrated=False,
         notes=(
             "MLP/OFT heads consume action hidden states rather than condition tokens.",
             "MoWA adapter can add a bridge-token summary to action hidden states before predict_action.",
@@ -40,40 +43,48 @@ MOWA_ACTION_HEAD_BINDINGS: dict[str, MoWAActionHeadBinding] = {
         action_head_type="VLA_Adapter",
         condition_kind="layerwise_task_action_hidden_features",
         injection_mode="insert_bridge_tokens_before_action_queries",
-        implemented=True,
+        adapter_helper_implemented=True,
+        framework_forward_integrated=False,
         notes=(
             "VLA_Adapter consumes [B, Layers, Total_Len, D] hidden states and keeps action queries at the tail.",
-            "MoWA adapter can insert bridge tokens before the action-query suffix without modifying VLA_Adapter internals.",
+            "MoWA adapter can insert bridge tokens before the action-query suffix "
+            "without modifying VLA_Adapter internals.",
         ),
     ),
     "DiT-S": MoWAActionHeadBinding(
         action_head_type="DiT-S",
         condition_kind="single_condition_sequence",
         injection_mode="append_bridge_tokens_to_condition_side",
-        implemented=True,
+        adapter_helper_implemented=True,
+        framework_forward_integrated=False,
         notes=(
             "DiT heads consume a single condition sequence.",
-            "MoWA adapter can append one selected bridge layer to the condition sequence with an expanded attention mask.",
+            "MoWA adapter can append one selected bridge layer to the condition sequence "
+            "with an expanded attention mask.",
         ),
     ),
     "DiT-B": MoWAActionHeadBinding(
         action_head_type="DiT-B",
         condition_kind="single_condition_sequence",
         injection_mode="append_bridge_tokens_to_condition_side",
-        implemented=True,
+        adapter_helper_implemented=True,
+        framework_forward_integrated=False,
         notes=(
             "GR00T-style DiT heads consume a single condition sequence rather than layerwise features.",
-            "MoWA adapter can append one selected bridge layer to the condition sequence with an expanded attention mask.",
+            "MoWA adapter can append one selected bridge layer to the condition sequence "
+            "with an expanded attention mask.",
         ),
     ),
     "DiT-L": MoWAActionHeadBinding(
         action_head_type="DiT-L",
         condition_kind="single_condition_sequence",
         injection_mode="append_bridge_tokens_to_condition_side",
-        implemented=True,
+        adapter_helper_implemented=True,
+        framework_forward_integrated=False,
         notes=(
             "GR00T-style DiT heads consume a single condition sequence rather than layerwise features.",
-            "MoWA adapter can append one selected bridge layer to the condition sequence with an expanded attention mask.",
+            "MoWA adapter can append one selected bridge layer to the condition sequence "
+            "with an expanded attention mask.",
         ),
     ),
 }
@@ -175,7 +186,10 @@ def fuse_mlp_bridge_features(
     bridge_tokens = bridge_output.layerwise_condition_features[layer_index]
     if action_hidden_features.dim() != 3 or bridge_tokens.dim() != 3:
         raise ValueError("MoWA MLP adapter expects [B, T, D] tensors.")
-    if action_hidden_features.shape[0] != bridge_tokens.shape[0] or action_hidden_features.shape[-1] != bridge_tokens.shape[-1]:
+    if (
+        action_hidden_features.shape[0] != bridge_tokens.shape[0]
+        or action_hidden_features.shape[-1] != bridge_tokens.shape[-1]
+    ):
         raise ValueError(
             "MoWA MLP adapter shape mismatch: "
             f"hidden={tuple(action_hidden_features.shape)}, bridge={tuple(bridge_tokens.shape)}."
@@ -236,7 +250,8 @@ def describe_mowa_action_head_bindings() -> tuple[dict[str, Any], ...]:
             "action_head_type": binding.action_head_type,
             "condition_kind": binding.condition_kind,
             "injection_mode": binding.injection_mode,
-            "adapter_helper_implemented": binding.implemented,
+            "adapter_helper_implemented": binding.adapter_helper_implemented,
+            "framework_forward_integrated": binding.framework_forward_integrated,
             "notes": list(binding.notes),
         }
         for binding in MOWA_ACTION_HEAD_BINDINGS.values()

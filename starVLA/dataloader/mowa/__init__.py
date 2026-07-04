@@ -45,7 +45,6 @@ from starVLA.dataloader.mowa.production_preflight import (
     build_mowa_atomic_core_production_preflight_smoke,
 )
 from starVLA.dataloader.mowa.robocasa365_adapter import (
-    MOWA_P0_HEADS,
     ROBOCASA365_REQUIRED_PARQUET_COLUMNS,
     MoWARoboCasa365DatasetSmoke,
     MoWARoboCasa365EpisodeSchema,
@@ -83,7 +82,6 @@ __all__ = [
     "DATA_GATE",
     "TBD",
     "MOWA_PRIMARY_CANDIDATE",
-    "MOWA_P0_HEADS",
     "MOWA_P0_CONSTRUCTIBLE_HEADS",
     "MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_RECIPE",
     "MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS",

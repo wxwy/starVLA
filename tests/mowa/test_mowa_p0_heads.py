@@ -14,14 +14,12 @@ class MoWAP0HeadsTest(unittest.TestCase):
             MOWA_P0_CONSTRUCTIBLE_HEADS as label_builder_constructible_heads,
             MOWA_P0_FULL_HEADS as label_builder_full_heads,
         )
-        from starVLA.dataloader.mowa.robocasa365_adapter import MOWA_P0_HEADS
         from starVLA.model.modules.mowa import (
             MOWA_P0_CONSTRUCTIBLE_HEADS,
             MOWA_P0_FULL_HEADS,
             MOWA_P0_MASKED_HEADS,
         )
 
-        self.assertEqual(MOWA_P0_HEADS, MOWA_P0_FULL_HEADS)
         self.assertEqual(label_builder_full_heads, MOWA_P0_FULL_HEADS)
         self.assertEqual(lerobot_full_heads, MOWA_P0_FULL_HEADS)
         self.assertEqual(label_builder_constructible_heads, MOWA_P0_CONSTRUCTIBLE_HEADS)
@@ -187,17 +185,24 @@ class MoWAP0HeadsTest(unittest.TestCase):
         dit = resolve_mowa_action_head_binding("DiT-B")
         vla_adapter = resolve_mowa_action_head_binding("VLA_Adapter")
 
-        self.assertTrue(layerwise.implemented)
+        self.assertTrue(layerwise.adapter_helper_implemented)
+        self.assertTrue(layerwise.framework_forward_integrated)
         self.assertEqual(layerwise.injection_mode, "append_bridge_tokens_to_condition_side")
-        self.assertTrue(mlp.implemented)
+        self.assertTrue(mlp.adapter_helper_implemented)
+        self.assertFalse(mlp.framework_forward_integrated)
         self.assertEqual(mlp.injection_mode, "add_bridge_summary_to_action_hidden_state")
-        self.assertTrue(dit.implemented)
+        self.assertTrue(dit.adapter_helper_implemented)
+        self.assertFalse(dit.framework_forward_integrated)
         self.assertEqual(dit.condition_kind, "single_condition_sequence")
-        self.assertTrue(vla_adapter.implemented)
+        self.assertTrue(vla_adapter.adapter_helper_implemented)
+        self.assertFalse(vla_adapter.framework_forward_integrated)
         self.assertEqual(vla_adapter.injection_mode, "insert_bridge_tokens_before_action_queries")
         binding_report = describe_mowa_action_head_bindings()
         self.assertIn("LayerwiseFM", {item["action_head_type"] for item in binding_report})
         self.assertIn("VLA_Adapter", {item["action_head_type"] for item in binding_report})
+        by_head = {item["action_head_type"]: item for item in binding_report}
+        self.assertTrue(by_head["LayerwiseFM"]["framework_forward_integrated"])
+        self.assertFalse(by_head["MLP"]["framework_forward_integrated"])
 
     def test_layerwise_adapter_appends_bridge_tokens_and_attention_mask(self):
         try:
@@ -911,10 +916,11 @@ class MoWAP0HeadsTest(unittest.TestCase):
             (root / "configs" / "mowa").mkdir(parents=True)
             checkpoint.mkdir(parents=True)
             final_model.mkdir(parents=True)
+            ckpt_path = "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test"
             (root / "configs" / "mowa" / "mowa_e006_eval_load_smoke.yaml").write_text(
                 "checkpoint:\n"
-                "  eval_candidate_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2\n"
-                "  final_model_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/final_model\n"
+                f"  eval_candidate_checkpoint: {ckpt_path}/checkpoints/steps_2\n"
+                f"  final_model_checkpoint: {ckpt_path}/final_model\n"
                 "  checkpoint_root_policy: playground/mowa_ckpt\n",
                 encoding="utf-8",
             )
@@ -1032,9 +1038,10 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "trainer:\n  full_path_dry_run_only: true\n",
                 encoding="utf-8",
             )
+            ckpt_path = "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test"
             (root / "configs" / "mowa" / "mowa_e006_eval_load_smoke.yaml").write_text(
                 "checkpoint:\n"
-                "  eval_candidate_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2\n",
+                f"  eval_candidate_checkpoint: {ckpt_path}/checkpoints/steps_2\n",
                 encoding="utf-8",
             )
 
@@ -1258,7 +1265,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
                         "launch_ready: false",
                         "eval_started: false",
                         "requires_human_confirmation: true",
-                        "checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2",
+                        "checkpoint: "
+                        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/"
+                        "checkpoints/steps_2",
                         "checkpoint_root_policy: playground/mowa_ckpt",
                         "server:",
                         "  python: .venv/bin/python",
@@ -1338,7 +1347,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
                         "launch_ready: false",
                         "eval_started: false",
                         "requires_human_confirmation: true",
-                        "checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2",
+                        "checkpoint: "
+                        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/"
+                        "checkpoints/steps_2",
                         "checkpoint_root_policy: playground/mowa_ckpt",
                         "server:",
                         "  python: .venv/bin/python",

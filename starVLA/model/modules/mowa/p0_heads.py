@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from starVLA.mowa_constants import (
-    MOWA_P0_CONSTRUCTIBLE_HEADS,
     MOWA_P0_FULL_HEADS,
     MOWA_P0_HEAD_OUTPUT_DIMS,
 )

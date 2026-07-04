@@ -26,36 +26,37 @@ integration_boundary:
     LayerwiseFM:
       condition_kind: layerwise_condition_features
       injection_mode: append_bridge_tokens_to_condition_side
-      implemented: true
+      adapter_helper_implemented: true
+      framework_forward_integrated: true
     MLP:
       condition_kind: action_hidden_features
       injection_mode: add_bridge_summary_to_action_hidden_state
       adapter_helper: fuse_mlp_bridge_features
-      implemented: true
+      adapter_helper_implemented: true
       framework_forward_integrated: false
     VLA_Adapter:
       condition_kind: layerwise_task_action_hidden_features
       injection_mode: insert_bridge_tokens_before_action_queries
       adapter_helper: append_vla_adapter_bridge_tokens
-      implemented: true
+      adapter_helper_implemented: true
       framework_forward_integrated: false
     DiT-S:
       condition_kind: single_condition_sequence
       injection_mode: append_bridge_tokens_to_condition_side
       adapter_helper: append_single_sequence_bridge_tokens
-      implemented: true
+      adapter_helper_implemented: true
       framework_forward_integrated: false
     DiT-B:
       condition_kind: single_condition_sequence
       injection_mode: append_bridge_tokens_to_condition_side
       adapter_helper: append_single_sequence_bridge_tokens
-      implemented: true
+      adapter_helper_implemented: true
       framework_forward_integrated: false
     DiT-L:
       condition_kind: single_condition_sequence
       injection_mode: append_bridge_tokens_to_condition_side
       adapter_helper: append_single_sequence_bridge_tokens
-      implemented: true
+      adapter_helper_implemented: true
       framework_forward_integrated: false
   modify_action_head_internal_logic: false
   default_injection: adapter_selected_by_action_model_type

@@ -49,7 +49,6 @@ def run_or_validate_starflow_ft0_training_smoke(
 ) -> dict[str, Any]:
     root = Path(repo_root)
     selected_run_id = run_id or _default_run_id()
-    run_dir = RUN_ROOT / selected_run_id
     commands: list[dict[str, Any]] = []
     if execute:
         commands.append(

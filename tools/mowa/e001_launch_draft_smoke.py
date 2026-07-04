@@ -94,7 +94,8 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         },
         "unresolved_items": [
             "class_mapping_status remains Data Gate",
-            "batch size 4, expected VRAM and runtime are bounded full-VLA smoke observed only, not long-training confirmed",
+            "batch size 4, expected VRAM and runtime are bounded full-VLA smoke observed only, "
+            "not long-training confirmed",
             "runtime policy remains unconfirmed",
             "executable training command candidate remains gated by human confirmation",
             "policy_confirmed and launch_ready remain false",

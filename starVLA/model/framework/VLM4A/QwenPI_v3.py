@@ -291,9 +291,14 @@ class Qwen_PI_v3(baseframework):
 
         action_head_type = getattr(self.config.framework.action_model, "action_model_type", None)
         binding = resolve_mowa_action_head_binding(action_head_type)
-        if not binding.implemented:
+        if not binding.adapter_helper_implemented:
             raise ValueError(
                 "MoWA layerwise bridge coupling is not implemented for "
+                f"action_model_type={action_head_type}."
+            )
+        if not binding.framework_forward_integrated:
+            raise ValueError(
+                "MoWA layerwise bridge coupling is not integrated in this framework for "
                 f"action_model_type={action_head_type}."
             )
         if binding.injection_mode != "append_bridge_tokens_to_condition_side":

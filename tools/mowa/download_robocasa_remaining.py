@@ -349,7 +349,6 @@ def main(argv: list[str] | None = None) -> int:
     to_download: list[tuple[str, str, str, Path, Path]] = []
     already_done: list[tuple[str, str]] = []
     for tar_key, label, src in datasets:
-        info = _parse_tar_key(tar_key)
         ds_path = base_path / tar_key.replace(".tar", "")
         extract_dir = ds_path.parent
         tar_path = extract_dir / "lerobot.tar"

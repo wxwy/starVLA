@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from starVLA.dataloader.mowa.robocasa365_adapter import MOWA_P0_HEADS
+from starVLA.mowa_constants import MOWA_P0_FULL_HEADS
 from starVLA.dataloader.mowa.schema import DATA_GATE, TBD
 
 
@@ -65,7 +65,7 @@ def inspect_mowa_p0_label_coverage(
         for episode_index in episode_indices
     )
     available_columns = tuple(sorted(set().union(*columns_by_episode))) if columns_by_episode else ()
-    coverage = tuple(_build_head_coverage(head, available_columns) for head in MOWA_P0_HEADS)
+    coverage = tuple(_build_head_coverage(head, available_columns) for head in MOWA_P0_FULL_HEADS)
     constructible_heads = tuple(item.head for item in coverage if item.status == "candidate_constructible")
     masked_heads = tuple(item.head for item in coverage if item.status != "candidate_constructible")
 

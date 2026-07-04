@@ -164,7 +164,13 @@ def _run_command(root: Path, command: list[str]) -> dict[str, Any]:
     }
 
 
-def _build_checks(root: Path, checkpoint: Path, execute: bool, runs: list[dict[str, Any]], batch_size: int) -> dict[str, bool]:
+def _build_checks(
+    root: Path,
+    checkpoint: Path,
+    execute: bool,
+    runs: list[dict[str, Any]],
+    batch_size: int,
+) -> dict[str, bool]:
     return {
         "config_exists": (root / CONFIG).is_file(),
         "checkpoint_exists": (root / checkpoint).is_dir(),

@@ -12,7 +12,6 @@ from starVLA.dataloader.mowa.sampler import (
     select_mowa_smoke_anchor_index,
 )
 from starVLA.dataloader.mowa.schema import DATA_GATE, TBD, MoWAUnifiedEpisode, MoWAWindowConfig
-from starVLA.mowa_constants import MOWA_P0_FULL_HEADS
 
 
 ROBOCASA365_REQUIRED_PARQUET_COLUMNS = (
@@ -23,9 +22,6 @@ ROBOCASA365_REQUIRED_PARQUET_COLUMNS = (
     "episode_index",
     "task_index",
 )
-MOWA_P0_HEADS = MOWA_P0_FULL_HEADS
-
-
 @dataclass(frozen=True)
 class MoWARoboCasa365EpisodeSchema:
     dataset_path: str

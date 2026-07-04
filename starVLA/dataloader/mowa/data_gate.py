@@ -134,7 +134,8 @@ def build_mowa_robocasa365_local_smoke_report(
                     temporal_profile_status=DATA_GATE,
                     leakage_status=TBD,
                     notes=(
-                        "本地已发现 OpenDrawer target/human 最小闭环路径；已完成 meta 只读 schema smoke，仍需执行 profile/leakage。"
+                        "本地已发现 OpenDrawer target/human 最小闭环路径；"
+                        "已完成 meta 只读 schema smoke，仍需执行 profile/leakage。"
                         if schema_available
                         else "本地已发现 OpenDrawer target/human 最小闭环路径；仍需执行 schema/profile/leakage。"
                         if path_exists

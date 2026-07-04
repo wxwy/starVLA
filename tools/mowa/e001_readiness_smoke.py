@@ -275,7 +275,8 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         "notes": [
             "This report does not start training and does not consume E-001.",
             "Existing QwenOFT RoboCasa365 scripts are baseline/walk-through scripts, not MoWA E-001 launch config.",
-            "E-001 launch requires explicit user confirmation before modifying training entry points or checkpoint logic.",
+            "E-001 launch requires explicit user confirmation before modifying training entry points "
+            "or checkpoint logic.",
         ],
     }
 

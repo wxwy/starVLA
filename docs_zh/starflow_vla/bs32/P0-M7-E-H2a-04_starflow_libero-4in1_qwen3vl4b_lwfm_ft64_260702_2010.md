@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中  
 > **run_id**: `P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010`  
 > **启动时间**: 2026-07-02 20:16:02 CST  
-> **当前更新**: 2026-07-04 20:30:00 CST  
+> **当前更新**: 2026-07-04 21:15:00 CST  
 > **tmux 会话**: `train`（attached）  
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_64.yaml`
 
@@ -69,13 +69,13 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **18736 / 80000**（23.42%） |
-| **单步耗时** | ~9.21 s/it |
-| **已运行时间** | 约 48 小时 10 分钟 |
-| **预计剩余时间** | ~157 小时（约 6.5 天） |
-| **最新 checkpoint** | `steps_18500` |
-| **上一个 checkpoint** | `steps_18250` |
-| **下一轮 eval** | `steps_19000`（~264 steps 后） |
+| **当前 Step** | **19049 / 80000**（23.81%） |
+| **单步耗时** | ~9.18 s/it |
+| **已运行时间** | 约 48 小时 59 分钟 |
+| **预计剩余时间** | ~155 小时（约 6.5 天） |
+| **最新 checkpoint** | `steps_19000` |
+| **上一个 checkpoint** | `steps_18750` |
+| **下一轮 eval** | `steps_19500`（~451 steps 后） |
 
 ### Loss 记录（部分）
 
@@ -153,31 +153,47 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | 18680 | 0.0758 | 0.0631 | |
 | 18700 | 0.0658 | 0.0497 | |
 | 18720 | 0.0789 | 0.0860 | |
-| 18736 | — | — | 🔵 当前 |
-| **250–18500** | — | — | ✅ 每 250 steps checkpoint |
+| 18750 | — | — | ✅ ckpt |
+| 18760 | 0.0722 | 0.0697 | |
+| 18780 | 0.0875 | 0.1066 | |
+| 18800 | 0.0645 | 0.0578 | |
+| 18820 | 0.0732 | 0.0664 | |
+| 18840 | 0.0880 | 0.1082 | |
+| 18860 | 0.0806 | 0.0861 | |
+| 18880 | 0.0565 | 0.0615 | |
+| 18900 | 0.0632 | 0.0568 | |
+| 18920 | 0.0787 | 0.0736 | |
+| 18940 | 0.0910 | 0.0754 | |
+| 18960 | 0.0789 | 0.0780 | |
+| 18980 | 0.0856 | 0.0990 | |
+| 19000 | 0.0711 | 0.0548 | eval mse=**0.00442** 🏆 ✅ ckpt |
+| 19020 | 0.0723 | 0.0620 | |
+| 19040 | 0.0705 | 0.0685 | |
+| 19049 | — | — | 🔵 当前 |
+| **250–19000** | — | — | ✅ 每 250 steps checkpoint |
 
 ### Loss 趋势
 
 - 初始快速下降至 0.24（step 500），随后逐渐收敛
-- 最佳 eval mse **0.00502** 在 step 11000，后续 step 15000/16000/17000 也接近此水平（0.00518/0.00510/0.00515）
-- step 13000–18660 损失在 0.057–0.12 之间震荡，无明显上升
-- 学习率按 cosine schedule 缓慢衰减（当前 base LR ~2.19e-5）
-- step 18000 eval mse=0.00677，step 18500 eval mse=**0.00594**（较 step 18000 改善，接近 best 水平）
-- 最新 checkpoint **steps_18500** 已于 19:50 保存并同步至持久存储
+- 🔥 **新的最佳 eval mse 0.00442** 在 step 19000，大幅超越此前 best 0.00502（step 11000，-12%）
+- step 13000–19040 损失在 0.056–0.12 之间震荡，无明显上升
+- 学习率按 cosine schedule 缓慢衰减（当前 base LR ~2.18e-5）
+- step 18000 eval mse=0.00677 → step 18500 eval mse=0.00594 → step 19000 eval mse=**0.00442** 🚀
+- 最新 checkpoint **steps_19000** 已于 21:07 保存并同步至持久存储
 
 ---
 
 ## 系统资源占用
 
-> 最后更新：2026-07-04 20:30:00 CST
+> 最后更新：2026-07-04 21:15:00 CST
 
 ### GPU（NVIDIA A100-SXM4-80GB）
 
 | 指标 | 值 |
 |------|-----|
-| **GPU 利用率** | 100% |
+| **GPU 利用率** | 99% |
 | **显存使用** | 64,269 MiB / 81,920 MiB（78.5%） |
-| **功耗** | 374.59 W / 400.00 W |
+| **功耗** | 383.31 W / 400.00 W |
 | **温度** | 57°C |
 
 ### Docker 内存（cgroup v2）
@@ -185,8 +201,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 | 指标 | 值 |
 |------|-----|
 | **上限** | 120 GiB |
-| **当前已用** | 26.73 GiB |
-| **使用率** | 22.3% |
+| **当前已用** | 27.87 GiB |
+| **使用率** | 23.2% |
 
 ### 存储
 
@@ -202,7 +218,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ```
 /disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/
-├── checkpoints/steps_250/ ... steps_18500/  ✅
+├── checkpoints/steps_250/ ... steps_19000/  ✅
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -215,7 +231,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 ## 自动监控状态
 
 - 定时任务 `4288195d`：每小时 :07 直接监控 tmux `train`，自动更新 H2a-04 tracker
-- 上次更新：2026-07-04 20:30:00 CST
+- 上次更新：2026-07-04 21:15:00 CST
 
 ---
 
@@ -224,9 +240,9 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 - 本实验验证 `num_target_vision_tokens=64` 的效果。
 - A100 显存使用率 78.5%，未 OOM。
 - 单步耗时 ~9.18 s/it，模型前向/反向 ~2.35 s。
-- checkpoint 每 250 steps 正常保存至 `steps_18500`。
-- step 17500 eval mse=0.00554，step 18000 eval mse=0.00677，step 18500 eval mse=**0.00594**（较 18000 改善）。
-- 下一轮 eval 在 step 19000。
+- checkpoint 每 250 steps 正常保存至 `steps_19000`。
+- 🔥 step 19000 eval mse=**0.00442**（新 best），较 best 0.00502（step 11000）提升 **12%**！
+- 下一轮 eval 在 step 19500。
 - **重要声明**：本 tracker 文件只由本 cron/手动任务维护；之前的 P1-M1 tracker 被 `.monitor_bs32.py` 误写，已单独还原。
 
 ---

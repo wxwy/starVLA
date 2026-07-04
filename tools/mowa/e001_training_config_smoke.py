@@ -16,6 +16,7 @@ TRAINING_SMOKE_CONFIG = Path("configs/mowa/mowa_e001_training_smoke.yaml")
 TRAINING_COMMAND_DRAFT = Path("configs/mowa/mowa_e001_training_command_draft.yaml")
 RUNTIME_POLICY = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
 A100_THROUGHPUT_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput_smoke.json")
+FULL_VLA_RUNTIME_SWEEP_REPORT = Path("docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json")
 READINESS_REPORT = Path("docs_zh/mowa/mowa_e001_readiness_smoke.json")
 
 
@@ -50,6 +51,7 @@ def main() -> None:
 def build_e001_training_config_smoke(repo_root: Path | str) -> dict[str, Any]:
     root = Path(repo_root)
     throughput = _read_json(root / A100_THROUGHPUT_REPORT) or {}
+    runtime_sweep = _read_json(root / FULL_VLA_RUNTIME_SWEEP_REPORT) or {}
     readiness = _read_json(root / READINESS_REPORT) or {}
     config = root / TRAINING_SMOKE_CONFIG
     command = root / TRAINING_COMMAND_DRAFT
@@ -85,11 +87,24 @@ def build_e001_training_config_smoke(repo_root: Path | str) -> dict[str, Any]:
         "resource_policy_unconfirmed": _text_contains(runtime_policy, "resource_policy_confirmed: false"),
         "save_resume_smoke_recorded": _text_contains(runtime_policy, "save_resume_smoke_status: passed_steps_1_to_2"),
         "eval_load_smoke_recorded": _text_contains(runtime_policy, "eval_load_smoke_status: passed_steps_2_model_load"),
+        "full_vla_runtime_sweep_recorded": _text_contains(
+            runtime_policy,
+            "full_vla_runtime_sweep_status: passed_bs1_bs2_bs4",
+        ),
+        "bounded_smoke_command_not_full_launch": (
+            _text_contains(command, "counted_as_full_launch: false")
+            and _text_contains(command, "tools/mowa/e001_full_vla_runtime_sweep_smoke.py")
+        ),
         "a100_smoke_passed": (
             throughput.get("benchmark") == "a100_throughput_smoke"
             and throughput.get("training_started") is False
             and throughput.get("checkpoint_saved") is False
             and stable_candidate.get("status") == "ok"
+        ),
+        "full_vla_runtime_sweep_bs4_passed": (
+            runtime_sweep.get("bounded_runtime_sweep") is True
+            and runtime_sweep.get("full_training_launch") is False
+            and all((runtime_sweep.get("checks") or {}).values())
         ),
         "readiness_training_not_started": readiness.get("training_started") is False,
     }
@@ -104,6 +119,7 @@ def build_e001_training_config_smoke(repo_root: Path | str) -> dict[str, Any]:
             "training_command_draft": str(TRAINING_COMMAND_DRAFT),
             "runtime_policy": str(RUNTIME_POLICY),
             "a100_throughput_report": str(A100_THROUGHPUT_REPORT),
+            "full_vla_runtime_sweep_report": str(FULL_VLA_RUNTIME_SWEEP_REPORT),
         },
         "observed": {
             "stable_candidate": stable_candidate,
@@ -116,7 +132,7 @@ def build_e001_training_config_smoke(repo_root: Path | str) -> dict[str, Any]:
             "checkpoint/save/resume policy not confirmed for launch",
             "MoWA checkpoint root is reserved as playground/mowa_ckpt and must not be mixed into playground/Checkpoints",
             "class_mapping_status remains Data Gate",
-            "full VLA E-001 throughput is not measured",
+            "full VLA E-001 throughput is bounded-smoke observed only, not long-training confirmed",
         ],
         "go_no_go": (
             "TBD: training config smoke passed; full E-001 launch remains gated"

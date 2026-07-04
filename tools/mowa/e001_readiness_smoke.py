@@ -41,6 +41,9 @@ E001_STARFLOW_FT0_TRAINING_THROUGHPUT_SMOKE_REPORT = Path(
 )
 E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG = Path("configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml")
 E001_A100_THROUGHPUT_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput_smoke.json")
+E001_FULL_VLA_RUNTIME_SWEEP_REPORT = Path(
+    "docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json"
+)
 E006_COUPLING_INTERVENTION_SMOKE_REPORT = Path(
     "docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json"
 )
@@ -158,6 +161,9 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         "a100_throughput_smoke_executed": _a100_throughput_smoke_passed(
             root / E001_A100_THROUGHPUT_SMOKE_REPORT
         ),
+        "full_vla_runtime_sweep_bs4_passed": _checks_report_passed(
+            root / E001_FULL_VLA_RUNTIME_SWEEP_REPORT
+        ),
         "e006_coupling_intervention_smoke_passed": _checks_report_passed(
             root / E006_COUPLING_INTERVENTION_SMOKE_REPORT
         ),
@@ -177,7 +183,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "E-001 launch draft is not executable",
             "class_mapping_status remains Data Gate",
             "runtime policy draft not confirmed",
-            "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
+            "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
             "E-001 full executable MoWA training launch still missing",
             "E-006 policy eval still requires a trained or smoke-compatible checkpoint",
         ]

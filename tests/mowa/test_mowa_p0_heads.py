@@ -398,10 +398,16 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_training_command_draft.yaml").write_text(
-                "config: configs/mowa/mowa_e001_training_smoke.yaml\nentrypoint: TBD_FULL_E001_ENTRYPOINT\n",
+                "config: configs/mowa/mowa_e001_training_smoke.yaml\n"
+                "entrypoint: TBD_FULL_E001_ENTRYPOINT\n"
+                "bounded_smoke_command:\n"
+                "  entrypoint: tools/mowa/e001_full_vla_runtime_sweep_smoke.py\n"
+                "  counted_as_full_launch: false\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
+                "resource_budget:\n"
+                "  full_vla_runtime_sweep_status: passed_bs1_bs2_bs4\n"
                 "status:\n  policy_confirmed: false\n"
                 "  checkpoint_policy_confirmed: true\n"
                 "  logging_policy_confirmed: true\n"
@@ -424,6 +430,16 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (root / "docs_zh" / "mowa" / "mowa_e001_full_vla_runtime_sweep_bs4_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "bounded_runtime_sweep": True,
+                        "full_training_launch": False,
+                        "checks": {"ok": True},
+                    }
+                ),
+                encoding="utf-8",
+            )
             (root / "docs_zh" / "mowa" / "mowa_e001_readiness_smoke.json").write_text(
                 json.dumps({"training_started": False}),
                 encoding="utf-8",
@@ -440,6 +456,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["resource_policy_unconfirmed"])
         self.assertTrue(report["checks"]["save_resume_smoke_recorded"])
         self.assertTrue(report["checks"]["eval_load_smoke_recorded"])
+        self.assertTrue(report["checks"]["full_vla_runtime_sweep_recorded"])
+        self.assertTrue(report["checks"]["bounded_smoke_command_not_full_launch"])
+        self.assertTrue(report["checks"]["full_vla_runtime_sweep_bs4_passed"])
 
     def test_e001_train_starvla_full_path_dry_run_smoke_keeps_training_disabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -683,6 +702,39 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["first_trainer_state_step_1"])
         self.assertTrue(report["checks"]["resume_trainer_state_step_2"])
         self.assertTrue(report["checks"]["command_runs_succeeded"])
+
+    def test_e001_full_vla_runtime_sweep_summarizes_metrics(self):
+        from tools.mowa.e001_full_vla_runtime_sweep_smoke import summarize_runtime_metrics
+
+        summary = summarize_runtime_metrics(
+            [
+                {
+                    "completed_steps": 1,
+                    "total_batch_size": 2,
+                    "step_time_sec": 4.0,
+                    "samples_per_sec": 0.5,
+                    "peak_vram_gb": 40.0,
+                    "peak_reserved_gb": 42.0,
+                    "cuda_device_name": "NVIDIA A100-SXM4-80GB",
+                },
+                {
+                    "completed_steps": 2,
+                    "total_batch_size": 2,
+                    "step_time_sec": 2.0,
+                    "samples_per_sec": 1.0,
+                    "peak_vram_gb": 41.0,
+                    "peak_reserved_gb": 43.0,
+                    "cuda_device_name": "NVIDIA A100-SXM4-80GB",
+                },
+            ]
+        )
+
+        self.assertEqual(summary["completed_steps"], 2)
+        self.assertEqual(summary["total_batch_size"], 2)
+        self.assertEqual(summary["mean_step_time_sec"], 3.0)
+        self.assertEqual(summary["samples_per_sec"], 1.0)
+        self.assertEqual(summary["peak_vram_gb"], 41.0)
+        self.assertEqual(summary["peak_reserved_gb"], 43.0)
 
     def test_e006_eval_load_smoke_validates_checkpoint_sidecars(self):
         with tempfile.TemporaryDirectory() as tmpdir:

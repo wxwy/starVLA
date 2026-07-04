@@ -80,7 +80,7 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         },
         "unresolved_items": [
             "class_mapping_status remains Data Gate",
-            "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
+            "batch size 4, expected VRAM and runtime are bounded full-VLA smoke observed only, not long-training confirmed",
             "runtime policy remains unconfirmed",
             "real MoWA E-001 training config is not executable",
             "full executable training command remains TBD",

@@ -1053,6 +1053,7 @@ class VLATrainer(TrainerUtils):
         self.total_batch_size = self._calculate_total_batch_size()
         self.resume_requires_training_state = False
         self.resume_requires_lightweight_state = False
+        self.runtime_metrics_report = getattr(self.config.trainer, "runtime_metrics_report", None)
         self.network_output_dir = Path(self.config.output_dir)
         self.network_checkpoint_dir = self.network_output_dir / "checkpoints"
         self.enable_local_checkpoint_staging = getattr(self.config.trainer, "enable_local_checkpoint_staging", True)
@@ -1596,7 +1597,38 @@ class VLATrainer(TrainerUtils):
             if not bool(getattr(self.config.trainer, "disable_wandb", False)):
                 wandb.log(metrics, step=self.completed_steps)
             logger.info(f"Step {self.completed_steps}, Loss: {metrics})")
+            self._write_runtime_metrics(metrics)
             self._maybe_cleanup_local_resume_checkpoint()
+
+    def _write_runtime_metrics(self, metrics):
+        if not self.runtime_metrics_report:
+            return
+        report_path = Path(self.runtime_metrics_report)
+        if not report_path.is_absolute():
+            report_path = Path.cwd() / report_path
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        timing_data = float(metrics.get("timing/data", 0.0))
+        timing_model = float(metrics.get("timing/model", 0.0))
+        step_time = timing_data + timing_model
+        payload = {
+            "completed_steps": int(self.completed_steps),
+            "total_batch_size": int(self.total_batch_size),
+            "timing_data_sec": timing_data,
+            "timing_model_sec": timing_model,
+            "step_time_sec": step_time,
+            "samples_per_sec": float(self.total_batch_size / step_time) if step_time > 0 else None,
+            "metrics": {
+                key: float(value)
+                for key, value in metrics.items()
+                if isinstance(value, (int, float))
+            },
+        }
+        if torch.cuda.is_available():
+            payload["cuda_device_name"] = torch.cuda.get_device_name()
+            payload["peak_vram_gb"] = float(torch.cuda.max_memory_allocated() / (1024**3))
+            payload["peak_reserved_gb"] = float(torch.cuda.max_memory_reserved() / (1024**3))
+        with report_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
     def _create_data_iterators(self):
         """Create data iterators."""
@@ -1619,6 +1651,8 @@ class VLATrainer(TrainerUtils):
     def train(self):
         """Execute training loop."""
         self._log_training_config()
+        if self.runtime_metrics_report and torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
         self._create_data_iterators()
         progress_bar = tqdm(
             total=self.config.trainer.max_train_steps,
@@ -1756,6 +1790,9 @@ class VLATrainer(TrainerUtils):
 
     def _finalize_training(self):
         """Training end processing."""
+        if bool(getattr(self.config.trainer, "skip_final_checkpoint", False)):
+            logger.info("Final checkpoint skipped because trainer.skip_final_checkpoint=true.")
+            return
         save_format = getattr(self.config.trainer, "save_format", "safetensors")
         final_checkpoint = self.local_output_dir / "final_model"
         self._ensure_local_checkpoint_capacity(final_checkpoint)

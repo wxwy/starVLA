@@ -32,6 +32,7 @@
     "starflow_ft0_training_throughput_smoke_passed": true,
     "a100_throughput_smoke_plan_created": true,
     "a100_throughput_smoke_executed": true,
+    "full_vla_runtime_sweep_bs4_passed": true,
     "e006_coupling_intervention_smoke_passed": true,
     "e006_eval_load_smoke_config_created": true,
     "e006_eval_load_smoke_passed": true
@@ -94,7 +95,7 @@
     "E-001 launch draft is not executable",
     "class_mapping_status remains Data Gate",
     "runtime policy draft not confirmed",
-    "batch size, expected VRAM and runtime are smoke-observed only, not production-confirmed",
+    "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
     "E-001 full executable MoWA training launch still missing",
     "E-006 policy eval still requires a trained or smoke-compatible checkpoint"
   ],

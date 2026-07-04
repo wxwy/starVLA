@@ -30,10 +30,29 @@ runtime_targets:
   history_steps: 10
   future_steps: 5
   action_chunk_steps: 10
-  per_device_batch_size: smoke_observed_8
-  gradient_accumulation_steps: smoke_observed_8
-  effective_batch_size: smoke_observed_64
+  per_device_batch_size: bounded_full_vla_smoke_observed_4
+  gradient_accumulation_steps: bounded_full_vla_smoke_observed_1
+  effective_batch_size: bounded_full_vla_smoke_observed_4
   max_train_steps: TBD
+  bounded_runtime_sweep:
+    report: docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json
+    scope: 2_step_train_skip_final_checkpoint
+    last_step_time_sec: 1.5000371620990336
+    samples_per_sec: 2.666600602349555
+    peak_vram_gb: 46.816529750823975
+    peak_reserved_gb: 50.13671875
+
+bounded_smoke_command:
+  entrypoint: tools/mowa/e001_full_vla_runtime_sweep_smoke.py
+  executable: true
+  counted_as_full_launch: false
+  command: >-
+    .venv/bin/python tools/mowa/e001_full_vla_runtime_sweep_smoke.py
+    --execute
+    --batch-sizes 4
+    --max-train-steps 2
+    --gradient-accumulation-steps 1
+    --output docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json
 
 checkpoint_policy:
   checkpoint_format: target_lightweight
@@ -47,4 +66,4 @@ checkpoint_policy:
 notes:
   - This is a command draft, not an executable launch config.
   - The config_yaml path points to a training-config smoke, not a full training config.
-  - Batch size, VRAM and runtime are observed on heads/bridge smoke only; full E-001 path remains TBD.
+  - Batch size 4, VRAM and short-step runtime are observed by bounded full-VLA smoke only; full E-001 long-training command remains TBD.

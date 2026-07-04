@@ -87,3 +87,27 @@ class MoWAEpisodeToWindowSampler:
         )
         sample.validate()
         return sample
+
+
+def select_mowa_smoke_anchor_index(row_count: int, window_config: MoWAWindowConfig) -> int:
+    """Select the first anchor with full history when the episode is long enough."""
+
+    if row_count <= 0:
+        return 0
+    first_full_history_anchor = max(window_config.history_steps - 1, 0)
+    last_full_future_anchor = max(row_count - window_config.future_steps - 1, 0)
+    return min(first_full_history_anchor, last_full_future_anchor, row_count - 1)
+
+
+def select_mowa_leakage_anchor_indices(
+    row_count: int,
+    window_config: MoWAWindowConfig,
+) -> tuple[int, ...]:
+    """Select start/mid/end anchors for metadata-level leakage checks."""
+
+    if row_count <= 0:
+        return ()
+    start = select_mowa_smoke_anchor_index(row_count, window_config)
+    mid = max(0, min(row_count - 1, row_count // 2))
+    end = max(0, min(row_count - 1, row_count - window_config.future_steps - 1))
+    return tuple(sorted({start, mid, end}))

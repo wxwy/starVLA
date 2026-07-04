@@ -26,6 +26,8 @@ from starVLA.dataloader.mowa import (
     inspect_robocasa365_lerobot_dataset_smoke,
     inspect_robocasa365_lerobot_episode_schema,
     inspect_robocasa365_lerobot_profile_smoke,
+    select_mowa_leakage_anchor_indices,
+    select_mowa_smoke_anchor_index,
 )
 
 
@@ -128,6 +130,13 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertIn("action_chunk_target", sample.targets)
         self.assertNotIn("action_chunk_target", sample.inputs)
         sample.validate()
+
+    def test_smoke_anchor_selection_uses_shared_first_full_history_policy(self):
+        config = MoWAWindowConfig(history_steps=3, future_steps=2, action_chunk_steps=2)
+
+        self.assertEqual(select_mowa_smoke_anchor_index(6, config), 2)
+        self.assertEqual(select_mowa_smoke_anchor_index(2, config), 0)
+        self.assertEqual(select_mowa_leakage_anchor_indices(6, config), (2, 3))
 
     def test_window_sample_blocks_future_action_leakage(self):
         sample = MoWAWindowSample(

@@ -20,19 +20,19 @@
       "relative_path": "v1.0/target/atomic/OpenDrawer/20250816/lerobot",
       "episode_index": 0,
       "row_count": 334,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -73,19 +73,19 @@
       "relative_path": "v1.0/target/atomic/OpenDrawer/20250816/lerobot",
       "episode_index": 1,
       "row_count": 235,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -126,19 +126,19 @@
       "relative_path": "v1.0/target/atomic/OpenDrawer/20250816/lerobot",
       "episode_index": 4,
       "row_count": 208,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -179,19 +179,19 @@
       "relative_path": "v1.0/target/atomic/OpenCabinet/20250813/lerobot",
       "episode_index": 0,
       "row_count": 156,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -232,19 +232,19 @@
       "relative_path": "v1.0/target/atomic/OpenCabinet/20250813/lerobot",
       "episode_index": 1,
       "row_count": 302,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -285,19 +285,19 @@
       "relative_path": "v1.0/target/atomic/OpenCabinet/20250813/lerobot",
       "episode_index": 4,
       "row_count": 572,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -338,19 +338,19 @@
       "relative_path": "v1.0/target/atomic/CloseFridge/20250816/lerobot",
       "episode_index": 0,
       "row_count": 429,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -391,19 +391,19 @@
       "relative_path": "v1.0/target/atomic/CloseFridge/20250816/lerobot",
       "episode_index": 1,
       "row_count": 258,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -444,19 +444,19 @@
       "relative_path": "v1.0/target/atomic/CloseFridge/20250816/lerobot",
       "episode_index": 4,
       "row_count": 423,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -497,19 +497,19 @@
       "relative_path": "v1.0/target/atomic/CloseToasterOvenDoor/20250818/lerobot",
       "episode_index": 0,
       "row_count": 117,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -550,19 +550,19 @@
       "relative_path": "v1.0/target/atomic/CloseToasterOvenDoor/20250818/lerobot",
       "episode_index": 1,
       "row_count": 164,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -603,19 +603,19 @@
       "relative_path": "v1.0/target/atomic/CloseToasterOvenDoor/20250818/lerobot",
       "episode_index": 4,
       "row_count": 140,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -656,19 +656,19 @@
       "relative_path": "v1.0/target/atomic/CoffeeSetupMug/20250813/lerobot",
       "episode_index": 0,
       "row_count": 202,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -709,19 +709,19 @@
       "relative_path": "v1.0/target/atomic/CoffeeSetupMug/20250813/lerobot",
       "episode_index": 1,
       "row_count": 188,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -762,19 +762,19 @@
       "relative_path": "v1.0/target/atomic/CoffeeSetupMug/20250813/lerobot",
       "episode_index": 4,
       "row_count": 199,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -815,19 +815,19 @@
       "relative_path": "v1.0/target/atomic/NavigateKitchen/20250821/lerobot",
       "episode_index": 0,
       "row_count": 177,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -868,19 +868,19 @@
       "relative_path": "v1.0/target/atomic/NavigateKitchen/20250821/lerobot",
       "episode_index": 1,
       "row_count": 130,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -921,19 +921,19 @@
       "relative_path": "v1.0/target/atomic/NavigateKitchen/20250821/lerobot",
       "episode_index": 4,
       "row_count": 118,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -974,19 +974,19 @@
       "relative_path": "v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot",
       "episode_index": 0,
       "row_count": 246,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1027,19 +1027,19 @@
       "relative_path": "v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot",
       "episode_index": 1,
       "row_count": 220,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1080,19 +1080,19 @@
       "relative_path": "v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot",
       "episode_index": 4,
       "row_count": 212,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1133,19 +1133,19 @@
       "relative_path": "v1.0/target/atomic/PickPlaceToasterToCounter/20250817/lerobot",
       "episode_index": 0,
       "row_count": 266,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1186,19 +1186,19 @@
       "relative_path": "v1.0/target/atomic/PickPlaceToasterToCounter/20250817/lerobot",
       "episode_index": 1,
       "row_count": 295,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1239,19 +1239,19 @@
       "relative_path": "v1.0/target/atomic/PickPlaceToasterToCounter/20250817/lerobot",
       "episode_index": 4,
       "row_count": 276,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1292,19 +1292,19 @@
       "relative_path": "v1.0/target/atomic/PickPlaceSinkToCounter/20250813/lerobot",
       "episode_index": 0,
       "row_count": 404,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1345,19 +1345,19 @@
       "relative_path": "v1.0/target/atomic/PickPlaceSinkToCounter/20250813/lerobot",
       "episode_index": 1,
       "row_count": 365,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1398,19 +1398,19 @@
       "relative_path": "v1.0/target/atomic/PickPlaceSinkToCounter/20250813/lerobot",
       "episode_index": 4,
       "row_count": 351,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1451,19 +1451,19 @@
       "relative_path": "v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot",
       "episode_index": 0,
       "row_count": 277,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1504,19 +1504,19 @@
       "relative_path": "v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot",
       "episode_index": 1,
       "row_count": 262,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",
@@ -1557,19 +1557,19 @@
       "relative_path": "v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot",
       "episode_index": 4,
       "row_count": 147,
-      "anchor_index": 3,
+      "anchor_index": 2,
       "history_indices": [
+        0,
         1,
-        2,
-        3
+        2
       ],
       "future_indices": [
-        4,
-        5
-      ],
-      "action_target_indices": [
         3,
         4
+      ],
+      "action_target_indices": [
+        2,
+        3
       ],
       "input_keys": [
         "current_index",

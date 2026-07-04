@@ -11,7 +11,10 @@ from starVLA.dataloader.mowa.robocasa365_adapter import inspect_robocasa365_lero
 from starVLA.dataloader.mowa.robocasa365_recipe import (
     MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS,
 )
-from starVLA.dataloader.mowa.sampler import MoWAEpisodeToWindowSampler
+from starVLA.dataloader.mowa.sampler import (
+    MoWAEpisodeToWindowSampler,
+    select_mowa_smoke_anchor_index,
+)
 from starVLA.dataloader.mowa.schema import MoWAWindowConfig
 
 
@@ -107,7 +110,7 @@ def build_mowa_atomic_core_batch_dataloader_smoke(
                 episode_index=episode_index,
                 preview_rows=8,
             )
-            anchor_index = _select_anchor_index(schema.row_count, window_config)
+            anchor_index = select_mowa_smoke_anchor_index(schema.row_count, window_config)
             window_sample = sampler.sample(schema.unified_episode, anchor_index=anchor_index)
             label_sample = build_mowa_p0_label_smoke_sample(
                 dataset_path,
@@ -166,11 +169,4 @@ def build_mowa_atomic_core_batch_dataloader_smoke(
             "Smoke samples combine WindowSample boundaries with ConstructibleHeads dry-run targets.",
             "No production dataloader, video decode, latent encoder or training loop is executed.",
         ),
-    )
-
-
-def _select_anchor_index(row_count: int, window_config: MoWAWindowConfig) -> int:
-    return min(
-        max(window_config.history_steps, 0),
-        max(row_count - window_config.future_steps - 1, 0),
     )

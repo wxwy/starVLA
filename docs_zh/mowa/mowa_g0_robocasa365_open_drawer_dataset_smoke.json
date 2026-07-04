@@ -24,19 +24,19 @@
       {
         "episode_index": 0,
         "row_count": 334,
-        "anchor_index": 3,
+        "anchor_index": 2,
         "history_indices": [
+          0,
           1,
-          2,
-          3
+          2
         ],
         "future_indices": [
-          4,
-          5
-        ],
-        "action_target_indices": [
           3,
           4
+        ],
+        "action_target_indices": [
+          2,
+          3
         ],
         "future_action_in_inputs": false,
         "full_future": true,
@@ -45,19 +45,19 @@
       {
         "episode_index": 1,
         "row_count": 235,
-        "anchor_index": 3,
+        "anchor_index": 2,
         "history_indices": [
+          0,
           1,
-          2,
-          3
+          2
         ],
         "future_indices": [
-          4,
-          5
-        ],
-        "action_target_indices": [
           3,
           4
+        ],
+        "action_target_indices": [
+          2,
+          3
         ],
         "future_action_in_inputs": false,
         "full_future": true,
@@ -66,19 +66,19 @@
       {
         "episode_index": 4,
         "row_count": 208,
-        "anchor_index": 3,
+        "anchor_index": 2,
         "history_indices": [
+          0,
           1,
-          2,
-          3
+          2
         ],
         "future_indices": [
-          4,
-          5
-        ],
-        "action_target_indices": [
           3,
           4
+        ],
+        "action_target_indices": [
+          2,
+          3
         ],
         "future_action_in_inputs": false,
         "full_future": true,

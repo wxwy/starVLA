@@ -10,7 +10,10 @@ from typing import Any, Mapping
 from starVLA.dataloader.mowa.robocasa365_recipe import (
     MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS,
 )
-from starVLA.dataloader.mowa.sampler import MoWAEpisodeToWindowSampler
+from starVLA.dataloader.mowa.sampler import (
+    MoWAEpisodeToWindowSampler,
+    select_mowa_leakage_anchor_indices,
+)
 from starVLA.dataloader.mowa.schema import DATA_GATE, MoWAUnifiedEpisode, MoWAWindowConfig
 
 
@@ -110,7 +113,7 @@ def build_mowa_atomic_core_leakage_gate_smoke(
                     "future_window": DATA_GATE,
                 },
             )
-            for anchor_index in _anchor_indices(length, window_config):
+            for anchor_index in select_mowa_leakage_anchor_indices(length, window_config):
                 checked += 1
                 try:
                     sample = sampler.sample(episode, anchor_index=anchor_index)
@@ -177,10 +180,3 @@ def _first_task(row: Mapping[str, Any]) -> str:
     if tasks:
         return str(tasks[0])
     return "TBD"
-
-
-def _anchor_indices(length: int, window_config: MoWAWindowConfig) -> tuple[int, ...]:
-    start = min(max(window_config.history_steps - 1, 0), length - 1)
-    end = max(0, length - window_config.future_steps - 1)
-    mid = max(0, min(length - 1, length // 2))
-    return tuple(sorted({start, mid, end}))

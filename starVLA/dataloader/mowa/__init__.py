@@ -61,7 +61,11 @@ from starVLA.dataloader.mowa.robocasa365_recipe import (
     MoWARoboCasa365RecipeTaskStatus,
     inspect_mowa_robocasa365_atomic_core_recipe,
 )
-from starVLA.dataloader.mowa.sampler import MoWAEpisodeToWindowSampler
+from starVLA.dataloader.mowa.sampler import (
+    MoWAEpisodeToWindowSampler,
+    select_mowa_leakage_anchor_indices,
+    select_mowa_smoke_anchor_index,
+)
 from starVLA.dataloader.mowa.schema import (
     DATA_GATE,
     TBD,
@@ -128,4 +132,6 @@ __all__ = [
     "inspect_robocasa365_lerobot_dataset_smoke",
     "inspect_robocasa365_lerobot_episode_schema",
     "inspect_robocasa365_lerobot_profile_smoke",
+    "select_mowa_leakage_anchor_indices",
+    "select_mowa_smoke_anchor_index",
 ]

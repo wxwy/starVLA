@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from starVLA.dataloader.mowa.sampler import MoWAEpisodeToWindowSampler
+from starVLA.dataloader.mowa.sampler import (
+    MoWAEpisodeToWindowSampler,
+    select_mowa_smoke_anchor_index,
+)
 from starVLA.dataloader.mowa.schema import DATA_GATE, TBD, MoWAUnifiedEpisode, MoWAWindowConfig
 from starVLA.mowa_constants import MOWA_P0_FULL_HEADS
 
@@ -325,9 +328,9 @@ def inspect_robocasa365_lerobot_dataset_smoke(
     sampled_row_counts = tuple(schema.row_count for schema in sampled_schemas)
     boundary_results = []
     for schema in sampled_schemas:
-        anchor_index = min(
-            max(window_config.history_steps, 0),
-            max(schema.unified_episode.num_steps - window_config.future_steps - 1, 0),
+        anchor_index = select_mowa_smoke_anchor_index(
+            schema.unified_episode.num_steps,
+            window_config,
         )
         sample = sampler.sample(schema.unified_episode, anchor_index=anchor_index)
         boundary_results.append(

@@ -12,7 +12,10 @@ from starVLA.dataloader.mowa.robocasa365_adapter import inspect_robocasa365_lero
 from starVLA.dataloader.mowa.robocasa365_recipe import (
     MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS,
 )
-from starVLA.dataloader.mowa.sampler import MoWAEpisodeToWindowSampler
+from starVLA.dataloader.mowa.sampler import (
+    MoWAEpisodeToWindowSampler,
+    select_mowa_smoke_anchor_index,
+)
 from starVLA.dataloader.mowa.schema import MoWAWindowConfig
 
 
@@ -267,7 +270,7 @@ def _inspect_worker_sample(job: tuple[Any, ...]) -> MoWAProductionPreflightSampl
         episode_index=episode_index,
         preview_rows=8,
     )
-    anchor_index = _select_anchor_index(row_count or schema.row_count, window_config)
+    anchor_index = select_mowa_smoke_anchor_index(row_count or schema.row_count, window_config)
     sample = MoWAEpisodeToWindowSampler(window_config).sample(
         schema.unified_episode,
         anchor_index=anchor_index,
@@ -281,11 +284,4 @@ def _inspect_worker_sample(job: tuple[Any, ...]) -> MoWAProductionPreflightSampl
         worker_slot=worker_slot,
         rank=rank,
         future_action_in_inputs="action_chunk_target" in sample.inputs,
-    )
-
-
-def _select_anchor_index(row_count: int, window_config: MoWAWindowConfig) -> int:
-    return min(
-        max(window_config.history_steps, 0),
-        max(row_count - window_config.future_steps - 1, 0),
     )

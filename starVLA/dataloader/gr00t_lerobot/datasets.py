@@ -104,6 +104,8 @@ def _attach_mowa_p0_labels(sample: dict, dataset, trajectory_id: int, base_index
     reward = float(row["next.reward"])
     done = bool(row["next.done"])
     masks = {head: head in MOWA_P0_CONSTRUCTIBLE_HEADS for head in MOWA_P0_FULL_HEADS}
+    # Production targets are tensor-ready values; class_mapping_status stays in
+    # metadata while smoke label reports may keep a richer dict for inspection.
     sample["mowa_p0_targets"] = {
         "task_progress": float(row["frame_index"]) / denominator,
         "action_outcome_class": [reward, 1.0 if done else 0.0],

@@ -274,6 +274,8 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertIn("action_loss", output)
         self.assertTrue(output["mowa_layerwise_bridge_coupled"])
         self.assertEqual(output["mowa_layerwise_bridge_token_shape"], (2, 2, 4))
+        self.assertEqual(output["mowa_layerwise_bridge_bridge_token_shape"], (2, 2, 4))
+        self.assertEqual(output["mowa_layerwise_bridge_adapted_vl_embed_shape"], (2, 5, 4))
         self.assertEqual(output["mowa_layerwise_bridge_intervention"], "baseline")
         self.assertTrue(output["mowa_layerwise_bridge_intervention_applied"])
         self.assertIsNone(output["mowa_layerwise_bridge_intervention_note"])
@@ -386,7 +388,11 @@ class StarFlowVLAReuseTest(unittest.TestCase):
             torch.manual_seed(0)
             model = object.__new__(StarFlowVLA)
             torch.nn.Module.__init__(model)
-            model.config = _minimal_config_with_mowa_layerwise_coupling(True, intervention)
+            model.config = _minimal_config_with_mowa_layerwise_coupling(
+                True,
+                intervention,
+                feature_source="mowa_p0_fullheads",
+            )
             model.config.trainer = {"repeated_diffusion_steps": 1}
             model.action_horizon = 8
             model.action_dit_hidden_dim = 4
@@ -427,10 +433,25 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertTrue(torch.allclose(shuffle_tokens[0], baseline_tokens[1]))
         self.assertTrue(torch.allclose(shuffle_tokens[1], baseline_tokens[0]))
         self.assertFalse(torch.allclose(head_mask_tokens, torch.zeros_like(head_mask_tokens)))
+        self.assertFalse(torch.allclose(head_mask_tokens, baseline_tokens))
+        self.assertEqual(
+            head_mask_output["mowa_layerwise_bridge_intervention_note"],
+            "rebuilt_from_constructible_head_outputs",
+        )
         self.assertEqual(
             head_mask_output["mowa_layerwise_bridge_active_heads"],
             ("task_progress", "action_outcome_class"),
         )
+
+    def test_mowa_head_mask_control_requires_future_feature_source(self):
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.config = _minimal_config_with_mowa_layerwise_coupling(True, "head_mask_control")
+        model.action_dit_hidden_dim = 4
+        model.num_action_dit_layers = 2
+
+        with self.assertRaisesRegex(ValueError, "future feature-head source"):
+            model._setup_mowa_layerwise_bridge_coupling()
 
     def test_mowa_batch_shuffle_intervention_reports_single_sample_noop(self):
         model = object.__new__(StarFlowVLA)
@@ -492,6 +513,8 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertEqual(output["mowa_layerwise_bridge_intervention"], "zero")
         self.assertTrue(output["mowa_layerwise_bridge_intervention_applied"])
         self.assertEqual(output["mowa_layerwise_bridge_token_shape"], (2, 2, 4))
+        self.assertEqual(output["mowa_layerwise_bridge_bridge_token_shape"], (2, 2, 4))
+        self.assertEqual(output["mowa_layerwise_bridge_adapted_vl_embed_shape"], (2, 5, 4))
         self.assertEqual(output["mowa_layerwise_bridge_attention_mask_shape"], (2, 5))
         self.assertEqual(action_model.captured_vl_shapes, [(2, 5, 4), (2, 5, 4)])
         self.assertEqual(action_model.captured_attention_mask_shape, (2, 5))

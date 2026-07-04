@@ -57,6 +57,7 @@ from starVLA.model.modules.mowa import (
     MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
     MOWA_FUTURE_FEATURE_SOURCE_ALIASES,
     MOWA_FUTURE_FULL_HEADS,
+    MOWA_FUTURE_HEAD_OUTPUT_DIMS,
     MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE,
     MoWAActionBridge,
     MoWAActionBridgeConfig,
@@ -290,6 +291,14 @@ class Qwen_PI_v3(baseframework):
                 "Unsupported MoWA layerwise bridge token intervention: "
                 f"{self.mowa_layerwise_bridge_token_intervention}. Supported: {supported}"
             )
+        if (
+            self.mowa_layerwise_bridge_token_intervention == "head_mask_control"
+            and self.mowa_layerwise_bridge_feature_source not in MOWA_FUTURE_FEATURE_SOURCE_ALIASES
+        ):
+            raise ValueError(
+                "MoWA head_mask_control intervention requires a future feature-head source, "
+                f"got {self.mowa_layerwise_bridge_feature_source}."
+            )
 
         action_head_type = getattr(self.config.framework.action_model, "action_model_type", None)
         binding = resolve_mowa_action_head_binding(action_head_type)
@@ -324,6 +333,7 @@ class Qwen_PI_v3(baseframework):
             else nn.Linear(self.action_dit_hidden_dim, wam_feature_dim)
         )
         self.mowa_layerwise_bridge_p0_heads = None
+        self.mowa_layerwise_bridge_head_mask_projector = None
         if self.mowa_layerwise_bridge_feature_source in MOWA_FUTURE_FEATURE_SOURCE_ALIASES:
             active_heads = getattr(
                 mowa_cfg,
@@ -342,6 +352,14 @@ class Qwen_PI_v3(baseframework):
                     hidden_dim=wam_feature_dim,
                 )
             )
+            head_mask_dim = sum(
+                MOWA_FUTURE_HEAD_OUTPUT_DIMS[head]
+                for head in MOWA_FUTURE_CONSTRUCTIBLE_HEADS
+            )
+            self.mowa_layerwise_bridge_head_mask_projector = nn.Linear(
+                head_mask_dim,
+                wam_feature_dim,
+            )
         self.mowa_layerwise_bridge = MoWAActionBridge(
             MoWAActionBridgeConfig(
                 wam_feature_dim=wam_feature_dim,
@@ -349,6 +367,33 @@ class Qwen_PI_v3(baseframework):
                 num_action_layers=self.num_action_dit_layers,
                 num_bridge_tokens=num_bridge_tokens,
             )
+        )
+
+    def _apply_mowa_layerwise_bridge_head_mask_control(
+        self,
+        future_features: MoWAFutureFeatures,
+    ) -> MoWAFutureFeatures:
+        if self.mowa_layerwise_bridge_head_mask_projector is None:
+            raise RuntimeError("MoWA head_mask_control requires initialized future feature heads.")
+        head_vectors = []
+        for head in MOWA_FUTURE_CONSTRUCTIBLE_HEADS:
+            value = future_features.head_outputs[head]
+            if value.dim() == 1:
+                value = value.unsqueeze(-1)
+            head_vectors.append(value)
+        controlled_features = self.mowa_layerwise_bridge_head_mask_projector(
+            torch.cat(head_vectors, dim=-1)
+        )
+        return MoWAFutureFeatures(
+            hidden_features=controlled_features,
+            head_outputs={
+                head: future_features.head_outputs[head]
+                for head in MOWA_FUTURE_CONSTRUCTIBLE_HEADS
+            },
+            active_heads=MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+            masked_heads=tuple(
+                head for head in MOWA_FUTURE_FULL_HEADS if head not in MOWA_FUTURE_CONSTRUCTIBLE_HEADS
+            ),
         )
 
     def _apply_mowa_layerwise_bridge_intervention(
@@ -397,14 +442,14 @@ class Qwen_PI_v3(baseframework):
                 metadata,
             )
         if intervention == "head_mask_control":
-            active_heads = MOWA_FUTURE_CONSTRUCTIBLE_HEADS
             metadata["intervention_applied"] = True
+            metadata["intervention_note"] = "rebuilt_from_constructible_head_outputs"
             return (
                 MoWAActionBridgeOutput(
                     layerwise_condition_features=bridge_output.layerwise_condition_features,
                     attention_mask=bridge_output.attention_mask,
-                    active_heads=active_heads,
-                    masked_heads=tuple(head for head in MOWA_FUTURE_FULL_HEADS if head not in active_heads),
+                    active_heads=bridge_output.active_heads,
+                    masked_heads=bridge_output.masked_heads,
                 ),
                 metadata,
             )
@@ -448,6 +493,11 @@ class Qwen_PI_v3(baseframework):
 
         hidden_features = vl_embs_list[-1].mean(dim=1)
         future_features = self._build_mowa_layerwise_bridge_future_features(hidden_features)
+        if (
+            getattr(self, "mowa_layerwise_bridge_token_intervention", "baseline")
+            == "head_mask_control"
+        ):
+            future_features = self._apply_mowa_layerwise_bridge_head_mask_control(future_features)
         bridge_output = self.mowa_layerwise_bridge(future_features)
         bridge_output, intervention_metadata = self._apply_mowa_layerwise_bridge_intervention(bridge_output)
         adapted_vl_embs_list, adapted_attention_mask = append_layerwise_bridge_tokens(
@@ -459,6 +509,10 @@ class Qwen_PI_v3(baseframework):
         metadata = {
             "coupled": True,
             "token_shape": tuple(first_layer_tokens.shape),
+            "bridge_token_shape": tuple(first_layer_tokens.shape),
+            "adapted_vl_embed_shape": (
+                tuple(adapted_vl_embs_list[0].shape) if adapted_vl_embs_list else None
+            ),
             "attention_mask_shape": (
                 tuple(adapted_attention_mask.shape) if adapted_attention_mask is not None else None
             ),
@@ -582,6 +636,12 @@ class Qwen_PI_v3(baseframework):
                 "intervention_note"
             ]
             output["mowa_layerwise_bridge_token_shape"] = mowa_bridge_metadata["token_shape"]
+            output["mowa_layerwise_bridge_bridge_token_shape"] = mowa_bridge_metadata[
+                "bridge_token_shape"
+            ]
+            output["mowa_layerwise_bridge_adapted_vl_embed_shape"] = mowa_bridge_metadata[
+                "adapted_vl_embed_shape"
+            ]
             output["mowa_layerwise_bridge_attention_mask_shape"] = mowa_bridge_metadata[
                 "attention_mask_shape"
             ]
@@ -663,6 +723,12 @@ class Qwen_PI_v3(baseframework):
                 "intervention_note"
             ]
             output["mowa_layerwise_bridge_token_shape"] = mowa_bridge_metadata["token_shape"]
+            output["mowa_layerwise_bridge_bridge_token_shape"] = mowa_bridge_metadata[
+                "bridge_token_shape"
+            ]
+            output["mowa_layerwise_bridge_adapted_vl_embed_shape"] = mowa_bridge_metadata[
+                "adapted_vl_embed_shape"
+            ]
             output["mowa_layerwise_bridge_attention_mask_shape"] = mowa_bridge_metadata[
                 "attention_mask_shape"
             ]

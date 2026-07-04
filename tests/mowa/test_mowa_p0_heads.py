@@ -1320,6 +1320,16 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "action_model_type": "LayerwiseFM",
                             "num_target_vision_tokens": 0,
                         },
+                        "mowa": {
+                            "enable_layerwise_bridge_token_coupling": True,
+                            "layerwise_bridge_feature_source": "mowa_p0_fullheads",
+                            "layerwise_bridge_token_intervention": "baseline",
+                            "num_bridge_tokens": 2,
+                            "layerwise_bridge_active_heads": [
+                                "task_progress",
+                                "action_outcome_class",
+                            ],
+                        },
                     },
                 }
             )
@@ -1338,6 +1348,14 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertEqual(accessed["framework"]["name"], "StarFlowVLA")
         self.assertEqual(accessed["framework"]["action_model"]["action_model_type"], "LayerwiseFM")
         self.assertEqual(accessed["framework"]["action_model"]["num_target_vision_tokens"], 0)
+        self.assertTrue(accessed["framework"]["mowa"]["enable_layerwise_bridge_token_coupling"])
+        self.assertEqual(accessed["framework"]["mowa"]["layerwise_bridge_feature_source"], "mowa_p0_fullheads")
+        self.assertEqual(accessed["framework"]["mowa"]["layerwise_bridge_token_intervention"], "baseline")
+        self.assertEqual(accessed["framework"]["mowa"]["num_bridge_tokens"], 2)
+        self.assertEqual(
+            accessed["framework"]["mowa"]["layerwise_bridge_active_heads"],
+            ["task_progress", "action_outcome_class"],
+        )
 
     def test_e006_policy_rollout_preflight_builds_gated_commands(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1650,3 +1668,34 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertEqual(probe["active_heads"], ("qwen_action_token_probe",))
         self.assertEqual(probe["masked_heads"], ())
         self.assertTrue(torch.isfinite(probe["probe_loss"]))
+
+    def test_qwenoft_mowa_bridge_probe_infers_mlp_layer_count(self):
+        try:
+            import torch.nn as nn
+            from omegaconf import OmegaConf
+        except ImportError:
+            self.skipTest("torch or omegaconf is not available")
+
+        from starVLA.model.framework.VLM4A.QwenOFT import Qwenvl_OFT
+
+        cfg = OmegaConf.create(
+            {
+                "framework": {
+                    "action_model": {"action_hidden_dim": 8},
+                    "mowa": {
+                        "enable_action_bridge_probe": True,
+                        "action_hidden_dim": 16,
+                        "num_bridge_tokens": 2,
+                    },
+                }
+            }
+        )
+        probe_owner = object.__new__(Qwenvl_OFT)
+        nn.Module.__init__(probe_owner)
+        probe_owner.config = cfg
+        probe_owner.action_model = nn.Module()
+        probe_owner.action_model.model = nn.Module()
+        probe_owner.action_model.model.mlp_resnet_blocks = nn.ModuleList([nn.Identity(), nn.Identity()])
+        probe_owner._setup_mowa_action_bridge_probe()
+
+        self.assertEqual(probe_owner.mowa_action_bridge_probe.config.num_action_layers, 2)

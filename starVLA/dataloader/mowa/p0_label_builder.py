@@ -10,6 +10,7 @@ from starVLA.dataloader.mowa.schema import DATA_GATE
 from starVLA.mowa_constants import (
     MOWA_P0_CONSTRUCTIBLE_HEADS,
     MOWA_P0_FULL_HEADS,
+    MOWA_P0_MASKED_HEADS,
 )
 
 
@@ -73,12 +74,11 @@ def build_mowa_p0_constructible_label_smoke(
         parquet_path = root / "data" / "chunk-000" / f"episode_{episode_index:06d}.parquet"
         samples.extend(_build_episode_samples(parquet_path, episode_index, preview_rows))
 
-    masked_heads = tuple(head for head in MOWA_P0_FULL_HEADS if head not in MOWA_P0_CONSTRUCTIBLE_HEADS)
     return MoWAP0ConstructibleLabelSmoke(
         dataset_path=str(root),
         sampled_episode_indices=episode_indices,
         constructible_heads=MOWA_P0_CONSTRUCTIBLE_HEADS,
-        masked_heads=masked_heads,
+        masked_heads=MOWA_P0_MASKED_HEADS,
         sample_count=len(samples),
         samples=tuple(samples),
         notes=(

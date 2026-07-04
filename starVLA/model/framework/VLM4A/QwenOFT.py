@@ -473,7 +473,13 @@ class Qwenvl_OFT(baseframework):
 
         action_hidden_dim = int(self.config.framework.action_model.action_hidden_dim)
         bridge_hidden_dim = int(getattr(mowa_cfg, "action_hidden_dim", action_hidden_dim))
-        num_action_layers = int(getattr(mowa_cfg, "num_action_layers", 1))
+        num_action_layers = int(
+            getattr(
+                mowa_cfg,
+                "num_action_layers",
+                self._infer_mowa_action_bridge_probe_layers(),
+            )
+        )
         num_bridge_tokens = int(getattr(mowa_cfg, "num_bridge_tokens", 1))
         self.mowa_action_bridge_probe = MoWAActionBridge(
             MoWAActionBridgeConfig(
@@ -483,6 +489,13 @@ class Qwenvl_OFT(baseframework):
                 num_bridge_tokens=num_bridge_tokens,
             )
         )
+
+    def _infer_mowa_action_bridge_probe_layers(self) -> int:
+        action_model = getattr(self, "action_model", None)
+        blocks = getattr(getattr(action_model, "model", None), "mlp_resnet_blocks", None)
+        if blocks is not None:
+            return max(int(len(blocks)), 1)
+        return 1
 
     def _maybe_run_mowa_action_bridge_probe(self, action_queries: torch.Tensor) -> dict | None:
         if not self.mowa_action_bridge_probe_enabled:

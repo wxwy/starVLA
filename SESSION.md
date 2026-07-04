@@ -2,6 +2,27 @@
 
 ## 当前阶段
 - M1 G0 Data Verification Gate 数据复验已通过；P0 ConstructibleHeads one-step train smoke 已通过，仍不计入 E-001 主训练。
+- 2026-07-04 完成当前机器上 StarFlow VLA tmux `train` 会话自动监控：
+  - 检测到 run_id `P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849` 正在训练（step 15141/80000，约 18.9%）。
+  - 从 tmux capture-pane 抓取到最新 loss（action_dit_loss ≈ 0.0867 @ step 15140）。
+  - 获取 GPU（RTX 4090，利用率 57%，显存 24032/24564 MiB，功耗 246.61W，温度 63°C）和 Docker 内存（31 GiB / 56 GiB）。
+  - 更新 `docs_zh/starflow_vla/bs32/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849.md` 中的训练进度、loss 记录、GPU、内存字段。
+  - 已 `git add -f`、commit、push 到 `merge-official-starvla-dev` 分支，提交信息：`docs: update E-H2a-01 tracker — step 15141 (18.9%)`。
+
+## StarFlow VLA 训练参数校验与修复（2026-07-04）
+- 校验范围：当前机器上 6 个正在运行的 LIBERO StarFlow VLA run（ft0/16/32/64、continuous_head ft32、mlp baseline）。
+- 数据源：`playground/Checkpoints/<RUN_ID>/config.full.yaml`、checkpoint 内 `starflow_mapping.json`。
+- 结论：
+  - **核心参数已生效**：`num_target_vision_tokens`（0/16/32/64 对应正确）、`framework.name`（mlp baseline 正确覆盖为 `QwenOFT`）、`state_mode`（continuous_head run 正确为 `continuous_head`）、`gradient_accumulation_steps`（32/4 对应正确）、`per_device_batch_size`（按 CLI 生效）。
+  - **`data_mix` 被脚本默认值覆盖**：`run_starflow_train_ready.sh` 中 `DATA_MIX=${DATA_MIX:-libero_all}`，导致 `future_tokens_32.yaml`、`future_tokens_64.yaml`、`continuous_head.yaml` 里的 `libero_goal` 实际都被覆盖为 `libero_all`。
+  - **`is_resume` 未生效**：用户命令中设置 `IS_RESUME=True` 的 4 个 run，实际 `config.full.yaml` 中 `trainer.is_resume=false`。对这些全新 `RUN_ID` 不影响训练结果（都从头开始），但说明 `IS_RESUME` 环境变量未正确传入训练进程。
+- 已修复（2026-07-04）：
+  - `examples/LIBERO/train_files/run_starflow_train_ready.sh`：取消 `DATA_MIX` 默认值，改为 `DATA_MIX=${DATA_MIX:-}`；仅在 `DATA_MIX` 非空时才追加 `--datasets.vla_data.data_mix`，让 YAML 配置说了算。
+  - `configs/starflow_vla/` 下 7 个 YAML 的 `datasets.vla_data.data_mix` 从 `libero_goal` 统一改为 `libero_all`：`ablations/future_tokens_32.yaml`、`ablations/future_tokens_64.yaml`、`stage3_future_token_ablation.yaml`、`state/continuous_head.yaml`、`state/discretized_instruction.yaml`、`state/hybrid_gated.yaml`、`state/hybrid_gated_cross.yaml`。当前所有 starflow_vla YAML 的 `data_mix` 均为 `libero_all`。
+- 根因判断：
+  - `data_mix` 覆盖属于脚本设计（默认值优先），已修复。
+  - `is_resume` 失效不是 `normalize_dotlist_args` 或 `OmegaConf.merge` 的问题（本地模拟可正确合并为 `True`），更可能是 tmux 中实际启动命令与用户贴出的命令存在差异（如 `IS_RESUME=True` 未真正作为环境变量传入）。
+- 下一步建议：在启动脚本或训练入口增加参数生效性断言/打印，避免静默失效。
 
 ## 数据状态
 - `.robocase` venv 已就绪：`/gemini/code/starVLA/.robocase`。

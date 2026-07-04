@@ -20,7 +20,7 @@ WANDB_RUN_ID=${WANDB_RUN_ID:-${RUN_ID}}
 WANDB_NAME=${WANDB_NAME:-${RUN_ID}}
 BASE_VLM=${BASE_VLM:-${STARVLA_DIR}/playground/Pretrained_models/Qwen3-VL-4B-Instruct}
 LIBERO_DATA_ROOT=${LIBERO_DATA_ROOT:-${STARVLA_DIR}/playground/Datasets/LEROBOT_LIBERO_DATA}
-DATA_MIX=${DATA_MIX:-libero_all}
+DATA_MIX=${DATA_MIX:-}
 CONFIG_YAML=${CONFIG_YAML:-configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml}
 FRAMEWORK_NAME=${FRAMEWORK_NAME:-}
 FREEZE_MODULES=${FREEZE_MODULES:-qwen_vl_interface}
@@ -126,7 +126,6 @@ TRAIN_ARGS=(
     --config_yaml "${CONFIG_YAML}"
     --framework.qwenvl.base_vlm "${BASE_VLM}"
     --datasets.vla_data.data_root_dir "${LIBERO_DATA_ROOT}"
-    --datasets.vla_data.data_mix "${DATA_MIX}"
     --datasets.vla_data.per_device_batch_size "${PER_DEVICE_BATCH_SIZE}"
     --datasets.vla_data.num_workers "${NUM_WORKERS}"
     --trainer.freeze_modules "${FREEZE_MODULES}"
@@ -154,6 +153,10 @@ TRAIN_ARGS=(
 
 if [[ -n "${FRAMEWORK_NAME}" ]]; then
     TRAIN_ARGS+=(--framework.name "${FRAMEWORK_NAME}")
+fi
+
+if [[ -n "${DATA_MIX}" ]]; then
+    TRAIN_ARGS+=(--datasets.vla_data.data_mix "${DATA_MIX}")
 fi
 
 if [[ "${NUM_PROCESSES}" -gt 1 || "${FORCE_DEEPSPEED}" == "true" ]]; then

@@ -1019,6 +1019,19 @@ class MoWAP0HeadsTest(unittest.TestCase):
 
         _enforce_launch_guard(guarded_cfg, full_path_dry_run_only=True)
 
+        policy_unconfirmed_cfg = OmegaConf.create(
+            {
+                "launch_guard": {
+                    "launch_ready": True,
+                    "requires_human_confirmation": True,
+                    "human_confirmed": True,
+                    "policy_confirmed": False,
+                }
+            }
+        )
+        with self.assertRaisesRegex(RuntimeError, "policy_confirmed=False"):
+            _enforce_launch_guard(policy_unconfirmed_cfg, full_path_dry_run_only=False)
+
         approved_cfg = OmegaConf.create(
             {
                 "launch_guard": {

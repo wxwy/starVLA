@@ -144,7 +144,7 @@ def _enforce_launch_guard(cfg, *, full_path_dry_run_only: bool) -> None:
     requires_human_confirmation = bool(getattr(launch_guard, "requires_human_confirmation", False))
     human_confirmed = bool(getattr(launch_guard, "human_confirmed", False))
     policy_confirmed = bool(getattr(launch_guard, "policy_confirmed", False))
-    if launch_ready and (not requires_human_confirmation or human_confirmed):
+    if launch_ready and policy_confirmed and (not requires_human_confirmation or human_confirmed):
         return
 
     raise RuntimeError(
@@ -153,8 +153,8 @@ def _enforce_launch_guard(cfg, *, full_path_dry_run_only: bool) -> None:
         f"policy_confirmed={policy_confirmed}, "
         f"requires_human_confirmation={requires_human_confirmation}, "
         f"human_confirmed={human_confirmed}. "
-        "Set launch_ready=true and, when requires_human_confirmation=true, "
-        "human_confirmed=true only after explicit approval."
+        "Set launch_ready=true, policy_confirmed=true, and, when "
+        "requires_human_confirmation=true, human_confirmed=true only after explicit approval."
     )
 
 # Initialize logger

@@ -42,6 +42,7 @@ from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.framework.share_tools import add_discretized_state_to_instruction, merge_framework_config
 from starVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
 from starVLA.model.modules.mowa import (
+    MOWA_P0_CONSTRUCTIBLE_HEADS,
     MOWA_P0_FULL_HEADS,
     MoWAActionBridge,
     MoWAActionBridgeConfig,
@@ -383,7 +384,7 @@ class Qwenvl_OFT(baseframework):
             getattr(
                 mowa_cfg,
                 "p0_supervision_active_heads",
-                ("task_progress", "action_outcome_class"),
+                MOWA_P0_CONSTRUCTIBLE_HEADS,
             )
         )
         if not self.mowa_p0_supervision_probe_enabled:

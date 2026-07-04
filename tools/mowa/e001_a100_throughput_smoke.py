@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from starVLA.model.modules.mowa import (
+    MOWA_P0_CONSTRUCTIBLE_HEADS,
+    MOWA_P0_MASKED_HEADS,
     MoWAActionBridge,
     MoWAActionBridgeConfig,
     MoWAP0FullHeads,
@@ -149,14 +151,8 @@ def run_a100_throughput_smoke(args: argparse.Namespace) -> dict[str, Any]:
             "action_hidden_dim": args.action_hidden_dim,
             "num_action_layers": args.num_action_layers,
             "num_bridge_tokens": args.num_bridge_tokens,
-            "active_heads": ["task_progress", "action_outcome_class"],
-            "masked_heads": [
-                "manipulation_readiness",
-                "failure_risk",
-                "next_best_view_score",
-                "subgoal_feasibility",
-                "object_visibility_future",
-            ],
+            "active_heads": list(MOWA_P0_CONSTRUCTIBLE_HEADS),
+            "masked_heads": list(MOWA_P0_MASKED_HEADS),
         },
         "settings": {
             "batch_candidates": batch_candidates,

@@ -54,6 +54,7 @@ from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.framework.share_tools import merge_framework_config, populate_layerwise_dit_cfg
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import LayerwiseFlowmatchingActionHead, get_action_model
 from starVLA.model.modules.mowa import (
+    MOWA_P0_CONSTRUCTIBLE_HEADS,
     MOWA_P0_FULL_HEADS,
     MoWAActionBridge,
     MoWAActionBridgeConfig,
@@ -320,7 +321,7 @@ class Qwen_PI_v3(baseframework):
             active_heads = getattr(
                 mowa_cfg,
                 "layerwise_bridge_active_heads",
-                ("task_progress", "action_outcome_class"),
+                MOWA_P0_CONSTRUCTIBLE_HEADS,
             )
             self.mowa_layerwise_bridge_active_heads = tuple(active_heads)
             unknown_heads = [
@@ -389,7 +390,7 @@ class Qwen_PI_v3(baseframework):
                 metadata,
             )
         if intervention == "head_mask_control":
-            active_heads = ("task_progress", "action_outcome_class")
+            active_heads = MOWA_P0_CONSTRUCTIBLE_HEADS
             metadata["intervention_applied"] = True
             return (
                 MoWAActionBridgeOutput(
@@ -422,7 +423,7 @@ class Qwen_PI_v3(baseframework):
             active_heads = getattr(
                 self,
                 "mowa_layerwise_bridge_active_heads",
-                ("task_progress", "action_outcome_class"),
+                MOWA_P0_CONSTRUCTIBLE_HEADS,
             )
             masks = {head: head in active_heads for head in MOWA_P0_FULL_HEADS}
             return self.mowa_layerwise_bridge_p0_heads.future_features(hidden_features, masks)

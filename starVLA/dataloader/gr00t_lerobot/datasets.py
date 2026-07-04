@@ -51,6 +51,10 @@ from starVLA.dataloader.gr00t_lerobot.schema import (
 )
 from starVLA.dataloader.gr00t_lerobot.transform import ComposedModalityTransform
 from starVLA.dataloader.gr00t_lerobot.transform.state_action import StateActionTransform
+from starVLA.mowa_constants import (
+    MOWA_P0_CONSTRUCTIBLE_HEADS,
+    MOWA_P0_FULL_HEADS,
+)
 
 from functools import partial
 from typing import Tuple, List
@@ -67,17 +71,6 @@ LE_ROBOT_DATA_FILENAME = "data/*/*.parquet"
 LE_ROBOT_STEPS_FILENAME = "meta/steps.pkl"
 LE_ROBOT_STATS_FORMAT_VERSION = 2
 EPSILON = 5e-4
-
-MOWA_P0_FULL_HEADS = (
-    "task_progress",
-    "manipulation_readiness",
-    "failure_risk",
-    "next_best_view_score",
-    "subgoal_feasibility",
-    "object_visibility_future",
-    "action_outcome_class",
-)
-MOWA_P0_CONSTRUCTIBLE_HEADS = ("task_progress", "action_outcome_class")
 
 #  LeRobot v3.0 dataset file names 
 LE_ROBOT3_TASKS_FILENAME = "meta/tasks.parquet"

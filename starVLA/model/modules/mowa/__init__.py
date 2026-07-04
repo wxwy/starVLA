@@ -16,8 +16,6 @@ from .action_head_adapter import (
     resolve_mowa_action_head_binding,
 )
 from .p0_heads import (
-    MOWA_P0_CONSTRUCTIBLE_HEADS,
-    MOWA_P0_FULL_HEADS,
     P0FutureFeatures,
     MoWAP0ConstructibleHeads,
     MoWAP0ConstructibleHeadsConfig,
@@ -26,11 +24,19 @@ from .p0_heads import (
     build_mowa_p0_constructible_batch_from_smoke,
     mowa_manual_sgd_step,
 )
+from starVLA.mowa_constants import (
+    MOWA_P0_CONSTRUCTIBLE_HEADS,
+    MOWA_P0_FULL_HEADS,
+    MOWA_P0_HEAD_OUTPUT_DIMS,
+    MOWA_P0_MASKED_HEADS,
+)
 
 __all__ = [
     "MOWA_P0_CONSTRUCTIBLE_HEADS",
     "MOWA_ACTION_HEAD_BINDINGS",
     "MOWA_P0_FULL_HEADS",
+    "MOWA_P0_HEAD_OUTPUT_DIMS",
+    "MOWA_P0_MASKED_HEADS",
     "MoWAActionBridge",
     "MoWAActionBridgeConfig",
     "MoWAActionBridgeOutput",

@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 
 from starVLA.model.modules.mowa import (
+    MOWA_P0_CONSTRUCTIBLE_HEADS,
+    MOWA_P0_MASKED_HEADS,
     MoWAP0ConstructibleHeads,
     MoWAP0ConstructibleHeadsConfig,
     build_mowa_p0_constructible_batch_from_smoke,
@@ -63,14 +65,8 @@ def main() -> None:
         "stage": "P0",
         "module": "MoWAP0ConstructibleHeads",
         "sample_count": batch["metadata"]["sample_count"],
-        "constructible_heads": ["task_progress", "action_outcome_class"],
-        "masked_heads": [
-            "manipulation_readiness",
-            "failure_risk",
-            "next_best_view_score",
-            "subgoal_feasibility",
-            "object_visibility_future",
-        ],
+        "constructible_heads": list(MOWA_P0_CONSTRUCTIBLE_HEADS),
+        "masked_heads": list(MOWA_P0_MASKED_HEADS),
         "input_shape": list(batch["features"].shape),
         "task_progress_output_shape": list(outputs["task_progress"].shape),
         "action_outcome_class_output_shape": list(outputs["action_outcome_class"].shape),

@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from starVLA.dataloader.mowa.robocasa365_adapter import MOWA_P0_HEADS
 from starVLA.dataloader.mowa.schema import DATA_GATE
-
-
-MOWA_P0_CONSTRUCTIBLE_HEADS = ("task_progress", "action_outcome_class")
+from starVLA.mowa_constants import (
+    MOWA_P0_CONSTRUCTIBLE_HEADS,
+    MOWA_P0_FULL_HEADS,
+)
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,7 @@ def build_mowa_p0_constructible_label_smoke(
         parquet_path = root / "data" / "chunk-000" / f"episode_{episode_index:06d}.parquet"
         samples.extend(_build_episode_samples(parquet_path, episode_index, preview_rows))
 
-    masked_heads = tuple(head for head in MOWA_P0_HEADS if head not in MOWA_P0_CONSTRUCTIBLE_HEADS)
+    masked_heads = tuple(head for head in MOWA_P0_FULL_HEADS if head not in MOWA_P0_CONSTRUCTIBLE_HEADS)
     return MoWAP0ConstructibleLabelSmoke(
         dataset_path=str(root),
         sampled_episode_indices=episode_indices,
@@ -139,7 +139,7 @@ def _build_episode_samples(
 
     samples = []
     for row_index, (frame_index, reward, done) in enumerate(zip(frame_indices, rewards, dones)):
-        masks = {head: head in MOWA_P0_CONSTRUCTIBLE_HEADS for head in MOWA_P0_HEADS}
+        masks = {head: head in MOWA_P0_CONSTRUCTIBLE_HEADS for head in MOWA_P0_FULL_HEADS}
         samples.append(
             MoWAP0LabelSmokeSample(
                 episode_index=episode_index,

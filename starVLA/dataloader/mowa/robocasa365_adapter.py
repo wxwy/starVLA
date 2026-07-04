@@ -9,6 +9,7 @@ from typing import Any
 
 from starVLA.dataloader.mowa.sampler import MoWAEpisodeToWindowSampler
 from starVLA.dataloader.mowa.schema import DATA_GATE, TBD, MoWAUnifiedEpisode, MoWAWindowConfig
+from starVLA.mowa_constants import MOWA_P0_FULL_HEADS
 
 
 ROBOCASA365_REQUIRED_PARQUET_COLUMNS = (
@@ -19,16 +20,7 @@ ROBOCASA365_REQUIRED_PARQUET_COLUMNS = (
     "episode_index",
     "task_index",
 )
-
-MOWA_P0_HEADS = (
-    "task_progress",
-    "manipulation_readiness",
-    "failure_risk",
-    "next_best_view_score",
-    "subgoal_feasibility",
-    "object_visibility_future",
-    "action_outcome_class",
-)
+MOWA_P0_HEADS = MOWA_P0_FULL_HEADS
 
 
 @dataclass(frozen=True)

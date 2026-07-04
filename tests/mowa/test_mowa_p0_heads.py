@@ -5,6 +5,32 @@ import unittest
 
 
 class MoWAP0HeadsTest(unittest.TestCase):
+    def test_p0_head_constants_are_shared_across_runtime_paths(self):
+        from starVLA.dataloader.gr00t_lerobot.datasets import (
+            MOWA_P0_CONSTRUCTIBLE_HEADS as lerobot_constructible_heads,
+            MOWA_P0_FULL_HEADS as lerobot_full_heads,
+        )
+        from starVLA.dataloader.mowa.p0_label_builder import (
+            MOWA_P0_CONSTRUCTIBLE_HEADS as label_builder_constructible_heads,
+            MOWA_P0_FULL_HEADS as label_builder_full_heads,
+        )
+        from starVLA.dataloader.mowa.robocasa365_adapter import MOWA_P0_HEADS
+        from starVLA.model.modules.mowa import (
+            MOWA_P0_CONSTRUCTIBLE_HEADS,
+            MOWA_P0_FULL_HEADS,
+            MOWA_P0_MASKED_HEADS,
+        )
+
+        self.assertEqual(MOWA_P0_HEADS, MOWA_P0_FULL_HEADS)
+        self.assertEqual(label_builder_full_heads, MOWA_P0_FULL_HEADS)
+        self.assertEqual(lerobot_full_heads, MOWA_P0_FULL_HEADS)
+        self.assertEqual(label_builder_constructible_heads, MOWA_P0_CONSTRUCTIBLE_HEADS)
+        self.assertEqual(lerobot_constructible_heads, MOWA_P0_CONSTRUCTIBLE_HEADS)
+        self.assertEqual(
+            MOWA_P0_MASKED_HEADS,
+            tuple(head for head in MOWA_P0_FULL_HEADS if head not in MOWA_P0_CONSTRUCTIBLE_HEADS),
+        )
+
     def test_constructible_heads_forward_loss_and_optimizer_step(self):
         try:
             import torch

@@ -1503,6 +1503,42 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("action_outcome_class", supervised["losses"])
         self.assertTrue(torch.isfinite(supervised["loss"]))
 
+    def test_qwenoft_mowa_future_supervision_aliases_match_p0_probe(self):
+        try:
+            import torch.nn as nn
+            from omegaconf import OmegaConf
+        except ImportError:
+            self.skipTest("torch or omegaconf is not available")
+
+        from starVLA.model.framework.VLM4A.QwenOFT import Qwenvl_OFT
+
+        cfg = OmegaConf.create(
+            {
+                "framework": {
+                    "action_model": {"action_hidden_dim": 8},
+                    "mowa": {
+                        "enable_p0_supervision_probe": True,
+                        "future_supervision_hidden_dim": 6,
+                        "future_supervision_active_heads": [
+                            "task_progress",
+                            "action_outcome_class",
+                        ],
+                    },
+                }
+            }
+        )
+        probe_owner = object.__new__(Qwenvl_OFT)
+        nn.Module.__init__(probe_owner)
+        probe_owner.config = cfg
+        probe_owner._setup_mowa_p0_supervision_probe()
+
+        self.assertIsNotNone(probe_owner.mowa_p0_supervision_probe)
+        self.assertEqual(
+            probe_owner.mowa_p0_supervision_active_heads,
+            ("task_progress", "action_outcome_class"),
+        )
+        self.assertEqual(probe_owner.mowa_p0_supervision_probe.config.hidden_dim, 6)
+
     def test_qwenoft_mowa_bridge_probe_uses_action_hidden_without_label_input(self):
         try:
             import torch

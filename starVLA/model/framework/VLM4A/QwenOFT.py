@@ -383,15 +383,25 @@ class Qwenvl_OFT(baseframework):
         self.mowa_p0_supervision_active_heads = tuple(
             getattr(
                 mowa_cfg,
-                "p0_supervision_active_heads",
-                MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+                "future_supervision_active_heads",
+                getattr(
+                    mowa_cfg,
+                    "p0_supervision_active_heads",
+                    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+                ),
             )
         )
         if not self.mowa_p0_supervision_probe_enabled:
             return
 
         action_hidden_dim = int(self.config.framework.action_model.action_hidden_dim)
-        hidden_dim = int(getattr(mowa_cfg, "p0_supervision_hidden_dim", 32))
+        hidden_dim = int(
+            getattr(
+                mowa_cfg,
+                "future_supervision_hidden_dim",
+                getattr(mowa_cfg, "p0_supervision_hidden_dim", 32),
+            )
+        )
         self.mowa_p0_supervision_probe = MoWAFutureFeatureHeads(
             MoWAFutureFeatureHeadsConfig(input_dim=action_hidden_dim, hidden_dim=hidden_dim)
         )

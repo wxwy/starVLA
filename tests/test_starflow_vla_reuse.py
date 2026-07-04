@@ -321,6 +321,43 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertNotIn("starflow_condition_probe", output["mowa_layerwise_bridge_active_heads"])
         self.assertEqual(action_model.captured_vl_shapes, [(1, 5, 4), (1, 5, 4)])
 
+    def test_mowa_layerwise_bridge_accepts_future_feature_source_alias(self):
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.config = _minimal_config_with_mowa_layerwise_coupling(
+            True,
+            feature_source="mowa_future_feature_heads",
+        )
+        model.config.trainer = {"repeated_diffusion_steps": 1}
+        model.action_horizon = 8
+        model.action_dit_hidden_dim = 4
+        model.num_action_dit_layers = 2
+        model._setup_mowa_layerwise_bridge_coupling()
+        action_model = _CaptureActionModel()
+        model.action_model = action_model
+        model._encode_vl_hidden_states = lambda images, instructions: (
+            [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
+            torch.ones(1, 3, dtype=torch.bool),
+        )
+
+        output = model.forward(
+            [
+                {
+                    "image": [],
+                    "lang": "open the drawer",
+                    "action": np.zeros((8, 7), dtype=np.float32),
+                }
+            ]
+        )
+
+        self.assertTrue(output["mowa_layerwise_bridge_coupled"])
+        self.assertEqual(output["mowa_layerwise_bridge_feature_source"], "mowa_future_feature_heads")
+        self.assertEqual(
+            output["mowa_layerwise_bridge_active_heads"],
+            ("task_progress", "action_outcome_class"),
+        )
+        self.assertEqual(action_model.captured_vl_shapes, [(1, 5, 4), (1, 5, 4)])
+
     def test_mowa_layerwise_bridge_rejects_unknown_feature_source(self):
         model = object.__new__(StarFlowVLA)
         torch.nn.Module.__init__(model)

@@ -268,6 +268,7 @@ class Qwen_PI_v3(baseframework):
         )
         supported_feature_sources = {
             "starflow_condition_probe",
+            "mowa_future_feature_heads",
             "mowa_p0_fullheads",
         }
         if self.mowa_layerwise_bridge_feature_source not in supported_feature_sources:
@@ -322,7 +323,10 @@ class Qwen_PI_v3(baseframework):
             else nn.Linear(self.action_dit_hidden_dim, wam_feature_dim)
         )
         self.mowa_layerwise_bridge_p0_heads = None
-        if self.mowa_layerwise_bridge_feature_source == "mowa_p0_fullheads":
+        if self.mowa_layerwise_bridge_feature_source in {
+            "mowa_future_feature_heads",
+            "mowa_p0_fullheads",
+        }:
             active_heads = getattr(
                 mowa_cfg,
                 "layerwise_bridge_active_heads",
@@ -422,9 +426,9 @@ class Qwen_PI_v3(baseframework):
                 active_heads=("starflow_condition_probe",),
                 masked_heads=(),
             )
-        if source == "mowa_p0_fullheads":
+        if source in {"mowa_future_feature_heads", "mowa_p0_fullheads"}:
             if self.mowa_layerwise_bridge_p0_heads is None:
-                raise RuntimeError("MoWA P0 FullHeads feature source is enabled but not initialized.")
+                raise RuntimeError("MoWA future feature-head source is enabled but not initialized.")
             active_heads = getattr(
                 self,
                 "mowa_layerwise_bridge_active_heads",
@@ -542,7 +546,7 @@ class Qwen_PI_v3(baseframework):
             repeated_diffusion_steps = (
                 self.config.trainer.get("repeated_diffusion_steps", 16) if self.config and self.config.trainer else 4
             )
-            
+
             actions_target_repeated = actions_target.repeat(repeated_diffusion_steps, 1, 1)
             # Repeat every VLM layer embedding to match the duplicated action batch.
             vl_embs_list_repeated = [h.repeat(repeated_diffusion_steps, 1, 1) for h in vl_embs_list]

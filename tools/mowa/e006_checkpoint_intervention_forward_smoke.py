@@ -13,9 +13,7 @@ from typing import Any
 
 
 CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml")
-DEFAULT_CHECKPOINT = Path(
-    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2"
-)
+E006_EVAL_LOAD_CONFIG = Path("configs/mowa/mowa_e006_eval_load_smoke.yaml")
 OUTPUT = Path("docs_zh/mowa/mowa_e006_checkpoint_intervention_forward_smoke.json")
 PER_INTERVENTION_DIR = Path("docs_zh/mowa/e006_checkpoint_intervention_forward")
 RUN_ROOT = Path("playground/mowa_ckpt")
@@ -30,7 +28,7 @@ INTERVENTIONS = (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run MoWA E-006 checkpoint intervention forward smoke.")
     parser.add_argument("--repo-root", type=Path, default=Path("."))
-    parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
+    parser.add_argument("--checkpoint", type=Path, default=None)
     parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--batch-size", type=int, default=2)
@@ -56,11 +54,12 @@ def main() -> None:
 def run_or_plan_checkpoint_intervention_forward_smoke(
     repo_root: Path | str,
     *,
-    checkpoint: Path,
+    checkpoint: Path | None,
     execute: bool,
     batch_size: int,
 ) -> dict[str, Any]:
     root = Path(repo_root)
+    checkpoint = checkpoint or _load_default_checkpoint_path(root)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     runs = []
     for intervention in INTERVENTIONS:
@@ -221,6 +220,13 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _load_default_checkpoint_path(repo_root: Path) -> Path:
+    from omegaconf import OmegaConf
+
+    cfg = OmegaConf.load(repo_root / E006_EVAL_LOAD_CONFIG)
+    return Path(str(cfg.checkpoint.eval_candidate_checkpoint))
 
 
 if __name__ == "__main__":

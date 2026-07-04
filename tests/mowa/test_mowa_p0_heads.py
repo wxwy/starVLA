@@ -1015,6 +1015,47 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("--datasets.vla_data.per_device_batch_size", command)
         self.assertIn("2", command)
 
+    def test_e006_checkpoint_intervention_forward_default_checkpoint_comes_from_config(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_save_resume_smoke_test"
+                / "checkpoints"
+                / "steps_2"
+            )
+            checkpoint.mkdir(parents=True)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_starflow_ft0_full_path_dry_run.yaml").write_text(
+                "trainer:\n  full_path_dry_run_only: true\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e006_eval_load_smoke.yaml").write_text(
+                "checkpoint:\n"
+                "  eval_candidate_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e006_checkpoint_intervention_forward_smoke import (
+                run_or_plan_checkpoint_intervention_forward_smoke,
+            )
+
+            report = run_or_plan_checkpoint_intervention_forward_smoke(
+                root,
+                checkpoint=None,
+                execute=False,
+                batch_size=2,
+            )
+
+        self.assertEqual(
+            report["checkpoint"],
+            "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2",
+        )
+        self.assertTrue(report["checks"]["checkpoint_exists"])
+        self.assertTrue(report["checks"]["checkpoint_under_mowa_ckpt"])
+
     def test_server_policy_accepts_eval_time_config_overrides(self):
         from deployment.model_server.server_policy import build_argparser
 

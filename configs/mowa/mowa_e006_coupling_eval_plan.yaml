@@ -12,6 +12,7 @@ preconditions:
   checkpoint_forward_report: docs_zh/mowa/mowa_e006_checkpoint_intervention_forward_smoke.json
   policy_rollout_candidate: configs/mowa/mowa_e006_policy_rollout_candidate.yaml
   policy_rollout_preflight_report: docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json
+  policy_rollout_smoke_report: docs_zh/mowa/mowa_e006_policy_rollout_smoke.json
   requires_training_checkpoint: true
   launch_ready: false
 

@@ -63,6 +63,8 @@ def build_e006_policy_rollout_preflight_smoke(
         "starvla_python_exists": (root / cfg.server.python).is_file(),
         "robocasa_python_exists": (root / cfg.client.python).is_file(),
         "run_eval_shell_syntax_valid": bash_syntax.returncode == 0,
+        "client_batch_size_allows_shuffle": int(cfg.client.n_envs) > 1,
+        "client_episode_count_covers_vector_envs": int(cfg.client.n_episodes) >= int(cfg.client.n_envs),
         "all_interventions_have_commands": set(commands.keys()) == set(cfg.interventions),
         "non_baseline_commands_use_config_override": all(
             "--config_override" in command_set["server_command"]

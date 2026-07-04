@@ -9,9 +9,11 @@ duplication. Differences vs. the GR1 tabletop runner:
 from __future__ import annotations
 
 import dataclasses
+import argparse
 import json
 import logging
 import os
+import sys
 import time
 from dataclasses import dataclass, field
 from functools import partial
@@ -25,7 +27,24 @@ import numpy as np
 import robocasa  # noqa: F401
 import robocasa.wrappers.gym_wrapper  # noqa: F401  (registers envs)
 import robosuite  # noqa: F401
-import tyro
+
+
+def _maybe_add_starvla_site_packages_for_client_transport() -> None:
+    try:
+        import websockets  # noqa: F401
+        import msgpack  # noqa: F401
+        return
+    except ModuleNotFoundError:
+        pass
+
+    repo_root = Path(__file__).resolve().parents[3]
+    py_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+    site_packages = repo_root / ".venv" / "lib" / py_version / "site-packages"
+    if site_packages.is_dir():
+        sys.path.append(str(site_packages))
+
+
+_maybe_add_starvla_site_packages_for_client_transport()
 
 from examples.Robocasa_365.eval_files.model2robocasa365_interface import PolicyWarper
 from examples.Robocasa_tabletop.eval_files.wrappers.multistep_wrapper import MultiStepWrapper
@@ -172,5 +191,29 @@ def main(args: Args) -> None:
         json.dump({"env": name, "success_rate": sr, "successes": [bool(s) for s in successes]}, f, indent=2)
 
 
+def _parse_args_without_tyro() -> Args:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--args.host", dest="host", default=Args.host)
+    parser.add_argument("--args.port", dest="port", type=int, default=Args.port)
+    parser.add_argument("--args.env-name", dest="env_name", default=Args.env_name)
+    parser.add_argument("--args.n-episodes", dest="n_episodes", type=int, default=Args.n_episodes)
+    parser.add_argument("--args.n-envs", dest="n_envs", type=int, default=Args.n_envs)
+    parser.add_argument("--args.max-episode-steps", dest="max_episode_steps", type=int, default=Args.max_episode_steps)
+    parser.add_argument("--args.n-action-steps", dest="n_action_steps", type=int, default=Args.n_action_steps)
+    parser.add_argument("--args.video-out-path", dest="video_out_path", default=Args.video_out_path)
+    parser.add_argument("--args.seed", dest="seed", type=int, default=Args.seed)
+    parser.add_argument("--args.pretrained-path", dest="pretrained_path", default=Args.pretrained_path)
+    parser.add_argument("--args.unnorm-key", dest="unnorm_key", default=Args.unnorm_key)
+    parsed = parser.parse_args()
+    return Args(**vars(parsed))
+
+
 if __name__ == "__main__":
-    tyro.cli(main)
+    try:
+        import tyro
+
+        tyro.cli(main)
+    except ModuleNotFoundError as exc:
+        if exc.name != "tyro":
+            raise
+        main(_parse_args_without_tyro())

@@ -998,8 +998,8 @@ class MoWAP0HeadsTest(unittest.TestCase):
                         "  python: .robocase/bin/python",
                         "  module: examples.Robocasa_365.eval_files.simulation_env",
                         "  env_name: robocasa/OpenDrawer",
-                        "  n_episodes: 1",
-                        "  n_envs: 1",
+                        "  n_episodes: 2",
+                        "  n_envs: 2",
                         "  max_episode_steps: 100",
                         "  n_action_steps: 8",
                         "  video_out_path: playground/eval_results/mowa_e006_robocasa365_open_drawer_smoke/videos",
@@ -1026,6 +1026,8 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertFalse(report["eval_started"])
         self.assertFalse(report["launch_ready"])
         self.assertTrue(report["checks"]["checkpoint_under_mowa_ckpt"])
+        self.assertTrue(report["checks"]["client_batch_size_allows_shuffle"])
+        self.assertTrue(report["checks"]["client_episode_count_covers_vector_envs"])
         self.assertTrue(report["checks"]["all_interventions_have_commands"])
         self.assertTrue(report["checks"]["non_baseline_commands_use_config_override"])
         self.assertTrue(report["checks"]["baseline_command_pins_baseline_override"])
@@ -1034,6 +1036,90 @@ class MoWAP0HeadsTest(unittest.TestCase):
             "framework.mowa.layerwise_bridge_token_intervention=zero",
             report["commands"]["zero"]["server_command"],
         )
+
+    def test_e006_policy_rollout_smoke_plan_does_not_execute(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_save_resume_smoke_test"
+                / "checkpoints"
+                / "steps_2"
+            )
+            checkpoint.mkdir(parents=True)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa" / "mowa_e006_policy_rollout_preflight_smoke.json").write_text(
+                json.dumps({"checks": {"ok": True}}),
+                encoding="utf-8",
+            )
+            config = root / "configs" / "mowa" / "mowa_e006_policy_rollout_candidate.yaml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "stage: M5",
+                        "task_id: M5-007",
+                        "experiment_id: E-006",
+                        "experiment_name: test",
+                        "launch_ready: false",
+                        "eval_started: false",
+                        "requires_human_confirmation: true",
+                        "checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_test/checkpoints/steps_2",
+                        "checkpoint_root_policy: playground/mowa_ckpt",
+                        "server:",
+                        "  python: .venv/bin/python",
+                        "  entrypoint: deployment/model_server/server_policy.py",
+                        "  port_base: 5686",
+                        "  use_bf16: true",
+                        "  idle_timeout: 1800",
+                        "client:",
+                        "  python: .robocase/bin/python",
+                        "  module: examples.Robocasa_365.eval_files.simulation_env",
+                        "  env_name: robocasa/OpenDrawer",
+                        "  n_episodes: 2",
+                        "  n_envs: 2",
+                        "  max_episode_steps: 100",
+                        "  n_action_steps: 8",
+                        "  video_out_path: playground/eval_results/mowa_e006_robocasa365_open_drawer_smoke/videos",
+                        "interventions:",
+                        "  - baseline",
+                        "  - zero",
+                        "  - batch_shuffle",
+                        "  - head_mask_control",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e006_policy_rollout_smoke import run_or_plan_e006_policy_rollout_smoke
+
+            report = run_or_plan_e006_policy_rollout_smoke(
+                root,
+                config_path=Path("configs/mowa/mowa_e006_policy_rollout_candidate.yaml"),
+                execute=False,
+                server_ready_timeout=1,
+            )
+
+        self.assertFalse(report["eval_started"])
+        self.assertTrue(report["checks"]["preflight_report_exists"])
+        self.assertTrue(report["checks"]["batch_shuffle_batch_size_gt_1"])
+        self.assertTrue(report["checks"]["executed_when_requested"])
+        self.assertEqual(
+            {run["intervention"] for run in report["runs"]},
+            {"baseline", "zero", "batch_shuffle", "head_mask_control"},
+        )
+        self.assertTrue(all(run["executed"] is False for run in report["runs"]))
+
+    def test_robocasa365_eval_client_has_argparse_fallback_without_tyro(self):
+        source = Path("examples/Robocasa_365/eval_files/simulation_env.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("\nimport tyro\n", source)
+        self.assertIn("def _parse_args_without_tyro", source)
+        self.assertIn("--args.pretrained-path", source)
+        self.assertIn("except ModuleNotFoundError as exc", source)
 
     def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
         try:

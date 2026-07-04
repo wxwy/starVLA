@@ -20,8 +20,8 @@ client:
   python: .robocase/bin/python
   module: examples.Robocasa_365.eval_files.simulation_env
   env_name: robocasa/OpenDrawer
-  n_episodes: 1
-  n_envs: 1
+  n_episodes: 2
+  n_envs: 2
   max_episode_steps: 100
   n_action_steps: 8
   video_out_path: playground/eval_results/mowa_e006_robocasa365_open_drawer_smoke/videos

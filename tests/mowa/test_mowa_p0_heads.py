@@ -947,6 +947,134 @@ class MoWAP0HeadsTest(unittest.TestCase):
             ],
         )
 
+    def test_policy_wrapper_metadata_uses_override_applied_action_horizon(self):
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from deployment.model_server.policy_wrapper import PolicyServerWrapper
+
+        framework = SimpleNamespace(
+            action_horizon=5,
+            config=SimpleNamespace(
+                framework=SimpleNamespace(
+                    action_model=SimpleNamespace(action_horizon=5),
+                ),
+            ),
+        )
+        framework.to = mock.Mock(return_value=framework)
+        framework.eval = mock.Mock(return_value=framework)
+
+        with mock.patch(
+            "deployment.model_server.policy_wrapper.baseframework.from_pretrained",
+            return_value=framework,
+        ) as from_pretrained:
+            with mock.patch(
+                "deployment.model_server.policy_wrapper.read_mode_config",
+                return_value=(
+                    {
+                        "framework": {
+                            "action_model": {
+                                "action_horizon": 16,
+                            }
+                        }
+                    },
+                    {"key_a": {}, "key_b": {}},
+                ),
+            ):
+                wrapper = PolicyServerWrapper(
+                    "playground/mowa_ckpt/run/checkpoints/steps_2",
+                    device="cpu",
+                    config_overrides=["framework.action_model.action_horizon=5"],
+                )
+
+        from_pretrained.assert_called_once_with(
+            "playground/mowa_ckpt/run/checkpoints/steps_2",
+            config_overrides=["framework.action_model.action_horizon=5"],
+        )
+        self.assertEqual(wrapper.metadata["action_chunk_size"], 5)
+        self.assertEqual(
+            wrapper.metadata["config_overrides"],
+            ["framework.action_model.action_horizon=5"],
+        )
+
+    def test_train_starvla_launch_guard_blocks_unconfirmed_launch_only(self):
+        from omegaconf import OmegaConf
+
+        from starVLA.training.train_starvla import _enforce_launch_guard
+
+        plain_cfg = OmegaConf.create({"trainer": {"max_train_steps": 1}})
+        _enforce_launch_guard(plain_cfg, full_path_dry_run_only=False)
+
+        guarded_cfg = OmegaConf.create(
+            {
+                "launch_guard": {
+                    "launch_ready": False,
+                    "requires_human_confirmation": True,
+                    "policy_confirmed": False,
+                }
+            }
+        )
+        with self.assertRaisesRegex(RuntimeError, "Training launch blocked"):
+            _enforce_launch_guard(guarded_cfg, full_path_dry_run_only=False)
+
+        _enforce_launch_guard(guarded_cfg, full_path_dry_run_only=True)
+
+        approved_cfg = OmegaConf.create(
+            {
+                "launch_guard": {
+                    "launch_ready": True,
+                    "requires_human_confirmation": True,
+                    "human_confirmed": True,
+                    "policy_confirmed": True,
+                }
+            }
+        )
+        _enforce_launch_guard(approved_cfg, full_path_dry_run_only=False)
+
+    def test_training_audit_config_touch_exports_key_fields(self):
+        from omegaconf import OmegaConf
+
+        from starVLA.training.train_starvla import _touch_training_audit_config
+        from starVLA.training.trainer_utils.config_tracker import wrap_config
+
+        cfg = wrap_config(
+            OmegaConf.create(
+                {
+                    "trainer": {
+                        "is_resume": True,
+                        "pretrained_checkpoint": "playground/mowa_ckpt/run/checkpoints/steps_2",
+                        "gradient_accumulation_steps": 4,
+                    },
+                    "datasets": {
+                        "vla_data": {
+                            "data_mix": "robocasa365_open_drawer_target_human",
+                        }
+                    },
+                    "framework": {
+                        "name": "StarFlowVLA",
+                        "action_model": {
+                            "action_model_type": "LayerwiseFM",
+                            "num_target_vision_tokens": 0,
+                        },
+                    },
+                }
+            )
+        )
+
+        _touch_training_audit_config(cfg)
+        accessed = cfg.export_accessed_config(use_original_values=False)
+
+        self.assertTrue(accessed["trainer"]["is_resume"])
+        self.assertEqual(
+            accessed["trainer"]["pretrained_checkpoint"],
+            "playground/mowa_ckpt/run/checkpoints/steps_2",
+        )
+        self.assertEqual(accessed["trainer"]["gradient_accumulation_steps"], 4)
+        self.assertEqual(accessed["datasets"]["vla_data"]["data_mix"], "robocasa365_open_drawer_target_human")
+        self.assertEqual(accessed["framework"]["name"], "StarFlowVLA")
+        self.assertEqual(accessed["framework"]["action_model"]["action_model_type"], "LayerwiseFM")
+        self.assertEqual(accessed["framework"]["action_model"]["num_target_vision_tokens"], 0)
+
     def test_e006_policy_rollout_preflight_builds_gated_commands(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

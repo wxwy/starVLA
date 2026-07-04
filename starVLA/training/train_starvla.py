@@ -109,6 +109,54 @@ STARTUP_SYNC_INFLIGHT_MARKER = None
 # Sane Defaults
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+
+def _get_config_path(cfg, path, default=None):
+    current = cfg
+    for key in path.split("."):
+        try:
+            current = getattr(current, key)
+        except AttributeError:
+            return default
+    return current
+
+
+def _touch_training_audit_config(cfg) -> None:
+    """Ensure key audit fields are present in AccessTrackedConfig snapshots."""
+    audit_paths = (
+        "trainer.is_resume",
+        "trainer.pretrained_checkpoint",
+        "trainer.gradient_accumulation_steps",
+        "datasets.vla_data.data_mix",
+        "framework.name",
+        "framework.action_model.action_model_type",
+        "framework.action_model.num_target_vision_tokens",
+    )
+    for path in audit_paths:
+        _get_config_path(cfg, path)
+
+
+def _enforce_launch_guard(cfg, *, full_path_dry_run_only: bool) -> None:
+    if full_path_dry_run_only or not hasattr(cfg, "launch_guard"):
+        return
+
+    launch_guard = cfg.launch_guard
+    launch_ready = bool(getattr(launch_guard, "launch_ready", False))
+    requires_human_confirmation = bool(getattr(launch_guard, "requires_human_confirmation", False))
+    human_confirmed = bool(getattr(launch_guard, "human_confirmed", False))
+    policy_confirmed = bool(getattr(launch_guard, "policy_confirmed", False))
+    if launch_ready and (not requires_human_confirmation or human_confirmed):
+        return
+
+    raise RuntimeError(
+        "Training launch blocked by launch_guard: "
+        f"launch_ready={launch_ready}, "
+        f"policy_confirmed={policy_confirmed}, "
+        f"requires_human_confirmation={requires_human_confirmation}, "
+        f"human_confirmed={human_confirmed}. "
+        "Set launch_ready=true and, when requires_human_confirmation=true, "
+        "human_confirmed=true only after explicit approval."
+    )
+
 # Initialize logger
 logger = get_logger(__name__)
 
@@ -1147,6 +1195,7 @@ class VLATrainer(TrainerUtils):
 
         _wait_for_startup_checkpoint_stage()
         self._setup_checkpoint_storage()
+        _touch_training_audit_config(self.config)
 
         # Save config snapshots upfront so that even if a later setup step
         # (ckpt load / DeepSpeed init / dataloader build) crashes, the
@@ -1775,6 +1824,24 @@ class VLATrainer(TrainerUtils):
         if self.accelerator.is_main_process:
             logger.info("***** Training Configuration *****")
             logger.info(f"  Total optimization steps = {self.config.trainer.max_train_steps}")
+            logger.info(f"  is_resume = {_get_config_path(self.config, 'trainer.is_resume', None)}")
+            logger.info(
+                f"  resume_from_checkpoint = {getattr(self, 'resume_from_checkpoint', None)}"
+            )
+            logger.info(
+                f"  trainer.pretrained_checkpoint = "
+                f"{_get_config_path(self.config, 'trainer.pretrained_checkpoint', None)}"
+            )
+            logger.info(f"  data_mix = {_get_config_path(self.config, 'datasets.vla_data.data_mix', None)}")
+            logger.info(f"  framework.name = {_get_config_path(self.config, 'framework.name', None)}")
+            logger.info(
+                f"  action_model_type = "
+                f"{_get_config_path(self.config, 'framework.action_model.action_model_type', None)}"
+            )
+            logger.info(
+                f"  num_target_vision_tokens = "
+                f"{_get_config_path(self.config, 'framework.action_model.num_target_vision_tokens', None)}"
+            )
             logger.info(f"  Per device batch size = {self.config.datasets.vla_data.per_device_batch_size}")
             logger.info(f"  Gradient accumulation steps = {self.accelerator.gradient_accumulation_steps}")
             logger.info(f"  Total batch size = {self.total_batch_size}")
@@ -2223,6 +2290,7 @@ def main(cfg) -> None:
     logger.info("✅ Configuration wrapped for access tracking")
 
     full_path_dry_run_only = _is_full_path_dry_run(cfg)
+    _enforce_launch_guard(cfg, full_path_dry_run_only=full_path_dry_run_only)
     if not full_path_dry_run_only:
         _launch_startup_checkpoint_stage(cfg)
     output_dir = setup_directories(cfg=cfg)

@@ -75,26 +75,20 @@ class PolicyServerWrapper:
         )
         self._framework = framework
 
-        # Co-located metadata.
-        stage_start = time.perf_counter()
-        model_cfg, _ = read_mode_config(self._ckpt_path)
-        logging.info(
-            "PolicyServerWrapper: read_mode_config for metadata finished in %.2fs",
-            time.perf_counter() - stage_start,
-        )
-        self._model_cfg = model_cfg
-
-        # action_chunk_size = future_action_window_size + 1 (matches old client).
-        action_model_cfg = model_cfg["framework"]["action_model"]
-        
-        if "action_horizon" in action_model_cfg:
-            self._action_chunk_size = int(action_model_cfg["action_horizon"])
-        elif "future_action_window_size" in action_model_cfg:
-            self._action_chunk_size = int(action_model_cfg["future_action_window_size"]) + 1
+        self._model_cfg = getattr(framework, "config", None)
+        if hasattr(framework, "action_horizon"):
+            self._action_chunk_size = int(framework.action_horizon)
         else:
-            raise ValueError(
-                f"PolicyServerWrapper: no action_horizon or future_action_window_size found in model config for {self._ckpt_path}"
-            )
+            action_model_cfg = self._model_cfg.framework.action_model
+            if hasattr(action_model_cfg, "action_horizon"):
+                self._action_chunk_size = int(action_model_cfg.action_horizon)
+            elif hasattr(action_model_cfg, "future_action_window_size"):
+                self._action_chunk_size = int(action_model_cfg.future_action_window_size) + 1
+            else:
+                raise ValueError(
+                    "PolicyServerWrapper: no action_horizon or future_action_window_size found "
+                    f"in override-applied model config for {self._ckpt_path}"
+                )
         # Cache of PolicyNormProcessor instances per unnorm_key.
         # For single-dataset ckpts unnorm_key is auto-selected; for multi-dataset
         # ckpts clients must pass unnorm_key per request.

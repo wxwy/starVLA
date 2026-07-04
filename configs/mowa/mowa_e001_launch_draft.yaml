@@ -106,4 +106,4 @@ launch_blockers:
   - resource policy remains unconfirmed for full E-001 long training
   - P0FullHeads bridge feature source is integrated, but action-gain evidence is not validated
   - batch size 4 / expected VRAM are bounded-smoke observed only, not long-training confirmed
-  - full executable training command not created
+  - executable training command candidate exists but is not human-confirmed

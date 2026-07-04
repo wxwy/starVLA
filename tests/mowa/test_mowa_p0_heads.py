@@ -344,7 +344,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                     "launch_ready: false\n"
                     "training_started: false\n"
                     "launch_blockers:\n"
-                    "  - full executable training command not created\n"
+                    "  - executable training command candidate exists but is not human-confirmed\n"
                 ),
                 encoding="utf-8",
             )
@@ -354,6 +354,14 @@ class MoWAP0HeadsTest(unittest.TestCase):
             )
             (root / "configs" / "mowa" / "mowa_e001_training_command_draft.yaml").write_text(
                 "dry_run_only: true\ncommand: TBD_FULL_E001_ENTRYPOINT\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_training_command_candidate.yaml").write_text(
+                "launch_ready: false\nrequires_human_confirmation: true\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_starflow_ft0_launch_candidate.yaml").write_text(
+                "launch_ready: false\npolicy_confirmed: false\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_a100_throughput_smoke_plan.yaml").write_text(
@@ -377,7 +385,11 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertFalse(report["launch_ready"])
         self.assertTrue(report["checks"]["training_command_dry_run_only"])
         self.assertTrue(report["checks"]["training_command_entrypoint_tbd"])
-        self.assertTrue(report["checks"]["full_executable_training_command_absent"])
+        self.assertTrue(report["checks"]["training_command_candidate_created"])
+        self.assertTrue(report["checks"]["launch_candidate_created"])
+        self.assertTrue(report["checks"]["candidate_command_not_launch_approved"])
+        self.assertTrue(report["checks"]["launch_candidate_not_launch_approved"])
+        self.assertTrue(report["checks"]["executable_training_command_candidate_recorded"])
         self.assertTrue(report["checks"]["a100_smoke_no_longer_waiting_for_a100"])
         self.assertTrue(report["checks"]["a100_throughput_report_created"])
 
@@ -735,6 +747,70 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertEqual(summary["samples_per_sec"], 1.0)
         self.assertEqual(summary["peak_vram_gb"], 41.0)
         self.assertEqual(summary["peak_reserved_gb"], 43.0)
+
+    def test_e001_launch_candidate_smoke_keeps_launch_gated(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_starflow_ft0_launch_candidate.yaml").write_text(
+                "launch_guard:\n"
+                "  launch_ready: false\n"
+                "  policy_confirmed: false\n"
+                "  requires_human_confirmation: true\n"
+                "run_root_dir: playground/mowa_ckpt\n"
+                "framework:\n"
+                "  name: StarFlowVLA\n"
+                "  action_model:\n"
+                "    action_model_type: LayerwiseFM\n"
+                "  mowa:\n"
+                "    layerwise_bridge_feature_source: mowa_p0_fullheads\n"
+                "datasets:\n"
+                "  vla_data:\n"
+                "    per_device_batch_size: 4\n"
+                "trainer:\n"
+                "  max_train_steps: 1000\n"
+                "  save_interval: 1000\n"
+                "  gradient_accumulation_steps: 1\n"
+                "  disable_wandb: true\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_training_command_candidate.yaml").write_text(
+                "launch_guard:\n"
+                "  launch_ready: false\n"
+                "  requires_human_confirmation: true\n"
+                "command_candidate:\n"
+                "  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
+                "status:\n  policy_confirmed: false\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_full_vla_runtime_sweep_bs4_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "bounded_runtime_sweep": True,
+                        "full_training_launch": False,
+                        "checks": {"ok": True},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_launch_candidate_smoke import build_e001_launch_candidate_smoke
+
+            report = build_e001_launch_candidate_smoke(root)
+
+        self.assertFalse(report["training_started"])
+        self.assertFalse(report["launch_ready"])
+        self.assertTrue(report["checks"]["launch_candidate_config_created"])
+        self.assertTrue(report["checks"]["command_candidate_config_created"])
+        self.assertTrue(report["checks"]["candidate_launch_ready_false"])
+        self.assertTrue(report["checks"]["command_requires_human_confirmation"])
+        self.assertTrue(report["checks"]["candidate_batch_size_4"])
+        self.assertTrue(report["checks"]["candidate_max_steps_1000"])
+        self.assertTrue(report["checks"]["runtime_policy_still_unconfirmed"])
 
     def test_e006_eval_load_smoke_validates_checkpoint_sidecars(self):
         with tempfile.TemporaryDirectory() as tmpdir:

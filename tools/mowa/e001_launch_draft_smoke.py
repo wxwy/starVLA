@@ -11,6 +11,8 @@ from typing import Any
 LAUNCH_DRAFT = Path("configs/mowa/mowa_e001_launch_draft.yaml")
 RUNTIME_POLICY = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
 TRAINING_COMMAND_DRAFT = Path("configs/mowa/mowa_e001_training_command_draft.yaml")
+TRAINING_COMMAND_CANDIDATE = Path("configs/mowa/mowa_e001_training_command_candidate.yaml")
+LAUNCH_CANDIDATE = Path("configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml")
 A100_THROUGHPUT_PLAN = Path("configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml")
 READINESS_REPORT = Path("docs_zh/mowa/mowa_e001_readiness_smoke.json")
 A100_THROUGHPUT_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput_smoke.json")
@@ -40,6 +42,8 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         "launch_draft_created": (root / LAUNCH_DRAFT).is_file(),
         "runtime_policy_created": (root / RUNTIME_POLICY).is_file(),
         "training_command_draft_created": (root / TRAINING_COMMAND_DRAFT).is_file(),
+        "training_command_candidate_created": (root / TRAINING_COMMAND_CANDIDATE).is_file(),
+        "launch_candidate_created": (root / LAUNCH_CANDIDATE).is_file(),
         "a100_throughput_plan_created": (root / A100_THROUGHPUT_PLAN).is_file(),
         "launch_ready_false": _text_contains(root / LAUNCH_DRAFT, "launch_ready: false"),
         "training_started_false": _text_contains(root / LAUNCH_DRAFT, "training_started: false"),
@@ -54,9 +58,17 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             root / TRAINING_COMMAND_DRAFT,
             "TBD_FULL_E001_ENTRYPOINT",
         ),
-        "full_executable_training_command_absent": _text_contains(
+        "candidate_command_not_launch_approved": (
+            _text_contains(root / TRAINING_COMMAND_CANDIDATE, "launch_ready: false")
+            and _text_contains(root / TRAINING_COMMAND_CANDIDATE, "requires_human_confirmation: true")
+        ),
+        "launch_candidate_not_launch_approved": (
+            _text_contains(root / LAUNCH_CANDIDATE, "launch_ready: false")
+            and _text_contains(root / LAUNCH_CANDIDATE, "policy_confirmed: false")
+        ),
+        "executable_training_command_candidate_recorded": _text_contains(
             root / LAUNCH_DRAFT,
-            "full executable training command not created",
+            "executable training command candidate exists but is not human-confirmed",
         ),
         "a100_smoke_no_longer_waiting_for_a100": _text_contains(
             root / A100_THROUGHPUT_PLAN,
@@ -75,6 +87,8 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             "launch_draft": str(LAUNCH_DRAFT),
             "runtime_policy": str(RUNTIME_POLICY),
             "training_command_draft": str(TRAINING_COMMAND_DRAFT),
+            "training_command_candidate": str(TRAINING_COMMAND_CANDIDATE),
+            "launch_candidate": str(LAUNCH_CANDIDATE),
             "a100_throughput_plan": str(A100_THROUGHPUT_PLAN),
             "a100_throughput_report": str(A100_THROUGHPUT_REPORT),
         },
@@ -82,8 +96,8 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             "class_mapping_status remains Data Gate",
             "batch size 4, expected VRAM and runtime are bounded full-VLA smoke observed only, not long-training confirmed",
             "runtime policy remains unconfirmed",
-            "real MoWA E-001 training config is not executable",
-            "full executable training command remains TBD",
+            "executable training command candidate remains gated by human confirmation",
+            "policy_confirmed and launch_ready remain false",
         ],
         "go_no_go": (
             "TBD: launch drafts available; A100 smoke passed but runtime policy remains Data Gate"
@@ -92,7 +106,7 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         ),
         "notes": [
             "This smoke does not start training.",
-            "Training command draft is dry-run-only and keeps launch_ready=false.",
+            "Training command draft is dry-run-only; command candidate exists but keeps launch_ready=false.",
         ],
     }
 

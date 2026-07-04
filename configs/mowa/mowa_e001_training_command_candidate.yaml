@@ -1,0 +1,49 @@
+project_short_name: MoWA
+stage: P0
+experiment_id: E-001
+config_role: training_command_candidate_requires_confirmation
+
+launch_guard:
+  launch_ready: false
+  training_started: false
+  requires_human_confirmation: true
+  policy_confirmed: false
+
+command_candidate:
+  entrypoint: starVLA/training/train_starvla.py
+  launcher: python_single_process
+  num_processes: 1
+  mixed_precision: none
+  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml
+  command: >-
+    .venv/bin/python starVLA/training/train_starvla.py
+    --config_yaml configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml
+
+runtime_targets:
+  gpu_type: A100_80G
+  num_gpus: 1
+  per_device_batch_size: 4
+  gradient_accumulation_steps: 1
+  effective_batch_size: 4
+  max_train_steps: 1000
+  save_interval: 1000
+  expected_vram: bounded_full_vla_bs4_peak_46.817GB_reserved_50.137GB
+  runtime_evidence: docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json
+
+checkpoint_policy:
+  run_root_dir: playground/mowa_ckpt
+  checkpoint_format: lightweight
+  save_interval: 1000
+  save_checkpoint_as_directory: true
+  resume_policy: resume_latest_complete_only
+  delete_or_overwrite_policy: no_delete_without_confirmation
+
+logging:
+  wandb_mode: disabled_for_initial_training
+  disable_wandb: true
+  logging_frequency: 10
+
+notes:
+  - This command candidate is executable but not launch-approved.
+  - Do not run until runtime policy is explicitly confirmed and launch_ready is true.
+  - Initial target is bs4 based on bounded 2-step full-VLA smoke, not long-training steady state.

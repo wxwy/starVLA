@@ -23,6 +23,8 @@ E001_LAUNCH_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_launch_draft.yaml")
 E001_RUNTIME_POLICY_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
 MOWA_ACTION_BRIDGE_INTERFACE_CONFIG = Path("configs/mowa/mowa_action_bridge_interface.yaml")
 E001_TRAINING_COMMAND_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_training_command_draft.yaml")
+E001_TRAINING_COMMAND_CANDIDATE_CONFIG = Path("configs/mowa/mowa_e001_training_command_candidate.yaml")
+E001_LAUNCH_CANDIDATE_CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml")
 E001_TRAINING_SMOKE_CONFIG = Path("configs/mowa/mowa_e001_training_smoke.yaml")
 E001_TRAINING_CONFIG_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_training_config_smoke.json")
 E001_TRAIN_STARVLA_DRY_RUN_CONFIG = Path("configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml")
@@ -129,6 +131,19 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             root / E001_TRAINING_COMMAND_DRAFT_CONFIG,
             "dry_run_only: true",
         ),
+        "training_command_candidate_created": (root / E001_TRAINING_COMMAND_CANDIDATE_CONFIG).is_file(),
+        "launch_candidate_created": (root / E001_LAUNCH_CANDIDATE_CONFIG).is_file(),
+        "training_command_candidate_gated": (
+            _text_contains(root / E001_TRAINING_COMMAND_CANDIDATE_CONFIG, "launch_ready: false")
+            and _text_contains(
+                root / E001_TRAINING_COMMAND_CANDIDATE_CONFIG,
+                "requires_human_confirmation: true",
+            )
+        ),
+        "launch_candidate_gated": (
+            _text_contains(root / E001_LAUNCH_CANDIDATE_CONFIG, "launch_ready: false")
+            and _text_contains(root / E001_LAUNCH_CANDIDATE_CONFIG, "policy_confirmed: false")
+        ),
         "training_smoke_config_created": (root / E001_TRAINING_SMOKE_CONFIG).is_file(),
         "training_config_smoke_passed": _training_config_smoke_passed(
             root / E001_TRAINING_CONFIG_SMOKE_REPORT
@@ -184,7 +199,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "class_mapping_status remains Data Gate",
             "runtime policy draft not confirmed",
             "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
-            "E-001 full executable MoWA training launch still missing",
+            "E-001 executable command candidate exists but remains gated by human confirmation",
             "E-006 policy eval still requires a trained or smoke-compatible checkpoint",
         ]
     )
@@ -222,6 +237,8 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "e001_runtime_policy_draft_config": str(E001_RUNTIME_POLICY_DRAFT_CONFIG),
             "mowa_action_bridge_interface_config": str(MOWA_ACTION_BRIDGE_INTERFACE_CONFIG),
             "e001_training_command_draft_config": str(E001_TRAINING_COMMAND_DRAFT_CONFIG),
+            "e001_training_command_candidate_config": str(E001_TRAINING_COMMAND_CANDIDATE_CONFIG),
+            "e001_launch_candidate_config": str(E001_LAUNCH_CANDIDATE_CONFIG),
             "e001_training_smoke_config": str(E001_TRAINING_SMOKE_CONFIG),
             "e001_training_config_smoke_report": str(E001_TRAINING_CONFIG_SMOKE_REPORT),
             "e001_train_starvla_full_path_dry_run_config": str(E001_TRAIN_STARVLA_DRY_RUN_CONFIG),

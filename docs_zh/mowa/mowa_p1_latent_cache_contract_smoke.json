@@ -1,0 +1,100 @@
+{
+  "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+  "cache_root": "playground/mowa_latent_cache/p1_contract",
+  "encoder_name": "wan2.2-ti2v-smoke-contract",
+  "entries": [
+    {
+      "cache_key": "42a0d90556602d68",
+      "cache_path": "playground/mowa_latent_cache/p1_contract/42a0d90556602d68.pt",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000000.mp4",
+      "video_exists": true,
+      "cache_exists": false,
+      "encoder_name": "wan2.2-ti2v-smoke-contract",
+      "cache_status": "planned"
+    },
+    {
+      "cache_key": "0a22e4079baaac29",
+      "cache_path": "playground/mowa_latent_cache/p1_contract/0a22e4079baaac29.pt",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
+      "video_exists": true,
+      "cache_exists": false,
+      "encoder_name": "wan2.2-ti2v-smoke-contract",
+      "cache_status": "planned"
+    },
+    {
+      "cache_key": "c1a7f8c831f49332",
+      "cache_path": "playground/mowa_latent_cache/p1_contract/c1a7f8c831f49332.pt",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_right/episode_000000.mp4",
+      "video_exists": true,
+      "cache_exists": false,
+      "encoder_name": "wan2.2-ti2v-smoke-contract",
+      "cache_status": "planned"
+    },
+    {
+      "cache_key": "7aa8bd8d9ca4cc9f",
+      "cache_path": "playground/mowa_latent_cache/p1_contract/7aa8bd8d9ca4cc9f.pt",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000001.mp4",
+      "video_exists": true,
+      "cache_exists": false,
+      "encoder_name": "wan2.2-ti2v-smoke-contract",
+      "cache_status": "planned"
+    },
+    {
+      "cache_key": "bae192142945e70f",
+      "cache_path": "playground/mowa_latent_cache/p1_contract/bae192142945e70f.pt",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000001.mp4",
+      "video_exists": true,
+      "cache_exists": false,
+      "encoder_name": "wan2.2-ti2v-smoke-contract",
+      "cache_status": "planned"
+    },
+    {
+      "cache_key": "57e6eaf801ffca42",
+      "cache_path": "playground/mowa_latent_cache/p1_contract/57e6eaf801ffca42.pt",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_right/episode_000001.mp4",
+      "video_exists": true,
+      "cache_exists": false,
+      "encoder_name": "wan2.2-ti2v-smoke-contract",
+      "cache_status": "planned"
+    },
+    {
+      "cache_key": "c5bed861e6ece3eb",
+      "cache_path": "playground/mowa_latent_cache/p1_contract/c5bed861e6ece3eb.pt",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000004.mp4",
+      "video_exists": true,
+      "cache_exists": false,
+      "encoder_name": "wan2.2-ti2v-smoke-contract",
+      "cache_status": "planned"
+    },
+    {
+      "cache_key": "f3e1f58c9d91572b",
+      "cache_path": "playground/mowa_latent_cache/p1_contract/f3e1f58c9d91572b.pt",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000004.mp4",
+      "video_exists": true,
+      "cache_exists": false,
+      "encoder_name": "wan2.2-ti2v-smoke-contract",
+      "cache_status": "planned"
+    },
+    {
+      "cache_key": "0e15be9e4d5c357c",
+      "cache_path": "playground/mowa_latent_cache/p1_contract/0e15be9e4d5c357c.pt",
+      "video_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_right/episode_000004.mp4",
+      "video_exists": true,
+      "cache_exists": false,
+      "encoder_name": "wan2.2-ti2v-smoke-contract",
+      "cache_status": "planned"
+    }
+  ],
+  "missing_video_count": 0,
+  "missing_cache_count": 9,
+  "duplicate_cache_key_count": 0,
+  "latent_shape_status": "Data Gate",
+  "cache_artifact_status": "Data Gate",
+  "encoder_status": "Data Gate",
+  "future_action_input_status": "not_used_as_input",
+  "notes": [
+    "Contract smoke plans deterministic latent cache artifact paths only.",
+    "No Wan encoder, VAE, latent tensor, cache file or training code is executed.",
+    "Future action remains target/invariant only and is not part of cache inputs."
+  ]
+}

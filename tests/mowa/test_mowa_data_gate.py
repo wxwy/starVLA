@@ -17,6 +17,7 @@ from starVLA.dataloader.mowa import (
     build_mowa_atomic_core_production_preflight_smoke,
     build_mowa_atomic_core_temporal_profile,
     build_mowa_g0_report_skeleton,
+    build_mowa_latent_cache_contract_smoke,
     build_mowa_latent_cache_manifest_smoke,
     build_mowa_p0_constructible_label_smoke,
     build_mowa_robocasa365_local_smoke_report,
@@ -540,6 +541,38 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertEqual(report["encoder_status"], DATA_GATE)
         self.assertTrue(report["entries"][0]["video_exists"])
         self.assertEqual(len(report["entries"][0]["cache_key"]), 16)
+        self.assertTrue(report["entries"][0]["cache_relative_path"].endswith(".pt"))
+
+    def test_latent_cache_contract_smoke_plans_artifacts_without_future_action_input(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH
+            video_dir = (
+                dataset_path
+                / "videos"
+                / "chunk-000"
+                / "observation.images.robot0_agentview_left"
+            )
+            video_dir.mkdir(parents=True)
+            (video_dir / "episode_000000.mp4").write_text("", encoding="utf-8")
+
+            report = build_mowa_latent_cache_contract_smoke(
+                dataset_path,
+                cache_root=root / "cache",
+                episode_indices=(0,),
+                video_keys=("observation.images.robot0_agentview_left",),
+            ).to_dict()
+
+        self.assertEqual(report["missing_video_count"], 0)
+        self.assertEqual(report["missing_cache_count"], 1)
+        self.assertEqual(report["duplicate_cache_key_count"], 0)
+        self.assertEqual(report["latent_shape_status"], DATA_GATE)
+        self.assertEqual(report["cache_artifact_status"], DATA_GATE)
+        self.assertEqual(report["encoder_status"], DATA_GATE)
+        self.assertEqual(report["future_action_input_status"], "not_used_as_input")
+        self.assertTrue(report["entries"][0]["cache_path"].endswith(".pt"))
+        self.assertFalse(report["entries"][0]["cache_exists"])
+        self.assertEqual(report["entries"][0]["cache_status"], "planned")
 
 
 if __name__ == "__main__":

@@ -15,8 +15,11 @@ from starVLA.dataloader.mowa.batch_smoke import (
     build_mowa_atomic_core_batch_dataloader_smoke,
 )
 from starVLA.dataloader.mowa.latent_cache_manifest import (
+    MoWALatentCacheContractEntry,
+    MoWALatentCacheContractSmoke,
     MoWALatentCacheManifestEntry,
     MoWALatentCacheManifestSmoke,
+    build_mowa_latent_cache_contract_smoke,
     build_mowa_latent_cache_manifest_smoke,
 )
 from starVLA.dataloader.mowa.leakage_gate import (
@@ -89,6 +92,8 @@ __all__ = [
     "MoWABatchSmokeSample",
     "MoWALatentCacheManifestEntry",
     "MoWALatentCacheManifestSmoke",
+    "MoWALatentCacheContractEntry",
+    "MoWALatentCacheContractSmoke",
     "MoWALeakageGateSmoke",
     "MoWALeakageGateTaskSmoke",
     "MoWAP0ConstructibleLabelSmoke",
@@ -113,6 +118,7 @@ __all__ = [
     "build_mowa_atomic_core_leakage_gate_smoke",
     "build_mowa_atomic_core_temporal_profile",
     "build_mowa_latent_cache_manifest_smoke",
+    "build_mowa_latent_cache_contract_smoke",
     "build_mowa_p0_constructible_label_smoke",
     "build_mowa_p0_label_smoke_sample",
     "build_mowa_atomic_core_production_preflight_smoke",

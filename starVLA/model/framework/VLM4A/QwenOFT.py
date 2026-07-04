@@ -42,13 +42,13 @@ from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.framework.share_tools import add_discretized_state_to_instruction, merge_framework_config
 from starVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
 from starVLA.model.modules.mowa import (
-    MOWA_P0_CONSTRUCTIBLE_HEADS,
-    MOWA_P0_FULL_HEADS,
+    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_FULL_HEADS,
     MoWAActionBridge,
     MoWAActionBridgeConfig,
-    MoWAP0FullHeads,
-    MoWAP0FullHeadsConfig,
-    P0FutureFeatures,
+    MoWAFutureFeatureHeads,
+    MoWAFutureFeatureHeadsConfig,
+    MoWAFutureFeatures,
 )
 from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.training.trainer_utils.trainer_tools import resize_images
@@ -384,7 +384,7 @@ class Qwenvl_OFT(baseframework):
             getattr(
                 mowa_cfg,
                 "p0_supervision_active_heads",
-                MOWA_P0_CONSTRUCTIBLE_HEADS,
+                MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
             )
         )
         if not self.mowa_p0_supervision_probe_enabled:
@@ -392,8 +392,8 @@ class Qwenvl_OFT(baseframework):
 
         action_hidden_dim = int(self.config.framework.action_model.action_hidden_dim)
         hidden_dim = int(getattr(mowa_cfg, "p0_supervision_hidden_dim", 32))
-        self.mowa_p0_supervision_probe = MoWAP0FullHeads(
-            MoWAP0FullHeadsConfig(input_dim=action_hidden_dim, hidden_dim=hidden_dim)
+        self.mowa_p0_supervision_probe = MoWAFutureFeatureHeads(
+            MoWAFutureFeatureHeadsConfig(input_dim=action_hidden_dim, hidden_dim=hidden_dim)
         )
 
     def _maybe_run_mowa_p0_supervision_probe(
@@ -413,13 +413,13 @@ class Qwenvl_OFT(baseframework):
                 "loss": None,
                 "losses": {},
                 "active_heads": (),
-                "masked_heads": MOWA_P0_FULL_HEADS,
+                "masked_heads": MOWA_FUTURE_FULL_HEADS,
             }
 
         targets = {}
         masks = {}
         device = hidden_features.device
-        for head in MOWA_P0_FULL_HEADS:
+        for head in MOWA_FUTURE_FULL_HEADS:
             head_active = head in self.mowa_p0_supervision_active_heads and all(
                 bool((example.get("mowa_p0_masks") or {}).get(head, False)) for example in examples
             )
@@ -435,7 +435,7 @@ class Qwenvl_OFT(baseframework):
                 "loss": None,
                 "losses": {},
                 "active_heads": (),
-                "masked_heads": MOWA_P0_FULL_HEADS,
+                "masked_heads": MOWA_FUTURE_FULL_HEADS,
             }
 
         loss, losses, _ = self.mowa_p0_supervision_probe.compute_loss(hidden_features, targets, masks)
@@ -443,8 +443,8 @@ class Qwenvl_OFT(baseframework):
             "supervision_available": True,
             "loss": loss,
             "losses": losses,
-            "active_heads": tuple(head for head in MOWA_P0_FULL_HEADS if bool(masks.get(head, False))),
-            "masked_heads": tuple(head for head in MOWA_P0_FULL_HEADS if not bool(masks.get(head, False))),
+            "active_heads": tuple(head for head in MOWA_FUTURE_FULL_HEADS if bool(masks.get(head, False))),
+            "masked_heads": tuple(head for head in MOWA_FUTURE_FULL_HEADS if not bool(masks.get(head, False))),
         }
 
     def _setup_mowa_action_bridge_probe(self) -> None:
@@ -476,7 +476,7 @@ class Qwenvl_OFT(baseframework):
             raise RuntimeError("MoWA action bridge probe is enabled but not initialized.")
 
         hidden_features = action_queries.mean(dim=1)
-        future_features = P0FutureFeatures(
+        future_features = MoWAFutureFeatures(
             hidden_features=hidden_features,
             head_outputs={},
             active_heads=("qwen_action_token_probe",),

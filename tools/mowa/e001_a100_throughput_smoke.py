@@ -14,13 +14,13 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from starVLA.model.modules.mowa import (
-    MOWA_P0_CONSTRUCTIBLE_HEADS,
-    MOWA_P0_MASKED_HEADS,
+    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_MASKED_HEADS,
     MoWAActionBridge,
     MoWAActionBridgeConfig,
-    MoWAP0FullHeads,
-    MoWAP0FullHeadsConfig,
-    build_mowa_p0_constructible_batch_from_smoke,
+    MoWAFutureFeatureHeads,
+    MoWAFutureFeatureHeadsConfig,
+    build_mowa_future_constructible_batch_from_smoke,
     mowa_manual_sgd_step,
 )
 
@@ -73,7 +73,7 @@ def run_a100_throughput_smoke(args: argparse.Namespace) -> dict[str, Any]:
     grad_accum_candidates = _parse_positive_ints(args.grad_accum_candidates)
     max_batch = max(batch_candidates)
     preload_start = time.perf_counter()
-    batch = build_mowa_p0_constructible_batch_from_smoke(
+    batch = build_mowa_future_constructible_batch_from_smoke(
         args.data_root,
         max_samples=max_batch,
     )
@@ -145,14 +145,14 @@ def run_a100_throughput_smoke(args: argparse.Namespace) -> dict[str, Any]:
             "source": batch["metadata"]["source"],
         },
         "model": {
-            "module": "MoWAP0FullHeads+MoWAActionBridge",
+            "module": "MoWAFutureFeatureHeads+MoWAActionBridge",
             "input_dim": args.input_dim,
             "hidden_dim": args.hidden_dim,
             "action_hidden_dim": args.action_hidden_dim,
             "num_action_layers": args.num_action_layers,
             "num_bridge_tokens": args.num_bridge_tokens,
-            "active_heads": list(MOWA_P0_CONSTRUCTIBLE_HEADS),
-            "masked_heads": list(MOWA_P0_MASKED_HEADS),
+            "active_heads": list(MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
+            "masked_heads": list(MOWA_FUTURE_MASKED_HEADS),
         },
         "settings": {
             "batch_candidates": batch_candidates,
@@ -199,9 +199,9 @@ def _measure_candidate(
         for key, value in batch["targets"].items()
     }
     masks = dict(batch["masks"])
-    model = MoWAP0FullHeads(MoWAP0FullHeadsConfig(input_dim=input_dim, hidden_dim=hidden_dim)).to(
-        device
-    )
+    model = MoWAFutureFeatureHeads(
+        MoWAFutureFeatureHeadsConfig(input_dim=input_dim, hidden_dim=hidden_dim)
+    ).to(device)
     bridge = MoWAActionBridge(
         MoWAActionBridgeConfig(
             wam_feature_dim=hidden_dim,

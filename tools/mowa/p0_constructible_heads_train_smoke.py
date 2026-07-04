@@ -7,11 +7,11 @@ import json
 from pathlib import Path
 
 from starVLA.model.modules.mowa import (
-    MOWA_P0_CONSTRUCTIBLE_HEADS,
-    MOWA_P0_MASKED_HEADS,
-    MoWAP0ConstructibleHeads,
-    MoWAP0ConstructibleHeadsConfig,
-    build_mowa_p0_constructible_batch_from_smoke,
+    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_MASKED_HEADS,
+    MoWAFutureConstructibleHeads,
+    MoWAFutureConstructibleHeadsConfig,
+    build_mowa_future_constructible_batch_from_smoke,
     mowa_manual_sgd_step,
 )
 
@@ -42,12 +42,12 @@ def main() -> None:
     import torch
 
     torch.manual_seed(0)
-    batch = build_mowa_p0_constructible_batch_from_smoke(
+    batch = build_mowa_future_constructible_batch_from_smoke(
         args.data_root,
         max_samples=args.max_samples,
     )
-    model = MoWAP0ConstructibleHeads(
-        MoWAP0ConstructibleHeadsConfig(input_dim=args.input_dim, hidden_dim=args.hidden_dim)
+    model = MoWAFutureConstructibleHeads(
+        MoWAFutureConstructibleHeadsConfig(input_dim=args.input_dim, hidden_dim=args.hidden_dim)
     )
     loss_before, losses_before, _ = model.compute_loss(
         batch["features"],
@@ -63,10 +63,10 @@ def main() -> None:
     )
     payload = {
         "stage": "P0",
-        "module": "MoWAP0ConstructibleHeads",
+        "module": "MoWAFutureConstructibleHeads",
         "sample_count": batch["metadata"]["sample_count"],
-        "constructible_heads": list(MOWA_P0_CONSTRUCTIBLE_HEADS),
-        "masked_heads": list(MOWA_P0_MASKED_HEADS),
+        "constructible_heads": list(MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
+        "masked_heads": list(MOWA_FUTURE_MASKED_HEADS),
         "input_shape": list(batch["features"].shape),
         "task_progress_output_shape": list(outputs["task_progress"].shape),
         "action_outcome_class_output_shape": list(outputs["action_outcome_class"].shape),

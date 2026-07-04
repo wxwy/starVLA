@@ -54,14 +54,14 @@ from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.framework.share_tools import merge_framework_config, populate_layerwise_dit_cfg
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import LayerwiseFlowmatchingActionHead, get_action_model
 from starVLA.model.modules.mowa import (
-    MOWA_P0_CONSTRUCTIBLE_HEADS,
-    MOWA_P0_FULL_HEADS,
+    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_FULL_HEADS,
     MoWAActionBridge,
     MoWAActionBridgeConfig,
-    MoWAP0FullHeads,
-    MoWAP0FullHeadsConfig,
     MoWAActionBridgeOutput,
-    P0FutureFeatures,
+    MoWAFutureFeatureHeads,
+    MoWAFutureFeatureHeadsConfig,
+    MoWAFutureFeatures,
     append_layerwise_bridge_tokens,
     resolve_mowa_action_head_binding,
 )
@@ -326,16 +326,16 @@ class Qwen_PI_v3(baseframework):
             active_heads = getattr(
                 mowa_cfg,
                 "layerwise_bridge_active_heads",
-                MOWA_P0_CONSTRUCTIBLE_HEADS,
+                MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
             )
             self.mowa_layerwise_bridge_active_heads = tuple(active_heads)
             unknown_heads = [
-                head for head in self.mowa_layerwise_bridge_active_heads if head not in MOWA_P0_FULL_HEADS
+                head for head in self.mowa_layerwise_bridge_active_heads if head not in MOWA_FUTURE_FULL_HEADS
             ]
             if unknown_heads:
                 raise ValueError(f"Unknown MoWA layerwise bridge active heads: {unknown_heads}")
-            self.mowa_layerwise_bridge_p0_heads = MoWAP0FullHeads(
-                MoWAP0FullHeadsConfig(
+            self.mowa_layerwise_bridge_p0_heads = MoWAFutureFeatureHeads(
+                MoWAFutureFeatureHeadsConfig(
                     input_dim=self.action_dit_hidden_dim,
                     hidden_dim=wam_feature_dim,
                 )
@@ -395,20 +395,20 @@ class Qwen_PI_v3(baseframework):
                 metadata,
             )
         if intervention == "head_mask_control":
-            active_heads = MOWA_P0_CONSTRUCTIBLE_HEADS
+            active_heads = MOWA_FUTURE_CONSTRUCTIBLE_HEADS
             metadata["intervention_applied"] = True
             return (
                 MoWAActionBridgeOutput(
                     layerwise_condition_features=bridge_output.layerwise_condition_features,
                     attention_mask=bridge_output.attention_mask,
                     active_heads=active_heads,
-                    masked_heads=tuple(head for head in MOWA_P0_FULL_HEADS if head not in active_heads),
+                    masked_heads=tuple(head for head in MOWA_FUTURE_FULL_HEADS if head not in active_heads),
                 ),
                 metadata,
             )
         raise RuntimeError(f"Unhandled MoWA layerwise bridge token intervention: {intervention}")
 
-    def _build_mowa_layerwise_bridge_future_features(self, hidden_features: torch.Tensor) -> P0FutureFeatures:
+    def _build_mowa_layerwise_bridge_future_features(self, hidden_features: torch.Tensor) -> MoWAFutureFeatures:
         source = getattr(
             self,
             "mowa_layerwise_bridge_feature_source",
@@ -416,7 +416,7 @@ class Qwen_PI_v3(baseframework):
         )
         if source == "starflow_condition_probe":
             hidden_features = self.mowa_layerwise_bridge_feature_projector(hidden_features)
-            return P0FutureFeatures(
+            return MoWAFutureFeatures(
                 hidden_features=hidden_features,
                 head_outputs={},
                 active_heads=("starflow_condition_probe",),
@@ -428,9 +428,9 @@ class Qwen_PI_v3(baseframework):
             active_heads = getattr(
                 self,
                 "mowa_layerwise_bridge_active_heads",
-                MOWA_P0_CONSTRUCTIBLE_HEADS,
+                MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
             )
-            masks = {head: head in active_heads for head in MOWA_P0_FULL_HEADS}
+            masks = {head: head in active_heads for head in MOWA_FUTURE_FULL_HEADS}
             return self.mowa_layerwise_bridge_p0_heads.future_features(hidden_features, masks)
         raise RuntimeError(f"Unhandled MoWA layerwise bridge feature source: {source}")
 

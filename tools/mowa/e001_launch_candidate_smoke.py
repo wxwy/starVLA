@@ -12,6 +12,10 @@ LAUNCH_CANDIDATE_CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_launch_candi
 COMMAND_CANDIDATE_CONFIG = Path("configs/mowa/mowa_e001_training_command_candidate.yaml")
 RUNTIME_POLICY = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
 RUNTIME_SWEEP_REPORT = Path("docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json")
+MOWA_FUTURE_FEATURE_SOURCE_PATTERNS = (
+    "layerwise_bridge_feature_source: mowa_future_feature_heads",
+    "layerwise_bridge_feature_source: mowa_p0_fullheads",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -52,9 +56,9 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
         ),
         "candidate_uses_starflow_vla": _text_contains(candidate, "name: StarFlowVLA"),
         "candidate_uses_layerwisefm": _text_contains(candidate, "action_model_type: LayerwiseFM"),
-        "candidate_uses_p0_fullheads_source": _text_contains(
+        "candidate_uses_future_feature_heads_source": _text_contains_any(
             candidate,
-            "layerwise_bridge_feature_source: mowa_p0_fullheads",
+            MOWA_FUTURE_FEATURE_SOURCE_PATTERNS,
         ),
         "candidate_batch_size_4": _text_contains(candidate, "per_device_batch_size: 4"),
         "candidate_grad_accum_1": _text_contains(candidate, "gradient_accumulation_steps: 1"),
@@ -105,6 +109,13 @@ def _text_contains(path: Path, pattern: str) -> bool:
     if not path.is_file():
         return False
     return pattern in path.read_text(encoding="utf-8")
+
+
+def _text_contains_any(path: Path, patterns: tuple[str, ...]) -> bool:
+    if not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8")
+    return any(pattern in text for pattern in patterns)
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@
     "mowa_layerwise_bridge_coupling_enabled": true,
     "mowa_layerwise_bridge_forward_coupled": true,
     "forward_has_mowa_layerwise_bridge_coupled": true,
-    "mowa_layerwise_bridge_uses_p0_fullheads": true,
+    "mowa_layerwise_bridge_uses_future_feature_heads": true,
     "mowa_layerwise_bridge_active_heads_are_p0": true,
     "mowa_layerwise_bridge_not_probe_source": true
   },
@@ -201,7 +201,7 @@
     "Full training throughput, step time, and steady-state VRAM are still not measured.",
     "VRAM fields use torch CUDA allocator state in the pre-prepare dry-run path.",
     "MoWA bridge tokens are coupled only in the explicit MoWA gated dry-run config.",
-    "MoWA bridge feature source must be mowa_p0_fullheads before launch, not starflow_condition_probe.",
+    "MoWA bridge feature source must be future feature heads before launch, not starflow_condition_probe.",
     "No checkpoint/save/resume launch policy is confirmed."
   ],
   "go_no_go": "TBD: StarFlow full-path dry-run smoke passed; MoWA bridge coupling remains gated"

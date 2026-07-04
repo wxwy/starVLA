@@ -14,7 +14,7 @@
     "command_points_to_candidate_config": true,
     "candidate_uses_starflow_vla": true,
     "candidate_uses_layerwisefm": true,
-    "candidate_uses_p0_fullheads_source": true,
+    "candidate_uses_future_feature_heads_source": true,
     "candidate_batch_size_4": true,
     "candidate_grad_accum_1": true,
     "candidate_max_steps_1000": true,

@@ -699,7 +699,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_coupling_enabled"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_forward_coupled"])
         self.assertTrue(report["checks"]["forward_has_mowa_layerwise_bridge_coupled"])
-        self.assertTrue(report["checks"]["mowa_layerwise_bridge_uses_p0_fullheads"])
+        self.assertTrue(report["checks"]["mowa_layerwise_bridge_uses_future_feature_heads"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_active_heads_are_p0"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_not_probe_source"])
 
@@ -877,9 +877,67 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["command_candidate_config_created"])
         self.assertTrue(report["checks"]["candidate_launch_ready_false"])
         self.assertTrue(report["checks"]["command_requires_human_confirmation"])
+        self.assertTrue(report["checks"]["candidate_uses_future_feature_heads_source"])
         self.assertTrue(report["checks"]["candidate_batch_size_4"])
         self.assertTrue(report["checks"]["candidate_max_steps_1000"])
         self.assertTrue(report["checks"]["runtime_policy_still_unconfirmed"])
+
+    def test_e001_launch_candidate_smoke_accepts_future_feature_source_alias(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_starflow_ft0_launch_candidate.yaml").write_text(
+                "launch_guard:\n"
+                "  launch_ready: false\n"
+                "  policy_confirmed: false\n"
+                "  requires_human_confirmation: true\n"
+                "run_root_dir: playground/mowa_ckpt\n"
+                "framework:\n"
+                "  name: StarFlowVLA\n"
+                "  action_model:\n"
+                "    action_model_type: LayerwiseFM\n"
+                "  mowa:\n"
+                "    layerwise_bridge_feature_source: mowa_future_feature_heads\n"
+                "datasets:\n"
+                "  vla_data:\n"
+                "    per_device_batch_size: 4\n"
+                "trainer:\n"
+                "  max_train_steps: 1000\n"
+                "  save_interval: 1000\n"
+                "  gradient_accumulation_steps: 1\n"
+                "  disable_wandb: true\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_training_command_candidate.yaml").write_text(
+                "launch_guard:\n"
+                "  launch_ready: false\n"
+                "  requires_human_confirmation: true\n"
+                "command_candidate:\n"
+                "  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
+                "status:\n  policy_confirmed: false\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_full_vla_runtime_sweep_bs4_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "bounded_runtime_sweep": True,
+                        "full_training_launch": False,
+                        "checks": {"ok": True},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_launch_candidate_smoke import build_e001_launch_candidate_smoke
+
+            report = build_e001_launch_candidate_smoke(root)
+
+        self.assertTrue(report["checks"]["candidate_uses_future_feature_heads_source"])
+        self.assertEqual(report["go_no_go"], "TBD: launch candidate is wired; training remains gated")
 
     def test_e006_eval_load_smoke_validates_checkpoint_sidecars(self):
         with tempfile.TemporaryDirectory() as tmpdir:

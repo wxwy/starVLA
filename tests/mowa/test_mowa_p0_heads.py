@@ -1075,6 +1075,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
             candidate.num_action_layers,
             launch_cfg.framework.qwenvl.num_vl_layers,
         )
+        self.assertEqual(bridge_cfg.data_gate.production_wam_hz, "Data Gate")
+        self.assertEqual(bridge_cfg.data_gate.production_window, "Data Gate")
+        self.assertEqual(bridge_cfg.data_gate.e001_preflight_target_wam_hz, 5)
 
     def test_e006_checkpoint_intervention_forward_smoke_builds_cli_overrides(self):
         with tempfile.TemporaryDirectory() as tmpdir:

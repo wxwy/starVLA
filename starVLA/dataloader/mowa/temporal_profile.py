@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from starVLA.dataloader.mowa.robocasa365_adapter import _fixed_size_list_shape
+from starVLA.dataloader.mowa.robocasa365_adapter import fixed_size_list_shape
 from starVLA.dataloader.mowa.robocasa365_recipe import (
     MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS,
 )
@@ -239,10 +239,10 @@ def _profile_parquet(path: Path) -> dict[str, Any]:
         "timestamp_monotonic": _is_monotonic(timestamps),
         "frame_index_monotonic": _is_monotonic(frame_indices),
         "timestamp_delta_values": _rounded_deltas(timestamps),
-        "state_shape": _fixed_size_list_shape(parquet_file.schema_arrow.field("observation.state"))
+        "state_shape": fixed_size_list_shape(parquet_file.schema_arrow.field("observation.state"))
         if "observation.state" in columns
         else DATA_GATE,
-        "action_shape": _fixed_size_list_shape(parquet_file.schema_arrow.field("action"))
+        "action_shape": fixed_size_list_shape(parquet_file.schema_arrow.field("action"))
         if "action" in columns
         else DATA_GATE,
         "reward_signal_seen": any(value != 0.0 for value in rewards),

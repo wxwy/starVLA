@@ -23,6 +23,7 @@ from starVLA.dataloader.mowa import (
     build_mowa_latent_cache_manifest_smoke,
     build_mowa_p0_constructible_label_smoke,
     build_mowa_robocasa365_local_smoke_report,
+    fixed_size_list_shape,
     inspect_mowa_p0_label_coverage,
     inspect_mowa_robocasa365_atomic_core_recipe,
     inspect_robocasa365_lerobot_dataset_smoke,
@@ -34,6 +35,16 @@ from starVLA.dataloader.mowa import (
 
 
 class MoWADataGateTest(unittest.TestCase):
+    def test_fixed_size_list_shape_is_public_helper(self):
+        try:
+            import pyarrow as pa
+        except ImportError:
+            self.skipTest("pyarrow is not available")
+
+        field = pa.field("action", pa.list_(pa.float32(), 12))
+
+        self.assertEqual(fixed_size_list_shape(field), (12,))
+
     def _write_minimal_robocasa_parquet_dataset(self, dataset_path: Path, lengths=(6, 7)):
         import pyarrow as pa
         import pyarrow.parquet as pq

@@ -437,11 +437,14 @@ def _read_video_keys(dataset_path: Path) -> tuple[str, ...]:
     return tuple(video.keys())
 
 
-def _fixed_size_list_shape(field: Any) -> tuple[int, ...] | str:
+def fixed_size_list_shape(field: Any) -> tuple[int, ...] | str:
     list_size = getattr(field.type, "list_size", None)
     if list_size is None:
         return TBD
     return (int(list_size),)
+
+
+_fixed_size_list_shape = fixed_size_list_shape
 
 
 def _read_scalar_preview(path: Path, columns: tuple[str, ...], limit: int) -> dict[str, Any]:

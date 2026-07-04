@@ -64,8 +64,10 @@ integration_boundary:
 data_gate:
   p0_future_features: interface_ready
   p1_future_features: Data Gate
-  production_wam_hz: 5
-  production_window: confirmed_for_e001_initial_target
+  production_wam_hz: Data Gate
+  production_window: Data Gate
+  e001_preflight_target_wam_hz: 5
+  e001_preflight_target_window: 5hz_preflight_passed_not_production_frozen
 experiment:
   e006_coupling_eval_required_before_claiming_action_gain: true
   counted_in_experiment_budget: false

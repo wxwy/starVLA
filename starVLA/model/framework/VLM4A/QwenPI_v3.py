@@ -633,12 +633,35 @@ class Qwen_PI_v3(baseframework):
         )
         # Step 2: run the flow-matching sampler to produce the denoised action chunk.
         with torch.autocast("cuda", dtype=torch.float32):
+            vl_embs_list, backbone_attention_mask, mowa_bridge_metadata = (
+                self._maybe_apply_mowa_layerwise_bridge_coupling(
+                    vl_embs_list,
+                    backbone_attention_mask,
+                )
+            )
             pred_actions = self.action_model.predict_action(
                 vl_embs_list, state, encoder_attention_mask=backbone_attention_mask
             )  # (B, action_horizon, action_dim)
 
         normalized_actions = pred_actions.detach().cpu().numpy()
-        return {"normalized_actions": normalized_actions}
+        output = {"normalized_actions": normalized_actions}
+        if mowa_bridge_metadata is not None:
+            output["mowa_layerwise_bridge_coupled"] = mowa_bridge_metadata["coupled"]
+            output["mowa_layerwise_bridge_intervention"] = mowa_bridge_metadata["intervention"]
+            output["mowa_layerwise_bridge_intervention_applied"] = mowa_bridge_metadata[
+                "intervention_applied"
+            ]
+            output["mowa_layerwise_bridge_intervention_note"] = mowa_bridge_metadata[
+                "intervention_note"
+            ]
+            output["mowa_layerwise_bridge_token_shape"] = mowa_bridge_metadata["token_shape"]
+            output["mowa_layerwise_bridge_attention_mask_shape"] = mowa_bridge_metadata[
+                "attention_mask_shape"
+            ]
+            output["mowa_layerwise_bridge_feature_source"] = mowa_bridge_metadata["feature_source"]
+            output["mowa_layerwise_bridge_active_heads"] = mowa_bridge_metadata["active_heads"]
+            output["mowa_layerwise_bridge_masked_heads"] = mowa_bridge_metadata["masked_heads"]
+        return output
 
     def _prepare_state_condition(
         self,

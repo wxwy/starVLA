@@ -6,6 +6,7 @@ endpoints (e.g., JSONL local logs, Weights & Biases).
 """
 
 from typing import Tuple
+import logging
 import re
 import json
 import gc
@@ -59,7 +60,7 @@ def normalize_dotlist_args(args):
             else:
                 normalized.append(f"{key}=true")
         else:
-            pass  # skip orphaned values
+            logging.getLogger(__name__).warning(f"Ignoring orphan CLI value without a preceding key: {arg}")
     return normalized
 
 

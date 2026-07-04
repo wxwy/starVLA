@@ -572,6 +572,8 @@ class MoWAP0HeadsTest(unittest.TestCase):
                         "framework": {
                             "name": "QwenOFT",
                             "mowa_action_bridge_probe_enabled": True,
+                            "mowa_future_supervision_probe_enabled": True,
+                            "mowa_future_supervision_label_status": "forward_evaluated_in_full_path_dry_run",
                             "mowa_p0_supervision_probe_enabled": True,
                             "mowa_p0_supervision_label_status": "forward_evaluated_in_full_path_dry_run",
                         },
@@ -593,6 +595,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "evaluated": True,
                             "keys": [
                                 "action_loss",
+                                "mowa_future_supervision_loss",
                                 "mowa_p0_supervision_loss",
                             ],
                         },
@@ -610,10 +613,10 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertFalse(report["training_started"])
         self.assertTrue(report["checks"]["training_not_started"])
         self.assertTrue(report["checks"]["checkpoint_not_saved"])
-        self.assertTrue(report["checks"]["mowa_p0_supervision_probe_enabled"])
-        self.assertTrue(report["checks"]["mowa_p0_supervision_labels_forward_evaluated"])
+        self.assertTrue(report["checks"]["mowa_future_supervision_probe_enabled"])
+        self.assertTrue(report["checks"]["mowa_future_supervision_labels_forward_evaluated"])
         self.assertTrue(report["checks"]["batch_has_mowa_p0_targets"])
-        self.assertTrue(report["checks"]["forward_has_mowa_p0_supervision_loss"])
+        self.assertTrue(report["checks"]["forward_has_mowa_future_supervision_loss"])
         self.assertTrue(report["checks"]["batch_fetched"])
 
     def test_e001_starflow_ft0_full_path_dry_run_smoke_keeps_training_disabled(self):

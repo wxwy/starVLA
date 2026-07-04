@@ -909,6 +909,16 @@ def _write_full_path_dry_run_report(
     )
     trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
     total_params = sum(param.numel() for param in model.parameters())
+    mowa_supervision_enabled = bool(getattr(model, "mowa_p0_supervision_probe_enabled", False))
+    mowa_supervision_active_heads = list(getattr(model, "mowa_p0_supervision_active_heads", ()))
+    mowa_supervision_label_status = (
+        "forward_evaluated_in_full_path_dry_run"
+        if (
+            "mowa_future_supervision_loss" in ((forward_summary or {}).get("keys") or [])
+            or "mowa_p0_supervision_loss" in ((forward_summary or {}).get("keys") or [])
+        )
+        else "not_evaluated_in_full_path_dry_run"
+    )
     payload = {
         "stage": "P0",
         "experiment_id": getattr(cfg, "experiment_id", "E-001"),
@@ -946,17 +956,12 @@ def _write_full_path_dry_run_report(
                 "mowa_layerwise_bridge_feature_source",
                 None,
             ),
-            "mowa_p0_supervision_probe_enabled": bool(
-                getattr(model, "mowa_p0_supervision_probe_enabled", False)
-            ),
-            "mowa_p0_supervision_active_heads": list(
-                getattr(model, "mowa_p0_supervision_active_heads", ())
-            ),
-            "mowa_p0_supervision_label_status": (
-                "forward_evaluated_in_full_path_dry_run"
-                if "mowa_p0_supervision_loss" in ((forward_summary or {}).get("keys") or [])
-                else "not_evaluated_in_full_path_dry_run"
-            ),
+            "mowa_future_supervision_probe_enabled": mowa_supervision_enabled,
+            "mowa_future_supervision_active_heads": mowa_supervision_active_heads,
+            "mowa_future_supervision_label_status": mowa_supervision_label_status,
+            "mowa_p0_supervision_probe_enabled": mowa_supervision_enabled,
+            "mowa_p0_supervision_active_heads": mowa_supervision_active_heads,
+            "mowa_p0_supervision_label_status": mowa_supervision_label_status,
         },
         "data": {
             "dataset_py": cfg.datasets.vla_data.dataset_py,

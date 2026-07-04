@@ -13,14 +13,14 @@
     "robocasa_data_mix": true,
     "framework_qwenoft": true,
     "mowa_action_bridge_probe_enabled": true,
-    "mowa_p0_supervision_probe_enabled": true,
-    "mowa_p0_supervision_labels_forward_evaluated": true,
+    "mowa_future_supervision_probe_enabled": true,
+    "mowa_future_supervision_labels_forward_evaluated": true,
     "batch_fetched": true,
     "mowa_p0_labels_enabled": true,
     "batch_has_mowa_p0_targets": true,
     "batch_has_mowa_p0_masks": true,
     "forward_evaluated": true,
-    "forward_has_mowa_p0_supervision_loss": true,
+    "forward_has_mowa_future_supervision_loss": true,
     "forward_has_action_loss": true
   },
   "reports": {

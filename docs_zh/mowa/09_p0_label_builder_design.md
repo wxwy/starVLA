@@ -22,6 +22,8 @@
 - smoke label report 可以保留 rich dict，用于展示 `class_mapping_status` 等元信息。
 - production dataloader 传给模型的是 tensor-ready target 值。
 - `action_outcome_class` 当前为 `[next_reward, next_done]` 二维回归式 target，`class_mapping_status` 仍为 `Data Gate`。
+- P0 / future heads 默认 `action_outcome_loss_type=mse`，保持当前 `[reward, done]` tensor target 行为。
+- `action_outcome_loss_type=cross_entropy_done` 仅作为 opt-in 兼容接口，使用 target 最后一维 `next_done` 作为二分类标签；不得在类别映射未冻结前把它设为默认。
 
 ## 未解决项
 

@@ -407,8 +407,19 @@ class Qwenvl_OFT(baseframework):
                 getattr(mowa_cfg, "p0_supervision_hidden_dim", 32),
             )
         )
+        action_outcome_loss_type = str(
+            getattr(
+                mowa_cfg,
+                "future_supervision_action_outcome_loss_type",
+                getattr(mowa_cfg, "p0_supervision_action_outcome_loss_type", "mse"),
+            )
+        )
         self.mowa_p0_supervision_probe = MoWAFutureFeatureHeads(
-            MoWAFutureFeatureHeadsConfig(input_dim=action_hidden_dim, hidden_dim=hidden_dim)
+            MoWAFutureFeatureHeadsConfig(
+                input_dim=action_hidden_dim,
+                hidden_dim=hidden_dim,
+                action_outcome_loss_type=action_outcome_loss_type,
+            )
         )
 
     def _maybe_run_mowa_p0_supervision_probe(

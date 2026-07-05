@@ -121,6 +121,47 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertNotIn("manipulation_readiness", outputs)
         self.assertTrue(torch.isfinite(loss))
 
+    def test_action_outcome_class_loss_type_can_use_done_cross_entropy(self):
+        try:
+            import torch
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.modules.mowa import (
+            MoWAP0ConstructibleHeads,
+            MoWAP0ConstructibleHeadsConfig,
+        )
+
+        model = MoWAP0ConstructibleHeads(
+            MoWAP0ConstructibleHeadsConfig(
+                input_dim=4,
+                hidden_dim=8,
+                action_outcome_loss_type="cross_entropy_done",
+            )
+        )
+        features = torch.randn(4, 4)
+        targets = {
+            "action_outcome_class": torch.tensor(
+                [
+                    [0.0, 0.0],
+                    [0.0, 1.0],
+                    [1.0, 1.0],
+                    [1.0, 0.0],
+                ],
+                dtype=torch.float32,
+            )
+        }
+        masks = {
+            "task_progress": False,
+            "action_outcome_class": True,
+        }
+
+        loss, losses, outputs = model.compute_loss(features, targets, masks)
+
+        self.assertEqual(outputs["action_outcome_class"].shape, (4, 2))
+        self.assertIn("action_outcome_class", losses)
+        self.assertTrue(torch.isfinite(loss))
+
     def test_full_heads_forward_loss_respects_masks(self):
         try:
             import torch
@@ -1833,6 +1874,37 @@ class MoWAP0HeadsTest(unittest.TestCase):
             ("task_progress", "action_outcome_class"),
         )
         self.assertEqual(probe_owner.mowa_p0_supervision_probe.config.hidden_dim, 6)
+
+    def test_qwenoft_mowa_future_supervision_accepts_action_outcome_loss_type(self):
+        try:
+            import torch.nn as nn
+            from omegaconf import OmegaConf
+        except ImportError:
+            self.skipTest("torch or omegaconf is not available")
+
+        from starVLA.model.framework.VLM4A.QwenOFT import Qwenvl_OFT
+
+        cfg = OmegaConf.create(
+            {
+                "framework": {
+                    "action_model": {"action_hidden_dim": 8},
+                    "mowa": {
+                        "enable_p0_supervision_probe": True,
+                        "future_supervision_hidden_dim": 6,
+                        "future_supervision_action_outcome_loss_type": "cross_entropy_done",
+                    },
+                }
+            }
+        )
+        probe_owner = object.__new__(Qwenvl_OFT)
+        nn.Module.__init__(probe_owner)
+        probe_owner.config = cfg
+        probe_owner._setup_mowa_p0_supervision_probe()
+
+        self.assertEqual(
+            probe_owner.mowa_p0_supervision_probe.config.action_outcome_loss_type,
+            "cross_entropy_done",
+        )
 
     def test_qwenoft_mowa_bridge_probe_uses_action_hidden_without_label_input(self):
         try:

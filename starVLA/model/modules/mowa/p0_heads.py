@@ -16,12 +16,14 @@ from starVLA.mowa_constants import (
 class MoWAP0ConstructibleHeadsConfig:
     input_dim: int = 4
     hidden_dim: int = 32
+    action_outcome_loss_type: str = "mse"
 
 
 @dataclass(frozen=True)
 class MoWAP0FullHeadsConfig:
     input_dim: int = 4
     hidden_dim: int = 32
+    action_outcome_loss_type: str = "mse"
 
 
 @dataclass(frozen=True)
@@ -85,9 +87,11 @@ class MoWAP0ConstructibleHeads:
                     losses["task_progress"] = loss
                     active_losses.append(loss)
                 if bool(masks.get("action_outcome_class", False)):
-                    loss = F.mse_loss(
+                    loss = _compute_mowa_head_loss(
+                        "action_outcome_class",
                         outputs["action_outcome_class"],
                         targets["action_outcome_class"],
+                        action_outcome_loss_type=self.config.action_outcome_loss_type,
                     )
                     losses["action_outcome_class"] = loss
                     active_losses.append(loss)
@@ -149,7 +153,6 @@ class MoWAP0FullHeads:
 
             def compute_loss(self, features, targets: Mapping[str, Any], masks: Mapping[str, Any]):
                 import torch
-                import torch.nn.functional as F
 
                 outputs = self(features)
                 losses = {}
@@ -159,7 +162,12 @@ class MoWAP0FullHeads:
                         continue
                     if head not in targets:
                         raise KeyError(f"MoWA P0 FullHeads active head missing target: {head}")
-                    loss = F.mse_loss(outputs[head], targets[head])
+                    loss = _compute_mowa_head_loss(
+                        head,
+                        outputs[head],
+                        targets[head],
+                        action_outcome_loss_type=self.config.action_outcome_loss_type,
+                    )
                     losses[head] = loss
                     active_losses.append(loss)
                 if not active_losses:
@@ -169,6 +177,28 @@ class MoWAP0FullHeads:
                 return total, losses, outputs
 
         return _TorchMoWAP0FullHeads(*args, **kwargs)
+
+
+def _compute_mowa_head_loss(
+    head: str,
+    output: Any,
+    target: Any,
+    *,
+    action_outcome_loss_type: str,
+) -> Any:
+    import torch
+    import torch.nn.functional as F
+
+    if head != "action_outcome_class":
+        return F.mse_loss(output, target)
+    if action_outcome_loss_type == "mse":
+        return F.mse_loss(output, target)
+    if action_outcome_loss_type == "cross_entropy_done":
+        target_tensor = torch.as_tensor(target, device=output.device)
+        if target_tensor.ndim > 1:
+            target_tensor = target_tensor[..., -1]
+        return F.cross_entropy(output.float(), target_tensor.long())
+    raise ValueError(f"Unsupported MoWA action_outcome_loss_type: {action_outcome_loss_type}")
 
 
 # Runtime-facing aliases. P0 names are kept for experiment-stage compatibility.

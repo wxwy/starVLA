@@ -16,6 +16,7 @@
     "baseline_p0_labels_disabled": true,
     "mowa_p0_labels_enabled": true,
     "paired_invariants_match": true,
+    "paired_runtime_symmetry_passed": true,
     "official_ft0_is_reference_only": true,
     "baseline_launch_guard_blocks_entrypoint": true,
     "mowa_launch_guard_blocks_entrypoint": true
@@ -32,8 +33,8 @@
       ],
       "returncode": 1,
       "blocked_by_launch_guard": true,
-      "stdout_tail": "Distributed environment: DistributedType.NO\nNum processes: 1\nProcess index: 0\nLocal process index: 0\nDevice: cuda\n\nMixed precision type: no\n\n07/05 [12:47:09] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2297\n                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2300\n                          for access tracking                                   \n",
-      "stderr_tail": "Traceback (most recent call last):\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 2387, in <module>\n    main(cfg)\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 2303, in main\n    _enforce_launch_guard(cfg, full_path_dry_run_only=full_path_dry_run_only)\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 155, in _enforce_launch_guard\n    raise RuntimeError(\nRuntimeError: Training launch blocked by launch_guard: launch_ready=False, policy_confirmed=False, requires_human_confirmation=True, human_confirmed=False. Set launch_ready=true, policy_confirmed=true, and, when requires_human_confirmation=true, human_confirmed=true only after explicit approval.\n"
+      "stdout_tail": "Distributed environment: DistributedType.NO\nNum processes: 1\nProcess index: 0\nLocal process index: 0\nDevice: cuda\n\nMixed precision type: no\n\n07/05 [13:19:10] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2299\n                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2302\n                          for access tracking                                   \n",
+      "stderr_tail": "Traceback (most recent call last):\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 2389, in <module>\n    main(cfg)\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 2305, in main\n    _enforce_launch_guard(cfg, full_path_dry_run_only=full_path_dry_run_only)\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 155, in _enforce_launch_guard\n    raise RuntimeError(\nRuntimeError: Training launch blocked by launch_guard: launch_ready=False, policy_confirmed=False, requires_human_confirmation=True, human_confirmed=False. Set launch_ready=true, policy_confirmed=true, and, when requires_human_confirmation=true, human_confirmed=true only after explicit approval.\n"
     },
     "mowa": {
       "config": "configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml",
@@ -45,8 +46,8 @@
       ],
       "returncode": 1,
       "blocked_by_launch_guard": true,
-      "stdout_tail": "Distributed environment: DistributedType.NO\nNum processes: 1\nProcess index: 0\nLocal process index: 0\nDevice: cuda\n\nMixed precision type: no\n\n07/05 [12:47:22] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2297\n                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2300\n                          for access tracking                                   \n",
-      "stderr_tail": "Traceback (most recent call last):\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 2387, in <module>\n    main(cfg)\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 2303, in main\n    _enforce_launch_guard(cfg, full_path_dry_run_only=full_path_dry_run_only)\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 155, in _enforce_launch_guard\n    raise RuntimeError(\nRuntimeError: Training launch blocked by launch_guard: launch_ready=False, policy_confirmed=False, requires_human_confirmation=True, human_confirmed=False. Set launch_ready=true, policy_confirmed=true, and, when requires_human_confirmation=true, human_confirmed=true only after explicit approval.\n"
+      "stdout_tail": "Distributed environment: DistributedType.NO\nNum processes: 1\nProcess index: 0\nLocal process index: 0\nDevice: cuda\n\nMixed precision type: no\n\n07/05 [13:19:24] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2299\n                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2302\n                          for access tracking                                   \n",
+      "stderr_tail": "Traceback (most recent call last):\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 2389, in <module>\n    main(cfg)\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 2305, in main\n    _enforce_launch_guard(cfg, full_path_dry_run_only=full_path_dry_run_only)\n  File \"/disk/rl/starVLA/starVLA/training/train_starvla.py\", line 155, in _enforce_launch_guard\n    raise RuntimeError(\nRuntimeError: Training launch blocked by launch_guard: launch_ready=False, policy_confirmed=False, requires_human_confirmation=True, human_confirmed=False. Set launch_ready=true, policy_confirmed=true, and, when requires_human_confirmation=true, human_confirmed=true only after explicit approval.\n"
     }
   },
   "invariant_values": {
@@ -182,6 +183,66 @@
     "trainer.gradient_accumulation_steps": true,
     "trainer.disable_wandb": true,
     "trainer.save_interval": true
+  },
+  "runtime_symmetry": {
+    "passed": true,
+    "compared_path_count": 91,
+    "matched_path_count": 82,
+    "allowed_difference_paths": [
+      "datasets.vla_data.enable_mowa_p0_labels",
+      "framework.mowa.action_hidden_dim",
+      "framework.mowa.enable_layerwise_bridge_token_coupling",
+      "framework.mowa.layerwise_bridge_active_heads",
+      "framework.mowa.layerwise_bridge_feature_source",
+      "framework.mowa.num_bridge_tokens",
+      "framework.mowa.wam_feature_dim",
+      "launch_guard.reason",
+      "run_id"
+    ],
+    "unexpected_difference_paths": [],
+    "missing_required_difference_paths": [],
+    "allowed_differences": {
+      "datasets.vla_data.enable_mowa_p0_labels": {
+        "baseline": false,
+        "mowa": true
+      },
+      "framework.mowa.action_hidden_dim": {
+        "baseline": null,
+        "mowa": 1024
+      },
+      "framework.mowa.enable_layerwise_bridge_token_coupling": {
+        "baseline": false,
+        "mowa": true
+      },
+      "framework.mowa.layerwise_bridge_active_heads": {
+        "baseline": null,
+        "mowa": [
+          "task_progress",
+          "action_outcome_class"
+        ]
+      },
+      "framework.mowa.layerwise_bridge_feature_source": {
+        "baseline": null,
+        "mowa": "mowa_p0_fullheads"
+      },
+      "framework.mowa.num_bridge_tokens": {
+        "baseline": null,
+        "mowa": 2
+      },
+      "framework.mowa.wam_feature_dim": {
+        "baseline": null,
+        "mowa": 1024
+      },
+      "launch_guard.reason": {
+        "baseline": "StarFlow ft0 same-data baseline candidate only; do not run until explicitly confirmed",
+        "mowa": "candidate config only; do not run until runtime policy is explicitly confirmed"
+      },
+      "run_id": {
+        "baseline": "MoWA-E-001_starflow_ft0_baseline_bs4_candidate",
+        "mowa": "MoWA-E-001_starflow_ft0_bs4_candidate"
+      }
+    },
+    "unexpected_differences": {}
   },
   "expected_differences": {
     "framework.mowa.enable_layerwise_bridge_token_coupling": {

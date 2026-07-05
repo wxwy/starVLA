@@ -1050,10 +1050,62 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["baseline_p0_labels_disabled"])
         self.assertTrue(report["checks"]["mowa_p0_labels_enabled"])
         self.assertTrue(report["checks"]["paired_invariants_match"])
+        self.assertTrue(report["checks"]["paired_runtime_symmetry_passed"])
         self.assertTrue(report["checks"]["official_ft0_is_reference_only"])
+        self.assertEqual(report["runtime_symmetry"]["unexpected_difference_paths"], ())
         self.assertEqual(
             report["expected_differences"]["framework.mowa.enable_layerwise_bridge_token_coupling"],
             {"baseline": False, "mowa": True},
+        )
+
+    def test_e001_starflow_ft0_runtime_symmetry_rejects_unexpected_drift(self):
+        from omegaconf import OmegaConf
+
+        from tools.mowa.e001_starflow_ft0_comparison_smoke import (
+            _build_runtime_symmetry_report,
+        )
+
+        baseline = OmegaConf.create(
+            {
+                "run_id": "baseline",
+                "launch_guard": {"reason": "baseline"},
+                "framework": {
+                    "mowa": {
+                        "enable_layerwise_bridge_token_coupling": False,
+                    }
+                },
+                "datasets": {
+                    "vla_data": {
+                        "per_device_batch_size": 4,
+                        "enable_mowa_p0_labels": False,
+                    }
+                },
+            }
+        )
+        mowa = OmegaConf.create(
+            {
+                "run_id": "mowa",
+                "launch_guard": {"reason": "mowa"},
+                "framework": {
+                    "mowa": {
+                        "enable_layerwise_bridge_token_coupling": True,
+                    }
+                },
+                "datasets": {
+                    "vla_data": {
+                        "per_device_batch_size": 8,
+                        "enable_mowa_p0_labels": True,
+                    }
+                },
+            }
+        )
+
+        report = _build_runtime_symmetry_report(baseline, mowa)
+
+        self.assertFalse(report["passed"])
+        self.assertIn(
+            "datasets.vla_data.per_device_batch_size",
+            report["unexpected_difference_paths"],
         )
 
     def test_e001_starflow_ft0_comparison_smoke_can_execute_launch_guard(self):

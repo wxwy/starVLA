@@ -45,6 +45,21 @@ INVARIANT_PATHS = (
     "trainer.disable_wandb",
     "trainer.save_interval",
 )
+ALLOWED_RUNTIME_DIFFERENCE_PATHS = (
+    "run_id",
+    "launch_guard.reason",
+    "framework.mowa.enable_layerwise_bridge_token_coupling",
+    "framework.mowa.layerwise_bridge_feature_source",
+    "framework.mowa.layerwise_bridge_active_heads",
+    "framework.mowa.wam_feature_dim",
+    "framework.mowa.action_hidden_dim",
+    "framework.mowa.num_bridge_tokens",
+    "datasets.vla_data.enable_mowa_p0_labels",
+)
+REQUIRED_RUNTIME_DIFFERENCE_PATHS = (
+    "framework.mowa.enable_layerwise_bridge_token_coupling",
+    "datasets.vla_data.enable_mowa_p0_labels",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -97,6 +112,7 @@ def build_starflow_ft0_comparison_smoke(
         path: values["baseline"] == values["mowa"]
         for path, values in invariant_values.items()
     }
+    runtime_symmetry = _build_runtime_symmetry_report(baseline, mowa)
     checks = {
         "baseline_config_created": (root / BASELINE_CONFIG).is_file(),
         "mowa_candidate_config_created": (root / MOWA_CONFIG).is_file(),
@@ -116,6 +132,7 @@ def build_starflow_ft0_comparison_smoke(
             _select(mowa, "datasets.vla_data.enable_mowa_p0_labels") is True
         ),
         "paired_invariants_match": all(invariant_matches.values()),
+        "paired_runtime_symmetry_passed": runtime_symmetry["passed"],
         "official_ft0_is_reference_only": (
             _select(official, "framework.name") == "StarFlowVLA"
             and _select(official, "framework.action_model.num_target_vision_tokens") == 0
@@ -156,6 +173,7 @@ def build_starflow_ft0_comparison_smoke(
         "launch_guard_execution": launch_guard_execution,
         "invariant_values": invariant_values,
         "invariant_matches": invariant_matches,
+        "runtime_symmetry": runtime_symmetry,
         "expected_differences": {
             "framework.mowa.enable_layerwise_bridge_token_coupling": {
                 "baseline": False,
@@ -190,6 +208,56 @@ def build_starflow_ft0_comparison_smoke(
 def _select(cfg: Any, dot_path: str) -> Any:
     value = OmegaConf.select(cfg, dot_path, default=None)
     return OmegaConf.to_container(value, resolve=True) if OmegaConf.is_config(value) else value
+
+
+def _build_runtime_symmetry_report(baseline: Any, mowa: Any) -> dict[str, Any]:
+    baseline_flat = _flatten_mapping(OmegaConf.to_container(baseline, resolve=True))
+    mowa_flat = _flatten_mapping(OmegaConf.to_container(mowa, resolve=True))
+    all_paths = sorted(set(baseline_flat) | set(mowa_flat))
+    differences = {
+        path: {
+            "baseline": baseline_flat.get(path),
+            "mowa": mowa_flat.get(path),
+        }
+        for path in all_paths
+        if baseline_flat.get(path) != mowa_flat.get(path)
+    }
+    allowed_difference_paths = tuple(
+        path for path in differences if path in ALLOWED_RUNTIME_DIFFERENCE_PATHS
+    )
+    unexpected_difference_paths = tuple(
+        path for path in differences if path not in ALLOWED_RUNTIME_DIFFERENCE_PATHS
+    )
+    missing_required_difference_paths = tuple(
+        path for path in REQUIRED_RUNTIME_DIFFERENCE_PATHS if path not in differences
+    )
+    return {
+        "passed": (
+            not unexpected_difference_paths
+            and not missing_required_difference_paths
+        ),
+        "compared_path_count": len(all_paths),
+        "matched_path_count": len(all_paths) - len(differences),
+        "allowed_difference_paths": allowed_difference_paths,
+        "unexpected_difference_paths": unexpected_difference_paths,
+        "missing_required_difference_paths": missing_required_difference_paths,
+        "allowed_differences": {
+            path: differences[path] for path in allowed_difference_paths
+        },
+        "unexpected_differences": {
+            path: differences[path] for path in unexpected_difference_paths
+        },
+    }
+
+
+def _flatten_mapping(value: Any, prefix: str = "") -> dict[str, Any]:
+    if isinstance(value, dict):
+        flattened: dict[str, Any] = {}
+        for key, item in value.items():
+            path = f"{prefix}.{key}" if prefix else str(key)
+            flattened.update(_flatten_mapping(item, path))
+        return flattened
+    return {prefix: value}
 
 
 def _run_launch_guard_check(

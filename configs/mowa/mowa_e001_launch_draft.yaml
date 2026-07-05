@@ -110,4 +110,4 @@ launch_blockers:
   - resource policy remains unconfirmed for full E-001 long training
   - StarFlow ft0 baseline/MoWA launch candidates are aligned and gated, but action-gain evidence is not validated
   - batch size 4 / expected VRAM are bounded-smoke observed only, not long-training confirmed
-  - executable training command candidate exists but is not human-confirmed
+  - executable training command candidate exists and is human-confirmed

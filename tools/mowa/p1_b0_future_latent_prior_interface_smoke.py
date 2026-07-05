@@ -86,7 +86,8 @@ def build_p1_b0_future_latent_prior_interface_smoke(
         "unresolved_items": [
             "This smoke validates the P1-b0 future latent prior interface only; no latent cache builder is executed.",
             "history_latent remains blocked at P1-b0 and must stay out of model inputs.",
-            "latent shape / encoder / cache artifact statuses remain Data Gate until real Wan cache builder is approved.",
+            "latent shape / encoder / cache artifact statuses remain Data Gate "
+            "until real Wan cache builder is approved.",
         ],
         "go_no_go": (
             "TBD: P1-b0 future latent prior interface smoke passed; latent cache builder remains gated"

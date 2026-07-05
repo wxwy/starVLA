@@ -26,7 +26,6 @@ class MoWAHLCGCI:
     """Compress history latent and gate condition-path injection."""
 
     def __new__(cls, *args: Any, **kwargs: Any):
-        import torch
         import torch.nn as nn
 
         class _TorchMoWAHLCGCI(nn.Module):

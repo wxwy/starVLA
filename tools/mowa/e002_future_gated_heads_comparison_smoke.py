@@ -94,7 +94,8 @@ def build_e002_future_gated_heads_comparison_smoke(repo_root: Path | str) -> dic
             "gated_heads": gated_heads_cfg,
         },
         "unresolved_items": [
-            "This is the single static E-002 comparison entry only; runtime integration exists but training remains gated.",
+            "This is the single static E-002 comparison entry only; "
+            "runtime integration exists but training remains gated.",
             "Per-head / leave-one-out / selected-head sweeps remain forbidden.",
             "No training is started by this smoke.",
         ],

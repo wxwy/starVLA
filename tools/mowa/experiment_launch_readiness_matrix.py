@@ -96,12 +96,17 @@ def _build_g0_entry(root: Path) -> dict[str, Any]:
         "leakage_gate_ready": _report_not_nogo(leakage),
         "constructible_label_smoke_ready": _report_not_nogo(label_builder),
     }
+    status = (
+        "bounded_data_domain_ready_for_following_experiments"
+        if all(checks.values())
+        else "data_gate_incomplete"
+    )
     return {
         "experiment_id": "G0",
         "stage": "Gate",
         "counts_as_training_experiment": False,
         "can_start_now": False,
-        "status": "bounded_data_domain_ready_for_following_experiments" if all(checks.values()) else "data_gate_incomplete",
+        "status": status,
         "evidence_reports": _present_reports(
             {
                 "recipe": recipe,
@@ -360,7 +365,10 @@ def _not_started_entry(root: Path, *, experiment_id: str, stage: str, message: s
 def _build_e006_blockers(rollout: dict[str, Any], success_rates: list[float]) -> list[str]:
     blockers = list(rollout.get("unresolved_items") or [])
     if success_rates and max(success_rates) <= 0.0:
-        blockers.append("Current rollout evidence is dominated by a weak checkpoint; replace with a meaningful trained checkpoint before claiming coupling gain.")
+        blockers.append(
+            "Current rollout evidence is dominated by a weak checkpoint; "
+            "replace with a meaningful trained checkpoint before claiming coupling gain."
+        )
     if rollout.get("rollout_blocker"):
         blockers.append(f"Recorded rollout blocker: {rollout['rollout_blocker']}")
     return blockers

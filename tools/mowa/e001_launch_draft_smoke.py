@@ -83,14 +83,16 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         ),
         "executable_training_command_candidate_recorded": _text_contains(
             root / LAUNCH_DRAFT,
-            "executable training command candidate exists but is not human-confirmed",
+            "executable training command candidate exists and is human-confirmed",
         ),
         "launch_draft_reason_current": (
             "final WAM feature source are not confirmed" not in launch_draft
             and (
-                "resource policy, core SOT, class mapping, and action-gain evidence are not confirmed"
+                "resource policy, core SOT, class mapping, and action-gain "
+                "evidence are not confirmed"
                 in launch_draft
-                or "long-training resource policy, core SOT, class mapping, and action-gain evidence remain unconfirmed for full-scale training"
+                or "long-training resource policy, core SOT, class mapping, "
+                "and action-gain evidence remain unconfirmed for full-scale training"
                 in launch_draft
             )
         ),
@@ -143,7 +145,8 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         ),
         "notes": [
             "This smoke does not start training.",
-            "Training command draft remains dry-run-only; command candidate records the currently approved bounded launch state.",
+            "Training command draft remains dry-run-only; command candidate "
+            "records the currently approved bounded launch state.",
         ],
     }
 

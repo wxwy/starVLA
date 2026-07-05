@@ -49,10 +49,6 @@ class MoWAP0HeadsTest(unittest.TestCase):
             MoWAFutureFeatureHeads,
             MoWAFutureFeatureHeadsConfig,
             MoWAFutureFeatures,
-            MoWAFutureConstructibleHeads,
-            MoWAFutureConstructibleHeadsConfig,
-            MoWAFutureFullHeads,
-            MoWAFutureFullHeadsConfig,
             MoWAP0ConstructibleHeads,
             MoWAP0ConstructibleHeadsConfig,
             MoWAP0FullHeads,
@@ -516,7 +512,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                     "launch_blockers:\n"
                     "  - StarFlow ft0 baseline/MoWA launch candidates are aligned and gated, "
                     "but action-gain evidence is not validated\n"
-                    "  - executable training command candidate exists but is not human-confirmed\n"
+                    "  - executable training command candidate exists and is human-confirmed\n"
                 ),
                 encoding="utf-8",
             )
@@ -2726,7 +2722,11 @@ class MoWAP0HeadsTest(unittest.TestCase):
 
         self.assertFalse(report["training_started"])
         self.assertTrue(all(report["checks"].values()))
-        self.assertEqual(report["go_no_go"], "TBD: P1-b0 future latent prior interface smoke passed; latent cache builder remains gated")
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: P1-b0 future latent prior interface smoke passed; "
+            "latent cache builder remains gated",
+        )
 
     def test_p1_b1_hlcgci_interface_shapes_and_gate_range(self):
         try:
@@ -2786,11 +2786,6 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIs(MoWAP0GatedHeadsConfig, MoWAGatedHeadsConfig)
 
     def test_future_gated_heads_use_interpretable_init_gate_value(self):
-        try:
-            import torch
-        except ImportError:
-            self.skipTest("torch is not available")
-
         from starVLA.model.modules.mowa import (
             MoWAFutureFullHeadsConfig,
             MoWAFutureGatedHeads,

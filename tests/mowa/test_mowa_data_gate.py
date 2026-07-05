@@ -268,7 +268,7 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertIn("profile/leakage pending", payload["go_no_go"])
         self.assertEqual(payload["local_checks"]["profile_status"], DATA_GATE)
 
-    def test_e003_history_sampling_consistency_smoke_matches_temporal_policy(self):
+    def test_e003_history_sampling_consistency_smoke_matches_temporal_policy_from_temp_root(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             (root / "configs" / "mowa").mkdir(parents=True)

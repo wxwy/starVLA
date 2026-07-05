@@ -25,6 +25,7 @@ MoWA（Mobile World Action Model，面向移动操作的世界动作模型）是
 | `08_starvla_data_benchmark_support_matrix.md` | 基于 StarVLA 当前仓库生成的 MoWA 数据 / benchmark 支持矩阵。 |
 | `09_p0_label_builder_design.md` | P0 label coverage 与 label/mask builder 设计草案。 |
 | `10_p1_latent_cache_manifest_design.md` | P1 latent cache manifest 设计草案。 |
+| `12_experiment_launch_readiness_matrix.md` | 所有实验的统一启动前状态说明与 matrix 生成入口。 |
 | `prompts/*.md` | 可独立复制给 Codex / Claude 的阶段 prompt。 |
 
 ## Codex / Claude 必读文件

@@ -770,8 +770,14 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "starflow_ft_variant": "custom",
                             "num_target_vision_tokens": 8,
                             "mowa_layerwise_bridge_coupling_enabled": True,
+                            "mowa_future_gated_heads_enabled": True,
                             "mowa_layerwise_bridge_coupling_status": "forward_coupled_in_full_path_dry_run",
                             "mowa_layerwise_bridge_feature_source": "mowa_p0_fullheads",
+                            "mowa_layerwise_bridge_gated_heads_summary": {
+                                "comparison_scope": "single_fullheads_control_only",
+                                "allow_per_head_sweep": False,
+                                "step": 0,
+                            },
                         },
                         "data": {
                             "data_mix": "robocasa365_open_drawer_target_human",
@@ -839,11 +845,13 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["forward_has_peak_reserved_vram_field"])
         self.assertTrue(report["checks"]["forward_vram_metric_scope_recorded"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_coupling_enabled"])
+        self.assertTrue(report["checks"]["mowa_future_gated_heads_flag_recorded"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_forward_coupled"])
         self.assertTrue(report["checks"]["forward_has_mowa_layerwise_bridge_coupled"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_uses_future_feature_heads"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_active_heads_are_p0"])
         self.assertTrue(report["checks"]["mowa_layerwise_bridge_not_probe_source"])
+        self.assertTrue(report["checks"]["mowa_gated_heads_summary_is_structured_when_enabled"])
 
     def test_e001_starflow_full_path_dry_run_cli_overrides_are_merged(self):
         try:
@@ -2761,6 +2769,116 @@ class MoWAP0HeadsTest(unittest.TestCase):
             report["go_no_go"],
             "TBD: HLC-GCI interface smoke passed; framework integration remains gated",
         )
+
+    def test_future_gated_heads_aliases_preserve_p0_compatibility(self):
+        from starVLA.model.modules.mowa import (
+            MoWAFutureGatedHeads,
+            MoWAFutureGatedHeadsConfig,
+            MoWAGatedHeads,
+            MoWAGatedHeadsConfig,
+            MoWAP0GatedHeads,
+            MoWAP0GatedHeadsConfig,
+        )
+
+        self.assertIs(MoWAFutureGatedHeads, MoWAGatedHeads)
+        self.assertIs(MoWAFutureGatedHeadsConfig, MoWAGatedHeadsConfig)
+        self.assertIs(MoWAP0GatedHeads, MoWAGatedHeads)
+        self.assertIs(MoWAP0GatedHeadsConfig, MoWAGatedHeadsConfig)
+
+    def test_future_gated_heads_use_interpretable_init_gate_value(self):
+        try:
+            import torch
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.modules.mowa import (
+            MoWAFutureFullHeadsConfig,
+            MoWAFutureGatedHeads,
+            MoWAFutureGatedHeadsConfig,
+        )
+
+        model = MoWAFutureGatedHeads(
+            MoWAFutureGatedHeadsConfig(
+                heads_config=MoWAFutureFullHeadsConfig(input_dim=8, hidden_dim=4),
+                init_gate_value=0.5,
+            )
+        )
+        gate_values = model.gate_values()
+        gate_summary = model.gate_summary(step=7)
+
+        self.assertTrue(all(abs(value - 0.5) < 1e-5 for value in gate_values.values()))
+        self.assertEqual(gate_summary["comparison_scope"], "single_fullheads_control_only")
+        self.assertFalse(gate_summary["allow_per_head_sweep"])
+        self.assertEqual(gate_summary["step"], 7)
+
+    def test_future_gated_heads_reject_invalid_scope_or_gate_value(self):
+        from starVLA.model.modules.mowa import (
+            MoWAFutureFullHeadsConfig,
+            MoWAFutureGatedHeadsConfig,
+        )
+
+        with self.assertRaisesRegex(ValueError, "init_gate_value"):
+            MoWAFutureGatedHeadsConfig(
+                heads_config=MoWAFutureFullHeadsConfig(input_dim=8, hidden_dim=4),
+                init_gate_value=1.2,
+            )
+        with self.assertRaisesRegex(ValueError, "comparison_scope"):
+            MoWAFutureGatedHeadsConfig(
+                heads_config=MoWAFutureFullHeadsConfig(input_dim=8, hidden_dim=4),
+                comparison_scope="per_head_sweep",
+            )
+        with self.assertRaisesRegex(ValueError, "must not enable per-head sweep"):
+            MoWAFutureGatedHeadsConfig(
+                heads_config=MoWAFutureFullHeadsConfig(input_dim=8, hidden_dim=4),
+                allow_per_head_sweep=True,
+            )
+
+    def test_future_gated_heads_interface_smoke_passes(self):
+        from tools.mowa.future_gated_heads_interface_smoke import _build_smoke
+
+        report = _build_smoke()
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(report["observed"]["gate_summary"]["comparison_scope"], "single_fullheads_control_only")
+        self.assertFalse(report["observed"]["gate_summary"]["allow_per_head_sweep"])
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: gated-heads interface smoke passed",
+        )
+
+    def test_e002_future_gated_heads_comparison_smoke_passes(self):
+        from tools.mowa.e002_future_gated_heads_comparison_smoke import (
+            build_e002_future_gated_heads_comparison_smoke,
+        )
+
+        report = build_e002_future_gated_heads_comparison_smoke(Path("."))
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: E-002 single FullHeads comparison entry is wired; training remains gated",
+        )
+        self.assertIn(
+            "runtime integration exists but training remains gated",
+            report["unresolved_items"][0],
+        )
+
+    def test_experiment_launch_readiness_matrix_reports_suite_not_ready(self):
+        from tools.mowa.experiment_launch_readiness_matrix import (
+            build_experiment_launch_readiness_matrix,
+        )
+
+        report = build_experiment_launch_readiness_matrix(Path("."))
+
+        self.assertFalse(report["all_training_experiments_ready"])
+        self.assertIn("E-001", report["not_ready_training_experiments"])
+        self.assertIn("E-002", report["not_ready_training_experiments"])
+        entries = {entry["experiment_id"]: entry for entry in report["entries"]}
+        self.assertEqual(entries["E-001"]["status"], "bounded_executable_but_full_launch_blocked")
+        self.assertEqual(entries["E-002"]["status"], "runtime_integrated_but_training_gated")
+        self.assertEqual(entries["E-006"]["status"], "rollout_executed_with_noninformative_checkpoint")
 
     def test_share_tools_strict_mismatch_accepts_legacy_mowa_bridge_key_alias(self):
         from starVLA.model.framework.share_tools import _filter_strict_key_mismatches

@@ -771,6 +771,18 @@ class MoWADataGateTest(unittest.TestCase):
             "TBD: final report template smoke passed",
         )
 
+    def test_p2_frozen_decoder_diagnostic_plan_smoke_passes(self):
+        from tools.mowa.p2_frozen_decoder_diagnostic_smoke import _build_smoke
+
+        report = _build_smoke()
+
+        self.assertFalse(report["eval_started"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: P2 diagnostic plan smoke passed; real decoder runs remain gated",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

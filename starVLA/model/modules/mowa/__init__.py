@@ -29,6 +29,14 @@ from .hlcgci import (
     MoWAHLCGCIConfig,
     MoWAHLCGCIOutput,
 )
+from .gated_heads import (
+    MoWAFutureGatedHeads,
+    MoWAFutureGatedHeadsConfig,
+    MoWAGatedHeads,
+    MoWAGatedHeadsConfig,
+    MoWAP0GatedHeads,
+    MoWAP0GatedHeadsConfig,
+)
 from .p0_heads import (
     MoWAFutureConstructibleHeads,
     MoWAFutureConstructibleHeadsConfig,
@@ -86,6 +94,12 @@ __all__ = [
     "MoWAHLCGCI",
     "MoWAHLCGCIConfig",
     "MoWAHLCGCIOutput",
+    "MoWAFutureGatedHeads",
+    "MoWAFutureGatedHeadsConfig",
+    "MoWAGatedHeads",
+    "MoWAGatedHeadsConfig",
+    "MoWAP0GatedHeads",
+    "MoWAP0GatedHeadsConfig",
     "MoWAFutureConstructibleHeads",
     "MoWAFutureConstructibleHeadsConfig",
     "MoWAFutureFeatureHeads",

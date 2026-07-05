@@ -1,0 +1,47 @@
+{
+  "task_id": "M2-003",
+  "experiment_id": "E-002",
+  "training_started": false,
+  "checks": {
+    "baseline_config_exists": true,
+    "gated_config_exists": true,
+    "gated_candidate_references_fullheads_control": true,
+    "single_fullheads_comparison_only": true,
+    "per_head_sweep_disabled": true,
+    "gated_heads_enabled": true,
+    "candidate_is_launch_gated": true,
+    "unexpected_difference_paths_empty": true
+  },
+  "configs": {
+    "baseline_fullheads": "configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml",
+    "gated_heads_candidate": "configs/mowa/mowa_e002_future_gated_heads_candidate.yaml"
+  },
+  "observed": {
+    "difference_paths": [
+      "experiment_id",
+      "framework.mowa.gated_heads",
+      "inherits",
+      "launch_guard.human_confirmed",
+      "launch_guard.launch_ready",
+      "launch_guard.policy_confirmed",
+      "launch_guard.reason",
+      "notes",
+      "run_id"
+    ],
+    "unexpected_difference_paths": [],
+    "gated_heads": {
+      "enabled": true,
+      "comparison_scope": "single_fullheads_control_only",
+      "allow_per_head_sweep": false,
+      "init_gate_value": 0.5,
+      "gate_logging_target": "future_gated_heads_summary",
+      "fullheads_control_config": "configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml"
+    }
+  },
+  "unresolved_items": [
+    "This is the single static E-002 comparison entry only; runtime integration exists but training remains gated.",
+    "Per-head / leave-one-out / selected-head sweeps remain forbidden.",
+    "No training is started by this smoke."
+  ],
+  "go_no_go": "TBD: E-002 single FullHeads comparison entry is wired; training remains gated"
+}

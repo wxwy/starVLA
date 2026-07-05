@@ -15,29 +15,34 @@ from typing import Any
 
 import torch
 
-from starVLA.model.modules.mowa.gated_heads import MoWAGatedHeads, MoWAGatedHeadsConfig
-from starVLA.model.modules.mowa.p0_heads import MoWAFutureFullHeadsConfig
+from starVLA.model.modules.mowa import (
+    MoWAFutureFullHeadsConfig,
+    MoWAFutureGatedHeads,
+    MoWAFutureGatedHeadsConfig,
+)
 from starVLA.mowa_constants import MOWA_FUTURE_FULL_HEADS, MOWA_FUTURE_CONSTRUCTIBLE_HEADS
 
 OUTPUT = Path("docs_zh/mowa/mowa_future_gated_heads_interface_smoke.json")
 
 
 def _build_smoke() -> dict[str, Any]:
-    cfg = MoWAGatedHeadsConfig(
+    cfg = MoWAFutureGatedHeadsConfig(
         heads_config=MoWAFutureFullHeadsConfig(
             input_dim=1024,
             hidden_dim=512,
         ),
-        init_gate=0.5,
+        init_gate_value=0.5,
     )
-    model = MoWAGatedHeads(cfg)
+    model = MoWAFutureGatedHeads(cfg)
 
     # --- gate shape / range check ---
     gate_dict = model.gate_values()
+    gate_summary = model.gate_summary(step=0)
     gates_ok = (
         len(gate_dict) == len(MOWA_FUTURE_FULL_HEADS)
         and all(0.0 <= v <= 1.0 for v in gate_dict.values())
     )
+    gate_init_ok = all(abs(v - 0.5) < 1e-5 for v in gate_dict.values())
 
     # --- forward smoke ---
     batch, dim = 4, 1024
@@ -59,11 +64,20 @@ def _build_smoke() -> dict[str, Any]:
         "checks": {
             "gate_shape_matches_head_count": len(gate_dict) == len(MOWA_FUTURE_FULL_HEADS),
             "gate_values_in_range": all(0.0 <= v <= 1.0 for v in gate_dict.values()),
+            "gate_init_value_matches_config": gate_init_ok,
             "forward_shape_ok": forward_ok,
             "head_names_match_fullheads": set(model.head_names) == set(MOWA_FUTURE_FULL_HEADS),
+            "single_fullheads_comparison_only": gate_summary["comparison_scope"]
+            == "single_fullheads_control_only",
+            "per_head_sweep_disabled": gate_summary["allow_per_head_sweep"] is False,
         },
         "observed": {
             "gate_values": {k: round(v, 6) for k, v in gate_dict.items()},
+            "gate_summary": {
+                "comparison_scope": gate_summary["comparison_scope"],
+                "allow_per_head_sweep": gate_summary["allow_per_head_sweep"],
+                "step": gate_summary["step"],
+            },
             "hidden_features_shape": list(out.hidden_features.shape),
             "active_heads": list(out.active_heads),
             "masked_heads": list(out.masked_heads),

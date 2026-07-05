@@ -138,6 +138,9 @@ def _touch_training_audit_config(cfg) -> None:
         "framework.mowa.layerwise_bridge_token_intervention",
         "framework.mowa.num_bridge_tokens",
         "framework.mowa.layerwise_bridge_active_heads",
+        "framework.mowa.gated_heads.enabled",
+        "framework.mowa.gated_heads.comparison_scope",
+        "framework.mowa.gated_heads.init_gate_value",
     )
     for path in audit_paths:
         _get_config_path(cfg, path)
@@ -975,6 +978,19 @@ def _write_full_path_dry_run_report(
             "mowa_layerwise_bridge_feature_source": getattr(
                 model,
                 "mowa_layerwise_bridge_feature_source",
+                None,
+            ),
+            "mowa_future_gated_heads_enabled": bool(
+                getattr(model, "mowa_future_gated_heads_enabled", False)
+            ),
+            "mowa_layerwise_bridge_gated_heads_summary": getattr(
+                model,
+                "mowa_last_layerwise_bridge_gated_heads_summary",
+                None,
+            ),
+            "mowa_future_supervision_gated_heads_summary": getattr(
+                model,
+                "mowa_last_future_supervision_gated_heads_summary",
                 None,
             ),
             "mowa_future_supervision_probe_enabled": mowa_supervision_enabled,

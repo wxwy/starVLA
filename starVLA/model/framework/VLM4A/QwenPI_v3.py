@@ -64,6 +64,8 @@ from starVLA.model.modules.mowa import (
     MoWAActionBridgeOutput,
     MoWAFutureFeatureHeads,
     MoWAFutureFeatureHeadsConfig,
+    MoWAFutureGatedHeads,
+    MoWAFutureGatedHeadsConfig,
     MoWAFutureFeatures,
     append_layerwise_bridge_tokens,
     resolve_mowa_action_head_binding,
@@ -335,6 +337,9 @@ class Qwen_PI_v3(baseframework):
         )
         self.mowa_layerwise_bridge_future_feature_heads = None
         self.mowa_layerwise_bridge_head_mask_projector = None
+        self.mowa_future_gated_heads_enabled = self._mowa_gated_heads_enabled()
+        self.mowa_last_layerwise_bridge_gated_heads_summary = None
+        self.mowa_last_future_supervision_gated_heads_summary = None
         if self.mowa_layerwise_bridge_feature_source in MOWA_FUTURE_FEATURE_SOURCE_ALIASES:
             active_heads = getattr(
                 mowa_cfg,
@@ -347,11 +352,9 @@ class Qwen_PI_v3(baseframework):
             ]
             if unknown_heads:
                 raise ValueError(f"Unknown MoWA layerwise bridge active heads: {unknown_heads}")
-            self.mowa_layerwise_bridge_future_feature_heads = MoWAFutureFeatureHeads(
-                MoWAFutureFeatureHeadsConfig(
-                    input_dim=self.action_dit_hidden_dim,
-                    hidden_dim=wam_feature_dim,
-                )
+            self.mowa_layerwise_bridge_future_feature_heads = self._build_mowa_future_head_module(
+                hidden_dim=wam_feature_dim,
+                action_outcome_loss_type="mse",
             )
             head_mask_dim = sum(
                 MOWA_FUTURE_HEAD_OUTPUT_DIMS[head]
@@ -380,6 +383,7 @@ class Qwen_PI_v3(baseframework):
             )
         )
         self.mowa_future_supervision_probe = None
+        self.mowa_last_future_supervision_gated_heads_summary = None
         self.mowa_future_supervision_active_heads = tuple(
             getattr(
                 mowa_cfg,
@@ -404,11 +408,42 @@ class Qwen_PI_v3(baseframework):
                 getattr(mowa_cfg, "p0_supervision_action_outcome_loss_type", "mse"),
             )
         )
-        self.mowa_future_supervision_probe = MoWAFutureFeatureHeads(
-            MoWAFutureFeatureHeadsConfig(
-                input_dim=self.action_dit_hidden_dim,
-                hidden_dim=hidden_dim,
-                action_outcome_loss_type=action_outcome_loss_type,
+        self.mowa_future_supervision_probe = self._build_mowa_future_head_module(
+            hidden_dim=hidden_dim,
+            action_outcome_loss_type=action_outcome_loss_type,
+        )
+
+    def _mowa_gated_heads_enabled(self) -> bool:
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        gated_cfg = getattr(mowa_cfg, "gated_heads", None) if mowa_cfg is not None else None
+        return bool(getattr(gated_cfg, "enabled", False))
+
+    def _build_mowa_future_head_module(
+        self,
+        *,
+        hidden_dim: int,
+        action_outcome_loss_type: str,
+    ):
+        heads_config = MoWAFutureFeatureHeadsConfig(
+            input_dim=self.action_dit_hidden_dim,
+            hidden_dim=hidden_dim,
+            action_outcome_loss_type=action_outcome_loss_type,
+        )
+        if not self._mowa_gated_heads_enabled():
+            return MoWAFutureFeatureHeads(heads_config)
+
+        gated_cfg = getattr(getattr(self.config.framework, "mowa", None), "gated_heads", None)
+        init_gate_value = float(getattr(gated_cfg, "init_gate_value", 0.5))
+        comparison_scope = str(
+            getattr(gated_cfg, "comparison_scope", "single_fullheads_control_only")
+        )
+        allow_per_head_sweep = bool(getattr(gated_cfg, "allow_per_head_sweep", False))
+        return MoWAFutureGatedHeads(
+            MoWAFutureGatedHeadsConfig(
+                heads_config=heads_config,
+                init_gate_value=init_gate_value,
+                comparison_scope=comparison_scope,
+                allow_per_head_sweep=allow_per_head_sweep,
             )
         )
 
@@ -555,7 +590,16 @@ class Qwen_PI_v3(baseframework):
                 MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
             )
             masks = {head: head in active_heads for head in MOWA_FUTURE_FULL_HEADS}
-            return self.mowa_layerwise_bridge_future_feature_heads.future_features(hidden_features, masks)
+            future_features = self.mowa_layerwise_bridge_future_feature_heads.future_features(hidden_features, masks)
+            gate_summary = getattr(
+                self.mowa_layerwise_bridge_future_feature_heads,
+                "gate_summary",
+                None,
+            )
+            self.mowa_last_layerwise_bridge_gated_heads_summary = (
+                gate_summary() if callable(gate_summary) else None
+            )
+            return future_features
         raise RuntimeError(f"Unhandled MoWA layerwise bridge feature source: {source}")
 
     @staticmethod
@@ -625,12 +669,17 @@ class Qwen_PI_v3(baseframework):
             }
 
         loss, losses, _ = supervision_probe.compute_loss(hidden_features, targets, masks)
+        gate_summary = getattr(supervision_probe, "gate_summary", None)
+        self.mowa_last_future_supervision_gated_heads_summary = (
+            gate_summary() if callable(gate_summary) else None
+        )
         return {
             "supervision_available": True,
             "loss": loss,
             "losses": losses,
             "active_heads": tuple(head for head in MOWA_FUTURE_FULL_HEADS if bool(masks.get(head, False))),
             "masked_heads": tuple(head for head in MOWA_FUTURE_FULL_HEADS if not bool(masks.get(head, False))),
+            "gated_heads_summary": self.mowa_last_future_supervision_gated_heads_summary,
         }
 
     def _maybe_apply_mowa_layerwise_bridge_coupling(
@@ -805,6 +854,11 @@ class Qwen_PI_v3(baseframework):
             output["mowa_layerwise_bridge_feature_source"] = mowa_bridge_metadata["feature_source"]
             output["mowa_layerwise_bridge_active_heads"] = mowa_bridge_metadata["active_heads"]
             output["mowa_layerwise_bridge_masked_heads"] = mowa_bridge_metadata["masked_heads"]
+            if self.mowa_last_layerwise_bridge_gated_heads_summary is not None:
+                output["mowa_future_gated_heads_enabled"] = True
+                output["mowa_layerwise_bridge_gated_heads_summary"] = (
+                    self.mowa_last_layerwise_bridge_gated_heads_summary
+                )
         if mowa_future_supervision is not None:
             output["mowa_future_supervision_available"] = mowa_future_supervision["supervision_available"]
             output["mowa_future_supervision_active_heads"] = mowa_future_supervision["active_heads"]
@@ -812,6 +866,11 @@ class Qwen_PI_v3(baseframework):
             if mowa_future_supervision["loss"] is not None:
                 output["mowa_future_supervision_loss"] = mowa_future_supervision["loss"]
                 output["mowa_future_supervision_losses"] = mowa_future_supervision["losses"]
+            if mowa_future_supervision.get("gated_heads_summary") is not None:
+                output["mowa_future_gated_heads_enabled"] = True
+                output["mowa_future_supervision_gated_heads_summary"] = mowa_future_supervision[
+                    "gated_heads_summary"
+                ]
         return output
 
     @torch.inference_mode()

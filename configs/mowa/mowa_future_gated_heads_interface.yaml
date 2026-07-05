@@ -8,7 +8,9 @@ task_id: M2-003
 gated_heads:
   enabled: false
   heads_config_ref: configs/mowa/mowa_p0_fullheads_interface.yaml
-  init_gate: 0.5
+  init_gate_value: 0.5
+  comparison_scope: single_fullheads_control_only
+  allow_per_head_sweep: false
   note: >
     Per-head scalar gates wrap MoWAFutureFeatureHeads.  Only one
     comparison against FullHeads is planned (E-002).  No per-head /
@@ -22,4 +24,6 @@ launch:
 checks:
   gate_range_valid: true
   gate_shape_matches_head_count: true
+  comparison_scope_single_fullheads_only: true
+  per_head_sweep_disabled: true
   smoke_passed: TBD

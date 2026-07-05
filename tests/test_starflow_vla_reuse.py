@@ -10,6 +10,7 @@ import torch
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.model.framework.VLM4A.QwenPI_v3 import Qwen_PI_v3
 from starVLA.model.framework.VLM4A.StarFlowVLA import StarFlowVLA
+from starVLA.model.modules.mowa import MoWAFutureGatedHeads
 
 
 class _CaptureActionModel:
@@ -66,6 +67,7 @@ def _minimal_config_with_mowa_layerwise_coupling(
     intervention: str = "baseline",
     action_hidden_dim: int = 4,
     feature_source: str | None = None,
+    gated_heads_enabled: bool = False,
 ) -> SimpleNamespace:
     active_heads = ("task_progress", "action_outcome_class")
     cfg = _minimal_config()
@@ -79,6 +81,24 @@ def _minimal_config_with_mowa_layerwise_coupling(
     if feature_source is not None:
         mowa["layerwise_bridge_feature_source"] = feature_source
         mowa["layerwise_bridge_active_heads"] = active_heads
+    if gated_heads_enabled:
+        mowa["gated_heads"] = SimpleNamespace(enabled=True)
+    cfg.framework.mowa = SimpleNamespace(**mowa)
+    return cfg
+
+
+def _minimal_config_with_mowa_future_supervision(
+    *,
+    gated_heads_enabled: bool = False,
+) -> SimpleNamespace:
+    cfg = _minimal_config()
+    mowa = {
+        "enable_future_supervision_loss": True,
+        "future_supervision_hidden_dim": 4,
+        "future_supervision_active_heads": ("task_progress", "action_outcome_class"),
+    }
+    if gated_heads_enabled:
+        mowa["gated_heads"] = SimpleNamespace(enabled=True)
     cfg.framework.mowa = SimpleNamespace(**mowa)
     return cfg
 
@@ -360,6 +380,49 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         )
         self.assertEqual(action_model.captured_vl_shapes, [(1, 5, 4), (1, 5, 4)])
 
+    def test_mowa_layerwise_bridge_uses_gated_future_heads_when_enabled(self):
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.config = _minimal_config_with_mowa_layerwise_coupling(
+            True,
+            feature_source="mowa_future_feature_heads",
+            gated_heads_enabled=True,
+        )
+        model.config.trainer = {"repeated_diffusion_steps": 1}
+        model.action_horizon = 8
+        model.action_dit_hidden_dim = 4
+        model.num_action_dit_layers = 2
+        model._setup_mowa_layerwise_bridge_coupling()
+        self.assertIsInstance(
+            model.mowa_layerwise_bridge_future_feature_heads,
+            MoWAFutureGatedHeads,
+        )
+        action_model = _CaptureActionModel()
+        model.action_model = action_model
+        model._encode_vl_hidden_states = lambda images, instructions: (
+            [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
+            torch.ones(1, 3, dtype=torch.bool),
+        )
+
+        output = model.forward(
+            [
+                {
+                    "image": [],
+                    "lang": "open the drawer",
+                    "action": np.zeros((8, 7), dtype=np.float32),
+                }
+            ]
+        )
+
+        self.assertTrue(output["mowa_future_gated_heads_enabled"])
+        self.assertEqual(
+            output["mowa_layerwise_bridge_gated_heads_summary"]["comparison_scope"],
+            "single_fullheads_control_only",
+        )
+        self.assertFalse(
+            output["mowa_layerwise_bridge_gated_heads_summary"]["allow_per_head_sweep"]
+        )
+
     def test_mowa_layerwise_bridge_rejects_unknown_feature_source(self):
         model = object.__new__(StarFlowVLA)
         torch.nn.Module.__init__(model)
@@ -519,6 +582,51 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertEqual(action_model.captured_vl_shapes, [(2, 5, 4), (2, 5, 4)])
         self.assertEqual(action_model.captured_attention_mask_shape, (2, 5))
         self.assertTrue(torch.allclose(bridge_tokens, torch.zeros_like(bridge_tokens)))
+
+    def test_mowa_future_supervision_uses_gated_heads_when_enabled(self):
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.config = _minimal_config_with_mowa_future_supervision(gated_heads_enabled=True)
+        model.config.trainer = {"repeated_diffusion_steps": 1}
+        model.action_horizon = 8
+        model.action_dit_hidden_dim = 4
+        model.num_action_dit_layers = 2
+        model._setup_mowa_future_supervision_loss()
+        self.assertIsInstance(model.mowa_future_supervision_probe, MoWAFutureGatedHeads)
+        model.action_model = _CaptureActionModel()
+        model._encode_vl_hidden_states = lambda images, instructions: (
+            [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
+            torch.ones(1, 3, dtype=torch.bool),
+        )
+
+        output = model.forward(
+            [
+                {
+                    "image": [],
+                    "lang": "open the drawer",
+                    "action": np.zeros((8, 7), dtype=np.float32),
+                    "mowa_p0_targets": {
+                        "task_progress": 0.5,
+                        "action_outcome_class": [0.0, 1.0],
+                    },
+                    "mowa_p0_masks": {
+                        "task_progress": True,
+                        "action_outcome_class": True,
+                    },
+                }
+            ]
+        )
+
+        self.assertTrue(output["mowa_future_supervision_available"])
+        self.assertIn("mowa_future_supervision_loss", output)
+        self.assertTrue(output["mowa_future_gated_heads_enabled"])
+        self.assertEqual(
+            output["mowa_future_supervision_gated_heads_summary"]["comparison_scope"],
+            "single_fullheads_control_only",
+        )
+        self.assertFalse(
+            output["mowa_future_supervision_gated_heads_summary"]["allow_per_head_sweep"]
+        )
 
 
 if __name__ == "__main__":

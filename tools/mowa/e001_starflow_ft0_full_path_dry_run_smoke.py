@@ -77,6 +77,9 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
         "mowa_layerwise_bridge_coupling_enabled": (
             framework.get("mowa_layerwise_bridge_coupling_enabled") is True
         ),
+        "mowa_future_gated_heads_flag_recorded": (
+            "mowa_future_gated_heads_enabled" in framework
+        ),
         "mowa_layerwise_bridge_forward_coupled": (
             framework.get("mowa_layerwise_bridge_coupling_status")
             == "forward_coupled_in_full_path_dry_run"
@@ -95,6 +98,9 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
         "mowa_layerwise_bridge_not_probe_source": (
             MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE
             not in (forward.get("mowa_layerwise_bridge_active_heads") or [])
+        ),
+        "mowa_gated_heads_summary_is_structured_when_enabled": (
+            _gated_heads_summary_is_valid(framework)
         ),
     }
     return {
@@ -151,6 +157,21 @@ def _starflow_ft_variant_matches_tokens(framework: dict[str, Any]) -> bool:
     if variant == "ft0":
         return num_tokens == 0
     return variant in {"config_defined", "custom", "ft_custom"} and num_tokens >= 0
+
+
+def _gated_heads_summary_is_valid(framework: dict[str, Any]) -> bool:
+    enabled = framework.get("mowa_future_gated_heads_enabled")
+    if enabled is None:
+        return False
+    if enabled is False:
+        return framework.get("mowa_layerwise_bridge_gated_heads_summary") is None
+    summary = framework.get("mowa_layerwise_bridge_gated_heads_summary")
+    if not isinstance(summary, dict):
+        return False
+    return (
+        summary.get("comparison_scope") == "single_fullheads_control_only"
+        and summary.get("allow_per_head_sweep") is False
+    )
 
 
 if __name__ == "__main__":

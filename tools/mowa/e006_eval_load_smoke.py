@@ -9,6 +9,17 @@ import time
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.mowa.mowa_checkpoint_resolver import (
+        resolve_mowa_checkpoint_reference,
+        resolve_mowa_final_model_reference,
+    )
+except ModuleNotFoundError:
+    from mowa_checkpoint_resolver import (
+        resolve_mowa_checkpoint_reference,
+        resolve_mowa_final_model_reference,
+    )
+
 
 E006_CONFIG = Path("configs/mowa/mowa_e006_eval_load_smoke.yaml")
 
@@ -151,9 +162,20 @@ def _load_default_checkpoint_paths(repo_root: Path) -> tuple[Path, Path]:
     config_path = repo_root / E006_CONFIG
     cfg = OmegaConf.load(config_path)
     checkpoint_cfg = cfg.checkpoint
+    checkpoint_root_policy = Path(
+        str(getattr(checkpoint_cfg, "checkpoint_root_policy", "playground/mowa_ckpt"))
+    )
     return (
-        Path(str(checkpoint_cfg.eval_candidate_checkpoint)),
-        Path(str(checkpoint_cfg.final_model_checkpoint)),
+        resolve_mowa_checkpoint_reference(
+            repo_root,
+            checkpoint_cfg.eval_candidate_checkpoint,
+            checkpoint_root_policy=checkpoint_root_policy,
+        ),
+        resolve_mowa_final_model_reference(
+            repo_root,
+            checkpoint_cfg.final_model_checkpoint,
+            checkpoint_root_policy=checkpoint_root_policy,
+        ),
     )
 
 

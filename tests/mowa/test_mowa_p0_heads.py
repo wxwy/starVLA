@@ -1099,6 +1099,67 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["checkpoint_under_mowa_ckpt"])
         self.assertTrue(report["checks"]["final_model_dir_exists"])
 
+    def test_e006_eval_load_resolves_latest_complete_checkpoint_alias(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            for run_id, completed_steps in (
+                ("MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001000", 1),
+                ("MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_002000", 2),
+            ):
+                checkpoint = (
+                    root
+                    / "playground"
+                    / "mowa_ckpt"
+                    / run_id
+                    / "checkpoints"
+                    / "steps_2"
+                )
+                final_model = checkpoint.parents[1] / "final_model"
+                checkpoint.mkdir(parents=True)
+                final_model.mkdir(parents=True)
+                (checkpoint / "trainer_state.json").write_text(
+                    json.dumps({"completed_steps": completed_steps}),
+                    encoding="utf-8",
+                )
+                (checkpoint / "starflow_mapping.json").write_text(
+                    json.dumps({"framework_name": "StarFlowVLA", "action_head": "LayerwiseFM"}),
+                    encoding="utf-8",
+                )
+                for name in (
+                    "model.safetensors.index.json",
+                    "config.full.yaml",
+                    "dataset_statistics.json",
+                    "optimizer_rank_00000.pt",
+                    "scheduler.pt",
+                    "random_states_0.pkl",
+                ):
+                    (checkpoint / name).write_bytes(b"placeholder")
+                (checkpoint / "model-00001.safetensors").write_bytes(b"placeholder")
+            (root / "configs" / "mowa" / "mowa_e006_eval_load_smoke.yaml").write_text(
+                "checkpoint:\n"
+                "  eval_candidate_checkpoint: latest_complete\n"
+                "  final_model_checkpoint: latest_complete\n"
+                "  checkpoint_root_policy: playground/mowa_ckpt\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e006_eval_load_smoke import build_e006_eval_load_smoke
+
+            report = build_e006_eval_load_smoke(root, execute_load=False)
+
+        self.assertEqual(
+            report["observed"]["checkpoint"],
+            "playground/mowa_ckpt/"
+            "MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_002000/checkpoints/steps_2",
+        )
+        self.assertEqual(
+            report["observed"]["final_model"],
+            "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_002000/final_model",
+        )
+        self.assertTrue(report["checks"]["checkpoint_dir_exists"])
+        self.assertTrue(report["checks"]["final_model_dir_exists"])
+
     def test_action_bridge_interface_records_starflow_candidate_values(self):
         from omegaconf import OmegaConf
 
@@ -1486,6 +1547,109 @@ class MoWAP0HeadsTest(unittest.TestCase):
             "framework.mowa.layerwise_bridge_token_intervention=zero",
             report["commands"]["zero"]["server_command"],
         )
+
+    def test_e006_policy_rollout_preflight_resolves_latest_complete_checkpoint_alias(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_003000"
+                / "checkpoints"
+                / "steps_2"
+            )
+            checkpoint.mkdir(parents=True)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "deployment" / "model_server").mkdir(parents=True)
+            (root / "examples" / "Robocasa_365" / "eval_files").mkdir(parents=True)
+            (root / ".venv" / "bin").mkdir(parents=True)
+            (root / ".robocase" / "bin").mkdir(parents=True)
+            (root / "deployment" / "model_server" / "server_policy.py").write_text(
+                "",
+                encoding="utf-8",
+            )
+            (root / "examples" / "Robocasa_365" / "eval_files" / "simulation_env.py").write_text(
+                "",
+                encoding="utf-8",
+            )
+            (root / "examples" / "Robocasa_365" / "eval_files" / "run_eval.sh").write_text(
+                "#!/usr/bin/env bash\nset -euo pipefail\n",
+                encoding="utf-8",
+            )
+            (root / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
+            (root / ".robocase" / "bin" / "python").write_text("", encoding="utf-8")
+            (checkpoint / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 2}),
+                encoding="utf-8",
+            )
+            (checkpoint / "starflow_mapping.json").write_text(
+                json.dumps({"framework_name": "StarFlowVLA", "action_head": "LayerwiseFM"}),
+                encoding="utf-8",
+            )
+            for name in (
+                "model.safetensors.index.json",
+                "config.full.yaml",
+                "dataset_statistics.json",
+                "optimizer_rank_00000.pt",
+                "scheduler.pt",
+                "random_states_0.pkl",
+            ):
+                (checkpoint / name).write_bytes(b"placeholder")
+            (checkpoint / "model-00001.safetensors").write_bytes(b"placeholder")
+            config = root / "configs" / "mowa" / "mowa_e006_policy_rollout_candidate.yaml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "stage: M5",
+                        "task_id: M5-007",
+                        "experiment_id: E-006",
+                        "experiment_name: test",
+                        "launch_ready: false",
+                        "eval_started: false",
+                        "requires_human_confirmation: true",
+                        "checkpoint: latest_complete",
+                        "checkpoint_root_policy: playground/mowa_ckpt",
+                        "server:",
+                        "  python: .venv/bin/python",
+                        "  entrypoint: deployment/model_server/server_policy.py",
+                        "  port_base: 5686",
+                        "  use_bf16: true",
+                        "  idle_timeout: 1800",
+                        "client:",
+                        "  python: .robocase/bin/python",
+                        "  module: examples.Robocasa_365.eval_files.simulation_env",
+                        "  env_name: robocasa/OpenDrawer",
+                        "  n_episodes: 2",
+                        "  n_envs: 2",
+                        "  max_episode_steps: 100",
+                        "  n_action_steps: 8",
+                        "  video_out_path: playground/eval_results/mowa/videos",
+                        "interventions:",
+                        "  - baseline",
+                        "  - zero",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e006_policy_rollout_preflight_smoke import (
+                build_e006_policy_rollout_preflight_smoke,
+            )
+
+            report = build_e006_policy_rollout_preflight_smoke(
+                root,
+                Path("configs/mowa/mowa_e006_policy_rollout_candidate.yaml"),
+            )
+
+        resolved = (
+            "playground/mowa_ckpt/"
+            "MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_003000/checkpoints/steps_2"
+        )
+        self.assertTrue(report["checks"]["checkpoint_exists"])
+        self.assertIn(resolved, report["commands"]["baseline"]["server_command"])
+        self.assertIn(resolved, report["commands"]["baseline"]["client_command"])
 
     def test_e006_policy_rollout_smoke_plan_does_not_execute(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -10,6 +10,11 @@ from typing import Any
 
 from omegaconf import OmegaConf
 
+try:
+    from tools.mowa.mowa_checkpoint_resolver import resolve_mowa_checkpoint_reference
+except ModuleNotFoundError:
+    from mowa_checkpoint_resolver import resolve_mowa_checkpoint_reference
+
 
 CONFIG = Path("configs/mowa/mowa_e006_policy_rollout_candidate.yaml")
 OUTPUT = Path("docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json")
@@ -42,6 +47,13 @@ def build_e006_policy_rollout_preflight_smoke(
     root = Path(repo_root)
     config_file = root / config_path
     cfg = OmegaConf.load(config_file)
+    cfg.checkpoint = str(
+        resolve_mowa_checkpoint_reference(
+            root,
+            cfg.checkpoint,
+            checkpoint_root_policy=cfg.checkpoint_root_policy,
+        )
+    )
     commands = _build_rollout_commands(cfg)
     bash_syntax = subprocess.run(
         ["bash", "-n", str(RUN_EVAL)],

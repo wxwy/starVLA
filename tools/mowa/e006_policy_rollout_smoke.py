@@ -15,8 +15,10 @@ from typing import Any
 from omegaconf import OmegaConf
 
 try:
+    from tools.mowa.mowa_checkpoint_resolver import resolve_mowa_checkpoint_reference
     from tools.mowa.e006_policy_rollout_preflight_smoke import CONFIG, OUTPUT, _build_rollout_commands
 except ModuleNotFoundError:
+    from mowa_checkpoint_resolver import resolve_mowa_checkpoint_reference
     from e006_policy_rollout_preflight_smoke import CONFIG, OUTPUT, _build_rollout_commands
 
 
@@ -59,6 +61,13 @@ def run_or_plan_e006_policy_rollout_smoke(
 ) -> dict[str, Any]:
     root = Path(repo_root)
     cfg = OmegaConf.load(root / config_path)
+    cfg.checkpoint = str(
+        resolve_mowa_checkpoint_reference(
+            root,
+            cfg.checkpoint,
+            checkpoint_root_policy=cfg.checkpoint_root_policy,
+        )
+    )
     commands = _build_rollout_commands(cfg)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     artifact_dir = ARTIFACT_ROOT / stamp

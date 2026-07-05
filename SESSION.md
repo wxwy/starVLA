@@ -2,6 +2,7 @@
 
 ## 当前阶段
 - M1 G0 Data Verification Gate 数据复验已通过；P0 ConstructibleHeads one-step train smoke 已通过，仍不计入 E-001 主训练。
+- MoWA 后续推进以 `docs_zh/mowa/04_task_breakdown.md` 的“当前落实顺序（2026-07-05）”为准；临时话题不再插队改变执行优先级。当前下一步固定为 E-001 paired baseline/MoWA runtime symmetry checker，不启动正式训练、不做大规模命名重写。
 - 2026-07-04 完成当前机器上 StarFlow VLA tmux `train` 会话自动监控：
   - 检测到 run_id `P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849` 正在训练（step 15141/80000，约 18.9%）。
   - 从 tmux capture-pane 抓取到最新 loss（action_dit_loss ≈ 0.0867 @ step 15140）。

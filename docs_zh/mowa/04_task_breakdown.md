@@ -2,6 +2,26 @@
 
 任务卡继承 `02_detailed_design.md` 的 Implementation Task、Ablation Task 与 Risk Item。本文件只拆解执行任务，不启动模型、数据或训练代码实现。
 
+## 当前落实顺序（2026-07-05）
+
+本节是当前 checkout 的执行准则。后续推进按本顺序落实，不因单次对话里的“可以训练”“先看命名”等临时话题改变优先级；临时话题只记录为待办或兼容性约束，除非用户明确要求修改本落实顺序。
+
+| 顺序 | 工作包 | 当前状态 | 下一步可执行项 | 不做事项 / Gate |
+|---|---|---|---|---|
+| 1 | E-001 paired baseline/MoWA 训练前一致性 | StarFlow ft0 baseline candidate 与 MoWA launch candidate 已存在，launch guard 物理阻断已验证。 | 补齐 baseline/MoWA runtime symmetry checker：只允许 MoWA bridge、future labels、feature source 等字段不同，其余数据、action head、trainer、checkpoint、wandb/offline 策略必须一致。 | 不启动正式训练；不修改 StarFlow 原项目配置。 |
+| 2 | E-001 launch readiness 收敛 | save/resume smoke、eval-load、bounded bs4 runtime smoke 已完成；`launch_ready=false`、`policy_confirmed=false` 保持。 | 将 symmetry checker 接入 readiness，并确认 launch candidate 的最终参数、checkpoint root、resume、offline logging 都可追溯。 | 不能因为用户说“可以训练”就直接训练；必须先完成 readiness 更新和人工确认字段。 |
+| 3 | E-006 action-coupling 证据 | synthetic intervention、checkpoint-backed forward、rollout preflight 已完成；真实 rollout 被 RoboCasa assets 缺失阻断。 | 先把 assets blocker 输出为结构化环境阻塞，或在 assets 补齐后重跑 baseline/zero/batch_shuffle/head_mask rollout。 | 没有真实 success_rate 前，不声明 action-gain。 |
+| 4 | 命名语义化收敛 | 新运行时代码已开始使用 `future_feature` / `future_supervision` / `latent_cache` 语义别名，旧 `P0/P1` 字段保留兼容。 | 只在碰到相关运行时代码或新报告时继续收敛；历史配置、checkpoint metadata、旧 JSON 不批量改名。 | 不能把命名问题插队到训练 gate 之前做大规模重命名。 |
+| 5 | 正式 E-001 训练 | 尚未放行。 | 只有当 1-3 完成且用户明确确认 `policy_confirmed=true`、`human_confirmed=true`、`launch_ready=true` 后，才执行正式训练命令。 | launch_guard 未放行时必须物理拒绝；wandb 默认保持 offline/disabled 策略。 |
+| 6 | P1 / latent-cache 后续 | latent cache contract 仅 plan-only 通过。 | E-001/E-006 证据闭环后，再进入真实 latent cache builder 或 P1-b0 接口实现。 | 不在 E-001 训练前并行展开 P1 主实现。 |
+
+### 执行纪律
+
+1. 每轮开始先对照“当前落实顺序”选择最高优先级未完成项。
+2. 用户临时提到训练、命名、review 或外部建议时，先判断是否属于当前工作包；不属于则记录，不插队实施。
+3. 任何正式训练前必须满足 readiness、launch guard、人工确认、checkpoint/resume/logging 可追溯四个条件。
+4. 每个工程步必须最小修改、可验证、更新 `SESSION.md` 和 `07_implementation_log.md`，再提交。
+
 ## M0-001：MoWA 文档入口与 Agent 规则
 
 | 项 | 内容 |

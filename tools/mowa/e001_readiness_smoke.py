@@ -25,6 +25,12 @@ MOWA_ACTION_BRIDGE_INTERFACE_CONFIG = Path("configs/mowa/mowa_action_bridge_inte
 E001_TRAINING_COMMAND_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_training_command_draft.yaml")
 E001_TRAINING_COMMAND_CANDIDATE_CONFIG = Path("configs/mowa/mowa_e001_training_command_candidate.yaml")
 E001_LAUNCH_CANDIDATE_CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml")
+E001_STARFLOW_FT0_BASELINE_CANDIDATE_CONFIG = Path(
+    "configs/mowa/mowa_e001_starflow_ft0_baseline_candidate.yaml"
+)
+E001_STARFLOW_FT0_COMPARISON_SMOKE_REPORT = Path(
+    "docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json"
+)
 E001_TRAINING_SMOKE_CONFIG = Path("configs/mowa/mowa_e001_training_smoke.yaml")
 E001_TRAINING_CONFIG_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_training_config_smoke.json")
 E001_TRAIN_STARVLA_DRY_RUN_CONFIG = Path("configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml")
@@ -159,6 +165,12 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             _text_contains(root / E001_LAUNCH_CANDIDATE_CONFIG, "launch_ready: false")
             and _text_contains(root / E001_LAUNCH_CANDIDATE_CONFIG, "policy_confirmed: false")
         ),
+        "starflow_ft0_baseline_candidate_created": (
+            root / E001_STARFLOW_FT0_BASELINE_CANDIDATE_CONFIG
+        ).is_file(),
+        "starflow_ft0_comparison_smoke_passed": _checks_report_passed(
+            root / E001_STARFLOW_FT0_COMPARISON_SMOKE_REPORT
+        ),
         "training_smoke_config_created": (root / E001_TRAINING_SMOKE_CONFIG).is_file(),
         "training_config_smoke_passed": _training_config_smoke_passed(
             root / E001_TRAINING_CONFIG_SMOKE_REPORT
@@ -260,6 +272,12 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "e001_training_command_draft_config": str(E001_TRAINING_COMMAND_DRAFT_CONFIG),
             "e001_training_command_candidate_config": str(E001_TRAINING_COMMAND_CANDIDATE_CONFIG),
             "e001_launch_candidate_config": str(E001_LAUNCH_CANDIDATE_CONFIG),
+            "e001_starflow_ft0_baseline_candidate_config": str(
+                E001_STARFLOW_FT0_BASELINE_CANDIDATE_CONFIG
+            ),
+            "e001_starflow_ft0_comparison_smoke_report": str(
+                E001_STARFLOW_FT0_COMPARISON_SMOKE_REPORT
+            ),
             "e001_training_smoke_config": str(E001_TRAINING_SMOKE_CONFIG),
             "e001_training_config_smoke_report": str(E001_TRAINING_CONFIG_SMOKE_REPORT),
             "e001_train_starvla_full_path_dry_run_config": str(E001_TRAIN_STARVLA_DRY_RUN_CONFIG),

@@ -1032,6 +1032,29 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["candidate_uses_future_feature_heads_source"])
         self.assertEqual(report["go_no_go"], "TBD: launch candidate is wired; training remains gated")
 
+    def test_e001_starflow_ft0_comparison_smoke_pins_only_mowa_delta(self):
+        from tools.mowa.e001_starflow_ft0_comparison_smoke import (
+            build_starflow_ft0_comparison_smoke,
+        )
+
+        report = build_starflow_ft0_comparison_smoke(Path("."))
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(report["checks"]["baseline_config_created"])
+        self.assertTrue(report["checks"]["mowa_candidate_config_created"])
+        self.assertTrue(report["checks"]["baseline_launch_gated"])
+        self.assertTrue(report["checks"]["mowa_launch_gated"])
+        self.assertTrue(report["checks"]["baseline_bridge_disabled"])
+        self.assertTrue(report["checks"]["mowa_bridge_enabled"])
+        self.assertTrue(report["checks"]["baseline_p0_labels_disabled"])
+        self.assertTrue(report["checks"]["mowa_p0_labels_enabled"])
+        self.assertTrue(report["checks"]["paired_invariants_match"])
+        self.assertTrue(report["checks"]["official_ft0_is_reference_only"])
+        self.assertEqual(
+            report["expected_differences"]["framework.mowa.enable_layerwise_bridge_token_coupling"],
+            {"baseline": False, "mowa": True},
+        )
+
     def test_e006_eval_load_smoke_validates_checkpoint_sidecars(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

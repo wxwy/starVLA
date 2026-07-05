@@ -1,0 +1,179 @@
+{
+  "stage": "P0",
+  "experiment_id": "E-001",
+  "training_started": false,
+  "baseline_config": "configs/mowa/mowa_e001_starflow_ft0_baseline_candidate.yaml",
+  "mowa_config": "configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml",
+  "official_starflow_ft0_reference": "configs/starflow_vla/ablations/future_tokens_0.yaml",
+  "checks": {
+    "baseline_config_created": true,
+    "mowa_candidate_config_created": true,
+    "official_starflow_ft0_config_exists": true,
+    "baseline_launch_gated": true,
+    "mowa_launch_gated": true,
+    "baseline_bridge_disabled": true,
+    "mowa_bridge_enabled": true,
+    "baseline_p0_labels_disabled": true,
+    "mowa_p0_labels_enabled": true,
+    "paired_invariants_match": true,
+    "official_ft0_is_reference_only": true
+  },
+  "invariant_values": {
+    "framework.name": {
+      "baseline": "StarFlowVLA",
+      "mowa": "StarFlowVLA"
+    },
+    "framework.starflow_ft_variant": {
+      "baseline": "ft0",
+      "mowa": "ft0"
+    },
+    "framework.state_mode": {
+      "baseline": "discretized_instruction",
+      "mowa": "discretized_instruction"
+    },
+    "framework.qwenvl.base_vlm": {
+      "baseline": "./playground/Pretrained_models/Qwen3-VL-4B-Instruct",
+      "mowa": "./playground/Pretrained_models/Qwen3-VL-4B-Instruct"
+    },
+    "framework.qwenvl.attn_implementation": {
+      "baseline": "flash_attention_2",
+      "mowa": "flash_attention_2"
+    },
+    "framework.qwenvl.vl_hidden_dim": {
+      "baseline": 2048,
+      "mowa": 2048
+    },
+    "framework.qwenvl.num_vl_layers": {
+      "baseline": 36,
+      "mowa": 36
+    },
+    "framework.action_model.action_model_type": {
+      "baseline": "LayerwiseFM",
+      "mowa": "LayerwiseFM"
+    },
+    "framework.action_model.action_dim": {
+      "baseline": 12,
+      "mowa": 12
+    },
+    "framework.action_model.state_dim": {
+      "baseline": 16,
+      "mowa": 16
+    },
+    "framework.action_model.action_horizon": {
+      "baseline": 16,
+      "mowa": 16
+    },
+    "framework.action_model.future_action_window_size": {
+      "baseline": 15,
+      "mowa": 15
+    },
+    "framework.action_model.past_action_window_size": {
+      "baseline": 0,
+      "mowa": 0
+    },
+    "framework.action_model.repeated_diffusion_steps": {
+      "baseline": 1,
+      "mowa": 1
+    },
+    "framework.action_model.num_inference_timesteps": {
+      "baseline": 4,
+      "mowa": 4
+    },
+    "framework.action_model.add_pos_embed": {
+      "baseline": true,
+      "mowa": true
+    },
+    "framework.action_model.max_seq_len": {
+      "baseline": 1024,
+      "mowa": 1024
+    },
+    "framework.action_model.num_target_vision_tokens": {
+      "baseline": 0,
+      "mowa": 0
+    },
+    "framework.action_model.diffusion_model_cfg.action_dit_hidden_dim": {
+      "baseline": 1024,
+      "mowa": 1024
+    },
+    "datasets.vla_data.data_mix": {
+      "baseline": "robocasa365_open_drawer_target_human",
+      "mowa": "robocasa365_open_drawer_target_human"
+    },
+    "datasets.vla_data.action_type": {
+      "baseline": "delta_ee",
+      "mowa": "delta_ee"
+    },
+    "datasets.vla_data.per_device_batch_size": {
+      "baseline": 4,
+      "mowa": 4
+    },
+    "trainer.max_train_steps": {
+      "baseline": 1000,
+      "mowa": 1000
+    },
+    "trainer.gradient_accumulation_steps": {
+      "baseline": 1,
+      "mowa": 1
+    },
+    "trainer.disable_wandb": {
+      "baseline": true,
+      "mowa": true
+    },
+    "trainer.save_interval": {
+      "baseline": 1000,
+      "mowa": 1000
+    }
+  },
+  "invariant_matches": {
+    "framework.name": true,
+    "framework.starflow_ft_variant": true,
+    "framework.state_mode": true,
+    "framework.qwenvl.base_vlm": true,
+    "framework.qwenvl.attn_implementation": true,
+    "framework.qwenvl.vl_hidden_dim": true,
+    "framework.qwenvl.num_vl_layers": true,
+    "framework.action_model.action_model_type": true,
+    "framework.action_model.action_dim": true,
+    "framework.action_model.state_dim": true,
+    "framework.action_model.action_horizon": true,
+    "framework.action_model.future_action_window_size": true,
+    "framework.action_model.past_action_window_size": true,
+    "framework.action_model.repeated_diffusion_steps": true,
+    "framework.action_model.num_inference_timesteps": true,
+    "framework.action_model.add_pos_embed": true,
+    "framework.action_model.max_seq_len": true,
+    "framework.action_model.num_target_vision_tokens": true,
+    "framework.action_model.diffusion_model_cfg.action_dit_hidden_dim": true,
+    "datasets.vla_data.data_mix": true,
+    "datasets.vla_data.action_type": true,
+    "datasets.vla_data.per_device_batch_size": true,
+    "trainer.max_train_steps": true,
+    "trainer.gradient_accumulation_steps": true,
+    "trainer.disable_wandb": true,
+    "trainer.save_interval": true
+  },
+  "expected_differences": {
+    "framework.mowa.enable_layerwise_bridge_token_coupling": {
+      "baseline": false,
+      "mowa": true
+    },
+    "datasets.vla_data.enable_mowa_p0_labels": {
+      "baseline": false,
+      "mowa": true
+    },
+    "framework.mowa.layerwise_bridge_feature_source": {
+      "baseline": null,
+      "mowa": "mowa_p0_fullheads"
+    },
+    "framework.mowa.num_bridge_tokens": {
+      "baseline": null,
+      "mowa": 2
+    }
+  },
+  "unresolved_items": [
+    "This is a static config comparison only; no training is started.",
+    "The official StarFlow ft0 YAML remains a reference config on LIBERO, not the paired RoboCasa baseline.",
+    "Both paired candidate configs remain launch-gated until explicit human confirmation."
+  ],
+  "go_no_go": "TBD: paired StarFlow ft0 baseline and MoWA bridge configs are aligned and gated"
+}

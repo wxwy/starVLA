@@ -914,6 +914,7 @@ def _write_full_path_dry_run_report(
     )
     trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
     total_params = sum(param.numel() for param in model.parameters())
+    mowa_labels_enabled = bool(getattr(cfg.datasets.vla_data, "enable_mowa_p0_labels", False))
     mowa_supervision_enabled = bool(getattr(model, "mowa_p0_supervision_probe_enabled", False))
     mowa_supervision_active_heads = list(getattr(model, "mowa_p0_supervision_active_heads", ()))
     mowa_supervision_label_status = (
@@ -975,7 +976,8 @@ def _write_full_path_dry_run_report(
             "per_device_batch_size": int(cfg.datasets.vla_data.per_device_batch_size),
             "dataloader_type": type(dataloader).__name__,
             "dataloader_length": len(dataloader) if hasattr(dataloader, "__len__") else None,
-            "mowa_p0_labels_enabled": bool(getattr(cfg.datasets.vla_data, "enable_mowa_p0_labels", False)),
+            "mowa_future_labels_enabled": mowa_labels_enabled,
+            "mowa_p0_labels_enabled": mowa_labels_enabled,
             "batch_summary": batch_summary or {"fetched": False},
         },
         "optimizer": {

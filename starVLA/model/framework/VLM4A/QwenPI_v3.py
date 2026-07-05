@@ -332,6 +332,7 @@ class Qwen_PI_v3(baseframework):
             if wam_feature_dim == self.action_dit_hidden_dim
             else nn.Linear(self.action_dit_hidden_dim, wam_feature_dim)
         )
+        self.mowa_layerwise_bridge_future_feature_heads = None
         self.mowa_layerwise_bridge_p0_heads = None
         self.mowa_layerwise_bridge_head_mask_projector = None
         if self.mowa_layerwise_bridge_feature_source in MOWA_FUTURE_FEATURE_SOURCE_ALIASES:
@@ -346,12 +347,13 @@ class Qwen_PI_v3(baseframework):
             ]
             if unknown_heads:
                 raise ValueError(f"Unknown MoWA layerwise bridge active heads: {unknown_heads}")
-            self.mowa_layerwise_bridge_p0_heads = MoWAFutureFeatureHeads(
+            self.mowa_layerwise_bridge_future_feature_heads = MoWAFutureFeatureHeads(
                 MoWAFutureFeatureHeadsConfig(
                     input_dim=self.action_dit_hidden_dim,
                     hidden_dim=wam_feature_dim,
                 )
             )
+            self.mowa_layerwise_bridge_p0_heads = self.mowa_layerwise_bridge_future_feature_heads
             head_mask_dim = sum(
                 MOWA_FUTURE_HEAD_OUTPUT_DIMS[head]
                 for head in MOWA_FUTURE_CONSTRUCTIBLE_HEADS
@@ -470,7 +472,7 @@ class Qwen_PI_v3(baseframework):
                 masked_heads=(),
             )
         if source in MOWA_FUTURE_FEATURE_SOURCE_ALIASES:
-            if self.mowa_layerwise_bridge_p0_heads is None:
+            if self.mowa_layerwise_bridge_future_feature_heads is None:
                 raise RuntimeError("MoWA future feature-head source is enabled but not initialized.")
             active_heads = getattr(
                 self,
@@ -478,7 +480,7 @@ class Qwen_PI_v3(baseframework):
                 MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
             )
             masks = {head: head in active_heads for head in MOWA_FUTURE_FULL_HEADS}
-            return self.mowa_layerwise_bridge_p0_heads.future_features(hidden_features, masks)
+            return self.mowa_layerwise_bridge_future_feature_heads.future_features(hidden_features, masks)
         raise RuntimeError(f"Unhandled MoWA layerwise bridge feature source: {source}")
 
     def _maybe_apply_mowa_layerwise_bridge_coupling(

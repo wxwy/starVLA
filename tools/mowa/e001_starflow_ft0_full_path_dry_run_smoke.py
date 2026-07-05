@@ -56,6 +56,7 @@ def build_starflow_ft0_full_path_dry_run_smoke(repo_root: Path | str) -> dict[st
         "starflow_ft_variant_configured": _starflow_ft_variant_matches_tokens(framework),
         "robocasa_data_mix": data.get("data_mix") == "robocasa365_open_drawer_target_human",
         "state_included": "state" in first_item_keys,
+        "mowa_future_labels_enabled": _get_future_labels_enabled(data) is True,
         "mowa_p0_labels_enabled": data.get("mowa_p0_labels_enabled") is True,
         "batch_has_mowa_p0_targets": "mowa_p0_targets" in first_item_keys,
         "batch_has_mowa_p0_masks": "mowa_p0_masks" in first_item_keys,
@@ -136,6 +137,10 @@ def _read_json(path: Path) -> dict[str, Any] | None:
 
 def _is_positive_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and value > 0
+
+
+def _get_future_labels_enabled(data: dict[str, Any]) -> Any:
+    return data.get("mowa_future_labels_enabled", data.get("mowa_p0_labels_enabled"))
 
 
 def _starflow_ft_variant_matches_tokens(framework: dict[str, Any]) -> bool:

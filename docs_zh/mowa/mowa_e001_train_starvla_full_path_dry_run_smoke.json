@@ -16,6 +16,7 @@
     "mowa_future_supervision_probe_enabled": true,
     "mowa_future_supervision_labels_forward_evaluated": true,
     "batch_fetched": true,
+    "mowa_future_labels_enabled": true,
     "mowa_p0_labels_enabled": true,
     "batch_has_mowa_p0_targets": true,
     "batch_has_mowa_p0_masks": true,

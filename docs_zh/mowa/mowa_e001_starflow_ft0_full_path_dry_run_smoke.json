@@ -15,6 +15,7 @@
     "starflow_ft_variant_configured": true,
     "robocasa_data_mix": true,
     "state_included": true,
+    "mowa_future_labels_enabled": true,
     "mowa_p0_labels_enabled": true,
     "batch_has_mowa_p0_targets": true,
     "batch_has_mowa_p0_masks": true,

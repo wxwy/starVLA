@@ -125,7 +125,7 @@ def build_starflow_ft0_training_throughput_smoke(
         "unresolved_items": [
             "This is a bounded save/resume smoke, not a full E-001 launch.",
             "Runtime policy is still not confirmed for long training.",
-            "The feature source is still the gated StarFlow condition probe, not final WAM output.",
+            "The feature source is the gated mowa_p0_fullheads bridge path; this smoke does not prove action-gain.",
         ],
         "go_no_go": (
             "TBD: save/resume training smoke passed; launch remains gated"

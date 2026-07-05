@@ -16,6 +16,8 @@ LAUNCH_CANDIDATE = Path("configs/mowa/mowa_e001_starflow_ft0_launch_candidate.ya
 A100_THROUGHPUT_PLAN = Path("configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml")
 READINESS_REPORT = Path("docs_zh/mowa/mowa_e001_readiness_smoke.json")
 A100_THROUGHPUT_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput_smoke.json")
+LAUNCH_CANDIDATE_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_launch_candidate_smoke.json")
+STARFLOW_COMPARISON_REPORT = Path("docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json")
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,12 +40,17 @@ def parse_args() -> argparse.Namespace:
 def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
     root = Path(repo_root)
     readiness = _read_json(root / READINESS_REPORT) or {}
+    launch_draft = (root / LAUNCH_DRAFT).read_text(encoding="utf-8") if (root / LAUNCH_DRAFT).is_file() else ""
+    launch_candidate_smoke = _read_json(root / LAUNCH_CANDIDATE_SMOKE_REPORT) or {}
+    starflow_comparison = _read_json(root / STARFLOW_COMPARISON_REPORT) or {}
     checks = {
         "launch_draft_created": (root / LAUNCH_DRAFT).is_file(),
         "runtime_policy_created": (root / RUNTIME_POLICY).is_file(),
         "training_command_draft_created": (root / TRAINING_COMMAND_DRAFT).is_file(),
         "training_command_candidate_created": (root / TRAINING_COMMAND_CANDIDATE).is_file(),
         "launch_candidate_created": (root / LAUNCH_CANDIDATE).is_file(),
+        "launch_candidate_smoke_report_created": (root / LAUNCH_CANDIDATE_SMOKE_REPORT).is_file(),
+        "starflow_comparison_report_created": (root / STARFLOW_COMPARISON_REPORT).is_file(),
         "a100_throughput_plan_created": (root / A100_THROUGHPUT_PLAN).is_file(),
         "launch_ready_false": _text_contains(root / LAUNCH_DRAFT, "launch_ready: false"),
         "training_started_false": _text_contains(root / LAUNCH_DRAFT, "training_started: false"),
@@ -66,9 +73,24 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             _text_contains(root / LAUNCH_CANDIDATE, "launch_ready: false")
             and _text_contains(root / LAUNCH_CANDIDATE, "policy_confirmed: false")
         ),
+        "launch_candidate_smoke_passed": bool(
+            (launch_candidate_smoke.get("checks") or {}).get("final_parameter_alignment_passed")
+        ),
+        "starflow_comparison_smoke_passed": bool(
+            (starflow_comparison.get("checks") or {}).get("paired_runtime_symmetry_passed")
+        ),
         "executable_training_command_candidate_recorded": _text_contains(
             root / LAUNCH_DRAFT,
             "executable training command candidate exists but is not human-confirmed",
+        ),
+        "launch_draft_reason_current": (
+            "final WAM feature source are not confirmed" not in launch_draft
+            and "resource policy, core SOT, class mapping, and action-gain evidence are not confirmed"
+            in launch_draft
+        ),
+        "launch_blocker_mentions_action_gain_not_feature_source": (
+            "action-gain evidence is not validated" in launch_draft
+            and "final WAM feature source are not confirmed" not in launch_draft
         ),
         "a100_smoke_no_longer_waiting_for_a100": _text_contains(
             root / A100_THROUGHPUT_PLAN,
@@ -76,6 +98,12 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         ),
         "a100_throughput_report_created": (root / A100_THROUGHPUT_REPORT).is_file(),
         "readiness_training_not_started": readiness.get("training_started") is False,
+        "readiness_launch_candidate_smoke_passed": bool(
+            (readiness.get("checks") or {}).get("launch_candidate_smoke_passed")
+        ),
+        "readiness_starflow_comparison_smoke_passed": bool(
+            (readiness.get("checks") or {}).get("starflow_ft0_comparison_smoke_passed")
+        ),
     }
     return {
         "stage": "P0",
@@ -89,6 +117,8 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             "training_command_draft": str(TRAINING_COMMAND_DRAFT),
             "training_command_candidate": str(TRAINING_COMMAND_CANDIDATE),
             "launch_candidate": str(LAUNCH_CANDIDATE),
+            "launch_candidate_smoke_report": str(LAUNCH_CANDIDATE_SMOKE_REPORT),
+            "starflow_comparison_report": str(STARFLOW_COMPARISON_REPORT),
             "a100_throughput_plan": str(A100_THROUGHPUT_PLAN),
             "a100_throughput_report": str(A100_THROUGHPUT_REPORT),
         },

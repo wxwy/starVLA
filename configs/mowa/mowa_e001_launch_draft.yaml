@@ -8,12 +8,14 @@ launch:
   launch_ready: false
   training_started: false
   requires_human_confirmation: true
-  reason: checkpoint/save/resume policy is confirmed, but resource policy and final WAM feature source are not confirmed
+  reason: checkpoint/save/resume policy is confirmed, but resource policy, core SOT, class mapping, and action-gain evidence are not confirmed
 
 references:
   interface_config: configs/mowa/mowa_p0_fullheads_interface.yaml
   runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
   readiness_report: docs_zh/mowa/mowa_e001_readiness_smoke.json
+  launch_candidate_smoke_report: docs_zh/mowa/mowa_e001_launch_candidate_smoke.json
+  paired_comparison_smoke_report: docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json
   production_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json
   production_window_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
   p0_train_smoke_report: docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json
@@ -104,6 +106,6 @@ launch_blockers:
   - SOT docs 00/01/02 are not available in docs_zh/mowa
   - class_mapping_status remains Data Gate
   - resource policy remains unconfirmed for full E-001 long training
-  - P0FullHeads bridge feature source is integrated, but action-gain evidence is not validated
+  - StarFlow ft0 baseline/MoWA launch candidates are aligned and gated, but action-gain evidence is not validated
   - batch size 4 / expected VRAM are bounded-smoke observed only, not long-training confirmed
   - executable training command candidate exists but is not human-confirmed

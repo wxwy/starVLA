@@ -503,7 +503,11 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 (
                     "launch_ready: false\n"
                     "training_started: false\n"
+                    "reason: checkpoint/save/resume policy is confirmed, but resource policy, "
+                    "core SOT, class mapping, and action-gain evidence are not confirmed\n"
                     "launch_blockers:\n"
+                    "  - StarFlow ft0 baseline/MoWA launch candidates are aligned and gated, "
+                    "but action-gain evidence is not validated\n"
                     "  - executable training command candidate exists but is not human-confirmed\n"
                 ),
                 encoding="utf-8",
@@ -533,7 +537,23 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (root / "docs_zh" / "mowa" / "mowa_e001_readiness_smoke.json").write_text(
-                json.dumps({"training_started": False}),
+                json.dumps(
+                    {
+                        "training_started": False,
+                        "checks": {
+                            "launch_candidate_smoke_passed": True,
+                            "starflow_ft0_comparison_smoke_passed": True,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_launch_candidate_smoke.json").write_text(
+                json.dumps({"checks": {"final_parameter_alignment_passed": True}}),
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_starflow_ft0_comparison_smoke.json").write_text(
+                json.dumps({"checks": {"paired_runtime_symmetry_passed": True}}),
                 encoding="utf-8",
             )
 
@@ -549,9 +569,15 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["launch_candidate_created"])
         self.assertTrue(report["checks"]["candidate_command_not_launch_approved"])
         self.assertTrue(report["checks"]["launch_candidate_not_launch_approved"])
+        self.assertTrue(report["checks"]["launch_candidate_smoke_passed"])
+        self.assertTrue(report["checks"]["starflow_comparison_smoke_passed"])
         self.assertTrue(report["checks"]["executable_training_command_candidate_recorded"])
+        self.assertTrue(report["checks"]["launch_draft_reason_current"])
+        self.assertTrue(report["checks"]["launch_blocker_mentions_action_gain_not_feature_source"])
         self.assertTrue(report["checks"]["a100_smoke_no_longer_waiting_for_a100"])
         self.assertTrue(report["checks"]["a100_throughput_report_created"])
+        self.assertTrue(report["checks"]["readiness_launch_candidate_smoke_passed"])
+        self.assertTrue(report["checks"]["readiness_starflow_comparison_smoke_passed"])
 
     def test_e001_training_config_smoke_requires_mowa_ckpt_root(self):
         with tempfile.TemporaryDirectory() as tmpdir:

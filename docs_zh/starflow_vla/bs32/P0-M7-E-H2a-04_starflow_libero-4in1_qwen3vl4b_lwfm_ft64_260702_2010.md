@@ -432,16 +432,16 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 |------|-----|
 | **GPU 利用率** | 100% |
 | **显存使用** | 64,269 MiB / 81,920 MiB（78.5%） |
-| **功耗** | 393.26 W / 400.00 W |
-| **温度** | 60°C |
+| **功耗** | 333.25 W / 400.00 W |
+| **温度** | 55°C |
 
 ### Docker 内存（cgroup v2）
 
 | 指标 | 值 |
 |------|-----|
 | **上限** | 120 GiB |
-| **当前已用** | 26.92 GiB |
-| **使用率** | 22.4% |
+| **当前已用** | 28.08 GiB |
+| **使用率** | 23.4% |
 
 ### 存储
 
@@ -457,7 +457,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ```
 /disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/
-├── checkpoints/steps_250/ ... steps_24500/  ✅
+├── checkpoints/steps_250/ ... steps_24750/  ✅
 ├── config.full.yaml          ✅
 ├── config.yaml               ✅
 ├── dataset_statistics.json   ✅
@@ -470,7 +470,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 ## 自动监控状态
 
 - 定时任务 `4288195d`：每小时 :07 直接监控 tmux `train`，自动更新 H2a-04 tracker
-- 上次更新：2026-07-05 11:15:00 CST
+- 上次更新：2026-07-05 12:15:00 CST
 
 ---
 
@@ -479,7 +479,7 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 - 本实验验证 `num_target_vision_tokens=64` 的效果。
 - A100 显存使用率 78.5%，未 OOM。
 - 单步耗时 ~9.18 s/it，模型前向/反向 ~2.35 s。
-- checkpoint 每 250 steps 正常保存至 `steps_24500`。
+- checkpoint 每 250 steps 正常保存至 `steps_24750`。
 - 🔥 **最佳 eval mse 0.00429**（23500），step 24500 eval mse=**0.00436**（接近 best ✅）
 - 下一轮 eval 在 step 25000。
 - **重要声明**：本 tracker 文件只由本 cron/手动任务维护；之前的 P1-M1 tracker 被 `.monitor_bs32.py` 误写，已单独还原。

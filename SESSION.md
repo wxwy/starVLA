@@ -4,6 +4,7 @@
 - M1 G0 Data Verification Gate 数据复验已通过；P0 ConstructibleHeads one-step train smoke 已通过，仍不计入 E-001 主训练。
 - MoWA 后续推进以 `docs_zh/mowa/04_task_breakdown.md` 的“当前落实顺序（2026-07-05）”为准；临时话题不再插队改变执行优先级。当前下一步固定为 E-001 paired baseline/MoWA runtime symmetry checker，不启动正式训练、不做大规模命名重写。
 - E-001 paired baseline/MoWA runtime symmetry checker 已补齐：`tools/mowa/e001_starflow_ft0_comparison_smoke.py` 现在递归比较 baseline/MoWA candidate YAML 的所有叶子节点，只允许 `run_id`、launch reason、MoWA bridge/future label 相关字段不同；`docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json` 显示 `paired_runtime_symmetry_passed=true`、`unexpected_difference_paths=[]`，readiness 已继续读取该 comparison report 且通过。
+- E-001 launch readiness 继续收敛：`tools/mowa/e001_launch_candidate_smoke.py` 已新增结构化最终参数对齐检查，确认 launch candidate 与 training command candidate 在 batch、grad accum、effective batch、max steps、save interval、checkpoint root/format、wandb disabled、logging frequency 上一致，并确认 runtime policy 对这些字段可追溯或明确保持 `TBD_long_training`；readiness 已纳入 `launch_candidate_smoke_passed=true`。
 - 2026-07-04 完成当前机器上 StarFlow VLA tmux `train` 会话自动监控：
   - 检测到 run_id `P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849` 正在训练（step 15141/80000，约 18.9%）。
   - 从 tmux capture-pane 抓取到最新 loss（action_dit_loss ≈ 0.0867 @ step 15140）。

@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from omegaconf import OmegaConf
+
 from starVLA.mowa_constants import MOWA_FUTURE_FEATURE_SOURCE_ALIASES
 
 LAUNCH_CANDIDATE_CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml")
@@ -41,7 +43,15 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
     candidate = root / LAUNCH_CANDIDATE_CONFIG
     command = root / COMMAND_CANDIDATE_CONFIG
     runtime_policy = root / RUNTIME_POLICY
+    candidate_cfg = _load_yaml(candidate)
+    command_cfg = _load_yaml(command)
+    runtime_policy_cfg = _load_yaml(runtime_policy)
     runtime_sweep = _read_json(root / RUNTIME_SWEEP_REPORT) or {}
+    final_parameter_alignment = _build_final_parameter_alignment(
+        candidate_cfg,
+        command_cfg,
+        runtime_policy_cfg,
+    )
     checks = {
         "launch_candidate_config_created": candidate.is_file(),
         "command_candidate_config_created": command.is_file(),
@@ -67,6 +77,7 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
         "candidate_wandb_disabled": _text_contains(candidate, "disable_wandb: true"),
         "candidate_checkpoint_root_mowa_ckpt": _text_contains(candidate, "run_root_dir: playground/mowa_ckpt"),
         "runtime_policy_still_unconfirmed": _text_contains(runtime_policy, "policy_confirmed: false"),
+        "final_parameter_alignment_passed": final_parameter_alignment["passed"],
         "runtime_sweep_bs4_passed": (
             runtime_sweep.get("bounded_runtime_sweep") is True
             and runtime_sweep.get("full_training_launch") is False
@@ -85,6 +96,7 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
             "runtime_policy": str(RUNTIME_POLICY),
             "runtime_sweep_bs4_report": str(RUNTIME_SWEEP_REPORT),
         },
+        "final_parameter_alignment": final_parameter_alignment,
         "unresolved_items": [
             "Candidate command is executable but not launch-approved.",
             "runtime_policy.policy_confirmed remains false.",
@@ -103,6 +115,169 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _load_yaml(path: Path) -> Any | None:
+    if not path.is_file():
+        return None
+    return OmegaConf.load(path)
+
+
+def _select(cfg: Any | None, dot_path: str) -> Any:
+    if cfg is None:
+        return None
+    value = OmegaConf.select(cfg, dot_path, default=None)
+    return OmegaConf.to_container(value, resolve=True) if OmegaConf.is_config(value) else value
+
+
+def _build_final_parameter_alignment(
+    candidate: Any | None,
+    command: Any | None,
+    runtime_policy: Any | None,
+) -> dict[str, Any]:
+    candidate_batch_size = _select(candidate, "datasets.vla_data.per_device_batch_size")
+    candidate_grad_accum = _select(candidate, "trainer.gradient_accumulation_steps")
+    candidate_effective_batch_size = (candidate_batch_size or 0) * (candidate_grad_accum or 0)
+    command_comparisons = {
+        "per_device_batch_size": {
+            "candidate": candidate_batch_size,
+            "command_candidate": _select(command, "runtime_targets.per_device_batch_size"),
+        },
+        "gradient_accumulation_steps": {
+            "candidate": candidate_grad_accum,
+            "command_candidate": _select(command, "runtime_targets.gradient_accumulation_steps"),
+        },
+        "effective_batch_size": {
+            "candidate": candidate_effective_batch_size,
+            "command_candidate": _select(command, "runtime_targets.effective_batch_size"),
+        },
+        "max_train_steps": {
+            "candidate": _select(candidate, "trainer.max_train_steps"),
+            "command_candidate": _select(command, "runtime_targets.max_train_steps"),
+        },
+        "save_interval": {
+            "candidate": _select(candidate, "trainer.save_interval"),
+            "command_candidate": _select(command, "checkpoint_policy.save_interval"),
+        },
+        "run_root_dir": {
+            "candidate": _select(candidate, "run_root_dir"),
+            "command_candidate": _select(command, "checkpoint_policy.run_root_dir"),
+        },
+        "checkpoint_format": {
+            "candidate": _select(candidate, "trainer.checkpoint_format"),
+            "command_candidate": _select(command, "checkpoint_policy.checkpoint_format"),
+        },
+        "save_checkpoint_as_directory": {
+            "candidate": _select(candidate, "trainer.save_checkpoint_as_directory"),
+            "command_candidate": _select(command, "checkpoint_policy.save_checkpoint_as_directory"),
+        },
+        "disable_wandb": {
+            "candidate": _select(candidate, "trainer.disable_wandb"),
+            "command_candidate": _select(command, "logging.disable_wandb"),
+        },
+        "logging_frequency": {
+            "candidate": _select(candidate, "trainer.logging_frequency"),
+            "command_candidate": _select(command, "logging.logging_frequency"),
+        },
+    }
+    runtime_traceability = {
+        "per_device_batch_size": {
+            "candidate": candidate_batch_size,
+            "runtime_policy": _select(runtime_policy, "resource_budget.per_device_batch_size"),
+            "match": _contains_expected_value(
+                _select(runtime_policy, "resource_budget.per_device_batch_size"),
+                candidate_batch_size,
+            ),
+        },
+        "gradient_accumulation_steps": {
+            "candidate": candidate_grad_accum,
+            "runtime_policy": _select(runtime_policy, "resource_budget.gradient_accumulation_steps"),
+            "match": _contains_expected_value(
+                _select(runtime_policy, "resource_budget.gradient_accumulation_steps"),
+                candidate_grad_accum,
+            ),
+        },
+        "effective_batch_size": {
+            "candidate": candidate_effective_batch_size,
+            "runtime_policy": _select(runtime_policy, "resource_budget.effective_batch_size"),
+            "match": _contains_expected_value(
+                _select(runtime_policy, "resource_budget.effective_batch_size"),
+                candidate_effective_batch_size,
+            ),
+        },
+        "max_train_steps": {
+            "candidate": _select(candidate, "trainer.max_train_steps"),
+            "runtime_policy": _select(runtime_policy, "resource_budget.max_train_steps"),
+            "match": _select(runtime_policy, "resource_budget.max_train_steps")
+            in (_select(candidate, "trainer.max_train_steps"), "TBD_long_training"),
+        },
+        "save_interval": {
+            "candidate": _select(candidate, "trainer.save_interval"),
+            "runtime_policy": _select(runtime_policy, "checkpoint.save_interval"),
+            "match": _contains_expected_value(
+                _select(runtime_policy, "checkpoint.save_interval"),
+                _select(candidate, "trainer.save_interval"),
+            ),
+        },
+        "run_root_dir": {
+            "candidate": _select(candidate, "run_root_dir"),
+            "runtime_policy": _select(runtime_policy, "checkpoint.run_root_dir"),
+            "match": _select(candidate, "run_root_dir")
+            == _select(runtime_policy, "checkpoint.run_root_dir"),
+        },
+        "checkpoint_format": {
+            "candidate": _select(candidate, "trainer.checkpoint_format"),
+            "runtime_policy": _select(runtime_policy, "checkpoint.checkpoint_format"),
+            "match": _select(candidate, "trainer.checkpoint_format")
+            == _select(runtime_policy, "checkpoint.checkpoint_format"),
+        },
+        "save_checkpoint_as_directory": {
+            "candidate": _select(candidate, "trainer.save_checkpoint_as_directory"),
+            "runtime_policy": _select(runtime_policy, "checkpoint.save_checkpoint_as_directory"),
+            "match": _select(candidate, "trainer.save_checkpoint_as_directory")
+            == _select(runtime_policy, "checkpoint.save_checkpoint_as_directory"),
+        },
+        "disable_wandb": {
+            "candidate": _select(candidate, "trainer.disable_wandb"),
+            "runtime_policy": _select(runtime_policy, "logging.disable_wandb"),
+            "match": _select(candidate, "trainer.disable_wandb")
+            == _select(runtime_policy, "logging.disable_wandb"),
+        },
+        "logging_frequency": {
+            "candidate": _select(candidate, "trainer.logging_frequency"),
+            "runtime_policy": _select(runtime_policy, "logging.logging_frequency"),
+            "match": _select(candidate, "trainer.logging_frequency")
+            == _select(runtime_policy, "logging.logging_frequency"),
+        },
+    }
+    command_match_results = {
+        name: values["candidate"] == values["command_candidate"]
+        for name, values in command_comparisons.items()
+    }
+    runtime_trace_results = {
+        name: bool(values["match"]) for name, values in runtime_traceability.items()
+    }
+    return {
+        "passed": all(command_match_results.values()) and all(runtime_trace_results.values()),
+        "command_comparisons": command_comparisons,
+        "command_matches": command_match_results,
+        "runtime_policy_traceability": runtime_traceability,
+        "runtime_policy_trace_matches": runtime_trace_results,
+        "mismatched_fields": tuple(
+            name for name, matched in command_match_results.items() if not matched
+        ),
+        "untraceable_runtime_policy_fields": tuple(
+            name for name, matched in runtime_trace_results.items() if not matched
+        ),
+    }
+
+
+def _contains_expected_value(observed: Any, expected: Any) -> bool:
+    if observed == expected:
+        return True
+    if expected is None:
+        return observed is None
+    return str(expected) in str(observed)
 
 
 def _text_contains(path: Path, pattern: str) -> bool:

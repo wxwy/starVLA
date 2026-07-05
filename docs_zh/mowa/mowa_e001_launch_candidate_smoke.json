@@ -22,6 +22,7 @@
     "candidate_wandb_disabled": true,
     "candidate_checkpoint_root_mowa_ckpt": true,
     "runtime_policy_still_unconfirmed": true,
+    "final_parameter_alignment_passed": true,
     "runtime_sweep_bs4_passed": true
   },
   "configs": {
@@ -29,6 +30,129 @@
     "command_candidate": "configs/mowa/mowa_e001_training_command_candidate.yaml",
     "runtime_policy": "configs/mowa/mowa_e001_runtime_policy_draft.yaml",
     "runtime_sweep_bs4_report": "docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json"
+  },
+  "final_parameter_alignment": {
+    "passed": true,
+    "command_comparisons": {
+      "per_device_batch_size": {
+        "candidate": 4,
+        "command_candidate": 4
+      },
+      "gradient_accumulation_steps": {
+        "candidate": 1,
+        "command_candidate": 1
+      },
+      "effective_batch_size": {
+        "candidate": 4,
+        "command_candidate": 4
+      },
+      "max_train_steps": {
+        "candidate": 1000,
+        "command_candidate": 1000
+      },
+      "save_interval": {
+        "candidate": 1000,
+        "command_candidate": 1000
+      },
+      "run_root_dir": {
+        "candidate": "playground/mowa_ckpt",
+        "command_candidate": "playground/mowa_ckpt"
+      },
+      "checkpoint_format": {
+        "candidate": "lightweight",
+        "command_candidate": "lightweight"
+      },
+      "save_checkpoint_as_directory": {
+        "candidate": true,
+        "command_candidate": true
+      },
+      "disable_wandb": {
+        "candidate": true,
+        "command_candidate": true
+      },
+      "logging_frequency": {
+        "candidate": 10,
+        "command_candidate": 10
+      }
+    },
+    "command_matches": {
+      "per_device_batch_size": true,
+      "gradient_accumulation_steps": true,
+      "effective_batch_size": true,
+      "max_train_steps": true,
+      "save_interval": true,
+      "run_root_dir": true,
+      "checkpoint_format": true,
+      "save_checkpoint_as_directory": true,
+      "disable_wandb": true,
+      "logging_frequency": true
+    },
+    "runtime_policy_traceability": {
+      "per_device_batch_size": {
+        "candidate": 4,
+        "runtime_policy": "bounded_full_vla_smoke_passed_4",
+        "match": true
+      },
+      "gradient_accumulation_steps": {
+        "candidate": 1,
+        "runtime_policy": "bounded_full_vla_smoke_1",
+        "match": true
+      },
+      "effective_batch_size": {
+        "candidate": 4,
+        "runtime_policy": "bounded_full_vla_smoke_4",
+        "match": true
+      },
+      "max_train_steps": {
+        "candidate": 1000,
+        "runtime_policy": "TBD_long_training",
+        "match": true
+      },
+      "save_interval": {
+        "candidate": 1000,
+        "runtime_policy": "initial_target_1000",
+        "match": true
+      },
+      "run_root_dir": {
+        "candidate": "playground/mowa_ckpt",
+        "runtime_policy": "playground/mowa_ckpt",
+        "match": true
+      },
+      "checkpoint_format": {
+        "candidate": "lightweight",
+        "runtime_policy": "lightweight",
+        "match": true
+      },
+      "save_checkpoint_as_directory": {
+        "candidate": true,
+        "runtime_policy": true,
+        "match": true
+      },
+      "disable_wandb": {
+        "candidate": true,
+        "runtime_policy": true,
+        "match": true
+      },
+      "logging_frequency": {
+        "candidate": 10,
+        "runtime_policy": 10,
+        "match": true
+      }
+    },
+    "runtime_policy_trace_matches": {
+      "per_device_batch_size": true,
+      "gradient_accumulation_steps": true,
+      "effective_batch_size": true,
+      "max_train_steps": true,
+      "save_interval": true,
+      "run_root_dir": true,
+      "checkpoint_format": true,
+      "save_checkpoint_as_directory": true,
+      "disable_wandb": true,
+      "logging_frequency": true
+    },
+    "mismatched_fields": [],
+    "untraceable_runtime_policy_fields": []
   },
   "unresolved_items": [
     "Candidate command is executable but not launch-approved.",

@@ -935,7 +935,10 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "  max_train_steps: 1000\n"
                 "  save_interval: 1000\n"
                 "  gradient_accumulation_steps: 1\n"
-                "  disable_wandb: true\n",
+                "  disable_wandb: true\n"
+                "  checkpoint_format: lightweight\n"
+                "  save_checkpoint_as_directory: true\n"
+                "  logging_frequency: 10\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_training_command_candidate.yaml").write_text(
@@ -943,11 +946,38 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "  launch_ready: false\n"
                 "  requires_human_confirmation: true\n"
                 "command_candidate:\n"
-                "  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml\n",
+                "  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml\n"
+                "runtime_targets:\n"
+                "  per_device_batch_size: 4\n"
+                "  gradient_accumulation_steps: 1\n"
+                "  effective_batch_size: 4\n"
+                "  max_train_steps: 1000\n"
+                "checkpoint_policy:\n"
+                "  run_root_dir: playground/mowa_ckpt\n"
+                "  checkpoint_format: lightweight\n"
+                "  save_interval: 1000\n"
+                "  save_checkpoint_as_directory: true\n"
+                "logging:\n"
+                "  disable_wandb: true\n"
+                "  logging_frequency: 10\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
-                "status:\n  policy_confirmed: false\n",
+                "resource_budget:\n"
+                "  per_device_batch_size: bounded_full_vla_smoke_passed_4\n"
+                "  gradient_accumulation_steps: bounded_full_vla_smoke_1\n"
+                "  effective_batch_size: bounded_full_vla_smoke_4\n"
+                "  max_train_steps: TBD_long_training\n"
+                "checkpoint:\n"
+                "  run_root_dir: playground/mowa_ckpt\n"
+                "  checkpoint_format: lightweight\n"
+                "  save_interval: initial_target_1000\n"
+                "  save_checkpoint_as_directory: true\n"
+                "logging:\n"
+                "  disable_wandb: true\n"
+                "  logging_frequency: 10\n"
+                "status:\n"
+                "  policy_confirmed: false\n",
                 encoding="utf-8",
             )
             (root / "docs_zh" / "mowa" / "mowa_e001_full_vla_runtime_sweep_bs4_smoke.json").write_text(
@@ -975,6 +1005,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["candidate_batch_size_4"])
         self.assertTrue(report["checks"]["candidate_max_steps_1000"])
         self.assertTrue(report["checks"]["runtime_policy_still_unconfirmed"])
+        self.assertTrue(report["checks"]["final_parameter_alignment_passed"])
 
     def test_e001_launch_candidate_smoke_accepts_future_feature_source_alias(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1000,7 +1031,10 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "  max_train_steps: 1000\n"
                 "  save_interval: 1000\n"
                 "  gradient_accumulation_steps: 1\n"
-                "  disable_wandb: true\n",
+                "  disable_wandb: true\n"
+                "  checkpoint_format: lightweight\n"
+                "  save_checkpoint_as_directory: true\n"
+                "  logging_frequency: 10\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_training_command_candidate.yaml").write_text(
@@ -1008,11 +1042,38 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "  launch_ready: false\n"
                 "  requires_human_confirmation: true\n"
                 "command_candidate:\n"
-                "  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml\n",
+                "  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml\n"
+                "runtime_targets:\n"
+                "  per_device_batch_size: 4\n"
+                "  gradient_accumulation_steps: 1\n"
+                "  effective_batch_size: 4\n"
+                "  max_train_steps: 1000\n"
+                "checkpoint_policy:\n"
+                "  run_root_dir: playground/mowa_ckpt\n"
+                "  checkpoint_format: lightweight\n"
+                "  save_interval: 1000\n"
+                "  save_checkpoint_as_directory: true\n"
+                "logging:\n"
+                "  disable_wandb: true\n"
+                "  logging_frequency: 10\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
-                "status:\n  policy_confirmed: false\n",
+                "resource_budget:\n"
+                "  per_device_batch_size: bounded_full_vla_smoke_passed_4\n"
+                "  gradient_accumulation_steps: bounded_full_vla_smoke_1\n"
+                "  effective_batch_size: bounded_full_vla_smoke_4\n"
+                "  max_train_steps: TBD_long_training\n"
+                "checkpoint:\n"
+                "  run_root_dir: playground/mowa_ckpt\n"
+                "  checkpoint_format: lightweight\n"
+                "  save_interval: initial_target_1000\n"
+                "  save_checkpoint_as_directory: true\n"
+                "logging:\n"
+                "  disable_wandb: true\n"
+                "  logging_frequency: 10\n"
+                "status:\n"
+                "  policy_confirmed: false\n",
                 encoding="utf-8",
             )
             (root / "docs_zh" / "mowa" / "mowa_e001_full_vla_runtime_sweep_bs4_smoke.json").write_text(

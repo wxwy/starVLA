@@ -42,7 +42,9 @@
     "full_vla_runtime_sweep_bs4_passed": true,
     "e006_coupling_intervention_smoke_passed": true,
     "e006_eval_load_smoke_config_created": true,
-    "e006_eval_load_smoke_passed": true
+    "e006_eval_load_smoke_passed": true,
+    "e006_policy_rollout_preflight_smoke_passed": true,
+    "e006_policy_rollout_blocker_recorded": true
   },
   "sot": {
     "required_core_docs": [
@@ -123,6 +125,22 @@
     "e006_coupling_intervention_smoke_report": "docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json",
     "e006_eval_load_smoke_config": "configs/mowa/mowa_e006_eval_load_smoke.yaml",
     "e006_eval_load_smoke_report": "docs_zh/mowa/mowa_e006_eval_load_smoke.json",
+    "e006_policy_rollout_preflight_smoke_report": "docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json",
+    "e006_policy_rollout_smoke_report": "docs_zh/mowa/mowa_e006_policy_rollout_smoke.json",
+    "e006_policy_rollout_blocker": {
+      "status": "robocasa_render_backend_unavailable",
+      "scope": "environment",
+      "blocked_interventions": [
+        "baseline",
+        "zero",
+        "batch_shuffle",
+        "head_mask_control"
+      ],
+      "backend_signatures": [
+        "    _error_checker = _ErrorChecker( _p, _p.GL.glGetError )",
+        "AttributeError: 'NoneType' object has no attribute 'glGetError'"
+      ]
+    },
     "a100_throughput_stable_candidate": {
       "per_device_batch_size": 8,
       "gradient_accumulation_steps": 8,
@@ -145,7 +163,7 @@
     "runtime policy draft not confirmed",
     "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
     "E-001 executable command candidate exists but remains gated by human confirmation",
-    "E-006 policy eval still requires a trained or smoke-compatible checkpoint"
+    "E-006 policy rollout remains blocked; see rollout_blocker in the E-006 smoke report"
   ],
   "go_no_go": "TBD: E-001 prerequisites mostly passed; launch draft exists but runtime/batch/save-resume remain Data Gate",
   "notes": [

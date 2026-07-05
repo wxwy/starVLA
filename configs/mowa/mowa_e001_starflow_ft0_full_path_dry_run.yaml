@@ -72,6 +72,7 @@ trainer:
   full_path_dry_run_fetch_batch: true
   full_path_dry_run_forward_batch: true
   full_path_dry_run_report: docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json
+  enable_mowa_future_supervision_loss: true
   max_train_steps: 1
   num_warmup_steps: 0
   save_interval: 1000
@@ -88,6 +89,7 @@ trainer:
   loss_scale:
     vla: 1.0
     vlm: 0.0
+    mowa_future_supervision: 1.0
   max_grad_norm: 1.0
   weight_decay: 0.0
   logging_frequency: 1

@@ -248,6 +248,7 @@ class Qwen_PI_v3(baseframework):
         # are normalised upstream by `share_tools.apply_config_compat`, so we
         # only ever read `action_horizon` here.
         self.action_horizon = int(self.config.framework.action_model.action_horizon)
+        self._setup_mowa_future_supervision_loss()
         self._setup_mowa_layerwise_bridge_coupling()
 
     def _setup_mowa_layerwise_bridge_coupling(self) -> None:
@@ -371,6 +372,82 @@ class Qwen_PI_v3(baseframework):
             )
         )
 
+    def _setup_mowa_future_supervision_loss(self) -> None:
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        self.mowa_future_supervision_loss_enabled = bool(
+            getattr(
+                mowa_cfg,
+                "enable_future_supervision_loss",
+                getattr(mowa_cfg, "enable_p0_supervision_loss", False),
+            )
+        )
+        self.mowa_future_supervision_probe = None
+        self.mowa_future_supervision_active_heads = tuple(
+            getattr(
+                mowa_cfg,
+                "future_supervision_active_heads",
+                getattr(mowa_cfg, "p0_supervision_active_heads", MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
+            )
+        )
+        if not self.mowa_future_supervision_loss_enabled:
+            return
+
+        hidden_dim = int(
+            getattr(
+                mowa_cfg,
+                "future_supervision_hidden_dim",
+                getattr(mowa_cfg, "p0_supervision_hidden_dim", 32),
+            )
+        )
+        action_outcome_loss_type = str(
+            getattr(
+                mowa_cfg,
+                "future_supervision_action_outcome_loss_type",
+                getattr(mowa_cfg, "p0_supervision_action_outcome_loss_type", "mse"),
+            )
+        )
+        self.mowa_future_supervision_probe = MoWAFutureFeatureHeads(
+            MoWAFutureFeatureHeadsConfig(
+                input_dim=self.action_dit_hidden_dim,
+                hidden_dim=hidden_dim,
+                action_outcome_loss_type=action_outcome_loss_type,
+            )
+        )
+
+    @staticmethod
+    def _rewrite_mowa_checkpoint_state_dict_keys_for_compatibility(state_dict) -> None:
+        legacy_prefix = "mowa_layerwise_bridge_p0_heads."
+        future_prefix = "mowa_layerwise_bridge_future_feature_heads."
+        for key in list(state_dict.keys()):
+            if not key.startswith(legacy_prefix):
+                continue
+            future_key = key.replace(legacy_prefix, future_prefix, 1)
+            if future_key in state_dict:
+                continue
+            state_dict[future_key] = state_dict.pop(key)
+
+    def _load_from_state_dict(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+    ):
+        if prefix == "":
+            self._rewrite_mowa_checkpoint_state_dict_keys_for_compatibility(state_dict)
+        super()._load_from_state_dict(
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
+        )
+
     def _apply_mowa_layerwise_bridge_head_mask_control(
         self,
         future_features: MoWAFutureFeatures,
@@ -482,6 +559,65 @@ class Qwen_PI_v3(baseframework):
             masks = {head: head in active_heads for head in MOWA_FUTURE_FULL_HEADS}
             return self.mowa_layerwise_bridge_future_feature_heads.future_features(hidden_features, masks)
         raise RuntimeError(f"Unhandled MoWA layerwise bridge feature source: {source}")
+
+    def _maybe_run_mowa_future_supervision_loss(
+        self,
+        hidden_features: torch.Tensor,
+        examples: List[dict],
+    ) -> dict | None:
+        if not bool(getattr(self, "mowa_future_supervision_loss_enabled", False)):
+            return None
+        supervision_probe = getattr(self, "mowa_future_supervision_probe", None)
+        if supervision_probe is None:
+            raise RuntimeError("MoWA future supervision loss is enabled but not initialized.")
+        if not examples or not all("mowa_p0_targets" in example for example in examples):
+            return {
+                "supervision_available": False,
+                "loss": None,
+                "losses": {},
+                "active_heads": (),
+                "masked_heads": MOWA_FUTURE_FULL_HEADS,
+            }
+
+        probe_dtype = next(supervision_probe.parameters()).dtype
+        hidden_features = hidden_features.to(dtype=probe_dtype)
+        targets = {}
+        masks = {}
+        device = hidden_features.device
+        active_heads = tuple(
+            getattr(
+                self,
+                "mowa_future_supervision_active_heads",
+                MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+            )
+        )
+        for head in MOWA_FUTURE_FULL_HEADS:
+            head_active = head in active_heads and all(
+                bool((example.get("mowa_p0_masks") or {}).get(head, False)) for example in examples
+            )
+            masks[head] = head_active
+            if not head_active:
+                continue
+            values = [example["mowa_p0_targets"][head] for example in examples]
+            targets[head] = torch.as_tensor(values, device=device, dtype=hidden_features.dtype)
+
+        if not any(masks.values()):
+            return {
+                "supervision_available": False,
+                "loss": None,
+                "losses": {},
+                "active_heads": (),
+                "masked_heads": MOWA_FUTURE_FULL_HEADS,
+            }
+
+        loss, losses, _ = supervision_probe.compute_loss(hidden_features, targets, masks)
+        return {
+            "supervision_available": True,
+            "loss": loss,
+            "losses": losses,
+            "active_heads": tuple(head for head in MOWA_FUTURE_FULL_HEADS if bool(masks.get(head, False))),
+            "masked_heads": tuple(head for head in MOWA_FUTURE_FULL_HEADS if not bool(masks.get(head, False))),
+        }
 
     def _maybe_apply_mowa_layerwise_bridge_coupling(
         self,
@@ -596,6 +732,9 @@ class Qwen_PI_v3(baseframework):
                 np.array(actions), device=base_hidden.device, dtype=base_hidden.dtype
             )  # [B, T_full, action_dim]
             actions_target = actions[:, -self.action_horizon :, :]  # (B, action_horizon, action_dim)
+            mowa_future_supervision = self._maybe_run_mowa_future_supervision_loss(
+                base_hidden.mean(dim=1), examples
+            )
 
             repeated_diffusion_steps = (
                 self.config.trainer.get("repeated_diffusion_steps", 16) if self.config and self.config.trainer else 4
@@ -650,6 +789,13 @@ class Qwen_PI_v3(baseframework):
             output["mowa_layerwise_bridge_feature_source"] = mowa_bridge_metadata["feature_source"]
             output["mowa_layerwise_bridge_active_heads"] = mowa_bridge_metadata["active_heads"]
             output["mowa_layerwise_bridge_masked_heads"] = mowa_bridge_metadata["masked_heads"]
+        if mowa_future_supervision is not None:
+            output["mowa_future_supervision_available"] = mowa_future_supervision["supervision_available"]
+            output["mowa_future_supervision_active_heads"] = mowa_future_supervision["active_heads"]
+            output["mowa_future_supervision_masked_heads"] = mowa_future_supervision["masked_heads"]
+            if mowa_future_supervision["loss"] is not None:
+                output["mowa_future_supervision_loss"] = mowa_future_supervision["loss"]
+                output["mowa_future_supervision_losses"] = mowa_future_supervision["losses"]
         return output
 
     @torch.inference_mode()

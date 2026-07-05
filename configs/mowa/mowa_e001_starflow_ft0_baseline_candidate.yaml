@@ -68,6 +68,7 @@ datasets:
 
 trainer:
   disable_wandb: true
+  enable_mowa_future_supervision_loss: true
   max_train_steps: 1000
   num_warmup_steps: 0
   save_interval: 1000
@@ -84,6 +85,7 @@ trainer:
   loss_scale:
     vla: 1.0
     vlm: 0.0
+    mowa_future_supervision: 1.0
   max_grad_norm: 1.0
   weight_decay: 0.0
   logging_frequency: 10

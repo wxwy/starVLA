@@ -1994,6 +1994,139 @@ class MoWAP0HeadsTest(unittest.TestCase):
         )
         self.assertTrue(all(run["executed"] is False for run in report["runs"]))
 
+    def test_e006_rollout_assets_blocker_is_detected_from_failed_runs(self):
+        from tools.mowa.e006_policy_rollout_smoke import _extract_rollout_blocker
+
+        runs = [
+            {
+                "intervention": "baseline",
+                "client_result": {
+                    "failure_category": "missing_robocasa_asset",
+                    "tail": [
+                        "FileNotFoundError: [Errno 2] No such file or directory: "
+                        "'/tmp/robocasa/models/assets/fixtures/sinks/Sink025/model.xml'"
+                    ],
+                },
+            },
+            {
+                "intervention": "zero",
+                "client_result": {
+                    "failure_category": "missing_robocasa_asset",
+                    "tail": [
+                        "FileNotFoundError: [Errno 2] No such file or directory: "
+                        "'/tmp/robocasa/models/assets/objects/lightwheel/utensil_rack/"
+                        "UtensilRack007/model.xml'"
+                    ],
+                },
+            },
+        ]
+
+        blocker = _extract_rollout_blocker(runs)
+
+        self.assertEqual(blocker["status"], "missing_robocasa_assets")
+        self.assertEqual(blocker["scope"], "environment")
+        self.assertEqual(blocker["blocked_interventions"], ["baseline", "zero"])
+        self.assertEqual(
+            blocker["missing_asset_paths"],
+            [
+                "/tmp/robocasa/models/assets/fixtures/sinks/Sink025/model.xml",
+                "/tmp/robocasa/models/assets/objects/lightwheel/utensil_rack/UtensilRack007/model.xml",
+            ],
+        )
+
+    def test_e006_rollout_render_backend_blocker_is_detected_from_failed_runs(self):
+        from tools.mowa.e006_policy_rollout_smoke import _extract_rollout_blocker
+
+        runs = [
+            {
+                "intervention": "baseline",
+                "client_result": {
+                    "failure_category": "robocasa_render_backend_unavailable",
+                    "tail": [
+                        "AttributeError: 'NoneType' object has no attribute 'glGetError'",
+                    ],
+                },
+            }
+        ]
+
+        blocker = _extract_rollout_blocker(runs)
+
+        self.assertEqual(blocker["status"], "robocasa_render_backend_unavailable")
+        self.assertEqual(blocker["scope"], "environment")
+        self.assertEqual(blocker["blocked_interventions"], ["baseline"])
+        self.assertEqual(
+            blocker["backend_signatures"],
+            ["AttributeError: 'NoneType' object has no attribute 'glGetError'"],
+        )
+
+    def test_e006_rollout_server_blocker_is_detected_from_failed_runs(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            server_log = root / "server.log"
+            server_log.write_text(
+                "\n".join(
+                    [
+                        "RuntimeError: Error(s) in loading state_dict for StarFlowVLA:",
+                        "Missing key(s) in state_dict: "
+                        "['mowa_layerwise_bridge_future_feature_heads.trunk.0.weight', "
+                        "'mowa_layerwise_bridge_head_mask_projector.weight']",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e006_policy_rollout_smoke import _extract_rollout_blocker
+
+            blocker = _extract_rollout_blocker(
+                [
+                    {
+                        "intervention": "baseline",
+                        "server_failure_category": "checkpoint_model_incompatible",
+                        "server_log": str(server_log),
+                    }
+                ]
+            )
+
+        self.assertEqual(blocker["status"], "checkpoint_model_incompatible")
+        self.assertEqual(blocker["scope"], "checkpoint")
+        self.assertEqual(blocker["blocked_interventions"], ["baseline"])
+        self.assertIn(
+            "mowa_layerwise_bridge_future_feature_heads.trunk.0.weight",
+            blocker["missing_state_keys"],
+        )
+
+    def test_e001_readiness_accepts_e006_rollout_blocker_report(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            report = root / "docs_zh" / "mowa" / "mowa_e006_policy_rollout_smoke.json"
+            report.write_text(
+                json.dumps(
+                    {
+                        "rollout_blocker": {
+                            "status": "missing_robocasa_assets",
+                            "scope": "environment",
+                            "blocked_interventions": ["baseline", "zero"],
+                            "missing_asset_paths": [
+                                "/tmp/robocasa/models/assets/fixtures/sinks/Sink025/model.xml"
+                            ],
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_readiness_smoke import _e006_rollout_blocker_recorded
+
+            self.assertTrue(_e006_rollout_blocker_recorded(report))
+
+    def test_robocasa365_eval_client_defaults_to_osmesa_when_backend_unset(self):
+        source = Path("examples/Robocasa_365/eval_files/simulation_env.py").read_text(encoding="utf-8")
+
+        self.assertIn('os.environ.setdefault("MUJOCO_GL", "osmesa")', source)
+        self.assertIn('os.environ.setdefault("PYOPENGL_PLATFORM", "osmesa")', source)
+
     def test_robocasa365_eval_client_has_argparse_fallback_without_tyro(self):
         source = Path("examples/Robocasa_365/eval_files/simulation_env.py").read_text(encoding="utf-8")
 
@@ -2197,3 +2330,34 @@ class MoWAP0HeadsTest(unittest.TestCase):
         probe_owner._setup_mowa_action_bridge_probe()
 
         self.assertEqual(probe_owner.mowa_action_bridge_probe.config.num_action_layers, 2)
+
+    def test_share_tools_strict_mismatch_accepts_legacy_mowa_bridge_key_alias(self):
+        from starVLA.model.framework.share_tools import _filter_strict_key_mismatches
+
+        missing_keys, unexpected_keys = _filter_strict_key_mismatches(
+            {"mowa_layerwise_bridge_future_feature_heads.trunk.0.weight"},
+            {"mowa_layerwise_bridge_p0_heads.trunk.0.weight"},
+        )
+
+        self.assertEqual(missing_keys, [])
+        self.assertEqual(unexpected_keys, [])
+
+    def test_qwenpi_rewrites_legacy_mowa_checkpoint_keys_for_compatibility(self):
+        from starVLA.model.framework.VLM4A.QwenPI_v3 import Qwen_PI_v3
+
+        state_dict = {
+            "mowa_layerwise_bridge_p0_heads.trunk.0.weight": "legacy_weight",
+            "mowa_layerwise_bridge_p0_heads.trunk.0.bias": "legacy_bias",
+        }
+
+        Qwen_PI_v3._rewrite_mowa_checkpoint_state_dict_keys_for_compatibility(state_dict)
+
+        self.assertNotIn("mowa_layerwise_bridge_p0_heads.trunk.0.weight", state_dict)
+        self.assertEqual(
+            state_dict["mowa_layerwise_bridge_future_feature_heads.trunk.0.weight"],
+            "legacy_weight",
+        )
+        self.assertEqual(
+            state_dict["mowa_layerwise_bridge_future_feature_heads.trunk.0.bias"],
+            "legacy_bias",
+        )

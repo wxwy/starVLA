@@ -126,6 +126,8 @@ def _touch_training_audit_config(cfg) -> None:
         "trainer.is_resume",
         "trainer.pretrained_checkpoint",
         "trainer.gradient_accumulation_steps",
+        "trainer.enable_mowa_future_supervision_loss",
+        "trainer.loss_scale.mowa_future_supervision",
         "datasets.vla_data.data_mix",
         "framework.name",
         "framework.action_model.action_model_type",
@@ -915,8 +917,20 @@ def _write_full_path_dry_run_report(
     trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
     total_params = sum(param.numel() for param in model.parameters())
     mowa_labels_enabled = bool(getattr(cfg.datasets.vla_data, "enable_mowa_p0_labels", False))
-    mowa_supervision_enabled = bool(getattr(model, "mowa_p0_supervision_probe_enabled", False))
-    mowa_supervision_active_heads = list(getattr(model, "mowa_p0_supervision_active_heads", ()))
+    mowa_supervision_enabled = bool(
+        getattr(
+            model,
+            "mowa_future_supervision_loss_enabled",
+            getattr(model, "mowa_p0_supervision_probe_enabled", False),
+        )
+    )
+    mowa_supervision_active_heads = list(
+        getattr(
+            model,
+            "mowa_future_supervision_active_heads",
+            getattr(model, "mowa_p0_supervision_active_heads", ()),
+        )
+    )
     mowa_supervision_label_status = (
         "forward_evaluated_in_full_path_dry_run"
         if (
@@ -1838,8 +1852,10 @@ class VLATrainer(TrainerUtils):
             logger.info(f"  Total optimization steps = {self.config.trainer.max_train_steps}")
             logger.info(f"  is_resume = {_get_config_path(self.config, 'trainer.is_resume', None)}")
             logger.info(
-                f"  resume_from_checkpoint = {getattr(self, 'resume_from_checkpoint', None)}"
+                f"  enable_mowa_future_supervision_loss = "
+                f"{_get_config_path(self.config, 'trainer.enable_mowa_future_supervision_loss', False)}"
             )
+            logger.info(f"  resume_from_checkpoint = {getattr(self, 'resume_from_checkpoint', None)}")
             logger.info(
                 f"  trainer.pretrained_checkpoint = "
                 f"{_get_config_path(self.config, 'trainer.pretrained_checkpoint', None)}"
@@ -1865,11 +1881,24 @@ class VLATrainer(TrainerUtils):
                 output_dict = self.model.forward(batch_vla)
                 action_loss = output_dict["action_loss"]
                 total_loss = action_loss
+                mowa_future_supervision_loss = output_dict.get("mowa_future_supervision_loss")
+                if mowa_future_supervision_loss is None:
+                    mowa_future_supervision_loss = output_dict.get("mowa_p0_supervision_loss")
+                if (
+                    bool(getattr(self.config.trainer, "enable_mowa_future_supervision_loss", False))
+                    and mowa_future_supervision_loss is not None
+                ):
+                    total_loss = total_loss + (
+                        mowa_future_supervision_loss
+                        * float(getattr(self.config.trainer.loss_scale, "mowa_future_supervision", 1.0))
+                    )
 
             action_loss_item = action_loss.item()
             if not hasattr(self, "_loss_accum"):
-                self._loss_accum = {"action_dit_loss": 0.0, "count": 0}
+                self._loss_accum = {"action_dit_loss": 0.0, "mowa_future_supervision_loss": 0.0, "count": 0}
             self._loss_accum["action_dit_loss"] += action_loss_item
+            if mowa_future_supervision_loss is not None:
+                self._loss_accum["mowa_future_supervision_loss"] += mowa_future_supervision_loss.item()
             self._loss_accum["count"] += 1
 
             self.accelerator.backward(total_loss)
@@ -1890,10 +1919,12 @@ class VLATrainer(TrainerUtils):
             if self.accelerator.sync_gradients:
                 metrics = {
                     "action_dit_loss": self._loss_accum["action_dit_loss"] / max(self._loss_accum["count"], 1),
+                    "mowa_future_supervision_loss": self._loss_accum["mowa_future_supervision_loss"]
+                    / max(self._loss_accum["count"], 1),
                     "action_dit_loss_last_micro": action_loss_item,
                     "train_accumulation_micro_steps": self._loss_accum["count"],
                 }
-                self._loss_accum = {"action_dit_loss": 0.0, "count": 0}
+                self._loss_accum = {"action_dit_loss": 0.0, "mowa_future_supervision_loss": 0.0, "count": 0}
                 return metrics
 
         return {

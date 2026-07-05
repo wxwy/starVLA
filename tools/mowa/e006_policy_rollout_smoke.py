@@ -109,7 +109,11 @@ def run_or_plan_e006_policy_rollout_smoke(
         "success_rate_recorded_when_executed": (not execute) or all(
             _is_number((run.get("rollout_result") or {}).get("success_rate")) for run in runs
         ),
+        "structured_blocker_recorded_when_executed": (not execute) or bool(
+            _extract_rollout_blocker(runs)
+        ),
     }
+    rollout_blocker = _extract_rollout_blocker(runs) if execute else {}
     return {
         "stage": cfg.stage,
         "task_id": cfg.task_id,
@@ -122,6 +126,7 @@ def run_or_plan_e006_policy_rollout_smoke(
         "config": str(config_path),
         "artifact_dir": str(artifact_dir),
         "checks": checks,
+        "rollout_blocker": rollout_blocker,
         "runs": runs,
         "success_rate_delta_vs_baseline": _success_rate_deltas(runs),
         "unresolved_items": [
@@ -166,6 +171,7 @@ def _run_intervention(
                 "elapsed_sec": float(time.perf_counter() - start_time),
                 "server_log": str(artifact_dir / intervention / "server.log"),
                 "client_log": str(artifact_dir / intervention / "client.log"),
+                "server_failure_category": _server_failure_category(server_log_path),
                 "error": f"server port {port} did not become ready",
             }
         client_result = _run_client(root, command_set["client_command"], client_log_path)
@@ -290,6 +296,12 @@ def _client_failure_category(lines: list[str]) -> str:
     text = "\n".join(lines)
     if "No module named" in text:
         return "missing_python_dependency"
+    if (
+        "mujoco.osmesa" in text and "glGetError" in text
+    ) or (
+        "mujoco.egl" in text and "eglQueryString" in text
+    ):
+        return "robocasa_render_backend_unavailable"
     if "FileNotFoundError" in text and "models/assets" in text:
         return "missing_robocasa_asset"
     if "ConnectionRefusedError" in text or "Failed to connect to server" in text:
@@ -298,11 +310,127 @@ def _client_failure_category(lines: list[str]) -> str:
 
 
 def _rollout_go_no_go(*, execute: bool, checks: dict[str, bool]) -> str:
+    if execute and checks.get("structured_blocker_recorded_when_executed"):
+        return "No-Go: E-006 rollout blocked; see rollout_blocker"
     if not all(checks.values()):
         return "No-Go: E-006 rollout smoke incomplete"
     if not execute:
         return "TBD: E-006 rollout smoke plan ready; execution not started"
     return "TBD: E-006 rollout smoke executed; review success deltas before any claim"
+
+
+def _extract_rollout_blocker(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    server_blocker = _extract_server_blocker(runs)
+    if server_blocker:
+        return server_blocker
+    render_blocker = _extract_render_backend_blocker(runs)
+    if render_blocker:
+        return render_blocker
+    asset_blocker = _extract_asset_blocker(runs)
+    if asset_blocker:
+        return asset_blocker
+    return {}
+
+
+def _extract_server_blocker(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    failing_runs = [
+        run
+        for run in runs
+        if run.get("server_failure_category") == "checkpoint_model_incompatible"
+    ]
+    if not failing_runs:
+        return {}
+    return {
+        "status": "checkpoint_model_incompatible",
+        "scope": "checkpoint",
+        "blocked_interventions": [run.get("intervention") for run in failing_runs],
+        "missing_state_keys": _collect_server_missing_keys(failing_runs),
+    }
+
+
+def _extract_asset_blocker(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    if not runs:
+        return {}
+    failing_runs = [
+        run
+        for run in runs
+        if (run.get("client_result") or {}).get("failure_category") == "missing_robocasa_asset"
+    ]
+    if not failing_runs:
+        return {}
+    missing_assets = []
+    interventions = []
+    for run in failing_runs:
+        interventions.append(run.get("intervention"))
+        tail = (run.get("client_result") or {}).get("tail") or []
+        path = _extract_missing_asset_path(tail)
+        if path is not None and path not in missing_assets:
+            missing_assets.append(path)
+    return {
+        "status": "missing_robocasa_assets",
+        "scope": "environment",
+        "blocked_interventions": interventions,
+        "missing_asset_paths": missing_assets,
+    }
+
+
+def _extract_render_backend_blocker(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    failing_runs = [
+        run
+        for run in runs
+        if (run.get("client_result") or {}).get("failure_category") == "robocasa_render_backend_unavailable"
+    ]
+    if not failing_runs:
+        return {}
+    return {
+        "status": "robocasa_render_backend_unavailable",
+        "scope": "environment",
+        "blocked_interventions": [run.get("intervention") for run in failing_runs],
+        "backend_signatures": _collect_render_backend_signatures(failing_runs),
+    }
+
+
+def _server_failure_category(path: Path) -> str | None:
+    lines = _tail_lines(path)
+    text = "\n".join(lines)
+    if "Error(s) in loading state_dict" in text and "Missing key(s) in state_dict" in text:
+        return "checkpoint_model_incompatible"
+    return None
+
+
+def _collect_server_missing_keys(runs: list[dict[str, Any]]) -> list[str]:
+    keys = []
+    for run in runs:
+        for line in _tail_lines(Path(run["server_log"])):
+            if "Missing key(s) in state_dict:" not in line:
+                continue
+            _, _, suffix = line.partition("Missing key(s) in state_dict:")
+            for raw_key in suffix.split(","):
+                key = raw_key.strip().strip("[]'\"")
+                if key and key not in keys:
+                    keys.append(key)
+    return keys
+
+
+def _collect_render_backend_signatures(runs: list[dict[str, Any]]) -> list[str]:
+    signatures = []
+    for run in runs:
+        for line in (run.get("client_result") or {}).get("tail") or []:
+            if "glGetError" in line or "eglQueryString" in line:
+                if line not in signatures:
+                    signatures.append(line)
+    return signatures
+
+
+def _extract_missing_asset_path(lines: list[str]) -> str | None:
+    for line in reversed(lines):
+        if "FileNotFoundError" not in line or "models/assets" not in line:
+            continue
+        marker = "No such file or directory: "
+        if marker not in line:
+            continue
+        return line.split(marker, 1)[1].strip().strip("'\"")
+    return None
 
 
 if __name__ == "__main__":

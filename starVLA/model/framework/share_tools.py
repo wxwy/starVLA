@@ -10,7 +10,6 @@ import functools
 import gc
 import inspect
 import json
-import os
 import re
 from pathlib import Path
 from types import SimpleNamespace
@@ -239,9 +238,41 @@ def _collect_checkpoint_keys_from_index(checkpoint_dir: Path) -> set[str]:
     return set()
 
 
+def _expand_checkpoint_key_for_compatibility(key: str) -> set[str]:
+    if key.startswith("mowa_layerwise_bridge_p0_heads."):
+        return {
+            key,
+            key.replace(
+                "mowa_layerwise_bridge_p0_heads.",
+                "mowa_layerwise_bridge_future_feature_heads.",
+                1,
+            ),
+        }
+    return {key}
+
+
+def _expand_model_key_for_compatibility(key: str) -> set[str]:
+    if key.startswith("mowa_layerwise_bridge_future_feature_heads."):
+        return {
+            key,
+            key.replace(
+                "mowa_layerwise_bridge_future_feature_heads.",
+                "mowa_layerwise_bridge_p0_heads.",
+                1,
+            ),
+        }
+    return {key}
+
+
 def _filter_strict_key_mismatches(model_keys: set[str], checkpoint_keys: set[str]) -> tuple[list[str], list[str]]:
-    missing_keys = set(model_keys - checkpoint_keys)
-    unexpected_keys = set(checkpoint_keys - model_keys)
+    normalized_checkpoint_keys = set()
+    for key in checkpoint_keys:
+        normalized_checkpoint_keys.update(_expand_checkpoint_key_for_compatibility(key))
+    normalized_model_keys = set()
+    for key in model_keys:
+        normalized_model_keys.update(_expand_model_key_for_compatibility(key))
+    missing_keys = set(model_keys - normalized_checkpoint_keys)
+    unexpected_keys = set(normalized_checkpoint_keys - normalized_model_keys)
 
     # HF/Qwen-style safetensors checkpoints may omit tied lm_head weights and
     # still keep non-persistent rotary caches in the serialized weight map.
@@ -249,11 +280,14 @@ def _filter_strict_key_mismatches(model_keys: set[str], checkpoint_keys: set[str
         if not missing_key.endswith(".lm_head.weight"):
             continue
         embed_key = missing_key.replace(".lm_head.weight", ".model.language_model.embed_tokens.weight")
-        if embed_key in checkpoint_keys:
+        if embed_key in normalized_checkpoint_keys:
             missing_keys.remove(missing_key)
 
     unexpected_keys = {
-        key for key in unexpected_keys if not key.endswith(".rotary_emb.inv_freq") and not key.endswith(".rotary_pos_emb.inv_freq")
+        key
+        for key in unexpected_keys
+        if not key.endswith(".rotary_emb.inv_freq")
+        and not key.endswith(".rotary_pos_emb.inv_freq")
     }
 
     return sorted(missing_keys), sorted(unexpected_keys)

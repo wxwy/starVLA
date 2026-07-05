@@ -23,6 +23,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import gymnasium as gym
 import numpy as np
 
+# Default to CPU offscreen rendering for RoboCasa eval unless the caller
+# explicitly pins a different backend in the environment.
+os.environ.setdefault("MUJOCO_GL", "osmesa")
+os.environ.setdefault("PYOPENGL_PLATFORM", "osmesa")
+
 # Required for upstream robocasa env registration: ``robocasa/<TaskName>``
 import robocasa  # noqa: F401
 import robocasa.wrappers.gym_wrapper  # noqa: F401  (registers envs)

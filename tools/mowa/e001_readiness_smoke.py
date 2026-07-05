@@ -58,6 +58,10 @@ E006_COUPLING_INTERVENTION_SMOKE_REPORT = Path(
 )
 E006_EVAL_LOAD_SMOKE_CONFIG = Path("configs/mowa/mowa_e006_eval_load_smoke.yaml")
 E006_EVAL_LOAD_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e006_eval_load_smoke.json")
+E006_POLICY_ROLLOUT_PREFLIGHT_SMOKE_REPORT = Path(
+    "docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json"
+)
+E006_POLICY_ROLLOUT_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e006_policy_rollout_smoke.json")
 CORE_SOT_DOCS = (
     "00_project_proposal.md",
     "01_technical_survey.md",
@@ -217,6 +221,12 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         "e006_eval_load_smoke_passed": _checks_report_passed(
             root / E006_EVAL_LOAD_SMOKE_REPORT
         ),
+        "e006_policy_rollout_preflight_smoke_passed": _checks_report_passed(
+            root / E006_POLICY_ROLLOUT_PREFLIGHT_SMOKE_REPORT
+        ),
+        "e006_policy_rollout_blocker_recorded": _e006_rollout_blocker_recorded(
+            root / E006_POLICY_ROLLOUT_SMOKE_REPORT
+        ),
     }
 
     sot_status = _sot_docs_status(root)
@@ -236,7 +246,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "runtime policy draft not confirmed",
             "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
             "E-001 executable command candidate exists but remains gated by human confirmation",
-            "E-006 policy eval still requires a trained or smoke-compatible checkpoint",
+            "E-006 policy rollout remains blocked; see rollout_blocker in the E-006 smoke report",
         ]
     )
 
@@ -304,6 +314,13 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "e006_coupling_intervention_smoke_report": str(E006_COUPLING_INTERVENTION_SMOKE_REPORT),
             "e006_eval_load_smoke_config": str(E006_EVAL_LOAD_SMOKE_CONFIG),
             "e006_eval_load_smoke_report": str(E006_EVAL_LOAD_SMOKE_REPORT),
+            "e006_policy_rollout_preflight_smoke_report": str(
+                E006_POLICY_ROLLOUT_PREFLIGHT_SMOKE_REPORT
+            ),
+            "e006_policy_rollout_smoke_report": str(E006_POLICY_ROLLOUT_SMOKE_REPORT),
+            "e006_policy_rollout_blocker": (
+                (_read_json(root / E006_POLICY_ROLLOUT_SMOKE_REPORT) or {}).get("rollout_blocker")
+            ),
             "a100_throughput_stable_candidate": (
                 (_read_json(root / E001_A100_THROUGHPUT_SMOKE_REPORT) or {}).get(
                     "stable_candidate"
@@ -416,6 +433,27 @@ def _starflow_ft0_comparison_smoke_passed(path: Path) -> bool:
         and execution.get("checked") is True
         and baseline.get("blocked_by_launch_guard") is True
         and mowa.get("blocked_by_launch_guard") is True
+    )
+
+
+def _e006_rollout_blocker_recorded(path: Path) -> bool:
+    payload = _read_json(path)
+    if payload is None:
+        return False
+    blocker = payload.get("rollout_blocker") or {}
+    return (
+        blocker.get("status") in {
+            "missing_robocasa_assets",
+            "checkpoint_model_incompatible",
+            "robocasa_render_backend_unavailable",
+        }
+        and blocker.get("scope") in {"environment", "checkpoint"}
+        and bool(blocker.get("blocked_interventions"))
+        and bool(
+            blocker.get("missing_asset_paths")
+            or blocker.get("missing_state_keys")
+            or blocker.get("backend_signatures")
+        )
     )
 
 

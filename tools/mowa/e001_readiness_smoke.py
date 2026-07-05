@@ -168,7 +168,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         "starflow_ft0_baseline_candidate_created": (
             root / E001_STARFLOW_FT0_BASELINE_CANDIDATE_CONFIG
         ).is_file(),
-        "starflow_ft0_comparison_smoke_passed": _checks_report_passed(
+        "starflow_ft0_comparison_smoke_passed": _starflow_ft0_comparison_smoke_passed(
             root / E001_STARFLOW_FT0_COMPARISON_SMOKE_REPORT
         ),
         "training_smoke_config_created": (root / E001_TRAINING_SMOKE_CONFIG).is_file(),
@@ -395,6 +395,23 @@ def _checks_report_passed(path: Path) -> bool:
         return False
     checks = payload.get("checks") or {}
     return bool(checks) and all(checks.values())
+
+
+def _starflow_ft0_comparison_smoke_passed(path: Path) -> bool:
+    payload = _read_json(path)
+    if payload is None:
+        return False
+    checks = payload.get("checks") or {}
+    execution = payload.get("launch_guard_execution") or {}
+    baseline = execution.get("baseline") or {}
+    mowa = execution.get("mowa") or {}
+    return (
+        bool(checks)
+        and all(checks.values())
+        and execution.get("checked") is True
+        and baseline.get("blocked_by_launch_guard") is True
+        and mowa.get("blocked_by_launch_guard") is True
+    )
 
 
 if __name__ == "__main__":

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from omegaconf import OmegaConf
 
@@ -49,12 +51,20 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run MoWA E-001 StarFlow ft0 comparison smoke.")
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, default=OUTPUT)
+    parser.add_argument(
+        "--check-launch-guard",
+        action="store_true",
+        help="Execute train_starvla.py up to launch_guard for both candidate configs.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    payload = build_starflow_ft0_comparison_smoke(args.repo_root)
+    payload = build_starflow_ft0_comparison_smoke(
+        args.repo_root,
+        check_launch_guard=args.check_launch_guard,
+    )
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -63,7 +73,15 @@ def main() -> None:
         print(text)
 
 
-def build_starflow_ft0_comparison_smoke(repo_root: Path | str) -> dict[str, Any]:
+CommandRunner = Callable[[list[str], Path], Any]
+
+
+def build_starflow_ft0_comparison_smoke(
+    repo_root: Path | str,
+    *,
+    check_launch_guard: bool = False,
+    command_runner: CommandRunner | None = None,
+) -> dict[str, Any]:
     root = Path(repo_root)
     baseline = OmegaConf.load(root / BASELINE_CONFIG)
     mowa = OmegaConf.load(root / MOWA_CONFIG)
@@ -105,6 +123,28 @@ def build_starflow_ft0_comparison_smoke(repo_root: Path | str) -> dict[str, Any]
             != _select(mowa, "datasets.vla_data.data_mix")
         ),
     }
+    launch_guard_execution = {
+        "checked": check_launch_guard,
+        "baseline": None,
+        "mowa": None,
+    }
+    if check_launch_guard:
+        launch_guard_execution["baseline"] = _run_launch_guard_check(
+            root,
+            BASELINE_CONFIG,
+            command_runner=command_runner,
+        )
+        launch_guard_execution["mowa"] = _run_launch_guard_check(
+            root,
+            MOWA_CONFIG,
+            command_runner=command_runner,
+        )
+        checks["baseline_launch_guard_blocks_entrypoint"] = bool(
+            launch_guard_execution["baseline"]["blocked_by_launch_guard"]
+        )
+        checks["mowa_launch_guard_blocks_entrypoint"] = bool(
+            launch_guard_execution["mowa"]["blocked_by_launch_guard"]
+        )
     return {
         "stage": "P0",
         "experiment_id": "E-001",
@@ -113,6 +153,7 @@ def build_starflow_ft0_comparison_smoke(repo_root: Path | str) -> dict[str, Any]
         "mowa_config": str(MOWA_CONFIG),
         "official_starflow_ft0_reference": str(OFFICIAL_FT0_CONFIG),
         "checks": checks,
+        "launch_guard_execution": launch_guard_execution,
         "invariant_values": invariant_values,
         "invariant_matches": invariant_matches,
         "expected_differences": {
@@ -149,6 +190,48 @@ def build_starflow_ft0_comparison_smoke(repo_root: Path | str) -> dict[str, Any]
 def _select(cfg: Any, dot_path: str) -> Any:
     value = OmegaConf.select(cfg, dot_path, default=None)
     return OmegaConf.to_container(value, resolve=True) if OmegaConf.is_config(value) else value
+
+
+def _run_launch_guard_check(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    command_runner: CommandRunner | None = None,
+) -> dict[str, Any]:
+    command = [
+        sys.executable,
+        "starVLA/training/train_starvla.py",
+        "--config_yaml",
+        str(config_path),
+    ]
+    runner = command_runner or _default_command_runner
+    completed = runner(command, repo_root)
+    stdout = getattr(completed, "stdout", "") or ""
+    stderr = getattr(completed, "stderr", "") or ""
+    combined_output = stdout + "\n" + stderr
+    blocked = (
+        getattr(completed, "returncode", 0) != 0
+        and "Training launch blocked by launch_guard" in combined_output
+    )
+    return {
+        "config": str(config_path),
+        "command": command,
+        "returncode": getattr(completed, "returncode", None),
+        "blocked_by_launch_guard": blocked,
+        "stdout_tail": stdout[-1000:],
+        "stderr_tail": stderr[-1000:],
+    }
+
+
+def _default_command_runner(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
 
 
 if __name__ == "__main__":

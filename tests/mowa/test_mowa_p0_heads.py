@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 import tempfile
 import unittest
 
@@ -1054,6 +1055,67 @@ class MoWAP0HeadsTest(unittest.TestCase):
             report["expected_differences"]["framework.mowa.enable_layerwise_bridge_token_coupling"],
             {"baseline": False, "mowa": True},
         )
+
+    def test_e001_starflow_ft0_comparison_smoke_can_execute_launch_guard(self):
+        from tools.mowa.e001_starflow_ft0_comparison_smoke import (
+            build_starflow_ft0_comparison_smoke,
+        )
+
+        commands = []
+
+        def fake_runner(command, cwd):
+            commands.append((command, cwd))
+            return SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr="RuntimeError: Training launch blocked by launch_guard",
+            )
+
+        report = build_starflow_ft0_comparison_smoke(
+            Path("."),
+            check_launch_guard=True,
+            command_runner=fake_runner,
+        )
+
+        self.assertEqual(len(commands), 2)
+        self.assertTrue(report["launch_guard_execution"]["checked"])
+        self.assertTrue(report["checks"]["baseline_launch_guard_blocks_entrypoint"])
+        self.assertTrue(report["checks"]["mowa_launch_guard_blocks_entrypoint"])
+        self.assertTrue(
+            report["launch_guard_execution"]["baseline"]["blocked_by_launch_guard"]
+        )
+        self.assertTrue(report["launch_guard_execution"]["mowa"]["blocked_by_launch_guard"])
+
+    def test_e001_readiness_requires_starflow_ft0_launch_guard_execution(self):
+        from tools.mowa.e001_readiness_smoke import _starflow_ft0_comparison_smoke_passed
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            report_path = Path(tmpdir) / "comparison.json"
+            report_path.write_text(
+                json.dumps(
+                    {
+                        "checks": {"static_checks": True},
+                        "launch_guard_execution": {"checked": False},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertFalse(_starflow_ft0_comparison_smoke_passed(report_path))
+
+            report_path.write_text(
+                json.dumps(
+                    {
+                        "checks": {"static_checks": True},
+                        "launch_guard_execution": {
+                            "checked": True,
+                            "baseline": {"blocked_by_launch_guard": True},
+                            "mowa": {"blocked_by_launch_guard": True},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertTrue(_starflow_ft0_comparison_smoke_passed(report_path))
 
     def test_e006_eval_load_smoke_validates_checkpoint_sidecars(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -15,20 +15,37 @@ from .action_head_adapter import (
     fuse_mlp_bridge_features,
     resolve_mowa_action_head_binding,
 )
+from .future_latent_prior import (
+    MoWAFutureLatentPrior,
+    MoWAFutureLatentPriorConfig,
+    MoWAFutureLatentPriorOutput,
+    # Backward-compatible P1 aliases (deprecated)
+    MoWAP1B0FutureLatentPrior,
+    MoWAP1B0FutureLatentPriorConfig,
+    MoWAP1B0FutureLatentPriorOutput,
+)
+from .hlcgci import (
+    MoWAHLCGCI,
+    MoWAHLCGCIConfig,
+    MoWAHLCGCIOutput,
+)
 from .p0_heads import (
-    P0FutureFeatures,
     MoWAFutureConstructibleHeads,
     MoWAFutureConstructibleHeadsConfig,
     MoWAFutureFeatureHeads,
     MoWAFutureFeatureHeadsConfig,
     MoWAFutureFeatures,
+    MoWAFutureFullHeads,
+    MoWAFutureFullHeadsConfig,
+    build_mowa_future_constructible_batch_from_smoke,
+    build_mowa_p0_constructible_batch_from_smoke,
+    mowa_manual_sgd_step,
+    # Backward-compatible P0 aliases (deprecated)
     MoWAP0ConstructibleHeads,
     MoWAP0ConstructibleHeadsConfig,
     MoWAP0FullHeads,
     MoWAP0FullHeadsConfig,
-    build_mowa_future_constructible_batch_from_smoke,
-    build_mowa_p0_constructible_batch_from_smoke,
-    mowa_manual_sgd_step,
+    P0FutureFeatures,
 )
 from starVLA.mowa_constants import (
     MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
@@ -46,6 +63,7 @@ from starVLA.mowa_constants import (
 )
 
 __all__ = [
+    "MOWA_ACTION_HEAD_BINDINGS",
     "MOWA_FUTURE_CONSTRUCTIBLE_HEADS",
     "MOWA_FUTURE_FEATURE_HEADS_SOURCE",
     "MOWA_FUTURE_FEATURE_SOURCE_ALIASES",
@@ -54,7 +72,6 @@ __all__ = [
     "MOWA_FUTURE_MASKED_HEADS",
     "MOWA_P0_CONSTRUCTIBLE_HEADS",
     "MOWA_P0_FULLHEADS_FEATURE_SOURCE",
-    "MOWA_ACTION_HEAD_BINDINGS",
     "MOWA_P0_FULL_HEADS",
     "MOWA_P0_HEAD_OUTPUT_DIMS",
     "MOWA_P0_MASKED_HEADS",
@@ -63,16 +80,27 @@ __all__ = [
     "MoWAActionBridgeConfig",
     "MoWAActionBridgeOutput",
     "MoWAActionHeadBinding",
+    "MoWAFutureLatentPrior",
+    "MoWAFutureLatentPriorConfig",
+    "MoWAFutureLatentPriorOutput",
+    "MoWAHLCGCI",
+    "MoWAHLCGCIConfig",
+    "MoWAHLCGCIOutput",
     "MoWAFutureConstructibleHeads",
     "MoWAFutureConstructibleHeadsConfig",
     "MoWAFutureFeatureHeads",
     "MoWAFutureFeatureHeadsConfig",
     "MoWAFutureFeatures",
-    "P0FutureFeatures",
+    "MoWAFutureFullHeads",
+    "MoWAFutureFullHeadsConfig",
     "MoWAP0ConstructibleHeads",
     "MoWAP0ConstructibleHeadsConfig",
     "MoWAP0FullHeads",
     "MoWAP0FullHeadsConfig",
+    "P0FutureFeatures",
+    "MoWAP1B0FutureLatentPrior",
+    "MoWAP1B0FutureLatentPriorConfig",
+    "MoWAP1B0FutureLatentPriorOutput",
     "build_mowa_future_constructible_batch_from_smoke",
     "build_mowa_p0_constructible_batch_from_smoke",
     "append_layerwise_bridge_tokens",

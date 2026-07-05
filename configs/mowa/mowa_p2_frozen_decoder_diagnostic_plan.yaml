@@ -1,0 +1,55 @@
+project_short_name: MoWA
+stage: P2
+experiment_id: E-008
+experiment_name: Frozen decoder diagnostic
+config_role: diagnostic_plan
+task_id: M6-001
+
+purpose:
+  summary: >
+    P2 frozen decoder is a DIAGNOSTIC tool only.  It serves failure
+    analysis, debugging, and demo visualisation.  It is NOT a trainable
+    module, NOT a continuous video generator, and does NOT fine-tune
+    Wan2.2-VAE.
+  triggers:
+    - selected failure cases where action metrics degrade unexpectedly
+    - visual inspection of predicted future latent quality
+  fallback:
+    - latent retrieval (nearest-neighbour in latent space)
+    - PCA / t-SNE latent visualisation
+    - attention-map inspection
+
+constraints:
+  no_train_new_decoder: true
+  no_finetune_wan_vae: true
+  no_continuous_video_generation: true
+  max_keyframes_per_case: 10
+
+plan:
+  step1_selection:
+    description: >
+      Curate a small set of representative failure episodes (max 20)
+      from E-006 rollout results.
+    status: TBD
+  step2_latent_decode:
+    description: >
+      For selected frames, feed stored Wan latents through the
+      OFF-THE-SHELF Wan2.2-VAE decoder (no fine-tuning).  Compare
+      decoded images against ground-truth frames.
+    status: TBD
+  step3_report:
+    description: >
+      Produce a per-case diagnostic card: ground-truth frame, decoded
+      frame, SSIM/PSNR, and expert notes.
+    status: TBD
+
+launch:
+  launch_ready: false
+  eval_started: false
+  requires_human_confirmation: true
+  reason: P2 is a diagnostic aid; not on the critical path for E-001/E-006
+
+checks:
+  plan_exists: true
+  constraints_documented: true
+  smoke_passed: TBD

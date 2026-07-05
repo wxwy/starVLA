@@ -111,3 +111,16 @@ def select_mowa_leakage_anchor_indices(
     mid = max(0, min(row_count - 1, row_count // 2))
     end = max(0, min(row_count - 1, row_count - window_config.future_steps - 1))
     return tuple(sorted({start, mid, end}))
+
+
+def build_mowa_shuffled_episode_pairs(
+    episode_indices: tuple[int, ...],
+) -> tuple[tuple[int, int], ...]:
+    """Build deterministic non-self shuffled pairs for robot-history sanity checks."""
+
+    if len(episode_indices) <= 1:
+        return ()
+    return tuple(
+        (episode_index, episode_indices[(idx + 1) % len(episode_indices)])
+        for idx, episode_index in enumerate(episode_indices)
+    )

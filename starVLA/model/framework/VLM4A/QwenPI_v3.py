@@ -334,7 +334,6 @@ class Qwen_PI_v3(baseframework):
             else nn.Linear(self.action_dit_hidden_dim, wam_feature_dim)
         )
         self.mowa_layerwise_bridge_future_feature_heads = None
-        self.mowa_layerwise_bridge_p0_heads = None
         self.mowa_layerwise_bridge_head_mask_projector = None
         if self.mowa_layerwise_bridge_feature_source in MOWA_FUTURE_FEATURE_SOURCE_ALIASES:
             active_heads = getattr(
@@ -354,7 +353,6 @@ class Qwen_PI_v3(baseframework):
                     hidden_dim=wam_feature_dim,
                 )
             )
-            self.mowa_layerwise_bridge_p0_heads = self.mowa_layerwise_bridge_future_feature_heads
             head_mask_dim = sum(
                 MOWA_FUTURE_HEAD_OUTPUT_DIMS[head]
                 for head in MOWA_FUTURE_CONSTRUCTIBLE_HEADS
@@ -560,6 +558,22 @@ class Qwen_PI_v3(baseframework):
             return self.mowa_layerwise_bridge_future_feature_heads.future_features(hidden_features, masks)
         raise RuntimeError(f"Unhandled MoWA layerwise bridge feature source: {source}")
 
+    @staticmethod
+    def _mask_aware_pool_last_hidden(
+        last_hidden: torch.Tensor,
+        attention_mask: torch.Tensor | None,
+    ) -> torch.Tensor:
+        """Mask-aware pooling over the sequence dimension.
+
+        When ``attention_mask`` is provided (shape ``[B, seq]``), padding
+        positions are excluded before averaging; otherwise a plain ``mean``
+        over dim=1 is used as a fallback.
+        """
+        if attention_mask is None:
+            return last_hidden.mean(dim=1)
+        mask = attention_mask.to(dtype=last_hidden.dtype).unsqueeze(-1)
+        return (last_hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)
+
     def _maybe_run_mowa_future_supervision_loss(
         self,
         hidden_features: torch.Tensor,
@@ -629,7 +643,9 @@ class Qwen_PI_v3(baseframework):
         if self.mowa_layerwise_bridge is None:
             raise RuntimeError("MoWA layerwise bridge coupling is enabled but not initialized.")
 
-        hidden_features = vl_embs_list[-1].mean(dim=1)
+        hidden_features = self._mask_aware_pool_last_hidden(
+            vl_embs_list[-1], encoder_attention_mask
+        )
         future_features = self._build_mowa_layerwise_bridge_future_features(hidden_features)
         if (
             getattr(self, "mowa_layerwise_bridge_token_intervention", "baseline")
@@ -733,7 +749,7 @@ class Qwen_PI_v3(baseframework):
             )  # [B, T_full, action_dim]
             actions_target = actions[:, -self.action_horizon :, :]  # (B, action_horizon, action_dim)
             mowa_future_supervision = self._maybe_run_mowa_future_supervision_loss(
-                base_hidden.mean(dim=1), examples
+                self._mask_aware_pool_last_hidden(base_hidden, backbone_attention_mask), examples
             )
 
             repeated_diffusion_steps = (
@@ -945,8 +961,9 @@ if __name__ == "__main__":
     cfg.framework.qwenvl.base_vlm = "./playground/Pretrained_models/Qwen3-VL-4B-Instruct"
 
     model = Qwen_PI_v3(cfg)
-    # ckpt="/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/1011_qwenpi/checkpoints/need_steps_10000_pytorch_model.pt"
-    # model = Qwen_PI.from_pretrained(ckpt)
+    # mdl = Qwen_PI.from_pretrained(ckpt)
+    # ckpt = "/mnt/petrelfs/yejinhui/Projects/llavavla/results/Checkpoints/"
+    # ckpt += "1011_qwenpi/checkpoints/need_steps_10000_pytorch_model.pt"
     print(model)
 
     def print_model_size(m: nn.Module, depth: int = 1):

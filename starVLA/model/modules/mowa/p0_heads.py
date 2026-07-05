@@ -1,4 +1,4 @@
-"""MoWA P0 ConstructibleHeads smoke module."""
+"""MoWA Future Feature Heads module (formerly P0 Heads)."""
 
 from __future__ import annotations
 
@@ -7,27 +7,27 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from starVLA.mowa_constants import (
-    MOWA_P0_FULL_HEADS,
-    MOWA_P0_HEAD_OUTPUT_DIMS,
+    MOWA_FUTURE_FULL_HEADS,
+    MOWA_FUTURE_HEAD_OUTPUT_DIMS,
 )
 
 
 @dataclass(frozen=True)
-class MoWAP0ConstructibleHeadsConfig:
+class MoWAFutureConstructibleHeadsConfig:
     input_dim: int = 4
     hidden_dim: int = 32
     action_outcome_loss_type: str = "mse"
 
 
 @dataclass(frozen=True)
-class MoWAP0FullHeadsConfig:
+class MoWAFutureFullHeadsConfig:
     input_dim: int = 4
     hidden_dim: int = 32
     action_outcome_loss_type: str = "mse"
 
 
 @dataclass(frozen=True)
-class P0FutureFeatures:
+class MoWAFutureFeatures:
     hidden_features: Any
     head_outputs: Mapping[str, Any]
     active_heads: tuple[str, ...]
@@ -46,21 +46,21 @@ def mowa_manual_sgd_step(model: Any, lr: float) -> None:
                 parameter.grad = None
 
 
-class MoWAP0ConstructibleHeads:
-    """Tiny P0 head module for train-smoke only.
+class MoWAFutureConstructibleHeads:
+    """Constructible future-feature head module for train-smoke only.
 
-    该模块只覆盖当前 G0 已放行的两个 ConstructibleHeads：
-    `task_progress` 和 `action_outcome_class`。其余 P0 head 不在本模块中
+    该模块只覆盖当前 G0 已放行的两个 constructible heads：
+    `task_progress` 和 `action_outcome_class`。其余 head 不在本模块中
     偷偷启用，必须继续由 mask 处理。
     """
 
     def __new__(cls, *args: Any, **kwargs: Any):
         import torch.nn as nn
 
-        class _TorchMoWAP0ConstructibleHeads(nn.Module):
-            def __init__(self, config: MoWAP0ConstructibleHeadsConfig | None = None):
+        class _TorchMoWAFutureConstructibleHeads(nn.Module):
+            def __init__(self, config: MoWAFutureConstructibleHeadsConfig | None = None):
                 super().__init__()
-                self.config = config or MoWAP0ConstructibleHeadsConfig()
+                self.config = config or MoWAFutureConstructibleHeadsConfig()
                 self.trunk = nn.Sequential(
                     nn.Linear(self.config.input_dim, self.config.hidden_dim),
                     nn.ReLU(),
@@ -101,22 +101,22 @@ class MoWAP0ConstructibleHeads:
                 losses["total"] = total
                 return total, losses, outputs
 
-        return _TorchMoWAP0ConstructibleHeads(*args, **kwargs)
+        return _TorchMoWAFutureConstructibleHeads(*args, **kwargs)
 
 
-class MoWAP0FullHeads:
-    """Seven-head P0 interface with mask-controlled loss.
+class MoWAFutureFullHeads:
+    """Seven-head future-feature interface with mask-controlled loss.
 
-    该模块固定七类 P0 heads；缺失标签必须通过 mask 关闭，不新增替代 head。
+    该模块固定七类 future heads；缺失标签必须通过 mask 关闭，不新增替代 head。
     """
 
     def __new__(cls, *args: Any, **kwargs: Any):
         import torch.nn as nn
 
-        class _TorchMoWAP0FullHeads(nn.Module):
-            def __init__(self, config: MoWAP0FullHeadsConfig | None = None):
+        class _TorchMoWAFutureFullHeads(nn.Module):
+            def __init__(self, config: MoWAFutureFullHeadsConfig | None = None):
                 super().__init__()
-                self.config = config or MoWAP0FullHeadsConfig()
+                self.config = config or MoWAFutureFullHeadsConfig()
                 self.trunk = nn.Sequential(
                     nn.Linear(self.config.input_dim, self.config.hidden_dim),
                     nn.ReLU(),
@@ -124,7 +124,7 @@ class MoWAP0FullHeads:
                 self.heads = nn.ModuleDict(
                     {
                         head: nn.Linear(self.config.hidden_dim, output_dim)
-                        for head, output_dim in MOWA_P0_HEAD_OUTPUT_DIMS.items()
+                        for head, output_dim in MOWA_FUTURE_HEAD_OUTPUT_DIMS.items()
                     }
                 )
 
@@ -136,15 +136,15 @@ class MoWAP0FullHeads:
                     outputs[head] = value.squeeze(-1) if value.shape[-1] == 1 else value
                 return outputs
 
-            def future_features(self, features, masks: Mapping[str, Any]) -> P0FutureFeatures:
+            def future_features(self, features, masks: Mapping[str, Any]) -> MoWAFutureFeatures:
                 hidden = self.trunk(features)
                 outputs = {}
                 for head, module in self.heads.items():
                     value = module(hidden)
                     outputs[head] = value.squeeze(-1) if value.shape[-1] == 1 else value
-                active_heads = tuple(head for head in MOWA_P0_FULL_HEADS if bool(masks.get(head, False)))
-                masked_heads = tuple(head for head in MOWA_P0_FULL_HEADS if not bool(masks.get(head, False)))
-                return P0FutureFeatures(
+                active_heads = tuple(head for head in MOWA_FUTURE_FULL_HEADS if bool(masks.get(head, False)))
+                masked_heads = tuple(head for head in MOWA_FUTURE_FULL_HEADS if not bool(masks.get(head, False)))
+                return MoWAFutureFeatures(
                     hidden_features=hidden,
                     head_outputs=outputs,
                     active_heads=active_heads,
@@ -157,7 +157,7 @@ class MoWAP0FullHeads:
                 outputs = self(features)
                 losses = {}
                 active_losses = []
-                for head in MOWA_P0_FULL_HEADS:
+                for head in MOWA_FUTURE_FULL_HEADS:
                     if not bool(masks.get(head, False)):
                         continue
                     if head not in targets:
@@ -176,7 +176,7 @@ class MoWAP0FullHeads:
                 losses["total"] = total
                 return total, losses, outputs
 
-        return _TorchMoWAP0FullHeads(*args, **kwargs)
+        return _TorchMoWAFutureFullHeads(*args, **kwargs)
 
 
 def _compute_mowa_head_loss(
@@ -201,12 +201,14 @@ def _compute_mowa_head_loss(
     raise ValueError(f"Unsupported MoWA action_outcome_loss_type: {action_outcome_loss_type}")
 
 
-# Runtime-facing aliases. P0 names are kept for experiment-stage compatibility.
-MoWAFutureConstructibleHeadsConfig = MoWAP0ConstructibleHeadsConfig
-MoWAFutureFeatureHeadsConfig = MoWAP0FullHeadsConfig
-MoWAFutureFeatures = P0FutureFeatures
-MoWAFutureConstructibleHeads = MoWAP0ConstructibleHeads
-MoWAFutureFeatureHeads = MoWAP0FullHeads
+# Backward-compatible P0 aliases (deprecated — prefer Future* names).
+MoWAP0ConstructibleHeadsConfig = MoWAFutureConstructibleHeadsConfig
+MoWAP0FullHeadsConfig = MoWAFutureFullHeadsConfig
+P0FutureFeatures = MoWAFutureFeatures
+MoWAP0ConstructibleHeads = MoWAFutureConstructibleHeads
+MoWAP0FullHeads = MoWAFutureFullHeads
+MoWAFutureFeatureHeadsConfig = MoWAFutureFullHeadsConfig  # convenient alias
+MoWAFutureFeatureHeads = MoWAFutureFullHeads             # convenient alias
 
 
 def build_mowa_p0_constructible_batch_from_smoke(

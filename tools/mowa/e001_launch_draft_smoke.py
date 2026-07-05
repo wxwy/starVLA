@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from omegaconf import OmegaConf
+
 
 LAUNCH_DRAFT = Path("configs/mowa/mowa_e001_launch_draft.yaml")
 RUNTIME_POLICY = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
@@ -40,6 +42,10 @@ def parse_args() -> argparse.Namespace:
 def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
     root = Path(repo_root)
     readiness = _read_json(root / READINESS_REPORT) or {}
+    launch_draft_cfg = _read_yaml(root / LAUNCH_DRAFT) or {}
+    runtime_policy_cfg = _read_yaml(root / RUNTIME_POLICY) or {}
+    training_command_candidate_cfg = _read_yaml(root / TRAINING_COMMAND_CANDIDATE) or {}
+    launch_candidate_cfg = _read_yaml(root / LAUNCH_CANDIDATE) or {}
     launch_draft = (root / LAUNCH_DRAFT).read_text(encoding="utf-8") if (root / LAUNCH_DRAFT).is_file() else ""
     launch_candidate_smoke = _read_json(root / LAUNCH_CANDIDATE_SMOKE_REPORT) or {}
     starflow_comparison = _read_json(root / STARFLOW_COMPARISON_REPORT) or {}
@@ -52,10 +58,8 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         "launch_candidate_smoke_report_created": (root / LAUNCH_CANDIDATE_SMOKE_REPORT).is_file(),
         "starflow_comparison_report_created": (root / STARFLOW_COMPARISON_REPORT).is_file(),
         "a100_throughput_plan_created": (root / A100_THROUGHPUT_PLAN).is_file(),
-        "launch_ready_false": _text_contains(root / LAUNCH_DRAFT, "launch_ready: false"),
-        "training_started_false": _text_contains(root / LAUNCH_DRAFT, "training_started: false"),
-        "runtime_policy_unconfirmed": _text_contains(root / RUNTIME_POLICY, "policy_confirmed: false"),
-        "runtime_policy_launch_ready_false": _text_contains(root / RUNTIME_POLICY, "launch_ready: false"),
+        "launch_draft_state_recorded": _launch_draft_state_recorded(launch_draft_cfg),
+        "runtime_policy_state_consistent": _runtime_policy_state_consistent(runtime_policy_cfg),
         "checkpoint_logic_unchanged": _text_contains(
             root / RUNTIME_POLICY,
             "checkpoint_logic_change_allowed: false",
@@ -65,13 +69,11 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             root / TRAINING_COMMAND_DRAFT,
             "TBD_FULL_E001_ENTRYPOINT",
         ),
-        "candidate_command_not_launch_approved": (
-            _text_contains(root / TRAINING_COMMAND_CANDIDATE, "launch_ready: false")
-            and _text_contains(root / TRAINING_COMMAND_CANDIDATE, "requires_human_confirmation: true")
+        "training_command_candidate_state_consistent": _launch_candidate_state_is_consistent(
+            training_command_candidate_cfg.get("launch_guard") or {}
         ),
-        "launch_candidate_not_launch_approved": (
-            _text_contains(root / LAUNCH_CANDIDATE, "launch_ready: false")
-            and _text_contains(root / LAUNCH_CANDIDATE, "policy_confirmed: false")
+        "launch_candidate_state_consistent": _launch_candidate_state_is_consistent(
+            launch_candidate_cfg.get("launch_guard") or {}
         ),
         "launch_candidate_smoke_passed": bool(
             (launch_candidate_smoke.get("checks") or {}).get("final_parameter_alignment_passed")
@@ -85,8 +87,12 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         ),
         "launch_draft_reason_current": (
             "final WAM feature source are not confirmed" not in launch_draft
-            and "resource policy, core SOT, class mapping, and action-gain evidence are not confirmed"
-            in launch_draft
+            and (
+                "resource policy, core SOT, class mapping, and action-gain evidence are not confirmed"
+                in launch_draft
+                or "long-training resource policy, core SOT, class mapping, and action-gain evidence remain unconfirmed for full-scale training"
+                in launch_draft
+            )
         ),
         "launch_blocker_mentions_action_gain_not_feature_source": (
             "action-gain evidence is not validated" in launch_draft
@@ -109,7 +115,7 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         "stage": "P0",
         "experiment_id": "E-001",
         "training_started": False,
-        "launch_ready": False,
+        "launch_ready": bool(((launch_draft_cfg.get("launch") or {}).get("launch_ready"))),
         "checks": checks,
         "drafts": {
             "launch_draft": str(LAUNCH_DRAFT),
@@ -126,18 +132,18 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             "class_mapping_status remains Data Gate",
             "batch size 4, expected VRAM and runtime are bounded full-VLA smoke observed only, "
             "not long-training confirmed",
-            "runtime policy remains unconfirmed",
-            "executable training command candidate remains gated by human confirmation",
-            "policy_confirmed and launch_ready remain false",
+            "runtime policy is approved only for current bounded E-001 scope, not for broader action-gain claims",
+            "executable training command candidate and launch candidate must remain synchronized with runtime policy",
+            "action-gain evidence remains unvalidated",
         ],
         "go_no_go": (
-            "TBD: launch drafts available; A100 smoke passed but runtime policy remains Data Gate"
+            "TBD: launch draft records approved bounded E-001 state; full-scale claims remain gated"
             if all(checks.values())
             else "No-Go: launch draft prerequisites incomplete"
         ),
         "notes": [
             "This smoke does not start training.",
-            "Training command draft is dry-run-only; command candidate exists but keeps launch_ready=false.",
+            "Training command draft remains dry-run-only; command candidate records the currently approved bounded launch state.",
         ],
     }
 
@@ -157,6 +163,48 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _read_yaml(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    payload = OmegaConf.load(path)
+    return OmegaConf.to_container(payload, resolve=True)
+
+
+def _launch_draft_state_recorded(payload: dict[str, Any]) -> bool:
+    launch = payload.get("launch") or {}
+    return (
+        launch.get("launch_ready") is True
+        and launch.get("training_started") is True
+        and launch.get("requires_human_confirmation") is True
+        and launch.get("human_confirmed") is True
+        and launch.get("training_completed_1000_steps") is True
+    )
+
+
+def _runtime_policy_state_consistent(payload: dict[str, Any]) -> bool:
+    status = payload.get("status") or {}
+    return (
+        status.get("policy_confirmed") is True
+        and status.get("launch_ready") is True
+        and status.get("resource_policy_confirmed") is True
+    )
+
+
+def _launch_candidate_state_is_consistent(guard: dict[str, Any]) -> bool:
+    if guard.get("launch_ready") is False:
+        return (
+            guard.get("policy_confirmed") is False
+            and guard.get("requires_human_confirmation") is True
+        )
+    if guard.get("launch_ready") is True:
+        return (
+            guard.get("policy_confirmed") is True
+            and guard.get("requires_human_confirmation") is True
+            and guard.get("human_confirmed") is True
+        )
+    return False
 
 
 def _text_contains(path: Path, pattern: str) -> bool:

@@ -23,10 +23,12 @@ from typing import Any, Dict, List, Optional, Tuple
 import gymnasium as gym
 import numpy as np
 
-# Default to CPU offscreen rendering for RoboCasa eval unless the caller
+# Default to EGL offscreen rendering for RoboCasa eval unless the caller
 # explicitly pins a different backend in the environment.
-os.environ.setdefault("MUJOCO_GL", "osmesa")
-os.environ.setdefault("PYOPENGL_PLATFORM", "osmesa")
+# OSMesa is the historical default but depends on libOSMesa which is not
+# always available; EGL works with NVIDIA drivers + libegl1.
+os.environ.setdefault("MUJOCO_GL", "egl")
+os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
 
 # Required for upstream robocasa env registration: ``robocasa/<TaskName>``
 import robocasa  # noqa: F401

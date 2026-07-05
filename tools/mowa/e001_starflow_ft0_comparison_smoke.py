@@ -48,17 +48,24 @@ INVARIANT_PATHS = (
 ALLOWED_RUNTIME_DIFFERENCE_PATHS = (
     "run_id",
     "launch_guard.reason",
+    "launch_guard.launch_ready",
+    "launch_guard.policy_confirmed",
+    "launch_guard.human_confirmed",
     "framework.mowa.enable_layerwise_bridge_token_coupling",
+    "framework.mowa.enable_future_supervision_loss",
     "framework.mowa.layerwise_bridge_feature_source",
     "framework.mowa.layerwise_bridge_active_heads",
     "framework.mowa.wam_feature_dim",
     "framework.mowa.action_hidden_dim",
     "framework.mowa.num_bridge_tokens",
     "datasets.vla_data.enable_mowa_p0_labels",
+    "trainer.enable_mowa_future_supervision_loss",
 )
 REQUIRED_RUNTIME_DIFFERENCE_PATHS = (
     "framework.mowa.enable_layerwise_bridge_token_coupling",
+    "framework.mowa.enable_future_supervision_loss",
     "datasets.vla_data.enable_mowa_p0_labels",
+    "trainer.enable_mowa_future_supervision_loss",
 )
 
 
@@ -118,7 +125,7 @@ def build_starflow_ft0_comparison_smoke(
         "mowa_candidate_config_created": (root / MOWA_CONFIG).is_file(),
         "official_starflow_ft0_config_exists": (root / OFFICIAL_FT0_CONFIG).is_file(),
         "baseline_launch_gated": _select(baseline, "launch_guard.launch_ready") is False,
-        "mowa_launch_gated": _select(mowa, "launch_guard.launch_ready") is False,
+        "mowa_launch_state_consistent": _launch_guard_state_is_consistent(mowa),
         "baseline_bridge_disabled": (
             _select(baseline, "framework.mowa.enable_layerwise_bridge_token_coupling") is False
         ),
@@ -195,10 +202,14 @@ def build_starflow_ft0_comparison_smoke(
         "unresolved_items": [
             "This is a static config comparison only; no training is started.",
             "The official StarFlow ft0 YAML remains a reference config on LIBERO, not the paired RoboCasa baseline.",
-            "Both paired candidate configs remain launch-gated until explicit human confirmation.",
+            (
+                "The paired baseline remains launch-gated while the MoWA candidate is launch-approved."
+                if _select(mowa, "launch_guard.launch_ready") is True
+                else "Both paired candidate configs remain launch-gated until explicit human confirmation."
+            ),
         ],
         "go_no_go": (
-            "TBD: paired StarFlow ft0 baseline and MoWA bridge configs are aligned and gated"
+            "TBD: paired StarFlow ft0 baseline and MoWA bridge configs are aligned"
             if all(checks.values())
             else "No-Go: paired StarFlow ft0 comparison config drift detected"
         ),
@@ -208,6 +219,22 @@ def build_starflow_ft0_comparison_smoke(
 def _select(cfg: Any, dot_path: str) -> Any:
     value = OmegaConf.select(cfg, dot_path, default=None)
     return OmegaConf.to_container(value, resolve=True) if OmegaConf.is_config(value) else value
+
+
+def _launch_guard_state_is_consistent(cfg: Any) -> bool:
+    launch_ready = _select(cfg, "launch_guard.launch_ready")
+    policy_confirmed = _select(cfg, "launch_guard.policy_confirmed")
+    requires_human_confirmation = _select(cfg, "launch_guard.requires_human_confirmation")
+    human_confirmed = _select(cfg, "launch_guard.human_confirmed")
+    if launch_ready is False:
+        return policy_confirmed is False
+    if launch_ready is True:
+        if policy_confirmed is not True:
+            return False
+        if requires_human_confirmation is True:
+            return human_confirmed is True
+        return True
+    return False
 
 
 def _build_runtime_symmetry_report(baseline: Any, mowa: Any) -> dict[str, Any]:

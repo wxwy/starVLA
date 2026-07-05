@@ -10,7 +10,7 @@
     "mowa_candidate_config_created": true,
     "official_starflow_ft0_config_exists": true,
     "baseline_launch_gated": true,
-    "mowa_launch_gated": true,
+    "mowa_launch_state_consistent": true,
     "baseline_bridge_disabled": true,
     "mowa_bridge_enabled": true,
     "baseline_p0_labels_disabled": true,
@@ -160,18 +160,23 @@
   },
   "runtime_symmetry": {
     "passed": true,
-    "compared_path_count": 93,
-    "matched_path_count": 84,
+    "compared_path_count": 95,
+    "matched_path_count": 81,
     "allowed_difference_paths": [
       "datasets.vla_data.enable_mowa_p0_labels",
       "framework.mowa.action_hidden_dim",
+      "framework.mowa.enable_future_supervision_loss",
       "framework.mowa.enable_layerwise_bridge_token_coupling",
       "framework.mowa.layerwise_bridge_active_heads",
       "framework.mowa.layerwise_bridge_feature_source",
       "framework.mowa.num_bridge_tokens",
       "framework.mowa.wam_feature_dim",
+      "launch_guard.human_confirmed",
+      "launch_guard.launch_ready",
+      "launch_guard.policy_confirmed",
       "launch_guard.reason",
-      "run_id"
+      "run_id",
+      "trainer.enable_mowa_future_supervision_loss"
     ],
     "unexpected_difference_paths": [],
     "missing_required_difference_paths": [],
@@ -183,6 +188,10 @@
       "framework.mowa.action_hidden_dim": {
         "baseline": null,
         "mowa": 1024
+      },
+      "framework.mowa.enable_future_supervision_loss": {
+        "baseline": false,
+        "mowa": true
       },
       "framework.mowa.enable_layerwise_bridge_token_coupling": {
         "baseline": false,
@@ -207,13 +216,29 @@
         "baseline": null,
         "mowa": 1024
       },
+      "launch_guard.human_confirmed": {
+        "baseline": null,
+        "mowa": true
+      },
+      "launch_guard.launch_ready": {
+        "baseline": false,
+        "mowa": true
+      },
+      "launch_guard.policy_confirmed": {
+        "baseline": false,
+        "mowa": true
+      },
       "launch_guard.reason": {
         "baseline": "StarFlow ft0 same-data baseline candidate only; do not run until explicitly confirmed",
-        "mowa": "candidate config only; do not run until runtime policy is explicitly confirmed"
+        "mowa": "runtime policy confirmed; launch approved"
       },
       "run_id": {
         "baseline": "MoWA-E-001_starflow_ft0_baseline_bs4_candidate",
         "mowa": "MoWA-E-001_starflow_ft0_bs4_candidate"
+      },
+      "trainer.enable_mowa_future_supervision_loss": {
+        "baseline": false,
+        "mowa": true
       }
     },
     "unexpected_differences": {}
@@ -239,7 +264,7 @@
   "unresolved_items": [
     "This is a static config comparison only; no training is started.",
     "The official StarFlow ft0 YAML remains a reference config on LIBERO, not the paired RoboCasa baseline.",
-    "Both paired candidate configs remain launch-gated until explicit human confirmation."
+    "The paired baseline remains launch-gated while the MoWA candidate is launch-approved."
   ],
-  "go_no_go": "TBD: paired StarFlow ft0 baseline and MoWA bridge configs are aligned and gated"
+  "go_no_go": "TBD: paired StarFlow ft0 baseline and MoWA bridge configs are aligned"
 }

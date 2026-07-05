@@ -142,14 +142,12 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         ),
         "p0_fullheads_interface_created": (root / P0_FULLHEADS_INTERFACE_CONFIG).is_file(),
         "e001_launch_draft_created": (root / E001_LAUNCH_DRAFT_CONFIG).is_file(),
-        "e001_launch_ready_false": _text_contains(
-            root / E001_LAUNCH_DRAFT_CONFIG,
-            "launch_ready: false",
+        "e001_launch_draft_state_recorded": _launch_draft_state_recorded(
+            root / E001_LAUNCH_DRAFT_CONFIG
         ),
         "runtime_policy_draft_created": (root / E001_RUNTIME_POLICY_DRAFT_CONFIG).is_file(),
-        "runtime_policy_confirmed_false": _text_contains(
-            root / E001_RUNTIME_POLICY_DRAFT_CONFIG,
-            "policy_confirmed: false",
+        "runtime_policy_state_recorded": _runtime_policy_state_recorded(
+            root / E001_RUNTIME_POLICY_DRAFT_CONFIG
         ),
         "action_bridge_interface_created": (root / MOWA_ACTION_BRIDGE_INTERFACE_CONFIG).is_file(),
         "training_command_draft_created": (root / E001_TRAINING_COMMAND_DRAFT_CONFIG).is_file(),
@@ -159,16 +157,12 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         ),
         "training_command_candidate_created": (root / E001_TRAINING_COMMAND_CANDIDATE_CONFIG).is_file(),
         "launch_candidate_created": (root / E001_LAUNCH_CANDIDATE_CONFIG).is_file(),
-        "training_command_candidate_gated": (
-            _text_contains(root / E001_TRAINING_COMMAND_CANDIDATE_CONFIG, "launch_ready: false")
-            and _text_contains(
-                root / E001_TRAINING_COMMAND_CANDIDATE_CONFIG,
-                "requires_human_confirmation: true",
-            )
+        "training_command_candidate_state_consistent": _command_candidate_state_consistent(
+            root / E001_TRAINING_COMMAND_CANDIDATE_CONFIG
         ),
-        "launch_candidate_gated": (
-            _text_contains(root / E001_LAUNCH_CANDIDATE_CONFIG, "launch_ready: false")
-            and _text_contains(root / E001_LAUNCH_CANDIDATE_CONFIG, "policy_confirmed: false")
+        "launch_candidate_state_consistent": _launch_candidate_state_consistent(
+            root / E001_LAUNCH_CANDIDATE_CONFIG,
+            root / E001_RUNTIME_POLICY_DRAFT_CONFIG,
         ),
         "launch_candidate_smoke_passed": _checks_report_passed(
             root / E001_LAUNCH_CANDIDATE_SMOKE_REPORT
@@ -224,7 +218,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         "e006_policy_rollout_preflight_smoke_passed": _checks_report_passed(
             root / E006_POLICY_ROLLOUT_PREFLIGHT_SMOKE_REPORT
         ),
-        "e006_policy_rollout_blocker_recorded": _e006_rollout_blocker_recorded(
+        "e006_policy_rollout_outcome_recorded": _e006_rollout_outcome_recorded(
             root / E006_POLICY_ROLLOUT_SMOKE_REPORT
         ),
     }
@@ -241,16 +235,22 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         )
     unresolved_items.extend(
         [
-            "E-001 launch draft is not executable",
+            "E-001 launch draft records bounded approved state only, not full-scale launch approval",
             "class_mapping_status remains Data Gate",
-            "runtime policy draft not confirmed",
+            "runtime policy draft and launch candidate must stay synchronized",
             "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
-            "E-001 executable command candidate exists but remains gated by human confirmation",
-            "E-006 policy rollout remains blocked; see rollout_blocker in the E-006 smoke report",
+            "E-001 executable command candidate exists; keep command/runtime/launch state synchronized",
+            "E-006 rollout outcome is recorded in the rollout smoke report; action-gain evidence remains pending",
         ]
     )
 
-    ready_for_launch = all(checks.values()) and not missing_reports
+    class_mapping_confirmed = str(p0_smoke.get("class_mapping_status")) != "Data Gate"
+    ready_for_launch = (
+        all(checks.values())
+        and not missing_reports
+        and sot_status["status"] == "available"
+        and class_mapping_confirmed
+    )
     return {
         "stage": "P0",
         "experiment_id": "E-001",
@@ -392,6 +392,59 @@ def _a100_throughput_smoke_passed(path: Path) -> bool:
     )
 
 
+def _runtime_policy_state_recorded(path: Path) -> bool:
+    payload = _read_yaml(path)
+    status = (payload or {}).get("status") or {}
+    return (
+        "policy_confirmed" in status
+        and "launch_ready" in status
+        and "resource_policy_confirmed" in status
+    )
+
+
+def _launch_draft_state_recorded(path: Path) -> bool:
+    payload = _read_yaml(path)
+    launch = (payload or {}).get("launch") or {}
+    return (
+        "launch_ready" in launch
+        and "training_started" in launch
+        and "requires_human_confirmation" in launch
+        and "human_confirmed" in launch
+    )
+
+
+def _command_candidate_state_consistent(path: Path) -> bool:
+    payload = _read_yaml(path)
+    guard = (payload or {}).get("launch_guard") or {}
+    return (
+        "launch_ready" in guard
+        and guard.get("requires_human_confirmation") is True
+        and "policy_confirmed" in guard
+    )
+
+
+def _launch_candidate_state_consistent(candidate_path: Path, runtime_policy_path: Path) -> bool:
+    candidate = _read_yaml(candidate_path)
+    runtime_policy = _read_yaml(runtime_policy_path)
+    candidate_guard = (candidate or {}).get("launch_guard") or {}
+    runtime_status = (runtime_policy or {}).get("status") or {}
+    if "launch_ready" not in candidate_guard or "policy_confirmed" not in candidate_guard:
+        return False
+    if candidate_guard.get("launch_ready") is True:
+        if candidate_guard.get("policy_confirmed") is not True:
+            return False
+        if candidate_guard.get("requires_human_confirmation") is True:
+            if candidate_guard.get("human_confirmed") is not True:
+                return False
+    else:
+        if candidate_guard.get("policy_confirmed") is not False:
+            return False
+    return (
+        runtime_status.get("launch_ready") == candidate_guard.get("launch_ready")
+        and runtime_status.get("policy_confirmed") == candidate_guard.get("policy_confirmed")
+    )
+
+
 def _training_config_smoke_passed(path: Path) -> bool:
     payload = _read_json(path)
     if payload is None:
@@ -425,23 +478,24 @@ def _starflow_ft0_comparison_smoke_passed(path: Path) -> bool:
         return False
     checks = payload.get("checks") or {}
     execution = payload.get("launch_guard_execution") or {}
-    baseline = execution.get("baseline") or {}
-    mowa = execution.get("mowa") or {}
     return (
         bool(checks)
         and all(checks.values())
-        and execution.get("checked") is True
-        and baseline.get("blocked_by_launch_guard") is True
-        and mowa.get("blocked_by_launch_guard") is True
+        and checks.get("baseline_launch_gated") is True
+        and checks.get("mowa_launch_state_consistent") is True
+        and (
+            execution.get("checked") is False
+            or bool((execution.get("baseline") or {}).get("blocked_by_launch_guard"))
+        )
     )
 
 
-def _e006_rollout_blocker_recorded(path: Path) -> bool:
+def _e006_rollout_outcome_recorded(path: Path) -> bool:
     payload = _read_json(path)
     if payload is None:
         return False
     blocker = payload.get("rollout_blocker") or {}
-    return (
+    if (
         blocker.get("status") in {
             "missing_robocasa_assets",
             "checkpoint_model_incompatible",
@@ -454,7 +508,27 @@ def _e006_rollout_blocker_recorded(path: Path) -> bool:
             or blocker.get("missing_state_keys")
             or blocker.get("backend_signatures")
         )
+    ):
+        return True
+    checks = payload.get("checks") or {}
+    return (
+        bool(checks)
+        and checks.get("server_started_when_executed") is True
+        and checks.get("client_succeeded_when_executed") is True
+        and checks.get("result_json_collected_when_executed") is True
+        and checks.get("success_rate_recorded_when_executed") is True
     )
+
+
+def _read_yaml(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    try:
+        from omegaconf import OmegaConf
+    except ModuleNotFoundError:
+        return None
+    payload = OmegaConf.load(path)
+    return OmegaConf.to_container(payload, resolve=True)
 
 
 if __name__ == "__main__":

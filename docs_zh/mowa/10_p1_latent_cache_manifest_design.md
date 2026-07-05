@@ -13,12 +13,15 @@
 - manifest helper: `starVLA/dataloader/mowa/latent_cache_manifest.py`
 - manifest smoke: `tools/mowa/g0_latent_cache_manifest_smoke.py`
 - P1 contract smoke: `tools/mowa/p1_latent_cache_contract_smoke.py`
+- P1 builder design smoke: `tools/mowa/p1_latent_cache_builder_design_smoke.py`
+- P1-b0 future latent prior interface smoke: `tools/mowa/p1_b0_future_latent_prior_interface_smoke.py`
 - Data Gate 单测: `tests/mowa/test_mowa_data_gate.py`
 
 ## 当前报告口径
 
 - `latent_shape_status`、`cache_hash_status`、`encoder_status` 未实测时保持 `Data Gate`。
 - contract smoke 只检查路径、cache key、artifact 规划和 future-action-not-input 约束。
+- builder design smoke 只在 contract 规划之上补一层 config/input-policy 审计，不执行真实 encoder/VAE/cache writer。
 - 不得把 plan-only manifest 当作真实 latent cache 可用证据。
 
 ## 未解决项

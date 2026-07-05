@@ -32,9 +32,22 @@
     "run_id": "MoWA-E-001_train_starvla_full_path_dry_run",
     "framework": {
       "name": "QwenOFT",
+      "starflow_ft_variant": "config_defined",
+      "action_model_type": "MLP",
+      "num_target_vision_tokens": null,
+      "state_mode": null,
       "total_params": 4510105396,
       "trainable_params": 4510105396,
       "mowa_action_bridge_probe_enabled": true,
+      "mowa_layerwise_bridge_coupling_enabled": false,
+      "mowa_layerwise_bridge_coupling_status": "not_coupled_in_full_path_dry_run",
+      "mowa_layerwise_bridge_feature_source": null,
+      "mowa_future_supervision_probe_enabled": true,
+      "mowa_future_supervision_active_heads": [
+        "task_progress",
+        "action_outcome_class"
+      ],
+      "mowa_future_supervision_label_status": "forward_evaluated_in_full_path_dry_run",
       "mowa_p0_supervision_probe_enabled": true,
       "mowa_p0_supervision_active_heads": [
         "task_progress",
@@ -49,6 +62,7 @@
       "per_device_batch_size": 1,
       "dataloader_type": "DataLoader",
       "dataloader_length": 137431,
+      "mowa_future_labels_enabled": true,
       "mowa_p0_labels_enabled": true,
       "batch_summary": {
         "fetched": true,

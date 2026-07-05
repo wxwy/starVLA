@@ -1,0 +1,80 @@
+{
+  "stage": "P1",
+  "experiment_id": "E-003",
+  "training_started": false,
+  "checks": {
+    "runtime_policy_created": true,
+    "launch_draft_created": true,
+    "training_command_draft_created": true,
+    "readiness_report_created": true,
+    "production_window_preflight_report_created": true,
+    "temporal_profile_report_created": true,
+    "launch_draft_matches_runtime_policy": true,
+    "training_command_matches_runtime_policy_core": true,
+    "readiness_matches_runtime_policy": true,
+    "readiness_matches_production_window_preflight_core": true,
+    "launch_matches_production_window_preflight_core": true,
+    "temporal_profile_reports_data_gate_status": true
+  },
+  "configs": {
+    "runtime_policy": "configs/mowa/mowa_e001_runtime_policy_draft.yaml",
+    "launch_draft": "configs/mowa/mowa_e001_launch_draft.yaml",
+    "training_command_draft": "configs/mowa/mowa_e001_training_command_draft.yaml",
+    "readiness_report": "docs_zh/mowa/mowa_e001_readiness_smoke.json",
+    "production_window_preflight_report": "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json",
+    "temporal_profile_report": "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_temporal_profile.json"
+  },
+  "observed": {
+    "launch_temporal": {
+      "raw_action_hz": 20,
+      "production_wam_hz": 5,
+      "wam_stride": 4,
+      "history_steps": 10,
+      "future_steps": 5,
+      "action_chunk_steps": 10
+    },
+    "command_temporal": {
+      "raw_action_hz": 20,
+      "production_wam_hz": 5,
+      "wam_stride": null,
+      "history_steps": 10,
+      "future_steps": 5,
+      "action_chunk_steps": 10
+    },
+    "runtime_policy_temporal": {
+      "raw_action_hz": 20,
+      "production_wam_hz": 5,
+      "wam_stride": 4,
+      "history_steps": 10,
+      "future_steps": 5,
+      "action_chunk_steps": 10
+    },
+    "readiness_temporal": {
+      "raw_action_hz": 20,
+      "production_wam_hz": 5,
+      "wam_stride": 4,
+      "history_steps": 10,
+      "future_steps": 5,
+      "action_chunk_steps": 10
+    },
+    "production_window_temporal": {
+      "raw_action_hz": null,
+      "production_wam_hz": null,
+      "wam_stride": null,
+      "history_steps": 10,
+      "future_steps": 5,
+      "action_chunk_steps": 10
+    },
+    "temporal_profile_status": {
+      "obs_fps_status": "Data Gate",
+      "action_hz_status": "Data Gate",
+      "history_window_status": "Data Gate",
+      "future_window_status": "Data Gate"
+    }
+  },
+  "unresolved_items": [
+    "This smoke only validates temporal-policy consistency; it does not build latent caches.",
+    "Real Wan encoder/VAE and latent cache writer remain separately gated."
+  ],
+  "go_no_go": "TBD: history sampling consistency smoke passed; latent-cache builder remains gated"
+}

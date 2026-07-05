@@ -132,6 +132,7 @@ def _touch_training_audit_config(cfg) -> None:
         "framework.name",
         "framework.action_model.action_model_type",
         "framework.action_model.num_target_vision_tokens",
+        "framework.mowa.enable_future_supervision_loss",
         "framework.mowa.enable_layerwise_bridge_token_coupling",
         "framework.mowa.layerwise_bridge_feature_source",
         "framework.mowa.layerwise_bridge_token_intervention",

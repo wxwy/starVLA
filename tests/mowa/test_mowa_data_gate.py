@@ -23,6 +23,7 @@ from starVLA.dataloader.mowa import (
     build_mowa_latent_cache_manifest_smoke,
     build_mowa_p0_constructible_label_smoke,
     build_mowa_robocasa365_local_smoke_report,
+    build_mowa_shuffled_episode_pairs,
     fixed_size_list_shape,
     inspect_mowa_p0_label_coverage,
     inspect_mowa_robocasa365_atomic_core_recipe,
@@ -266,6 +267,109 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertEqual(payload["local_checks"]["video_file_count"], 1)
         self.assertIn("profile/leakage pending", payload["go_no_go"])
         self.assertEqual(payload["local_checks"]["profile_status"], DATA_GATE)
+
+    def test_e003_history_sampling_consistency_smoke_matches_temporal_policy(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa" / "g0_atomic_core_smoke").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
+                "temporal_policy:\n"
+                "  raw_action_hz: 20\n"
+                "  production_wam_hz: 5\n"
+                "  wam_stride: 4\n"
+                "  history_steps: 10\n"
+                "  future_steps: 5\n"
+                "  action_chunk_steps: 10\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_launch_draft.yaml").write_text(
+                "training:\n"
+                "  raw_action_hz: 20\n"
+                "  wam_hz: 5\n"
+                "  wam_stride: 4\n"
+                "  history_steps: 10\n"
+                "  future_steps: 5\n"
+                "  action_chunk_steps: 10\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_training_command_draft.yaml").write_text(
+                "runtime_targets:\n"
+                "  raw_action_hz: 20\n"
+                "  production_wam_hz: 5\n"
+                "  wam_stride: 4\n"
+                "  history_steps: 10\n"
+                "  future_steps: 5\n"
+                "  action_chunk_steps: 10\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_readiness_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "observed": {
+                            "raw_action_hz": 20,
+                            "production_wam_hz": 5,
+                            "wam_stride": 4,
+                            "history_steps": 10,
+                            "future_steps": 5,
+                            "action_chunk_steps": 10,
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            window_preflight_path = (
+                root / "docs_zh" / "mowa" / "g0_atomic_core_smoke"
+                / "mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json"
+            )
+            window_preflight_path.write_text(
+                json.dumps(
+                    {
+                        "window_config": {
+                            "history_steps": 10,
+                            "future_steps": 5,
+                            "action_chunk_steps": 10,
+                        },
+                        "raw_action_hz": 20,
+                        "production_wam_hz": 5,
+                        "wam_stride": 4,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            temporal_profile_path = (
+                root / "docs_zh" / "mowa" / "g0_atomic_core_smoke"
+                / "mowa_g0_atomic_core_temporal_profile.json"
+            )
+            temporal_profile_path.write_text(
+                json.dumps(
+                    {
+                        "obs_fps_status": DATA_GATE,
+                        "action_hz_status": DATA_GATE,
+                        "history_window_status": DATA_GATE,
+                        "future_window_status": DATA_GATE,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e003_history_sampling_consistency_smoke import (
+                build_e003_history_sampling_consistency_smoke,
+            )
+
+            report = build_e003_history_sampling_consistency_smoke(root)
+
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: history sampling consistency smoke passed; latent-cache builder remains gated",
+        )
+        self.assertTrue(report["checks"]["launch_draft_matches_runtime_policy"])
+        self.assertTrue(report["checks"]["training_command_matches_runtime_policy_core"])
+        self.assertTrue(report["checks"]["readiness_matches_runtime_policy"])
+        self.assertTrue(report["checks"]["readiness_matches_production_window_preflight_core"])
+        self.assertTrue(report["checks"]["launch_matches_production_window_preflight_core"])
+        self.assertTrue(report["checks"]["readiness_matches_production_window_preflight_core"])
+        self.assertTrue(report["checks"]["temporal_profile_reports_data_gate_status"])
 
     def test_robocasa365_adapter_maps_parquet_to_unified_episode_without_leakage(self):
         try:
@@ -604,6 +708,67 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertIs(
             build_mowa_future_latent_cache_contract_smoke,
             build_mowa_latent_cache_contract_smoke,
+        )
+
+    def test_p1_latent_cache_builder_design_smoke_passes(self):
+        from tools.mowa.p1_latent_cache_builder_design_smoke import (
+            build_p1_latent_cache_builder_design_smoke,
+        )
+
+        report = build_p1_latent_cache_builder_design_smoke(Path("."))
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: latent cache builder design smoke passed; real builder remains gated",
+        )
+
+    def test_e003_history_sampling_consistency_smoke_matches_temporal_policy(self):
+        from tools.mowa.e003_history_sampling_consistency_smoke import (
+            build_e003_history_sampling_consistency_smoke,
+        )
+
+        report = build_e003_history_sampling_consistency_smoke(Path("."))
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: history sampling consistency smoke passed; latent-cache builder remains gated",
+        )
+
+    def test_shuffled_episode_pairs_are_non_self_and_cyclic(self):
+        pairs = build_mowa_shuffled_episode_pairs((0, 1, 4))
+
+        self.assertEqual(pairs, ((0, 1), (1, 4), (4, 0)))
+
+    def test_p1_b1_shuffled_robot_sanity_plan_smoke_passes(self):
+        from tools.mowa.p1_b1_shuffled_robot_sanity_plan_smoke import (
+            build_p1_b1_shuffled_robot_sanity_plan_smoke,
+        )
+
+        report = build_p1_b1_shuffled_robot_sanity_plan_smoke(Path("."))
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: shuffled-robot sanity plan smoke passed; rollout remains gated",
+        )
+
+    def test_final_report_template_smoke_passes(self):
+        from tools.mowa.final_report_template_smoke import (
+            build_final_report_template_smoke,
+        )
+
+        report = build_final_report_template_smoke(Path("."))
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: final report template smoke passed",
         )
 
 

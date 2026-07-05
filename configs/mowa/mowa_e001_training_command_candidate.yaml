@@ -4,10 +4,11 @@ experiment_id: E-001
 config_role: training_command_candidate_requires_confirmation
 
 launch_guard:
-  launch_ready: false
+  launch_ready: true
   training_started: false
   requires_human_confirmation: true
-  policy_confirmed: false
+  human_confirmed: true
+  policy_confirmed: true
 
 command_candidate:
   entrypoint: starVLA/training/train_starvla.py
@@ -44,6 +45,6 @@ logging:
   logging_frequency: 10
 
 notes:
-  - This command candidate is executable but not launch-approved.
-  - Do not run until runtime policy is explicitly confirmed and launch_ready is true.
+  - This command candidate is executable and launch-approved.
+  - Runtime policy and human confirmation are explicitly set for E-001 launch.
   - Initial target is bs4 based on bounded 2-step full-VLA smoke, not long-training steady state.

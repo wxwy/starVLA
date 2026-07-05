@@ -1,0 +1,24 @@
+{
+  "task_id": "M6-001",
+  "experiment_id": "E-008",
+  "eval_started": false,
+  "checks": {
+    "plan_exists": true,
+    "constraints_documented": true,
+    "steps_documented": true
+  },
+  "observed": {
+    "constraints": {
+      "no_train_new_decoder": true,
+      "no_finetune_wan_vae": true,
+      "no_continuous_video_generation": true,
+      "max_keyframes_per_case": 10
+    },
+    "plan_steps": {
+      "step1_selection": "TBD",
+      "step2_latent_decode": "TBD",
+      "step3_report": "TBD"
+    }
+  },
+  "go_no_go": "TBD: P2 diagnostic plan smoke passed; real decoder runs remain gated"
+}

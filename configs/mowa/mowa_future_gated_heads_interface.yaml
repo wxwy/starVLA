@@ -1,0 +1,25 @@
+project_short_name: MoWA
+stage: P0
+experiment_id: E-002
+experiment_name: Future-GatedHeads vs Future-FullHeads comparison
+config_role: gated_heads_interface
+task_id: M2-003
+
+gated_heads:
+  enabled: false
+  heads_config_ref: configs/mowa/mowa_p0_fullheads_interface.yaml
+  init_gate: 0.5
+  note: >
+    Per-head scalar gates wrap MoWAFutureFeatureHeads.  Only one
+    comparison against FullHeads is planned (E-002).  No per-head /
+    leave-one-out / selected-head sweep is implemented here.
+
+launch:
+  launch_ready: false
+  training_started: false
+  reason: optional interface; not part of E-001 main training path
+
+checks:
+  gate_range_valid: true
+  gate_shape_matches_head_count: true
+  smoke_passed: TBD

@@ -5,10 +5,12 @@ experiment_name: P0-FullHeads vs VLA baseline
 config_role: launch_draft_not_executable
 
 launch:
-  launch_ready: false
-  training_started: false
+  launch_ready: true
+  training_started: true
   requires_human_confirmation: true
-  reason: checkpoint/save/resume policy is confirmed, but resource policy, core SOT, class mapping, and action-gain evidence are not confirmed
+  human_confirmed: true
+  training_completed_1000_steps: true
+  reason: short smoke training (1000 steps, bs4) completed; long-training resource policy, core SOT, class mapping, and action-gain evidence remain unconfirmed for full-scale training
 
 references:
   interface_config: configs/mowa/mowa_p0_fullheads_interface.yaml

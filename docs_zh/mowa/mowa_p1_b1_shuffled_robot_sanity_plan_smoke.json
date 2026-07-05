@@ -1,0 +1,50 @@
+{
+  "stage": "P1-b1",
+  "task_id": "M4-003",
+  "experiment_id": "E-005",
+  "training_started": false,
+  "checks": {
+    "config_exists": true,
+    "pair_count_expected": true,
+    "pairs_are_non_self": true,
+    "history_source_robot_only": true,
+    "shuffle_policy_cyclic_non_self": true,
+    "future_action_target_only": true,
+    "rollout_status_data_gate": true,
+    "metric_status_data_gate": true,
+    "leakage_status_data_gate": true
+  },
+  "config": "configs/mowa/mowa_p1_b1_shuffled_robot_sanity_plan.yaml",
+  "observed": {
+    "episode_indices": [
+      0,
+      1,
+      4
+    ],
+    "shuffled_pairs": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        4,
+        0
+      ]
+    ],
+    "metric_scope": [
+      "action_success_rate",
+      "action_loss"
+    ],
+    "expected_outcome": "shuffled_robot_metrics_drop"
+  },
+  "unresolved_items": [
+    "This smoke validates pair construction only and does not execute rollout.",
+    "Real shuffled-robot evidence still depends on trained P1-b1 checkpoints.",
+    "Metric drop is an expectation to test later, not a measured result here."
+  ],
+  "go_no_go": "TBD: shuffled-robot sanity plan smoke passed; rollout remains gated"
+}

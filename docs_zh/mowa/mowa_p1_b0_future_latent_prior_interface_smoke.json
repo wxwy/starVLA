@@ -1,0 +1,33 @@
+{
+  "stage": "P1-b0",
+  "task_id": "M3-002",
+  "experiment_id": "E-003",
+  "training_started": false,
+  "checks": {
+    "config_exists": true,
+    "predicted_future_latent_shape_expected": true,
+    "future_latent_target_required": true,
+    "history_latent_not_used": true,
+    "loss_is_finite": true,
+    "input_policy_current_plus_text_only": true,
+    "history_latent_status_data_gate": true,
+    "latent_shape_status_data_gate": true
+  },
+  "config": "configs/mowa/mowa_p1_b0_future_latent_prior_interface.yaml",
+  "observed": {
+    "predicted_future_latent_shape": [
+      2,
+      1024
+    ],
+    "loss": 1.0635844469070435,
+    "loss_keys": [
+      "future_latent_mse"
+    ]
+  },
+  "unresolved_items": [
+    "This smoke validates the P1-b0 future latent prior interface only; no latent cache builder is executed.",
+    "history_latent remains blocked at P1-b0 and must stay out of model inputs.",
+    "latent shape / encoder / cache artifact statuses remain Data Gate until real Wan cache builder is approved."
+  ],
+  "go_no_go": "TBD: P1-b0 future latent prior interface smoke passed; latent cache builder remains gated"
+}

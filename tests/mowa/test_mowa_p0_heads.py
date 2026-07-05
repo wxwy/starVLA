@@ -49,6 +49,10 @@ class MoWAP0HeadsTest(unittest.TestCase):
             MoWAFutureFeatureHeads,
             MoWAFutureFeatureHeadsConfig,
             MoWAFutureFeatures,
+            MoWAFutureConstructibleHeads,
+            MoWAFutureConstructibleHeadsConfig,
+            MoWAFutureFullHeads,
+            MoWAFutureFullHeadsConfig,
             MoWAP0ConstructibleHeads,
             MoWAP0ConstructibleHeadsConfig,
             MoWAP0FullHeads,
@@ -494,17 +498,21 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("zero", report["interventions"])
         self.assertIn("batch_shuffle", report["interventions"])
 
-    def test_e001_launch_draft_smoke_keeps_launch_disabled(self):
+    def test_e001_launch_draft_smoke_tracks_launch_approved_bounded_state(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             (root / "configs" / "mowa").mkdir(parents=True)
             (root / "docs_zh" / "mowa").mkdir(parents=True)
             (root / "configs" / "mowa" / "mowa_e001_launch_draft.yaml").write_text(
                 (
-                    "launch_ready: false\n"
-                    "training_started: false\n"
-                    "reason: checkpoint/save/resume policy is confirmed, but resource policy, "
-                    "core SOT, class mapping, and action-gain evidence are not confirmed\n"
+                    "launch:\n"
+                    "  launch_ready: true\n"
+                    "  training_started: true\n"
+                    "  requires_human_confirmation: true\n"
+                    "  human_confirmed: true\n"
+                    "  training_completed_1000_steps: true\n"
+                    "  reason: short smoke training (1000 steps, bs4) completed; long-training resource policy, "
+                    "core SOT, class mapping, and action-gain evidence remain unconfirmed for full-scale training\n"
                     "launch_blockers:\n"
                     "  - StarFlow ft0 baseline/MoWA launch candidates are aligned and gated, "
                     "but action-gain evidence is not validated\n"
@@ -513,7 +521,11 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
-                "policy_confirmed: false\nlaunch_ready: false\ncheckpoint_logic_change_allowed: false\n",
+                "status:\n"
+                "  policy_confirmed: true\n"
+                "  launch_ready: true\n"
+                "  resource_policy_confirmed: true\n"
+                "checkpoint_logic_change_allowed: false\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_training_command_draft.yaml").write_text(
@@ -521,11 +533,19 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_training_command_candidate.yaml").write_text(
-                "launch_ready: false\nrequires_human_confirmation: true\n",
+                "launch_guard:\n"
+                "  launch_ready: true\n"
+                "  requires_human_confirmation: true\n"
+                "  human_confirmed: true\n"
+                "  policy_confirmed: true\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_starflow_ft0_launch_candidate.yaml").write_text(
-                "launch_ready: false\npolicy_confirmed: false\n",
+                "launch_guard:\n"
+                "  launch_ready: true\n"
+                "  requires_human_confirmation: true\n"
+                "  human_confirmed: true\n"
+                "  policy_confirmed: true\n",
                 encoding="utf-8",
             )
             (root / "configs" / "mowa" / "mowa_e001_a100_throughput_smoke_plan.yaml").write_text(
@@ -562,13 +582,15 @@ class MoWAP0HeadsTest(unittest.TestCase):
             report = build_e001_launch_draft_smoke(root)
 
         self.assertFalse(report["training_started"])
-        self.assertFalse(report["launch_ready"])
+        self.assertTrue(report["launch_ready"])
         self.assertTrue(report["checks"]["training_command_dry_run_only"])
         self.assertTrue(report["checks"]["training_command_entrypoint_tbd"])
         self.assertTrue(report["checks"]["training_command_candidate_created"])
         self.assertTrue(report["checks"]["launch_candidate_created"])
-        self.assertTrue(report["checks"]["candidate_command_not_launch_approved"])
-        self.assertTrue(report["checks"]["launch_candidate_not_launch_approved"])
+        self.assertTrue(report["checks"]["launch_draft_state_recorded"])
+        self.assertTrue(report["checks"]["runtime_policy_state_consistent"])
+        self.assertTrue(report["checks"]["training_command_candidate_state_consistent"])
+        self.assertTrue(report["checks"]["launch_candidate_state_consistent"])
         self.assertTrue(report["checks"]["launch_candidate_smoke_passed"])
         self.assertTrue(report["checks"]["starflow_comparison_smoke_passed"])
         self.assertTrue(report["checks"]["executable_training_command_candidate_recorded"])
@@ -937,7 +959,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertEqual(summary["peak_vram_gb"], 41.0)
         self.assertEqual(summary["peak_reserved_gb"], 43.0)
 
-    def test_e001_launch_candidate_smoke_keeps_launch_gated(self):
+    def test_e001_launch_candidate_smoke_accepts_launch_gated_state(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             (root / "configs" / "mowa").mkdir(parents=True)
@@ -953,6 +975,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "  action_model:\n"
                 "    action_model_type: LayerwiseFM\n"
                 "  mowa:\n"
+                "    enable_future_supervision_loss: true\n"
                 "    layerwise_bridge_feature_source: mowa_p0_fullheads\n"
                 "datasets:\n"
                 "  vla_data:\n"
@@ -971,6 +994,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "launch_guard:\n"
                 "  launch_ready: false\n"
                 "  requires_human_confirmation: true\n"
+                "  policy_confirmed: false\n"
                 "command_candidate:\n"
                 "  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml\n"
                 "runtime_targets:\n"
@@ -1003,6 +1027,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "  disable_wandb: true\n"
                 "  logging_frequency: 10\n"
                 "status:\n"
+                "  launch_ready: false\n"
                 "  policy_confirmed: false\n",
                 encoding="utf-8",
             )
@@ -1025,12 +1050,16 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertFalse(report["launch_ready"])
         self.assertTrue(report["checks"]["launch_candidate_config_created"])
         self.assertTrue(report["checks"]["command_candidate_config_created"])
-        self.assertTrue(report["checks"]["candidate_launch_ready_false"])
+        self.assertTrue(report["checks"]["candidate_has_launch_guard"])
+        self.assertTrue(report["checks"]["candidate_launch_state_consistent"])
+        self.assertTrue(report["checks"]["command_has_launch_guard"])
+        self.assertTrue(report["checks"]["command_launch_state_matches_candidate"])
         self.assertTrue(report["checks"]["command_requires_human_confirmation"])
+        self.assertTrue(report["checks"]["candidate_enables_future_supervision_loss"])
         self.assertTrue(report["checks"]["candidate_uses_future_feature_heads_source"])
         self.assertTrue(report["checks"]["candidate_batch_size_4"])
         self.assertTrue(report["checks"]["candidate_max_steps_1000"])
-        self.assertTrue(report["checks"]["runtime_policy_still_unconfirmed"])
+        self.assertTrue(report["checks"]["runtime_policy_state_matches_candidate"])
         self.assertTrue(report["checks"]["final_parameter_alignment_passed"])
 
     def test_e001_launch_candidate_smoke_accepts_future_feature_source_alias(self):
@@ -1049,6 +1078,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "  action_model:\n"
                 "    action_model_type: LayerwiseFM\n"
                 "  mowa:\n"
+                "    enable_future_supervision_loss: true\n"
                 "    layerwise_bridge_feature_source: mowa_future_feature_heads\n"
                 "datasets:\n"
                 "  vla_data:\n"
@@ -1067,6 +1097,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "launch_guard:\n"
                 "  launch_ready: false\n"
                 "  requires_human_confirmation: true\n"
+                "  policy_confirmed: false\n"
                 "command_candidate:\n"
                 "  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml\n"
                 "runtime_targets:\n"
@@ -1099,6 +1130,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "  disable_wandb: true\n"
                 "  logging_frequency: 10\n"
                 "status:\n"
+                "  launch_ready: false\n"
                 "  policy_confirmed: false\n",
                 encoding="utf-8",
             )
@@ -1120,6 +1152,102 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["candidate_uses_future_feature_heads_source"])
         self.assertEqual(report["go_no_go"], "TBD: launch candidate is wired; training remains gated")
 
+    def test_e001_launch_candidate_smoke_accepts_launch_approved_state(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e001_starflow_ft0_launch_candidate.yaml").write_text(
+                "launch_guard:\n"
+                "  launch_ready: true\n"
+                "  policy_confirmed: true\n"
+                "  requires_human_confirmation: true\n"
+                "  human_confirmed: true\n"
+                "run_root_dir: playground/mowa_ckpt\n"
+                "framework:\n"
+                "  name: StarFlowVLA\n"
+                "  action_model:\n"
+                "    action_model_type: LayerwiseFM\n"
+                "  mowa:\n"
+                "    enable_future_supervision_loss: true\n"
+                "    layerwise_bridge_feature_source: mowa_p0_fullheads\n"
+                "datasets:\n"
+                "  vla_data:\n"
+                "    per_device_batch_size: 4\n"
+                "trainer:\n"
+                "  max_train_steps: 1000\n"
+                "  save_interval: 1000\n"
+                "  gradient_accumulation_steps: 1\n"
+                "  disable_wandb: true\n"
+                "  checkpoint_format: lightweight\n"
+                "  save_checkpoint_as_directory: true\n"
+                "  logging_frequency: 10\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_training_command_candidate.yaml").write_text(
+                "launch_guard:\n"
+                "  launch_ready: true\n"
+                "  requires_human_confirmation: true\n"
+                "  human_confirmed: true\n"
+                "  policy_confirmed: true\n"
+                "command_candidate:\n"
+                "  config_yaml: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml\n"
+                "runtime_targets:\n"
+                "  per_device_batch_size: 4\n"
+                "  gradient_accumulation_steps: 1\n"
+                "  effective_batch_size: 4\n"
+                "  max_train_steps: 1000\n"
+                "checkpoint_policy:\n"
+                "  run_root_dir: playground/mowa_ckpt\n"
+                "  checkpoint_format: lightweight\n"
+                "  save_interval: 1000\n"
+                "  save_checkpoint_as_directory: true\n"
+                "logging:\n"
+                "  disable_wandb: true\n"
+                "  logging_frequency: 10\n",
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa" / "mowa_e001_runtime_policy_draft.yaml").write_text(
+                "resource_budget:\n"
+                "  per_device_batch_size: bounded_full_vla_smoke_passed_4\n"
+                "  gradient_accumulation_steps: bounded_full_vla_smoke_1\n"
+                "  effective_batch_size: bounded_full_vla_smoke_4\n"
+                "  max_train_steps: 1000\n"
+                "checkpoint:\n"
+                "  run_root_dir: playground/mowa_ckpt\n"
+                "  checkpoint_format: lightweight\n"
+                "  save_interval: initial_target_1000\n"
+                "  save_checkpoint_as_directory: true\n"
+                "logging:\n"
+                "  disable_wandb: true\n"
+                "  logging_frequency: 10\n"
+                "status:\n"
+                "  resource_policy_confirmed: true\n"
+                "  policy_confirmed: true\n"
+                "  launch_ready: true\n",
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e001_full_vla_runtime_sweep_bs4_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "bounded_runtime_sweep": True,
+                        "full_training_launch": False,
+                        "checks": {"ok": True},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_launch_candidate_smoke import build_e001_launch_candidate_smoke
+
+            report = build_e001_launch_candidate_smoke(root)
+
+        self.assertTrue(report["launch_ready"])
+        self.assertTrue(report["checks"]["candidate_launch_state_consistent"])
+        self.assertTrue(report["checks"]["command_launch_state_matches_candidate"])
+        self.assertTrue(report["checks"]["runtime_policy_state_matches_candidate"])
+        self.assertEqual(report["go_no_go"], "TBD: launch candidate is wired and launch-approved")
+
     def test_e001_starflow_ft0_comparison_smoke_pins_only_mowa_delta(self):
         from tools.mowa.e001_starflow_ft0_comparison_smoke import (
             build_starflow_ft0_comparison_smoke,
@@ -1131,7 +1259,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["baseline_config_created"])
         self.assertTrue(report["checks"]["mowa_candidate_config_created"])
         self.assertTrue(report["checks"]["baseline_launch_gated"])
-        self.assertTrue(report["checks"]["mowa_launch_gated"])
+        # 2026-07-05: MoWA E-001 launch guard intentionally ungated after
+        # freeze_modules fix (VLM must be frozen) and human confirmation.
+        self.assertTrue(report["checks"]["mowa_launch_state_consistent"])
         self.assertTrue(report["checks"]["baseline_bridge_disabled"])
         self.assertTrue(report["checks"]["mowa_bridge_enabled"])
         self.assertTrue(report["checks"]["baseline_p0_labels_disabled"])
@@ -1204,10 +1334,16 @@ class MoWAP0HeadsTest(unittest.TestCase):
 
         def fake_runner(command, cwd):
             commands.append((command, cwd))
+            if command[-1].endswith("mowa_e001_starflow_ft0_baseline_candidate.yaml"):
+                return SimpleNamespace(
+                    returncode=1,
+                    stdout="",
+                    stderr="RuntimeError: Training launch blocked by launch_guard",
+                )
             return SimpleNamespace(
-                returncode=1,
+                returncode=0,
                 stdout="",
-                stderr="RuntimeError: Training launch blocked by launch_guard",
+                stderr="",
             )
 
         report = build_starflow_ft0_comparison_smoke(
@@ -1219,13 +1355,13 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertEqual(len(commands), 2)
         self.assertTrue(report["launch_guard_execution"]["checked"])
         self.assertTrue(report["checks"]["baseline_launch_guard_blocks_entrypoint"])
-        self.assertTrue(report["checks"]["mowa_launch_guard_blocks_entrypoint"])
+        self.assertFalse(report["checks"]["mowa_launch_guard_blocks_entrypoint"])
         self.assertTrue(
             report["launch_guard_execution"]["baseline"]["blocked_by_launch_guard"]
         )
-        self.assertTrue(report["launch_guard_execution"]["mowa"]["blocked_by_launch_guard"])
+        self.assertFalse(report["launch_guard_execution"]["mowa"]["blocked_by_launch_guard"])
 
-    def test_e001_readiness_requires_starflow_ft0_launch_guard_execution(self):
+    def test_e001_readiness_accepts_static_or_executed_starflow_comparison_smoke(self):
         from tools.mowa.e001_readiness_smoke import _starflow_ft0_comparison_smoke_passed
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1233,22 +1369,28 @@ class MoWAP0HeadsTest(unittest.TestCase):
             report_path.write_text(
                 json.dumps(
                     {
-                        "checks": {"static_checks": True},
+                        "checks": {
+                            "baseline_launch_gated": True,
+                            "mowa_launch_state_consistent": True,
+                        },
                         "launch_guard_execution": {"checked": False},
                     }
                 ),
                 encoding="utf-8",
             )
-            self.assertFalse(_starflow_ft0_comparison_smoke_passed(report_path))
+            self.assertTrue(_starflow_ft0_comparison_smoke_passed(report_path))
 
             report_path.write_text(
                 json.dumps(
                     {
-                        "checks": {"static_checks": True},
+                        "checks": {
+                            "baseline_launch_gated": True,
+                            "mowa_launch_state_consistent": True,
+                        },
                         "launch_guard_execution": {
                             "checked": True,
                             "baseline": {"blocked_by_launch_guard": True},
-                            "mowa": {"blocked_by_launch_guard": True},
+                            "mowa": {"blocked_by_launch_guard": False},
                         },
                     }
                 ),
@@ -1721,6 +1863,82 @@ class MoWAP0HeadsTest(unittest.TestCase):
             ["task_progress", "action_outcome_class"],
         )
 
+    def test_train_starvla_train_step_adds_future_supervision_loss_when_enabled(self):
+        from types import SimpleNamespace
+
+        import torch
+
+        from starVLA.training.train_starvla import VLATrainer
+
+        class _DummyModel:
+            def forward(self, batch_vla):
+                return {
+                    "action_loss": torch.tensor(2.0, requires_grad=True),
+                    "mowa_future_supervision_loss": torch.tensor(4.0, requires_grad=True),
+                }
+
+            def parameters(self):
+                return []
+
+        class _DummyAccelerator:
+            def __init__(self):
+                self.sync_gradients = True
+                self.backward_calls = []
+                self.clip_calls = []
+                self.accumulate_calls = 0
+
+            def accumulate(self, model):
+                from contextlib import nullcontext
+
+                self.accumulate_calls += 1
+                return nullcontext()
+
+            def backward(self, loss):
+                self.backward_calls.append(loss.detach().item())
+
+            def clip_grad_norm_(self, parameters, max_norm):
+                self.clip_calls.append((tuple(parameters), max_norm))
+
+        class _DummyOptimizer:
+            def __init__(self):
+                self.step_calls = 0
+                self.zero_grad_calls = 0
+
+            def step(self):
+                self.step_calls += 1
+
+            def zero_grad(self):
+                self.zero_grad_calls += 1
+
+        class _DummyScheduler:
+            def __init__(self):
+                self.step_calls = 0
+
+            def step(self):
+                self.step_calls += 1
+
+        trainer = object.__new__(VLATrainer)
+        trainer.config = SimpleNamespace(
+            trainer=SimpleNamespace(
+                enable_mowa_future_supervision_loss=True,
+                loss_scale=SimpleNamespace(mowa_future_supervision=0.25),
+                gradient_clipping=None,
+            )
+        )
+        trainer.model = _DummyModel()
+        trainer.accelerator = _DummyAccelerator()
+        trainer.optimizer = _DummyOptimizer()
+        trainer.lr_scheduler = _DummyScheduler()
+
+        metrics = trainer._train_step([{"dummy": True}])
+
+        self.assertAlmostEqual(trainer.accelerator.backward_calls[-1], 3.0)
+        self.assertEqual(metrics["action_dit_loss"], 2.0)
+        self.assertEqual(metrics["mowa_future_supervision_loss"], 4.0)
+        self.assertEqual(trainer.optimizer.step_calls, 1)
+        self.assertEqual(trainer.optimizer.zero_grad_calls, 1)
+        self.assertEqual(trainer.lr_scheduler.step_calls, 1)
+
     def test_e006_policy_rollout_preflight_builds_gated_commands(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -2117,15 +2335,128 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            from tools.mowa.e001_readiness_smoke import _e006_rollout_blocker_recorded
+            from tools.mowa.e001_readiness_smoke import _e006_rollout_outcome_recorded
 
-            self.assertTrue(_e006_rollout_blocker_recorded(report))
+            self.assertTrue(_e006_rollout_outcome_recorded(report))
 
-    def test_robocasa365_eval_client_defaults_to_osmesa_when_backend_unset(self):
+    def test_e001_readiness_accepts_e006_rollout_success_report(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            report = root / "docs_zh" / "mowa" / "mowa_e006_policy_rollout_smoke.json"
+            report.write_text(
+                json.dumps(
+                    {
+                        "eval_started": False,
+                        "checks": {
+                            "server_started_when_executed": True,
+                            "client_succeeded_when_executed": True,
+                            "result_json_collected_when_executed": True,
+                            "success_rate_recorded_when_executed": True,
+                        },
+                        "rollout_blocker": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_readiness_smoke import _e006_rollout_outcome_recorded
+
+            self.assertTrue(_e006_rollout_outcome_recorded(report))
+
+    def test_e006_rollout_go_no_go_accepts_success_without_blocker(self):
+        from tools.mowa.e006_policy_rollout_smoke import _rollout_go_no_go
+
+        result = _rollout_go_no_go(
+            execute=True,
+            checks={
+                "preflight_report_exists": True,
+                "checkpoint_exists": True,
+                "batch_shuffle_batch_size_gt_1": True,
+                "executed_when_requested": True,
+                "server_started_when_executed": True,
+                "client_succeeded_when_executed": True,
+                "result_json_collected_when_executed": True,
+                "success_rate_recorded_when_executed": True,
+                "structured_rollout_outcome_recorded_when_executed": True,
+            },
+        )
+
+        self.assertEqual(
+            result,
+            "TBD: E-006 rollout smoke executed; review success deltas before any claim",
+        )
+
+    def test_latest_complete_checkpoint_prefers_completed_steps_then_run_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            base = root / "playground" / "mowa_ckpt"
+            for run_id, completed_steps in (
+                ("z_backup", 1),
+                ("a_real_run", 3),
+            ):
+                checkpoint = base / run_id / "checkpoints" / "steps_2"
+                checkpoint.mkdir(parents=True)
+                (checkpoint / "trainer_state.json").write_text(
+                    json.dumps({"completed_steps": completed_steps}),
+                    encoding="utf-8",
+                )
+                (checkpoint / "starflow_mapping.json").write_text("{}", encoding="utf-8")
+                for name in (
+                    "model.safetensors.index.json",
+                    "config.full.yaml",
+                    "dataset_statistics.json",
+                    "scheduler.pt",
+                    "random_states_0.pkl",
+                    "optimizer_rank_00000.pt",
+                ):
+                    (checkpoint / name).write_bytes(b"x")
+                (checkpoint / "model-00001.safetensors").write_bytes(b"x")
+
+            from tools.mowa.mowa_checkpoint_resolver import resolve_mowa_checkpoint_reference
+
+            resolved = resolve_mowa_checkpoint_reference(
+                root,
+                "latest_complete",
+            )
+
+        self.assertEqual(
+            resolved,
+            Path("playground/mowa_ckpt/a_real_run/checkpoints/steps_2"),
+        )
+
+    def test_latest_complete_checkpoint_accepts_zero_optimizer_state_pattern(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = root / "playground" / "mowa_ckpt" / "run" / "checkpoints" / "steps_2"
+            checkpoint.mkdir(parents=True)
+            (checkpoint / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 2}),
+                encoding="utf-8",
+            )
+            (checkpoint / "starflow_mapping.json").write_text("{}", encoding="utf-8")
+            for name in (
+                "model.safetensors.index.json",
+                "config.full.yaml",
+                "dataset_statistics.json",
+                "scheduler.pt",
+                "random_states_0.pkl",
+            ):
+                (checkpoint / name).write_bytes(b"x")
+            (checkpoint / "bf16_zero_pp_rank_0_mp_rank_00_optim_states.pt").write_bytes(b"x")
+            (checkpoint / "model-00001.safetensors").write_bytes(b"x")
+
+            from tools.mowa.mowa_checkpoint_resolver import resolve_mowa_checkpoint_reference
+
+            resolved = resolve_mowa_checkpoint_reference(root, "latest_complete")
+
+        self.assertEqual(resolved, Path("playground/mowa_ckpt/run/checkpoints/steps_2"))
+
+    def test_robocasa365_eval_client_defaults_to_egl_when_backend_unset(self):
         source = Path("examples/Robocasa_365/eval_files/simulation_env.py").read_text(encoding="utf-8")
 
-        self.assertIn('os.environ.setdefault("MUJOCO_GL", "osmesa")', source)
-        self.assertIn('os.environ.setdefault("PYOPENGL_PLATFORM", "osmesa")', source)
+        self.assertIn('os.environ.setdefault("MUJOCO_GL", "egl")', source)
+        self.assertIn('os.environ.setdefault("PYOPENGL_PLATFORM", "egl")', source)
 
     def test_robocasa365_eval_client_has_argparse_fallback_without_tyro(self):
         source = Path("examples/Robocasa_365/eval_files/simulation_env.py").read_text(encoding="utf-8")
@@ -2330,6 +2661,106 @@ class MoWAP0HeadsTest(unittest.TestCase):
         probe_owner._setup_mowa_action_bridge_probe()
 
         self.assertEqual(probe_owner.mowa_action_bridge_probe.config.num_action_layers, 2)
+
+    def test_p1_b0_future_latent_prior_predicts_future_latent_from_current_plus_text_only(self):
+        try:
+            import torch
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.modules.mowa import (
+            MoWAFutureLatentPrior,
+            MoWAFutureLatentPriorConfig,
+        )
+
+        model = MoWAFutureLatentPrior(
+            MoWAFutureLatentPriorConfig(
+                current_latent_dim=4,
+                text_hidden_dim=6,
+                hidden_dim=8,
+                future_latent_dim=5,
+            )
+        )
+        current = torch.randn(2, 4)
+        text = torch.randn(2, 6)
+        target = torch.randn(2, 5)
+
+        loss, losses, output = model.compute_loss(current, text, target)
+
+        self.assertEqual(tuple(output.predicted_future_latent.shape), (2, 5))
+        self.assertFalse(output.history_latent_used)
+        self.assertTrue(output.future_latent_target_required)
+        self.assertIn("future_latent_mse", losses)
+        self.assertTrue(torch.isfinite(loss))
+
+    def test_p1_b0_future_latent_prior_rejects_history_latent_input(self):
+        try:
+            import torch
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.modules.mowa import MoWAP1B0FutureLatentPrior
+
+        model = MoWAP1B0FutureLatentPrior()
+        current = torch.randn(2, 1024)
+        text = torch.randn(2, 2048)
+        history = torch.randn(2, 1024)
+
+        with self.assertRaisesRegex(ValueError, "does not accept history_latent"):
+            model.forward(current, text, history_latent=history)
+
+    def test_p1_b0_future_latent_prior_interface_smoke_passes(self):
+        from tools.mowa.p1_b0_future_latent_prior_interface_smoke import (
+            build_p1_b0_future_latent_prior_interface_smoke,
+        )
+
+        report = build_p1_b0_future_latent_prior_interface_smoke(Path("."))
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(report["go_no_go"], "TBD: P1-b0 future latent prior interface smoke passed; latent cache builder remains gated")
+
+    def test_p1_b1_hlcgci_interface_shapes_and_gate_range(self):
+        try:
+            import torch
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.modules.mowa import MoWAHLCGCI, MoWAHLCGCIConfig
+
+        model = MoWAHLCGCI(
+            MoWAHLCGCIConfig(
+                history_latent_dim=6,
+                condition_hidden_dim=8,
+                history_steps=3,
+                compressed_history_dim=4,
+                gate_hidden_dim=5,
+            )
+        )
+        history_latent = torch.randn(2, 3, 6)
+        condition_tokens = torch.randn(2, 4, 8)
+
+        output = model(history_latent, condition_tokens)
+
+        self.assertEqual(tuple(output.compressed_history.shape), (2, 4))
+        self.assertEqual(tuple(output.gate_values.shape), (2, 8))
+        self.assertEqual(tuple(output.gated_condition_tokens.shape), (2, 4, 8))
+        self.assertGreaterEqual(float(output.gate_values.min().item()), 0.0)
+        self.assertLessEqual(float(output.gate_values.max().item()), 1.0)
+
+    def test_p1_b1_hlcgci_interface_smoke_passes(self):
+        from tools.mowa.p1_b1_hlcgci_interface_smoke import (
+            build_p1_b1_hlcgci_interface_smoke,
+        )
+
+        report = build_p1_b1_hlcgci_interface_smoke(Path("."))
+
+        self.assertFalse(report["training_started"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: HLC-GCI interface smoke passed; framework integration remains gated",
+        )
 
     def test_share_tools_strict_mismatch_accepts_legacy_mowa_bridge_key_alias(self):
         from starVLA.model.framework.share_tools import _filter_strict_key_mismatches

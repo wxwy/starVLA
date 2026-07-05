@@ -16,16 +16,16 @@
     "production_window_5hz_preflight_passed": true,
     "p0_fullheads_interface_created": true,
     "e001_launch_draft_created": true,
-    "e001_launch_ready_false": true,
+    "e001_launch_draft_state_recorded": true,
     "runtime_policy_draft_created": true,
-    "runtime_policy_confirmed_false": true,
+    "runtime_policy_state_recorded": true,
     "action_bridge_interface_created": true,
     "training_command_draft_created": true,
     "training_command_dry_run_only": true,
     "training_command_candidate_created": true,
     "launch_candidate_created": true,
-    "training_command_candidate_gated": true,
-    "launch_candidate_gated": true,
+    "training_command_candidate_state_consistent": true,
+    "launch_candidate_state_consistent": true,
     "launch_candidate_smoke_passed": true,
     "starflow_ft0_baseline_candidate_created": true,
     "starflow_ft0_comparison_smoke_passed": true,
@@ -44,7 +44,7 @@
     "e006_eval_load_smoke_config_created": true,
     "e006_eval_load_smoke_passed": true,
     "e006_policy_rollout_preflight_smoke_passed": true,
-    "e006_policy_rollout_blocker_recorded": true
+    "e006_policy_rollout_outcome_recorded": true
   },
   "sot": {
     "required_core_docs": [
@@ -127,20 +127,7 @@
     "e006_eval_load_smoke_report": "docs_zh/mowa/mowa_e006_eval_load_smoke.json",
     "e006_policy_rollout_preflight_smoke_report": "docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json",
     "e006_policy_rollout_smoke_report": "docs_zh/mowa/mowa_e006_policy_rollout_smoke.json",
-    "e006_policy_rollout_blocker": {
-      "status": "robocasa_render_backend_unavailable",
-      "scope": "environment",
-      "blocked_interventions": [
-        "baseline",
-        "zero",
-        "batch_shuffle",
-        "head_mask_control"
-      ],
-      "backend_signatures": [
-        "    _error_checker = _ErrorChecker( _p, _p.GL.glGetError )",
-        "AttributeError: 'NoneType' object has no attribute 'glGetError'"
-      ]
-    },
+    "e006_policy_rollout_blocker": {},
     "a100_throughput_stable_candidate": {
       "per_device_batch_size": 8,
       "gradient_accumulation_steps": 8,
@@ -158,14 +145,14 @@
   },
   "unresolved_items": [
     "core SOT docs missing=00_project_proposal.md,01_technical_survey.md,02_detailed_design.md",
-    "E-001 launch draft is not executable",
+    "E-001 launch draft records bounded approved state only, not full-scale launch approval",
     "class_mapping_status remains Data Gate",
-    "runtime policy draft not confirmed",
+    "runtime policy draft and launch candidate must stay synchronized",
     "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
-    "E-001 executable command candidate exists but remains gated by human confirmation",
-    "E-006 policy rollout remains blocked; see rollout_blocker in the E-006 smoke report"
+    "E-001 executable command candidate exists; keep command/runtime/launch state synchronized",
+    "E-006 rollout outcome is recorded in the rollout smoke report; action-gain evidence remains pending"
   ],
-  "go_no_go": "TBD: E-001 prerequisites mostly passed; launch draft exists but runtime/batch/save-resume remain Data Gate",
+  "go_no_go": "No-Go: E-001 prerequisites incomplete",
   "notes": [
     "This report does not start training and does not consume E-001.",
     "Existing QwenOFT RoboCasa365 scripts are baseline/walk-through scripts, not MoWA E-001 launch config.",

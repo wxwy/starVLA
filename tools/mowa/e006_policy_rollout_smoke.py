@@ -109,8 +109,11 @@ def run_or_plan_e006_policy_rollout_smoke(
         "success_rate_recorded_when_executed": (not execute) or all(
             _is_number((run.get("rollout_result") or {}).get("success_rate")) for run in runs
         ),
-        "structured_blocker_recorded_when_executed": (not execute) or bool(
-            _extract_rollout_blocker(runs)
+        "structured_rollout_outcome_recorded_when_executed": (not execute)
+        or bool(_extract_rollout_blocker(runs))
+        or all(
+            (run.get("client_result") or {}).get("returncode") == 0
+            for run in runs
         ),
     }
     rollout_blocker = _extract_rollout_blocker(runs) if execute else {}
@@ -310,7 +313,9 @@ def _client_failure_category(lines: list[str]) -> str:
 
 
 def _rollout_go_no_go(*, execute: bool, checks: dict[str, bool]) -> str:
-    if execute and checks.get("structured_blocker_recorded_when_executed"):
+    if execute and checks.get("structured_rollout_outcome_recorded_when_executed") and not checks.get(
+        "client_succeeded_when_executed"
+    ):
         return "No-Go: E-006 rollout blocked; see rollout_blocker"
     if not all(checks.values()):
         return "No-Go: E-006 rollout smoke incomplete"

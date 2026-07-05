@@ -47,6 +47,9 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
     command_cfg = _load_yaml(command)
     runtime_policy_cfg = _load_yaml(runtime_policy)
     runtime_sweep = _read_json(root / RUNTIME_SWEEP_REPORT) or {}
+    candidate_launch_guard = _extract_launch_guard(candidate_cfg)
+    command_launch_guard = _extract_launch_guard(command_cfg)
+    runtime_policy_status = _extract_runtime_policy_status(runtime_policy_cfg)
     final_parameter_alignment = _build_final_parameter_alignment(
         candidate_cfg,
         command_cfg,
@@ -56,16 +59,26 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
         "launch_candidate_config_created": candidate.is_file(),
         "command_candidate_config_created": command.is_file(),
         "runtime_sweep_bs4_report_created": (root / RUNTIME_SWEEP_REPORT).is_file(),
-        "candidate_launch_ready_false": _text_contains(candidate, "launch_ready: false"),
-        "candidate_policy_confirmed_false": _text_contains(candidate, "policy_confirmed: false"),
-        "command_launch_ready_false": _text_contains(command, "launch_ready: false"),
-        "command_requires_human_confirmation": _text_contains(command, "requires_human_confirmation: true"),
+        "candidate_has_launch_guard": candidate_launch_guard["present"],
+        "candidate_launch_state_consistent": _launch_guard_state_is_consistent(candidate_launch_guard),
+        "command_has_launch_guard": command_launch_guard["present"],
+        "command_launch_state_matches_candidate": _launch_guards_match(
+            candidate_launch_guard,
+            command_launch_guard,
+        ),
+        "command_requires_human_confirmation": (
+            command_launch_guard["requires_human_confirmation"] is True
+        ),
         "command_points_to_candidate_config": _text_contains(
             command,
             "configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml",
         ),
         "candidate_uses_starflow_vla": _text_contains(candidate, "name: StarFlowVLA"),
         "candidate_uses_layerwisefm": _text_contains(candidate, "action_model_type: LayerwiseFM"),
+        "candidate_enables_future_supervision_loss": _text_contains(
+            candidate,
+            "enable_future_supervision_loss: true",
+        ),
         "candidate_uses_future_feature_heads_source": _text_contains_any(
             candidate,
             MOWA_FUTURE_FEATURE_SOURCE_PATTERNS,
@@ -76,7 +89,10 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
         "candidate_save_interval_1000": _text_contains(candidate, "save_interval: 1000"),
         "candidate_wandb_disabled": _text_contains(candidate, "disable_wandb: true"),
         "candidate_checkpoint_root_mowa_ckpt": _text_contains(candidate, "run_root_dir: playground/mowa_ckpt"),
-        "runtime_policy_still_unconfirmed": _text_contains(runtime_policy, "policy_confirmed: false"),
+        "runtime_policy_state_matches_candidate": _runtime_policy_matches_launch_candidate(
+            runtime_policy_status,
+            candidate_launch_guard,
+        ),
         "final_parameter_alignment_passed": final_parameter_alignment["passed"],
         "runtime_sweep_bs4_passed": (
             runtime_sweep.get("bounded_runtime_sweep") is True
@@ -88,7 +104,7 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
         "stage": "P0",
         "experiment_id": "E-001",
         "training_started": False,
-        "launch_ready": False,
+        "launch_ready": bool(candidate_launch_guard["launch_ready"]),
         "checks": checks,
         "configs": {
             "launch_candidate": str(LAUNCH_CANDIDATE_CONFIG),
@@ -96,15 +112,16 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
             "runtime_policy": str(RUNTIME_POLICY),
             "runtime_sweep_bs4_report": str(RUNTIME_SWEEP_REPORT),
         },
+        "launch_guard": candidate_launch_guard,
+        "command_launch_guard": command_launch_guard,
+        "runtime_policy_status": runtime_policy_status,
         "final_parameter_alignment": final_parameter_alignment,
-        "unresolved_items": [
-            "Candidate command is executable but not launch-approved.",
-            "runtime_policy.policy_confirmed remains false.",
-            "launch_ready remains false until human confirmation.",
-            "E-006 action-gain rollout evidence remains pending.",
-        ],
+        "unresolved_items": _build_unresolved_items(
+            candidate_launch_guard,
+            runtime_policy_status,
+        ),
         "go_no_go": (
-            "TBD: launch candidate is wired; training remains gated"
+            _go_no_go(candidate_launch_guard)
             if all(checks.values())
             else "No-Go: launch candidate wiring incomplete"
         ),
@@ -121,6 +138,97 @@ def _load_yaml(path: Path) -> Any | None:
     if not path.is_file():
         return None
     return OmegaConf.load(path)
+
+
+def _extract_launch_guard(cfg: Any | None) -> dict[str, Any]:
+    return {
+        "present": cfg is not None and _select(cfg, "launch_guard") is not None,
+        "launch_ready": _select(cfg, "launch_guard.launch_ready"),
+        "policy_confirmed": _select(cfg, "launch_guard.policy_confirmed"),
+        "requires_human_confirmation": _select(cfg, "launch_guard.requires_human_confirmation"),
+        "human_confirmed": _select(cfg, "launch_guard.human_confirmed"),
+    }
+
+
+def _extract_runtime_policy_status(cfg: Any | None) -> dict[str, Any]:
+    return {
+        "present": cfg is not None and _select(cfg, "status") is not None,
+        "launch_ready": _select(cfg, "status.launch_ready"),
+        "policy_confirmed": _select(cfg, "status.policy_confirmed"),
+        "resource_policy_confirmed": _select(cfg, "status.resource_policy_confirmed"),
+    }
+
+
+def _launch_guard_state_is_consistent(guard: dict[str, Any]) -> bool:
+    if not guard["present"]:
+        return False
+    launch_ready = guard["launch_ready"]
+    policy_confirmed = guard["policy_confirmed"]
+    requires_human_confirmation = guard["requires_human_confirmation"]
+    human_confirmed = guard["human_confirmed"]
+    if launch_ready is False:
+        return policy_confirmed is False
+    if launch_ready is True:
+        if policy_confirmed is not True:
+            return False
+        if requires_human_confirmation is True:
+            return human_confirmed is True
+        return True
+    return False
+
+
+def _launch_guards_match(candidate_guard: dict[str, Any], command_guard: dict[str, Any]) -> bool:
+    return (
+        command_guard["present"]
+        and candidate_guard["launch_ready"] == command_guard["launch_ready"]
+        and candidate_guard["policy_confirmed"] == command_guard["policy_confirmed"]
+        and candidate_guard["requires_human_confirmation"]
+        == command_guard["requires_human_confirmation"]
+        and candidate_guard["human_confirmed"] == command_guard["human_confirmed"]
+    )
+
+
+def _runtime_policy_matches_launch_candidate(
+    runtime_policy_status: dict[str, Any],
+    candidate_guard: dict[str, Any],
+) -> bool:
+    return (
+        runtime_policy_status["present"]
+        and runtime_policy_status["policy_confirmed"] == candidate_guard["policy_confirmed"]
+        and runtime_policy_status["launch_ready"] == candidate_guard["launch_ready"]
+        and (
+            runtime_policy_status["resource_policy_confirmed"] is True
+            if candidate_guard["launch_ready"] is True
+            else True
+        )
+    )
+
+
+def _build_unresolved_items(
+    candidate_launch_guard: dict[str, Any],
+    runtime_policy_status: dict[str, Any],
+) -> list[str]:
+    unresolved = []
+    if candidate_launch_guard["launch_ready"] is True:
+        unresolved.append("Candidate command is executable and launch-approved.")
+    else:
+        unresolved.append("Candidate command is executable but not launch-approved.")
+    if runtime_policy_status["policy_confirmed"] is True:
+        unresolved.append("runtime_policy.policy_confirmed is true; monitor real training and checkpoint outputs.")
+    else:
+        unresolved.append("runtime_policy.policy_confirmed remains false.")
+    if candidate_launch_guard["launch_ready"] is True:
+        unresolved.append("launch_ready is true; keep checkpoint/save-resume evidence aligned with the approved config.")
+    else:
+        unresolved.append("launch_ready remains false until human confirmation.")
+    unresolved.append("E-006 action-gain rollout evidence remains pending.")
+    return unresolved
+
+
+def _go_no_go(candidate_launch_guard: dict[str, Any]) -> str:
+    if candidate_launch_guard["launch_ready"] is True:
+        return "TBD: launch candidate is wired and launch-approved"
+    return "TBD: launch candidate is wired; training remains gated"
 
 
 def _select(cfg: Any | None, dot_path: str) -> Any:

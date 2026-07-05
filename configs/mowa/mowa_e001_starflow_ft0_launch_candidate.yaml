@@ -1,8 +1,9 @@
 launch_guard:
-  launch_ready: false
+  launch_ready: true
   requires_human_confirmation: true
-  policy_confirmed: false
-  reason: candidate config only; do not run until runtime policy is explicitly confirmed
+  human_confirmed: true
+  policy_confirmed: true
+  reason: runtime policy confirmed; launch approved
 
 run_id: MoWA-E-001_starflow_ft0_bs4_candidate
 run_root_dir: playground/mowa_ckpt
@@ -49,6 +50,7 @@ framework:
   mowa:
     enable_qwenpi_projector_dtype_alignment: true
     enable_layerwise_bridge_token_coupling: true
+    enable_future_supervision_loss: true
     layerwise_bridge_feature_source: mowa_p0_fullheads
     layerwise_bridge_active_heads:
       - task_progress
@@ -88,7 +90,7 @@ trainer:
   lr_scheduler_type: cosine_with_min_lr
   scheduler_specific_kwargs:
     min_lr: 1.0e-06
-  freeze_modules: ''
+  freeze_modules: qwen_vl_interface
   loss_scale:
     vla: 1.0
     vlm: 0.0

@@ -8,7 +8,7 @@ launch_ready: false
 eval_started: false
 requires_human_confirmation: true
 
-checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260705_codex_a100/checkpoints/steps_2
+checkpoint: latest_complete
 checkpoint_root_policy: playground/mowa_ckpt
 server:
   python: .venv/bin/python

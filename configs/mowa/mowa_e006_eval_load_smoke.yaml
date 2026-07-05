@@ -4,10 +4,10 @@ experiment_id: E-006
 config_role: eval_load_smoke
 
 checkpoint:
-  run_id: MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657
-  run_dir: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657
-  eval_candidate_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2
-  final_model_checkpoint: playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/final_model
+  run_id: latest_complete
+  run_dir: latest_complete
+  eval_candidate_checkpoint: latest_complete
+  final_model_checkpoint: latest_complete
   checkpoint_root_policy: playground/mowa_ckpt
 
 eval_load_smoke:

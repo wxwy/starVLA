@@ -69,6 +69,7 @@ from starVLA.dataloader.mowa.robocasa365_recipe import (
 )
 from starVLA.dataloader.mowa.sampler import (
     MoWAEpisodeToWindowSampler,
+    build_mowa_shuffled_episode_pairs,
     select_mowa_leakage_anchor_indices,
     select_mowa_smoke_anchor_index,
 )
@@ -124,6 +125,7 @@ __all__ = [
     "MoWAUnifiedEpisode",
     "MoWAWindowConfig",
     "MoWAWindowSample",
+    "build_mowa_shuffled_episode_pairs",
     "MoWATemporalProfileReport",
     "MoWATemporalProfileTask",
     "fixed_size_list_shape",

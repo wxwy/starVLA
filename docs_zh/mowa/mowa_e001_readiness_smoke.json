@@ -41,6 +41,42 @@
     "e006_eval_load_smoke_config_created": true,
     "e006_eval_load_smoke_passed": true
   },
+  "sot": {
+    "required_core_docs": [
+      "00_project_proposal.md",
+      "01_technical_survey.md",
+      "02_detailed_design.md"
+    ],
+    "available_core_docs": [],
+    "missing_core_docs": [
+      "00_project_proposal.md",
+      "01_technical_survey.md",
+      "02_detailed_design.md"
+    ],
+    "derived_design_docs": [
+      "03_agent_implementation_plan.md",
+      "04_task_breakdown.md",
+      "05_experiment_registry.md",
+      "06_data_gate_report.md",
+      "07_implementation_log.md",
+      "08_starvla_data_benchmark_support_matrix.md",
+      "09_p0_label_builder_design.md",
+      "10_p1_latent_cache_manifest_design.md"
+    ],
+    "available_derived_design_docs": [
+      "03_agent_implementation_plan.md",
+      "04_task_breakdown.md",
+      "05_experiment_registry.md",
+      "06_data_gate_report.md",
+      "07_implementation_log.md",
+      "08_starvla_data_benchmark_support_matrix.md",
+      "09_p0_label_builder_design.md",
+      "10_p1_latent_cache_manifest_design.md"
+    ],
+    "missing_derived_design_docs": [],
+    "status": "missing_core_sot",
+    "note": "Do not recreate or locally rewrite missing core SOT docs; keep launch gated and record the gap in implementation logs."
+  },
   "observed": {
     "task_count": 10,
     "available_task_count": 10,
@@ -97,7 +133,7 @@
     }
   },
   "unresolved_items": [
-    "SOT docs 00/01/02 are not available in docs_zh/mowa",
+    "core SOT docs missing=00_project_proposal.md,01_technical_survey.md,02_detailed_design.md",
     "E-001 launch draft is not executable",
     "class_mapping_status remains Data Gate",
     "runtime policy draft not confirmed",

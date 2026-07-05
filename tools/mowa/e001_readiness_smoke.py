@@ -51,6 +51,21 @@ E006_COUPLING_INTERVENTION_SMOKE_REPORT = Path(
 )
 E006_EVAL_LOAD_SMOKE_CONFIG = Path("configs/mowa/mowa_e006_eval_load_smoke.yaml")
 E006_EVAL_LOAD_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e006_eval_load_smoke.json")
+CORE_SOT_DOCS = (
+    "00_project_proposal.md",
+    "01_technical_survey.md",
+    "02_detailed_design.md",
+)
+DERIVED_DESIGN_DOCS = (
+    "03_agent_implementation_plan.md",
+    "04_task_breakdown.md",
+    "05_experiment_registry.md",
+    "06_data_gate_report.md",
+    "07_implementation_log.md",
+    "08_starvla_data_benchmark_support_matrix.md",
+    "09_p0_label_builder_design.md",
+    "10_p1_latent_cache_manifest_design.md",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -188,11 +203,16 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         ),
     }
 
+    sot_status = _sot_docs_status(root)
+
     unresolved_items = []
     if missing_reports:
         unresolved_items.append(f"missing_reports={','.join(missing_reports)}")
-    if not _sot_docs_available(root):
-        unresolved_items.append("SOT docs 00/01/02 are not available in docs_zh/mowa")
+    if sot_status["status"] != "available":
+        unresolved_items.append(
+            "core SOT docs missing="
+            + ",".join(sot_status["missing_core_docs"])
+        )
     unresolved_items.extend(
         [
             "E-001 launch draft is not executable",
@@ -212,6 +232,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         "training_started": False,
         "reports": {name: str(path) for name, path in REQUIRED_REPORTS.items()},
         "checks": checks,
+        "sot": sot_status,
         "observed": {
             "task_count": recipe.get("task_count"),
             "available_task_count": recipe.get("available_task_count"),
@@ -293,15 +314,29 @@ def _text_contains(path: Path, pattern: str) -> bool:
     return pattern in path.read_text(encoding="utf-8")
 
 
-def _sot_docs_available(root: Path) -> bool:
-    return all(
-        (root / "docs_zh" / "mowa" / name).is_file()
-        for name in (
-            "00_project_proposal.md",
-            "01_technical_survey.md",
-            "02_detailed_design.md",
-        )
+def _sot_docs_status(root: Path) -> dict[str, Any]:
+    docs_root = root / "docs_zh" / "mowa"
+    available_core = tuple(name for name in CORE_SOT_DOCS if (docs_root / name).is_file())
+    missing_core = tuple(name for name in CORE_SOT_DOCS if name not in available_core)
+    available_derived = tuple(
+        name for name in DERIVED_DESIGN_DOCS if (docs_root / name).is_file()
     )
+    missing_derived = tuple(
+        name for name in DERIVED_DESIGN_DOCS if name not in available_derived
+    )
+    return {
+        "required_core_docs": CORE_SOT_DOCS,
+        "available_core_docs": available_core,
+        "missing_core_docs": missing_core,
+        "derived_design_docs": DERIVED_DESIGN_DOCS,
+        "available_derived_design_docs": available_derived,
+        "missing_derived_design_docs": missing_derived,
+        "status": "available" if not missing_core else "missing_core_sot",
+        "note": (
+            "Do not recreate or locally rewrite missing core SOT docs; keep launch gated "
+            "and record the gap in implementation logs."
+        ),
+    }
 
 
 def _a100_throughput_smoke_passed(path: Path) -> bool:

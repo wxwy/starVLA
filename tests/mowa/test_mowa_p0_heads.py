@@ -393,6 +393,44 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("feature_removal_bridge_tokens_zeroed", report["interventions"])
         self.assertFalse(report["guardrails"]["modify_layerwisefm_internal_logic"])
 
+    def test_e001_readiness_reports_missing_core_sot_docs(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            docs_root = root / "docs_zh" / "mowa"
+            docs_root.mkdir(parents=True)
+            for name in (
+                "03_agent_implementation_plan.md",
+                "04_task_breakdown.md",
+                "05_experiment_registry.md",
+                "06_data_gate_report.md",
+                "07_implementation_log.md",
+                "08_starvla_data_benchmark_support_matrix.md",
+                "09_p0_label_builder_design.md",
+                "10_p1_latent_cache_manifest_design.md",
+            ):
+                (docs_root / name).write_text("# placeholder\n", encoding="utf-8")
+
+            from tools.mowa.e001_readiness_smoke import build_e001_readiness_report
+
+            report = build_e001_readiness_report(root)
+
+        self.assertEqual(report["sot"]["status"], "missing_core_sot")
+        self.assertEqual(
+            report["sot"]["missing_core_docs"],
+            (
+                "00_project_proposal.md",
+                "01_technical_survey.md",
+                "02_detailed_design.md",
+            ),
+        )
+        self.assertEqual(report["sot"]["missing_derived_design_docs"], ())
+        self.assertTrue(
+            any(
+                item.startswith("core SOT docs missing=")
+                for item in report["unresolved_items"]
+            )
+        )
+
     def test_e006_coupling_intervention_smoke_runs_without_training(self):
         try:
             import torch  # noqa: F401

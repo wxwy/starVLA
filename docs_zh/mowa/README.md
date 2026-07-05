@@ -10,6 +10,8 @@ MoWA（Mobile World Action Model，面向移动操作的世界动作模型）是
 
 以上三份文件是 MoWA 的核心 Source-of-Truth，后续执行文件只能继承、拆解和追踪，不得改写其核心结论。
 
+当前 checkout 中三份核心 Source-of-Truth 文件未随仓库提供。Agent 不得在本目录临时补写这些核心文档；继续工程时必须把该缺口记录在 readiness / implementation log 中，并保持训练 launch gate 关闭，直到核心 SOT 被正式补齐或人工确认可继续。
+
 ## Agent 执行文件作用
 
 | 文件 | 作用 |
@@ -34,6 +36,8 @@ MoWA（Mobile World Action Model，面向移动操作的世界动作模型）是
 3. `docs_zh/mowa/02_detailed_design.md` 的第 0、1、4、8、11、14 章和附录 A/B/D/F
 4. 当前任务对应的 prompt 或任务卡
 5. `docs_zh/mowa/07_implementation_log.md`
+
+若第 3 项对应文件在当前 checkout 缺失，必须改读 `03_agent_implementation_plan.md`、`04_task_breakdown.md`、`05_experiment_registry.md`、`06_data_gate_report.md`、`09_p0_label_builder_design.md`、`10_p1_latent_cache_manifest_design.md` 作为派生执行依据；这些派生文档不能替代核心 SOT。
 
 ## Source-of-Truth
 

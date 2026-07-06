@@ -1,4 +1,4 @@
-"""MoWA P1-b1 HLC-GCI interface."""
+"""MoWA HLC-GCI interface."""
 
 from __future__ import annotations
 

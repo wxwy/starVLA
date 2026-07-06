@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P0
+stage: full_heads
 experiment_id: E-001
 config_role: runtime_policy_prelaunch_partial_confirmed
 
@@ -14,7 +14,7 @@ resource_budget:
   expected_vram: bounded_full_vla_bs4_peak_46.817GB_reserved_50.137GB
   expected_runtime: TBD_full_e001_training
   throughput_smoke_report: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
-  throughput_smoke_scope: MoWAP0FullHeads_plus_MoWAActionBridge_only
+  throughput_smoke_scope: MoWAFutureFullHeads_plus_MoWAActionBridge_only
   throughput_smoke_step_time_sec: 0.14424942016601563
   throughput_smoke_samples_per_sec: 443.6759601968788
   throughput_smoke_status: smoke_passed_not_production_training
@@ -69,7 +69,7 @@ logging:
 launch_requirements:
   require_recipe_available: true
   require_production_preflight_passed: true
-  require_p0_one_step_smoke_passed: true
+  require_full_heads_one_step_smoke_passed: true
   require_fullheads_interface: true
   require_runtime_policy_confirmation: true
   require_human_confirmation_before_training: true
@@ -85,7 +85,7 @@ status:
   notes:
     - Checkpoint/save/resume and wandb-disabled logging policy are confirmed for prelaunch smoke.
     - Resource target is single A100 80G as confirmed by user.
-    - A100 throughput smoke has run on P0 FullHeads plus ActionBridge only; it is not full VLA E-001 throughput.
+    - A100 throughput smoke has run on Future FullHeads plus ActionBridge only; it is not full VLA E-001 throughput.
     - Bounded full-VLA runtime sweep passed for per_device_batch_size 1, 2, and 4 with skip_final_checkpoint=true.
     - Batch size 4 is only a short-smoke candidate; long-training VRAM/runtime stability is not confirmed.
     - Full StarFlowVLA save/resume smoke has passed only at per_device_batch_size=1 and gradient_accumulation_steps=1.

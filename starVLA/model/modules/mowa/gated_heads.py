@@ -18,7 +18,7 @@ from typing import Any, Mapping
 import torch
 import torch.nn as nn
 
-from starVLA.model.modules.mowa.p0_heads import (
+from starVLA.model.modules.mowa.full_heads import (
     MoWAFutureFeatureHeads,
     MoWAFutureFullHeadsConfig,
     MoWAFutureFeatures,
@@ -143,8 +143,7 @@ class MoWAGatedHeads(nn.Module):
         return total, losses, outputs.head_outputs
 
 
-# Preferred semantic aliases and backward-compatible P0 aliases.
+# Semantic aliases used by framework-level code.
 MoWAFutureGatedHeadsConfig = MoWAGatedHeadsConfig
 MoWAFutureGatedHeads = MoWAGatedHeads
-MoWAP0GatedHeadsConfig = MoWAGatedHeadsConfig
-MoWAP0GatedHeads = MoWAGatedHeads
+

@@ -109,7 +109,7 @@ def build_e001_training_config_smoke(repo_root: Path | str) -> dict[str, Any]:
         "readiness_training_not_started": readiness.get("training_started") is False,
     }
     return {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": "E-001",
         "training_started": False,
         "launch_ready": False,

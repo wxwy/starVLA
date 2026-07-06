@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P0
+stage: full_heads
 experiment_id: E-006
 config_role: eval_load_smoke
 
@@ -30,4 +30,4 @@ launch_guard:
 
 unresolved_items:
   - E-006 policy rollout environment/runtime is not launched by this smoke.
-  - Checkpoint uses mowa_p0_fullheads bridge feature source, but action-gain evidence is still pending.
+  - Checkpoint uses mowa_future_feature_heads bridge feature source, but action-gain evidence is still pending.

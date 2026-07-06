@@ -5,32 +5,32 @@ import tempfile
 import unittest
 
 
-class MoWAP0HeadsTest(unittest.TestCase):
-    def test_p0_head_constants_are_shared_across_runtime_paths(self):
+class MoWAFutureHeadsTest(unittest.TestCase):
+    def test_future_head_constants_are_shared_across_runtime_paths(self):
         from starVLA.dataloader.gr00t_lerobot.datasets import (
-            MOWA_P0_CONSTRUCTIBLE_HEADS as lerobot_constructible_heads,
-            MOWA_P0_FULL_HEADS as lerobot_full_heads,
+            MOWA_FUTURE_CONSTRUCTIBLE_HEADS as lerobot_constructible_heads,
+            MOWA_FUTURE_FULL_HEADS as lerobot_full_heads,
         )
-        from starVLA.dataloader.mowa.p0_label_builder import (
-            MOWA_P0_CONSTRUCTIBLE_HEADS as label_builder_constructible_heads,
-            MOWA_P0_FULL_HEADS as label_builder_full_heads,
+        from starVLA.dataloader.mowa.full_head_label_builder import (
+            MOWA_FUTURE_CONSTRUCTIBLE_HEADS as label_builder_constructible_heads,
+            MOWA_FUTURE_FULL_HEADS as label_builder_full_heads,
         )
         from starVLA.model.modules.mowa import (
-            MOWA_P0_CONSTRUCTIBLE_HEADS,
-            MOWA_P0_FULL_HEADS,
-            MOWA_P0_MASKED_HEADS,
+            MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+            MOWA_FUTURE_FULL_HEADS,
+            MOWA_FUTURE_MASKED_HEADS,
         )
 
-        self.assertEqual(label_builder_full_heads, MOWA_P0_FULL_HEADS)
-        self.assertEqual(lerobot_full_heads, MOWA_P0_FULL_HEADS)
-        self.assertEqual(label_builder_constructible_heads, MOWA_P0_CONSTRUCTIBLE_HEADS)
-        self.assertEqual(lerobot_constructible_heads, MOWA_P0_CONSTRUCTIBLE_HEADS)
+        self.assertEqual(label_builder_full_heads, MOWA_FUTURE_FULL_HEADS)
+        self.assertEqual(lerobot_full_heads, MOWA_FUTURE_FULL_HEADS)
+        self.assertEqual(label_builder_constructible_heads, MOWA_FUTURE_CONSTRUCTIBLE_HEADS)
+        self.assertEqual(lerobot_constructible_heads, MOWA_FUTURE_CONSTRUCTIBLE_HEADS)
         self.assertEqual(
-            MOWA_P0_MASKED_HEADS,
-            tuple(head for head in MOWA_P0_FULL_HEADS if head not in MOWA_P0_CONSTRUCTIBLE_HEADS),
+            MOWA_FUTURE_MASKED_HEADS,
+            tuple(head for head in MOWA_FUTURE_FULL_HEADS if head not in MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
         )
 
-    def test_future_head_aliases_preserve_p0_compatibility(self):
+    def test_future_head_aliases_preserve_legacy_compatibility(self):
         from starVLA.model.modules.mowa import (
             MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
             MOWA_FUTURE_FEATURE_HEADS_SOURCE,
@@ -38,45 +38,35 @@ class MoWAP0HeadsTest(unittest.TestCase):
             MOWA_FUTURE_FULL_HEADS,
             MOWA_FUTURE_HEAD_OUTPUT_DIMS,
             MOWA_FUTURE_MASKED_HEADS,
-            MOWA_P0_FULLHEADS_FEATURE_SOURCE,
-            MOWA_P0_CONSTRUCTIBLE_HEADS,
-            MOWA_P0_FULL_HEADS,
-            MOWA_P0_HEAD_OUTPUT_DIMS,
-            MOWA_P0_MASKED_HEADS,
             MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE,
             MoWAFutureConstructibleHeads,
             MoWAFutureConstructibleHeadsConfig,
             MoWAFutureFeatureHeads,
             MoWAFutureFeatureHeadsConfig,
             MoWAFutureFeatures,
-            MoWAP0ConstructibleHeads,
-            MoWAP0ConstructibleHeadsConfig,
-            MoWAP0FullHeads,
-            MoWAP0FullHeadsConfig,
-            P0FutureFeatures,
+            MoWAFutureFullHeads,
+            MoWAFutureFullHeadsConfig,
             build_mowa_future_constructible_batch_from_smoke,
-            build_mowa_p0_constructible_batch_from_smoke,
         )
 
-        self.assertIs(MOWA_FUTURE_CONSTRUCTIBLE_HEADS, MOWA_P0_CONSTRUCTIBLE_HEADS)
-        self.assertIs(MOWA_FUTURE_FULL_HEADS, MOWA_P0_FULL_HEADS)
-        self.assertIs(MOWA_FUTURE_MASKED_HEADS, MOWA_P0_MASKED_HEADS)
-        self.assertIs(MOWA_FUTURE_HEAD_OUTPUT_DIMS, MOWA_P0_HEAD_OUTPUT_DIMS)
+        self.assertIs(MOWA_FUTURE_CONSTRUCTIBLE_HEADS, MOWA_FUTURE_CONSTRUCTIBLE_HEADS)
+        self.assertIs(MOWA_FUTURE_FULL_HEADS, MOWA_FUTURE_FULL_HEADS)
+        self.assertIs(MOWA_FUTURE_MASKED_HEADS, MOWA_FUTURE_MASKED_HEADS)
+        self.assertIs(MOWA_FUTURE_HEAD_OUTPUT_DIMS, MOWA_FUTURE_HEAD_OUTPUT_DIMS)
         self.assertEqual(MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE, "starflow_condition_probe")
         self.assertEqual(MOWA_FUTURE_FEATURE_HEADS_SOURCE, "mowa_future_feature_heads")
-        self.assertEqual(MOWA_P0_FULLHEADS_FEATURE_SOURCE, "mowa_p0_fullheads")
         self.assertEqual(
             MOWA_FUTURE_FEATURE_SOURCE_ALIASES,
-            (MOWA_FUTURE_FEATURE_HEADS_SOURCE, MOWA_P0_FULLHEADS_FEATURE_SOURCE),
+            (MOWA_FUTURE_FEATURE_HEADS_SOURCE,),
         )
-        self.assertIs(MoWAFutureConstructibleHeads, MoWAP0ConstructibleHeads)
-        self.assertIs(MoWAFutureConstructibleHeadsConfig, MoWAP0ConstructibleHeadsConfig)
-        self.assertIs(MoWAFutureFeatureHeads, MoWAP0FullHeads)
-        self.assertIs(MoWAFutureFeatureHeadsConfig, MoWAP0FullHeadsConfig)
-        self.assertIs(MoWAFutureFeatures, P0FutureFeatures)
+        self.assertIs(MoWAFutureConstructibleHeads, MoWAFutureConstructibleHeads)
+        self.assertIs(MoWAFutureConstructibleHeadsConfig, MoWAFutureConstructibleHeadsConfig)
+        self.assertIs(MoWAFutureFeatureHeads, MoWAFutureFullHeads)
+        self.assertIs(MoWAFutureFeatureHeadsConfig, MoWAFutureFullHeadsConfig)
+        self.assertIs(MoWAFutureFeatures, MoWAFutureFeatures)
         self.assertIs(
             build_mowa_future_constructible_batch_from_smoke,
-            build_mowa_p0_constructible_batch_from_smoke,
+            build_mowa_future_constructible_batch_from_smoke,
         )
 
     def test_constructible_heads_forward_loss_and_optimizer_step(self):
@@ -86,14 +76,14 @@ class MoWAP0HeadsTest(unittest.TestCase):
             self.skipTest("torch is not available")
 
         from starVLA.model.modules.mowa import (
-            MoWAP0ConstructibleHeads,
-            MoWAP0ConstructibleHeadsConfig,
+            MoWAFutureConstructibleHeads,
+            MoWAFutureConstructibleHeadsConfig,
             mowa_manual_sgd_step,
         )
 
         torch.manual_seed(0)
-        model = MoWAP0ConstructibleHeads(
-            MoWAP0ConstructibleHeadsConfig(input_dim=4, hidden_dim=8)
+        model = MoWAFutureConstructibleHeads(
+            MoWAFutureConstructibleHeadsConfig(input_dim=4, hidden_dim=8)
         )
         features = torch.randn(5, 4)
         targets = {
@@ -129,12 +119,12 @@ class MoWAP0HeadsTest(unittest.TestCase):
             self.skipTest("torch is not available")
 
         from starVLA.model.modules.mowa import (
-            MoWAP0ConstructibleHeads,
-            MoWAP0ConstructibleHeadsConfig,
+            MoWAFutureConstructibleHeads,
+            MoWAFutureConstructibleHeadsConfig,
         )
 
-        model = MoWAP0ConstructibleHeads(
-            MoWAP0ConstructibleHeadsConfig(
+        model = MoWAFutureConstructibleHeads(
+            MoWAFutureConstructibleHeadsConfig(
                 input_dim=4,
                 hidden_dim=8,
                 action_outcome_loss_type="cross_entropy_done",
@@ -170,17 +160,17 @@ class MoWAP0HeadsTest(unittest.TestCase):
             self.skipTest("torch is not available")
 
         from starVLA.model.modules.mowa import (
-            MOWA_P0_FULL_HEADS,
-            MoWAP0FullHeads,
-            MoWAP0FullHeadsConfig,
+            MOWA_FUTURE_FULL_HEADS,
+            MoWAFutureFullHeads,
+            MoWAFutureFullHeadsConfig,
         )
 
         torch.manual_seed(0)
-        model = MoWAP0FullHeads(MoWAP0FullHeadsConfig(input_dim=4, hidden_dim=8))
+        model = MoWAFutureFullHeads(MoWAFutureFullHeadsConfig(input_dim=4, hidden_dim=8))
         features = torch.randn(5, 4)
         outputs = model(features)
 
-        self.assertEqual(tuple(outputs.keys()), MOWA_P0_FULL_HEADS)
+        self.assertEqual(tuple(outputs.keys()), MOWA_FUTURE_FULL_HEADS)
         self.assertEqual(outputs["task_progress"].shape, (5,))
         self.assertEqual(outputs["manipulation_readiness"].shape, (5,))
         self.assertEqual(outputs["failure_risk"].shape, (5,))
@@ -226,12 +216,12 @@ class MoWAP0HeadsTest(unittest.TestCase):
         from starVLA.model.modules.mowa import (
             MoWAActionBridge,
             MoWAActionBridgeConfig,
-            MoWAP0FullHeads,
-            MoWAP0FullHeadsConfig,
+            MoWAFutureFullHeads,
+            MoWAFutureFullHeadsConfig,
         )
 
         torch.manual_seed(0)
-        p0_model = MoWAP0FullHeads(MoWAP0FullHeadsConfig(input_dim=4, hidden_dim=8))
+        future_model = MoWAFutureFullHeads(MoWAFutureFullHeadsConfig(input_dim=4, hidden_dim=8))
         bridge = MoWAActionBridge(
             MoWAActionBridgeConfig(
                 wam_feature_dim=8,
@@ -251,7 +241,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
             "action_outcome_class": True,
         }
 
-        future_features = p0_model.future_features(features, masks)
+        future_features = future_model.future_features(features, masks)
         bridge_output = bridge(future_features)
 
         self.assertEqual(len(bridge_output.layerwise_condition_features), 3)
@@ -304,7 +294,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         from starVLA.model.modules.mowa import (
             MoWAActionBridge,
             MoWAActionBridgeConfig,
-            P0FutureFeatures,
+            MoWAFutureFeatures,
             append_layerwise_bridge_tokens,
         )
 
@@ -320,7 +310,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
             )
         )
         bridge_output = bridge(
-            P0FutureFeatures(
+            MoWAFutureFeatures(
                 hidden_features=torch.randn(2, 6),
                 head_outputs={},
                 active_heads=("task_progress",),
@@ -350,7 +340,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         from starVLA.model.modules.mowa import (
             MoWAActionBridge,
             MoWAActionBridgeConfig,
-            P0FutureFeatures,
+            MoWAFutureFeatures,
             append_single_sequence_bridge_tokens,
             append_vla_adapter_bridge_tokens,
             fuse_mlp_bridge_features,
@@ -366,7 +356,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
             )
         )
         bridge_output = bridge(
-            P0FutureFeatures(
+            MoWAFutureFeatures(
                 hidden_features=torch.randn(2, 6),
                 head_outputs={},
                 active_heads=("task_progress",),
@@ -447,8 +437,8 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "06_data_gate_report.md",
                 "07_implementation_log.md",
                 "08_starvla_data_benchmark_support_matrix.md",
-                "09_p0_label_builder_design.md",
-                "10_p1_latent_cache_manifest_design.md",
+                "09_future_label_builder_design.md",
+                "10_future_latent_cache_manifest_design.md",
             ):
                 (docs_root / name).write_text("# placeholder\n", encoding="utf-8")
 
@@ -698,20 +688,18 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "mowa_action_bridge_probe_enabled": True,
                             "mowa_future_supervision_probe_enabled": True,
                             "mowa_future_supervision_label_status": "forward_evaluated_in_full_path_dry_run",
-                            "mowa_p0_supervision_probe_enabled": True,
-                            "mowa_p0_supervision_label_status": "forward_evaluated_in_full_path_dry_run",
                         },
                         "data": {
                             "data_mix": "robocasa365_open_drawer_target_human",
-                            "mowa_p0_labels_enabled": True,
+                            "mowa_future_labels_enabled": True,
                             "batch_summary": {
                                 "fetched": True,
                                 "first_item_keys": [
                                     "action",
                                     "image",
                                     "lang",
-                                    "mowa_p0_masks",
-                                    "mowa_p0_targets",
+                                    "mowa_future_masks",
+                                    "mowa_future_targets",
                                 ],
                             },
                         },
@@ -720,7 +708,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "keys": [
                                 "action_loss",
                                 "mowa_future_supervision_loss",
-                                "mowa_p0_supervision_loss",
+                                "mowa_future_supervision_loss",
                             ],
                         },
                     }
@@ -739,7 +727,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["checkpoint_not_saved"])
         self.assertTrue(report["checks"]["mowa_future_supervision_probe_enabled"])
         self.assertTrue(report["checks"]["mowa_future_supervision_labels_forward_evaluated"])
-        self.assertTrue(report["checks"]["batch_has_mowa_p0_targets"])
+        self.assertTrue(report["checks"]["batch_has_mowa_future_targets"])
         self.assertTrue(report["checks"]["forward_has_mowa_future_supervision_loss"])
         self.assertTrue(report["checks"]["batch_fetched"])
 
@@ -768,7 +756,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                             "mowa_layerwise_bridge_coupling_enabled": True,
                             "mowa_future_gated_heads_enabled": True,
                             "mowa_layerwise_bridge_coupling_status": "forward_coupled_in_full_path_dry_run",
-                            "mowa_layerwise_bridge_feature_source": "mowa_p0_fullheads",
+                            "mowa_layerwise_bridge_feature_source": "mowa_future_feature_heads",
                             "mowa_layerwise_bridge_gated_heads_summary": {
                                 "comparison_scope": "single_fullheads_control_only",
                                 "allow_per_head_sweep": False,
@@ -777,14 +765,14 @@ class MoWAP0HeadsTest(unittest.TestCase):
                         },
                         "data": {
                             "data_mix": "robocasa365_open_drawer_target_human",
-                            "mowa_p0_labels_enabled": True,
+                            "mowa_future_labels_enabled": True,
                             "batch_summary": {
                                 "first_item_keys": [
                                     "action",
                                     "image",
                                     "lang",
-                                    "mowa_p0_masks",
-                                    "mowa_p0_targets",
+                                    "mowa_future_masks",
+                                    "mowa_future_targets",
                                     "state",
                                 ],
                             },
@@ -797,7 +785,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                                 "mowa_layerwise_bridge_coupled",
                                 "mowa_layerwise_bridge_feature_source",
                             ],
-                            "mowa_layerwise_bridge_feature_source": "mowa_p0_fullheads",
+                            "mowa_layerwise_bridge_feature_source": "mowa_future_feature_heads",
                             "mowa_layerwise_bridge_active_heads": [
                                 "task_progress",
                                 "action_outcome_class",
@@ -980,7 +968,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "    action_model_type: LayerwiseFM\n"
                 "  mowa:\n"
                 "    enable_future_supervision_loss: true\n"
-                "    layerwise_bridge_feature_source: mowa_p0_fullheads\n"
+                "    layerwise_bridge_feature_source: mowa_future_feature_heads\n"
                 "datasets:\n"
                 "  vla_data:\n"
                 "    per_device_batch_size: 4\n"
@@ -1174,7 +1162,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "    action_model_type: LayerwiseFM\n"
                 "  mowa:\n"
                 "    enable_future_supervision_loss: true\n"
-                "    layerwise_bridge_feature_source: mowa_p0_fullheads\n"
+                "    layerwise_bridge_feature_source: mowa_future_feature_heads\n"
                 "datasets:\n"
                 "  vla_data:\n"
                 "    per_device_batch_size: 4\n"
@@ -1268,8 +1256,8 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["mowa_launch_state_consistent"])
         self.assertTrue(report["checks"]["baseline_bridge_disabled"])
         self.assertTrue(report["checks"]["mowa_bridge_enabled"])
-        self.assertTrue(report["checks"]["baseline_p0_labels_disabled"])
-        self.assertTrue(report["checks"]["mowa_p0_labels_enabled"])
+        self.assertTrue(report["checks"]["baseline_future_labels_disabled"])
+        self.assertTrue(report["checks"]["mowa_future_labels_enabled"])
         self.assertTrue(report["checks"]["paired_invariants_match"])
         self.assertTrue(report["checks"]["paired_runtime_symmetry_passed"])
         self.assertTrue(report["checks"]["official_ft0_is_reference_only"])
@@ -1298,7 +1286,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "datasets": {
                     "vla_data": {
                         "per_device_batch_size": 4,
-                        "enable_mowa_p0_labels": False,
+                        "enable_mowa_future_labels": False,
                     }
                 },
             }
@@ -1315,7 +1303,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "datasets": {
                     "vla_data": {
                         "per_device_batch_size": 8,
-                        "enable_mowa_p0_labels": True,
+                        "enable_mowa_future_labels": True,
                     }
                 },
             }
@@ -1886,7 +1874,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                         },
                         "mowa": {
                             "enable_layerwise_bridge_token_coupling": True,
-                            "layerwise_bridge_feature_source": "mowa_p0_fullheads",
+                            "layerwise_bridge_feature_source": "mowa_future_feature_heads",
                             "layerwise_bridge_token_intervention": "baseline",
                             "num_bridge_tokens": 2,
                             "layerwise_bridge_active_heads": [
@@ -1913,7 +1901,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertEqual(accessed["framework"]["action_model"]["action_model_type"], "LayerwiseFM")
         self.assertEqual(accessed["framework"]["action_model"]["num_target_vision_tokens"], 0)
         self.assertTrue(accessed["framework"]["mowa"]["enable_layerwise_bridge_token_coupling"])
-        self.assertEqual(accessed["framework"]["mowa"]["layerwise_bridge_feature_source"], "mowa_p0_fullheads")
+        self.assertEqual(accessed["framework"]["mowa"]["layerwise_bridge_feature_source"], "mowa_future_feature_heads")
         self.assertEqual(accessed["framework"]["mowa"]["layerwise_bridge_token_intervention"], "baseline")
         self.assertEqual(accessed["framework"]["mowa"]["num_bridge_tokens"], 2)
         self.assertEqual(
@@ -2524,7 +2512,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("--args.pretrained-path", source)
         self.assertIn("except ModuleNotFoundError as exc", source)
 
-    def test_qwenoft_mowa_p0_supervision_probe_requires_explicit_labels(self):
+    def test_qwenoft_mowa_future_supervision_probe_requires_explicit_labels(self):
         try:
             import torch
             import torch.nn as nn
@@ -2539,9 +2527,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "framework": {
                     "action_model": {"action_hidden_dim": 8},
                     "mowa": {
-                        "enable_p0_supervision_probe": True,
-                        "p0_supervision_hidden_dim": 6,
-                        "p0_supervision_active_heads": [
+                        "enable_future_supervision_probe": True,
+                        "future_supervision_hidden_dim": 6,
+                        "future_supervision_active_heads": [
                             "task_progress",
                             "action_outcome_class",
                         ],
@@ -2552,10 +2540,10 @@ class MoWAP0HeadsTest(unittest.TestCase):
         probe_owner = object.__new__(Qwenvl_OFT)
         nn.Module.__init__(probe_owner)
         probe_owner.config = cfg
-        probe_owner._setup_mowa_p0_supervision_probe()
+        probe_owner._setup_mowa_future_supervision_probe()
 
         action_queries = torch.randn(4, 5, 8)
-        missing = probe_owner._maybe_run_mowa_p0_supervision_probe(action_queries, [{} for _ in range(4)])
+        missing = probe_owner._maybe_run_mowa_future_supervision_probe(action_queries, [{} for _ in range(4)])
         self.assertIsNotNone(missing)
         self.assertFalse(missing["supervision_available"])
         self.assertIsNone(missing["loss"])
@@ -2563,18 +2551,18 @@ class MoWAP0HeadsTest(unittest.TestCase):
 
         examples = [
             {
-                "mowa_p0_targets": {
+                "mowa_future_targets": {
                     "task_progress": 0.25,
                     "action_outcome_class": [1.0, 0.0],
                 },
-                "mowa_p0_masks": {
+                "mowa_future_masks": {
                     "task_progress": True,
                     "action_outcome_class": True,
                 },
             }
             for _ in range(4)
         ]
-        supervised = probe_owner._maybe_run_mowa_p0_supervision_probe(action_queries, examples)
+        supervised = probe_owner._maybe_run_mowa_future_supervision_probe(action_queries, examples)
 
         self.assertTrue(supervised["supervision_available"])
         self.assertEqual(
@@ -2585,7 +2573,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("action_outcome_class", supervised["losses"])
         self.assertTrue(torch.isfinite(supervised["loss"]))
 
-    def test_qwenoft_mowa_future_supervision_aliases_match_p0_probe(self):
+    def test_qwenoft_mowa_future_supervision_aliases_match_legacy_probe(self):
         try:
             import torch.nn as nn
             from omegaconf import OmegaConf
@@ -2599,7 +2587,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "framework": {
                     "action_model": {"action_hidden_dim": 8},
                     "mowa": {
-                        "enable_p0_supervision_probe": True,
+                        "enable_future_supervision_probe": True,
                         "future_supervision_hidden_dim": 6,
                         "future_supervision_active_heads": [
                             "task_progress",
@@ -2612,14 +2600,14 @@ class MoWAP0HeadsTest(unittest.TestCase):
         probe_owner = object.__new__(Qwenvl_OFT)
         nn.Module.__init__(probe_owner)
         probe_owner.config = cfg
-        probe_owner._setup_mowa_p0_supervision_probe()
+        probe_owner._setup_mowa_future_supervision_probe()
 
-        self.assertIsNotNone(probe_owner.mowa_p0_supervision_probe)
+        self.assertIsNotNone(probe_owner.mowa_future_supervision_probe)
         self.assertEqual(
-            probe_owner.mowa_p0_supervision_active_heads,
+            probe_owner.mowa_future_supervision_active_heads,
             ("task_progress", "action_outcome_class"),
         )
-        self.assertEqual(probe_owner.mowa_p0_supervision_probe.config.hidden_dim, 6)
+        self.assertEqual(probe_owner.mowa_future_supervision_probe.config.hidden_dim, 6)
 
     def test_qwenoft_mowa_future_supervision_accepts_action_outcome_loss_type(self):
         try:
@@ -2635,7 +2623,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "framework": {
                     "action_model": {"action_hidden_dim": 8},
                     "mowa": {
-                        "enable_p0_supervision_probe": True,
+                        "enable_future_supervision_probe": True,
                         "future_supervision_hidden_dim": 6,
                         "future_supervision_action_outcome_loss_type": "cross_entropy_done",
                     },
@@ -2645,10 +2633,10 @@ class MoWAP0HeadsTest(unittest.TestCase):
         probe_owner = object.__new__(Qwenvl_OFT)
         nn.Module.__init__(probe_owner)
         probe_owner.config = cfg
-        probe_owner._setup_mowa_p0_supervision_probe()
+        probe_owner._setup_mowa_future_supervision_probe()
 
         self.assertEqual(
-            probe_owner.mowa_p0_supervision_probe.config.action_outcome_loss_type,
+            probe_owner.mowa_future_supervision_probe.config.action_outcome_loss_type,
             "cross_entropy_done",
         )
 
@@ -2720,7 +2708,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
 
         self.assertEqual(probe_owner.mowa_action_bridge_probe.config.num_action_layers, 2)
 
-    def test_p1_b0_future_latent_prior_predicts_future_latent_from_current_plus_text_only(self):
+    def test_future_latent_prior_predicts_future_latent_from_current_plus_text_only(self):
         try:
             import torch
         except ImportError:
@@ -2751,15 +2739,15 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertIn("future_latent_mse", losses)
         self.assertTrue(torch.isfinite(loss))
 
-    def test_p1_b0_future_latent_prior_rejects_history_latent_input(self):
+    def test_future_latent_prior_rejects_history_latent_input(self):
         try:
             import torch
         except ImportError:
             self.skipTest("torch is not available")
 
-        from starVLA.model.modules.mowa import MoWAP1B0FutureLatentPrior
+        from starVLA.model.modules.mowa import MoWAFutureLatentPrior
 
-        model = MoWAP1B0FutureLatentPrior()
+        model = MoWAFutureLatentPrior()
         current = torch.randn(2, 1024)
         text = torch.randn(2, 2048)
         history = torch.randn(2, 1024)
@@ -2767,22 +2755,22 @@ class MoWAP0HeadsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "does not accept history_latent"):
             model.forward(current, text, history_latent=history)
 
-    def test_p1_b0_future_latent_prior_interface_smoke_passes(self):
-        from tools.mowa.p1_b0_future_latent_prior_interface_smoke import (
-            build_p1_b0_future_latent_prior_interface_smoke,
+    def test_future_latent_prior_interface_smoke_passes(self):
+        from tools.mowa.future_latent_prior_interface_smoke import (
+            build_future_latent_prior_interface_smoke,
         )
 
-        report = build_p1_b0_future_latent_prior_interface_smoke(Path("."))
+        report = build_future_latent_prior_interface_smoke(Path("."))
 
         self.assertFalse(report["training_started"])
         self.assertTrue(all(report["checks"].values()))
         self.assertEqual(
             report["go_no_go"],
-            "TBD: P1-b0 future latent prior interface smoke passed; "
+            "TBD: future latent prior interface smoke passed; "
             "latent cache builder remains gated",
         )
 
-    def test_p1_b1_hlcgci_interface_shapes_and_gate_range(self):
+    def test_hlc_gci_interface_shapes_and_gate_range(self):
         try:
             import torch
         except ImportError:
@@ -2810,12 +2798,12 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertGreaterEqual(float(output.gate_values.min().item()), 0.0)
         self.assertLessEqual(float(output.gate_values.max().item()), 1.0)
 
-    def test_p1_b1_hlcgci_interface_smoke_passes(self):
-        from tools.mowa.p1_b1_hlcgci_interface_smoke import (
-            build_p1_b1_hlcgci_interface_smoke,
+    def test_hlc_gci_interface_smoke_passes(self):
+        from tools.mowa.hlc_gci_interface_smoke import (
+            build_hlc_gci_interface_smoke,
         )
 
-        report = build_p1_b1_hlcgci_interface_smoke(Path("."))
+        report = build_hlc_gci_interface_smoke(Path("."))
 
         self.assertFalse(report["training_started"])
         self.assertTrue(all(report["checks"].values()))
@@ -2824,20 +2812,18 @@ class MoWAP0HeadsTest(unittest.TestCase):
             "TBD: HLC-GCI interface smoke passed; framework integration remains gated",
         )
 
-    def test_future_gated_heads_aliases_preserve_p0_compatibility(self):
+    def test_future_gated_heads_aliases_preserve_legacy_compatibility(self):
         from starVLA.model.modules.mowa import (
             MoWAFutureGatedHeads,
             MoWAFutureGatedHeadsConfig,
             MoWAGatedHeads,
             MoWAGatedHeadsConfig,
-            MoWAP0GatedHeads,
-            MoWAP0GatedHeadsConfig,
         )
 
         self.assertIs(MoWAFutureGatedHeads, MoWAGatedHeads)
         self.assertIs(MoWAFutureGatedHeadsConfig, MoWAGatedHeadsConfig)
-        self.assertIs(MoWAP0GatedHeads, MoWAGatedHeads)
-        self.assertIs(MoWAP0GatedHeadsConfig, MoWAGatedHeadsConfig)
+        self.assertIs(MoWAGatedHeads, MoWAGatedHeads)
+        self.assertIs(MoWAGatedHeadsConfig, MoWAGatedHeadsConfig)
 
     def test_future_gated_heads_use_interpretable_init_gate_value(self):
         from starVLA.model.modules.mowa import (
@@ -2934,7 +2920,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
 
         missing_keys, unexpected_keys = _filter_strict_key_mismatches(
             {"mowa_layerwise_bridge_future_feature_heads.trunk.0.weight"},
-            {"mowa_layerwise_bridge_p0_heads.trunk.0.weight"},
+            {"mowa_layerwise_bridge_future_heads.trunk.0.weight"},
         )
 
         self.assertEqual(missing_keys, [])
@@ -2944,13 +2930,13 @@ class MoWAP0HeadsTest(unittest.TestCase):
         from starVLA.model.framework.VLM4A.QwenPI_v3 import Qwen_PI_v3
 
         state_dict = {
-            "mowa_layerwise_bridge_p0_heads.trunk.0.weight": "legacy_weight",
-            "mowa_layerwise_bridge_p0_heads.trunk.0.bias": "legacy_bias",
+            "mowa_layerwise_bridge_future_heads.trunk.0.weight": "legacy_weight",
+            "mowa_layerwise_bridge_future_heads.trunk.0.bias": "legacy_bias",
         }
 
         Qwen_PI_v3._rewrite_mowa_checkpoint_state_dict_keys_for_compatibility(state_dict)
 
-        self.assertNotIn("mowa_layerwise_bridge_p0_heads.trunk.0.weight", state_dict)
+        self.assertNotIn("mowa_layerwise_bridge_future_heads.trunk.0.weight", state_dict)
         self.assertEqual(
             state_dict["mowa_layerwise_bridge_future_feature_heads.trunk.0.weight"],
             "legacy_weight",

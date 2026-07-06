@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P0
+stage: full_heads
 experiment_id: E-001
 config_role: a100_throughput_smoke_plan_not_launch
 
@@ -30,7 +30,7 @@ measurements:
     per_device_batch_size: 8
     gradient_accumulation_steps: 8
     effective_batch_size: 64
-  measurement_scope: MoWAP0FullHeads_plus_MoWAActionBridge_only
+  measurement_scope: MoWAFutureFullHeads_plus_MoWAActionBridge_only
   production_training_status: not_measured
 
 guardrails:

@@ -28,7 +28,7 @@ interventions:
     expected_role: test whether coupling is sample-specific rather than constant bias
   head_mask_control:
     bridge_tokens: constructible_heads_only
-    expected_role: keep missing P0 heads masked; no per-head sweep
+    expected_role: keep missing future heads masked; no per-head sweep
 
 metrics:
   action_success_delta: TBD

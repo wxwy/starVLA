@@ -1,9 +1,9 @@
 project_short_name: MoWA
-stage: P0
+stage: full_heads
 experiment_id: E-001
 config_role: interface_draft_not_launch
 model:
-  type: MoWAP0FullHeads
+  type: MoWAFutureFullHeads
   input_dim: 4
   hidden_dim: 32
 heads:
@@ -38,7 +38,7 @@ training:
     - checkpoint/save/resume strategy not confirmed
     - batch size, expected VRAM and runtime not confirmed
 data_gate:
-  p0_one_step_smoke: passed
+  full_heads_one_step_smoke: passed
   production_preflight: passed
   wam_hz: 5
   history_window: 2.0s_10_steps

@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P1-b1
+stage: hlc_gci
 task_id: M4-001
 experiment_id: E-004
 config_role: hlcgci_interface_smoke
@@ -21,4 +21,4 @@ status:
 
 unresolved_items:
   - This smoke validates interface shape and gate range only.
-  - Real P1-b1 training and injection into StarVLA framework remain separately gated.
+  - Real HLC-GCI training and injection into StarVLA framework remain separately gated.

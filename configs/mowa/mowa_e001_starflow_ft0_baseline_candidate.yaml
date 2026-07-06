@@ -65,7 +65,7 @@ datasets:
     obs_image_size: [224, 224]
     delete_pause_frame: false
     video_backend: torchvision_av
-    enable_mowa_p0_labels: false
+    enable_mowa_future_labels: false
 
 trainer:
   disable_wandb: true

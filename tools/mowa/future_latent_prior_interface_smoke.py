@@ -1,4 +1,4 @@
-"""MoWA P1-b0 future latent prior interface smoke."""
+"""MoWA future latent prior interface smoke."""
 
 from __future__ import annotations
 
@@ -17,12 +17,12 @@ from starVLA.model.modules.mowa import (
 )
 
 
-CONFIG = Path("configs/mowa/mowa_p1_b0_future_latent_prior_interface.yaml")
-OUTPUT = Path("docs_zh/mowa/mowa_p1_b0_future_latent_prior_interface_smoke.json")
+CONFIG = Path("configs/mowa/mowa_future_latent_prior_interface.yaml")
+OUTPUT = Path("docs_zh/mowa/mowa_future_latent_prior_interface_smoke.json")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run MoWA P1-b0 future latent prior interface smoke.")
+    parser = argparse.ArgumentParser(description="Run MoWA future latent prior interface smoke.")
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--config", type=Path, default=CONFIG)
     parser.add_argument("--output", type=Path, default=OUTPUT)
@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    payload = build_p1_b0_future_latent_prior_interface_smoke(args.repo_root, args.config)
+    payload = build_future_latent_prior_interface_smoke(args.repo_root, args.config)
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -40,7 +40,7 @@ def main() -> None:
         print(text)
 
 
-def build_p1_b0_future_latent_prior_interface_smoke(
+def build_future_latent_prior_interface_smoke(
     repo_root: Path | str,
     config_path: Path = CONFIG,
 ) -> dict[str, Any]:
@@ -72,7 +72,7 @@ def build_p1_b0_future_latent_prior_interface_smoke(
         "latent_shape_status_data_gate": str(cfg.status.latent_shape_status) == DATA_GATE,
     }
     return {
-        "stage": "P1-b0",
+        "stage": "future_latent_prior",
         "task_id": "M3-002",
         "experiment_id": "E-003",
         "training_started": False,
@@ -84,15 +84,15 @@ def build_p1_b0_future_latent_prior_interface_smoke(
             "loss_keys": tuple(losses.keys()),
         },
         "unresolved_items": [
-            "This smoke validates the P1-b0 future latent prior interface only; no latent cache builder is executed.",
-            "history_latent remains blocked at P1-b0 and must stay out of model inputs.",
+            "This smoke validates the future latent prior interface only; no latent cache builder is executed.",
+            "history_latent remains blocked at future latent prior stage and must stay out of model inputs.",
             "latent shape / encoder / cache artifact statuses remain Data Gate "
             "until real Wan cache builder is approved.",
         ],
         "go_no_go": (
-            "TBD: P1-b0 future latent prior interface smoke passed; latent cache builder remains gated"
+            "TBD: future latent prior interface smoke passed; latent cache builder remains gated"
             if all(checks.values())
-            else "No-Go: P1-b0 future latent prior interface smoke failed"
+            else "No-Go: future latent prior interface smoke failed"
         ),
     }
 

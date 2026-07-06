@@ -92,7 +92,7 @@ def build_e006_eval_load_smoke(
         ),
     }
     return {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": "E-006",
         "eval_started": False,
         "policy_eval_started": False,
@@ -112,7 +112,8 @@ def build_e006_eval_load_smoke(
         "unresolved_items": [
             "This validates checkpoint eval-load readiness only; no policy rollout is started.",
             "E-006 baseline/zero/shuffle/head_mask policy metrics remain pending.",
-            "Checkpoint uses mowa_p0_fullheads bridge feature source, but action-gain evidence is still pending.",
+            "Checkpoint uses mowa_future_feature_heads bridge feature source, "
+            "but action-gain evidence is still pending.",
         ],
         "go_no_go": (
             "TBD: E-006 eval-load smoke passed; policy rollout remains gated"

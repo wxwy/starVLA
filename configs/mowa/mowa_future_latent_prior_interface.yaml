@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P1-b0
+stage: future_latent_prior
 task_id: M3-002
 experiment_id: E-003
 config_role: future_latent_prior_interface_smoke

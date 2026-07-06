@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P0
+stage: full_heads
 experiment_id: E-001
 config_role: training_config_smoke_not_launch
 
@@ -29,7 +29,7 @@ data:
   val_every: 10
 
 model:
-  type: MoWAP0FullHeads
+  type: MoWAFutureFullHeads
   action_bridge: MoWAActionBridge
   active_heads:
     - task_progress
@@ -61,7 +61,7 @@ runtime_smoke_observed:
   step_time_sec: 0.14424942016601563
   samples_per_sec: 443.6759601968788
   peak_vram_gb: 0.04040336608886719
-  scope: MoWAP0FullHeads_plus_MoWAActionBridge_only
+  scope: MoWAFutureFullHeads_plus_MoWAActionBridge_only
 
 training:
   counted_in_experiment_budget: true

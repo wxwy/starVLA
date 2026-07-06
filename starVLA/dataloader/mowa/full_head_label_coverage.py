@@ -1,4 +1,4 @@
-"""MoWA P0 label coverage smoke utilities."""
+"""MoWA future label coverage smoke utilities."""
 
 from __future__ import annotations
 
@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from starVLA.mowa_constants import MOWA_P0_FULL_HEADS
+from starVLA.mowa_constants import MOWA_FUTURE_FULL_HEADS
 from starVLA.dataloader.mowa.schema import DATA_GATE, TBD
 
 
 @dataclass(frozen=True)
-class MoWAP0HeadCoverage:
+class MoWAFutureHeadCoverage:
     head: str
     status: str
     source_fields: tuple[str, ...]
@@ -29,11 +29,11 @@ class MoWAP0HeadCoverage:
 
 
 @dataclass(frozen=True)
-class MoWAP0LabelCoverageReport:
+class MoWAFutureLabelCoverageReport:
     dataset_path: str
     sampled_episode_indices: tuple[int, ...]
     available_columns: tuple[str, ...]
-    head_coverage: tuple[MoWAP0HeadCoverage, ...]
+    head_coverage: tuple[MoWAFutureHeadCoverage, ...]
     constructible_heads: tuple[str, ...]
     masked_heads: tuple[str, ...]
     unresolved_items: tuple[str, ...]
@@ -50,13 +50,13 @@ class MoWAP0LabelCoverageReport:
         }
 
 
-def inspect_mowa_p0_label_coverage(
+def inspect_mowa_future_label_coverage(
     dataset_path: Path | str,
     episode_indices: tuple[int, ...] = (0, 1, 4),
-) -> MoWAP0LabelCoverageReport:
-    """只读检查 P0 七类 head 的字段可构造性。
+) -> MoWAFutureLabelCoverageReport:
+    """只读检查未来七类 head 的字段可构造性。
 
-    该函数不生成训练标签，不定义阈值，不启动 P0 模型。
+    该函数不生成训练标签，不定义阈值，不启动 future head 模型。
     """
 
     root = Path(dataset_path)
@@ -65,11 +65,11 @@ def inspect_mowa_p0_label_coverage(
         for episode_index in episode_indices
     )
     available_columns = tuple(sorted(set().union(*columns_by_episode))) if columns_by_episode else ()
-    coverage = tuple(_build_head_coverage(head, available_columns) for head in MOWA_P0_FULL_HEADS)
+    coverage = tuple(_build_head_coverage(head, available_columns) for head in MOWA_FUTURE_FULL_HEADS)
     constructible_heads = tuple(item.head for item in coverage if item.status == "candidate_constructible")
     masked_heads = tuple(item.head for item in coverage if item.status != "candidate_constructible")
 
-    return MoWAP0LabelCoverageReport(
+    return MoWAFutureLabelCoverageReport(
         dataset_path=str(root),
         sampled_episode_indices=episode_indices,
         available_columns=available_columns,
@@ -90,11 +90,11 @@ def _read_parquet_columns(path: Path) -> tuple[str, ...]:
     try:
         import pyarrow.parquet as pq
     except ImportError as exc:
-        raise RuntimeError("MoWA P0 label coverage smoke requires pyarrow.") from exc
+        raise RuntimeError("MoWA future label coverage smoke requires pyarrow.") from exc
     return tuple(pq.ParquetFile(path).schema_arrow.names)
 
 
-def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAP0HeadCoverage:
+def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAFutureHeadCoverage:
     columns = set(available_columns)
     if head == "task_progress":
         required = ("frame_index", "timestamp", "episode_index")
@@ -116,7 +116,7 @@ def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAP
             force_data_gate=True,
         )
     if head == "failure_risk":
-        return MoWAP0HeadCoverage(
+        return MoWAFutureHeadCoverage(
             head=head,
             status="masked",
             source_fields=("failure_annotation",),
@@ -124,7 +124,7 @@ def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAP
             notes="No explicit failure annotation in current Lerobot schema.",
         )
     if head == "next_best_view_score":
-        return MoWAP0HeadCoverage(
+        return MoWAFutureHeadCoverage(
             head=head,
             status="masked",
             source_fields=("view_score", "visibility_label"),
@@ -142,7 +142,7 @@ def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAP
             force_data_gate=True,
         )
     if head == "object_visibility_future":
-        return MoWAP0HeadCoverage(
+        return MoWAFutureHeadCoverage(
             head=head,
             status="masked",
             source_fields=("future_video", "object_visibility_proxy"),
@@ -159,12 +159,12 @@ def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAP
             "Candidate from next.reward / next.done; class mapping is frozen for E-001 initial target.",
         )
 
-    return MoWAP0HeadCoverage(
+    return MoWAFutureHeadCoverage(
         head=head,
         status=TBD,
         source_fields=(),
         mask_rule="mask unknown head",
-        notes="Unknown P0 head.",
+        notes="Unknown future head.",
     )
 
 
@@ -175,13 +175,13 @@ def _coverage(
     mask_rule: str,
     notes: str,
     force_data_gate: bool = False,
-) -> MoWAP0HeadCoverage:
+) -> MoWAFutureHeadCoverage:
     missing = tuple(field for field in required if field not in columns)
     status = "candidate_constructible" if not missing and not force_data_gate else DATA_GATE
     if missing:
         status = "masked"
         notes = f"Missing fields: {missing}."
-    return MoWAP0HeadCoverage(
+    return MoWAFutureHeadCoverage(
         head=head,
         status=status,
         source_fields=required,

@@ -146,7 +146,7 @@ def _build_config(intervention: str) -> SimpleNamespace:
                 wam_feature_dim=4,
                 action_hidden_dim=4,
                 num_bridge_tokens=2,
-                layerwise_bridge_feature_source="mowa_p0_fullheads",
+                layerwise_bridge_feature_source="mowa_future_feature_heads",
                 layerwise_bridge_active_heads=(
                     "task_progress",
                     "action_outcome_class",

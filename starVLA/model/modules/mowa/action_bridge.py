@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .p0_heads import MoWAFutureFeatures
+from .full_heads import MoWAFutureFeatures
 
 
 @dataclass(frozen=True)

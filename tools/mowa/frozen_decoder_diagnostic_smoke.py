@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MoWA M6-001 P2 frozen decoder diagnostic plan smoke.
+"""MoWA M6-001 frozen decoder diagnostic plan smoke.
 
 Validates that the diagnostic plan YAML exists and records its
 constraints.  Does NOT run a Wan decoder, VAE, or video generation.
@@ -14,8 +14,8 @@ from typing import Any
 
 import yaml
 
-PLAN_YAML = Path("configs/mowa/mowa_p2_frozen_decoder_diagnostic_plan.yaml")
-OUTPUT = Path("docs_zh/mowa/mowa_p2_frozen_decoder_diagnostic_smoke.json")
+PLAN_YAML = Path("configs/mowa/mowa_frozen_decoder_diagnostic_plan.yaml")
+OUTPUT = Path("docs_zh/mowa/mowa_frozen_decoder_diagnostic_smoke.json")
 
 
 def _build_smoke() -> dict[str, Any]:
@@ -25,7 +25,7 @@ def _build_smoke() -> dict[str, Any]:
             "experiment_id": "E-008",
             "eval_started": False,
             "checks": {"plan_exists": False},
-            "go_no_go": "No-Go: P2 diagnostic plan YAML not found",
+            "go_no_go": "No-Go: frozen decoder diagnostic plan YAML not found",
         }
 
     with PLAN_YAML.open(encoding="utf-8") as fh:
@@ -61,9 +61,9 @@ def _build_smoke() -> dict[str, Any]:
             "plan_steps": {k: v.get("status") for k, v in plan_steps.items()},
         },
         "go_no_go": (
-            "TBD: P2 diagnostic plan smoke passed; real decoder runs remain gated"
+            "TBD: frozen decoder diagnostic plan smoke passed; real decoder runs remain gated"
             if all_ok
-            else "No-Go: P2 diagnostic plan validation failed"
+            else "No-Go: frozen decoder diagnostic plan validation failed"
         ),
     }
 

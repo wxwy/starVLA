@@ -25,7 +25,7 @@ class MoWADataGateCandidate:
     license_status: str = DATA_GATE
     schema_status: str = DATA_GATE
     temporal_profile_status: str = DATA_GATE
-    p0_label_status: str = DATA_GATE
+    future_label_status: str = DATA_GATE
     latent_cache_status: str = DATA_GATE
     leakage_status: str = TBD
     notes: str = ""
@@ -40,7 +40,7 @@ class MoWADataGateCandidate:
             "license_status": self.license_status,
             "schema_status": self.schema_status,
             "temporal_profile_status": self.temporal_profile_status,
-            "p0_label_status": self.p0_label_status,
+            "future_label_status": self.future_label_status,
             "latent_cache_status": self.latent_cache_status,
             "leakage_status": self.leakage_status,
             "notes": self.notes,
@@ -78,7 +78,7 @@ def build_mowa_g0_report_skeleton() -> MoWADataGateReport:
                 dataset="robocasa365",
                 role="PrimaryCandidate",
                 starvla_support="train+eval+registry",
-                default_use="G0/P0 first loop",
+                default_use="G0/full_heads first loop",
                 notes="先用 OpenDrawer target/human 做最小闭环；G0 通过后再扩展 target_human_all。",
             ),
             MoWADataGateCandidate(
@@ -99,7 +99,7 @@ def build_mowa_g0_report_skeleton() -> MoWADataGateReport:
         unresolved_items=(
             "obs fps / action Hz must be profiled by G0 before use.",
             "history window / future horizon / action chunk must remain Data Gate before profiling.",
-            "future action leakage tests must pass before P0/P1 training.",
+            "future action leakage tests must pass before full_heads/future_latent_prior training.",
         ),
     )
 

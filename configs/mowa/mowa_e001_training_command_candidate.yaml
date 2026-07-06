@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P0
+stage: full_heads
 experiment_id: E-001
 config_role: training_command_candidate_requires_confirmation
 

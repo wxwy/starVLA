@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P0
+stage: full_heads
 experiment_id: E-002
 experiment_name: Future-GatedHeads vs Future-FullHeads comparison
 config_role: gated_heads_interface
@@ -7,7 +7,7 @@ task_id: M2-003
 
 gated_heads:
   enabled: false
-  heads_config_ref: configs/mowa/mowa_p0_fullheads_interface.yaml
+  heads_config_ref: configs/mowa/mowa_full_heads_interface.yaml
   init_gate_value: 0.5
   comparison_scope: single_fullheads_control_only
   allow_per_head_sweep: false

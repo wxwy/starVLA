@@ -1,4 +1,4 @@
-"""MoWA P0 constructible label builder smoke utilities."""
+"""MoWA future constructible label builder smoke utilities."""
 
 from __future__ import annotations
 
@@ -11,14 +11,14 @@ from starVLA.mowa_constants import (
     MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
     MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
     MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
-    MOWA_P0_CONSTRUCTIBLE_HEADS,
-    MOWA_P0_FULL_HEADS,
-    MOWA_P0_MASKED_HEADS,
+    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_FULL_HEADS,
+    MOWA_FUTURE_MASKED_HEADS,
 )
 
 
 @dataclass(frozen=True)
-class MoWAP0LabelSmokeSample:
+class MoWAFutureLabelSmokeSample:
     episode_index: int
     row_index: int
     labels: dict[str, Any]
@@ -38,13 +38,13 @@ class MoWAP0LabelSmokeSample:
 
 
 @dataclass(frozen=True)
-class MoWAP0ConstructibleLabelSmoke:
+class MoWAFutureConstructibleLabelSmoke:
     dataset_path: str
     sampled_episode_indices: tuple[int, ...]
     constructible_heads: tuple[str, ...]
     masked_heads: tuple[str, ...]
     sample_count: int
-    samples: tuple[MoWAP0LabelSmokeSample, ...]
+    samples: tuple[MoWAFutureLabelSmokeSample, ...]
     notes: tuple[str, ...]
 
     def to_dict(self) -> dict[str, Any]:
@@ -59,12 +59,12 @@ class MoWAP0ConstructibleLabelSmoke:
         }
 
 
-def build_mowa_p0_constructible_label_smoke(
+def build_mowa_future_constructible_label_smoke(
     dataset_path: Path | str,
     episode_indices: tuple[int, ...] = (0, 1, 4),
     preview_rows: int = 8,
-) -> MoWAP0ConstructibleLabelSmoke:
-    """Build smoke-only P0 labels for currently constructible heads.
+) -> MoWAFutureConstructibleLabelSmoke:
+    """Build smoke-only future labels for currently constructible heads.
 
     该函数只读取 parquet 标量字段，输出 dry-run targets/masks。
     它不定义 production 阈值，
@@ -72,32 +72,32 @@ def build_mowa_p0_constructible_label_smoke(
     """
 
     root = Path(dataset_path)
-    samples: list[MoWAP0LabelSmokeSample] = []
+    samples: list[MoWAFutureLabelSmokeSample] = []
     for episode_index in episode_indices:
         parquet_path = root / "data" / "chunk-000" / f"episode_{episode_index:06d}.parquet"
         samples.extend(_build_episode_samples(parquet_path, episode_index, preview_rows))
 
-    return MoWAP0ConstructibleLabelSmoke(
+    return MoWAFutureConstructibleLabelSmoke(
         dataset_path=str(root),
         sampled_episode_indices=episode_indices,
-        constructible_heads=MOWA_P0_CONSTRUCTIBLE_HEADS,
-        masked_heads=MOWA_P0_MASKED_HEADS,
+        constructible_heads=MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+        masked_heads=MOWA_FUTURE_MASKED_HEADS,
         sample_count=len(samples),
         samples=tuple(samples),
         notes=(
             "Smoke-only labels are targets, not WAM inputs.",
             "task_progress is normalized by episode row count for dry-run only.",
             "action_outcome_class uses the frozen E-001 mapping [next_reward, next_done_flag].",
-            "Non-constructible P0 heads stay masked.",
+            "Non-constructible future heads stay masked.",
         ),
     )
 
 
-def build_mowa_p0_label_smoke_sample(
+def build_mowa_future_label_smoke_sample(
     dataset_path: Path | str,
     episode_index: int,
     row_index: int,
-) -> MoWAP0LabelSmokeSample:
+) -> MoWAFutureLabelSmokeSample:
     """Build one dry-run label sample for a concrete episode row."""
 
     root = Path(dataset_path)
@@ -109,7 +109,7 @@ def build_mowa_p0_label_smoke_sample(
     )
     if row_index >= len(samples):
         raise IndexError(
-            f"MoWA P0 label row_index out of range: {row_index}, available={len(samples)}."
+            f"MoWA future label row_index out of range: {row_index}, available={len(samples)}."
         )
     return samples[row_index]
 
@@ -118,20 +118,20 @@ def _build_episode_samples(
     parquet_path: Path,
     episode_index: int,
     preview_rows: int,
-) -> list[MoWAP0LabelSmokeSample]:
+) -> list[MoWAFutureLabelSmokeSample]:
     if not parquet_path.is_file():
-        raise FileNotFoundError(f"MoWA P0 label builder parquet not found: {parquet_path}")
+        raise FileNotFoundError(f"MoWA future label builder parquet not found: {parquet_path}")
     try:
         import pyarrow.parquet as pq
     except ImportError as exc:
-        raise RuntimeError("MoWA P0 label builder smoke requires pyarrow.") from exc
+        raise RuntimeError("MoWA future label builder smoke requires pyarrow.") from exc
 
     parquet_file = pq.ParquetFile(parquet_path)
     required_columns = ("frame_index", "next.reward", "next.done")
     columns = set(parquet_file.schema_arrow.names)
     missing = tuple(column for column in required_columns if column not in columns)
     if missing:
-        raise ValueError(f"MoWA P0 label builder missing required columns: {missing}")
+        raise ValueError(f"MoWA future label builder missing required columns: {missing}")
 
     row_count = parquet_file.metadata.num_rows
     table = parquet_file.read(columns=list(required_columns)).slice(0, preview_rows).to_pydict()
@@ -142,9 +142,9 @@ def _build_episode_samples(
 
     samples = []
     for row_index, (frame_index, reward, done) in enumerate(zip(frame_indices, rewards, dones)):
-        masks = {head: head in MOWA_P0_CONSTRUCTIBLE_HEADS for head in MOWA_P0_FULL_HEADS}
+        masks = {head: head in MOWA_FUTURE_CONSTRUCTIBLE_HEADS for head in MOWA_FUTURE_FULL_HEADS}
         samples.append(
-            MoWAP0LabelSmokeSample(
+            MoWAFutureLabelSmokeSample(
                 episode_index=episode_index,
                 row_index=row_index,
                 labels={

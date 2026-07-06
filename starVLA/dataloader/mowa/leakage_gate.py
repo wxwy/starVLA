@@ -105,7 +105,7 @@ def build_mowa_atomic_core_leakage_gate_smoke(
                 timestamps=tuple(range(length)),
                 observations={"rgb": DATA_GATE, "robot_state": DATA_GATE},
                 actions={"canonical_action": DATA_GATE},
-                wam_targets={"p0_labels": DATA_GATE, "future_wan_latent": DATA_GATE},
+                wam_targets={"future_labels": DATA_GATE, "future_wan_latent": DATA_GATE},
                 metadata={
                     "obs_fps": DATA_GATE,
                     "action_hz": DATA_GATE,

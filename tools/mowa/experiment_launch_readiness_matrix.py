@@ -87,7 +87,7 @@ def _build_g0_entry(root: Path) -> dict[str, Any]:
     )
     label_builder = _load_json(
         root,
-        "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_p0_label_builder_summary.json",
+        "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_future_label_builder_summary.json",
     )
     checks = {
         "recipe_ready": _report_not_nogo(recipe),
@@ -137,7 +137,7 @@ def _build_e001_entry(root: Path) -> dict[str, Any]:
     blockers = list(readiness.get("unresolved_items") or [])
     return {
         "experiment_id": "E-001",
-        "stage": "P0",
+        "stage": "full_heads",
         "counts_as_training_experiment": True,
         "can_start_now": bool(launch_ready and not readiness_nogo),
         "status": status,
@@ -164,7 +164,7 @@ def _build_e002_entry(root: Path) -> dict[str, Any]:
     comparison = _load_json(root, "docs_zh/mowa/mowa_e002_future_gated_heads_comparison_smoke.json")
     return {
         "experiment_id": "E-002",
-        "stage": "P0",
+        "stage": "full_heads",
         "counts_as_training_experiment": True,
         "can_start_now": False,
         "status": "runtime_integrated_but_training_gated"
@@ -188,17 +188,17 @@ def _build_e002_entry(root: Path) -> dict[str, Any]:
 
 
 def _build_e003_entry(root: Path) -> dict[str, Any]:
-    prior = _load_json(root, "docs_zh/mowa/mowa_p1_b0_future_latent_prior_interface_smoke.json")
-    builder = _load_json(root, "docs_zh/mowa/mowa_p1_latent_cache_builder_design_smoke.json")
+    prior = _load_json(root, "docs_zh/mowa/mowa_future_latent_prior_interface_smoke.json")
+    builder = _load_json(root, "docs_zh/mowa/mowa_latent_cache_builder_design_smoke.json")
     consistency = _load_json(root, "docs_zh/mowa/mowa_e003_history_sampling_consistency_smoke.json")
     return {
         "experiment_id": "E-003",
-        "stage": "P1-b0",
+        "stage": "future_latent_prior",
         "counts_as_training_experiment": True,
         "can_start_now": False,
         "status": "interface_ready_but_latent_cache_builder_missing"
         if _report_not_nogo(prior) and _report_not_nogo(builder) and _report_not_nogo(consistency)
-        else "p1_b0_preconditions_incomplete",
+        else "future_latent_prior_preconditions_incomplete",
         "evidence_reports": _present_reports(
             {
                 "future_latent_prior_interface": prior,
@@ -216,16 +216,16 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
 
 
 def _build_e004_entry(root: Path) -> dict[str, Any]:
-    hlcgci = _load_json(root, "docs_zh/mowa/mowa_p1_b1_hlcgci_interface_smoke.json")
+    hlcgci = _load_json(root, "docs_zh/mowa/mowa_hlc_gci_interface_smoke.json")
     consistency = _load_json(root, "docs_zh/mowa/mowa_e003_history_sampling_consistency_smoke.json")
     return {
         "experiment_id": "E-004",
-        "stage": "P1-b1",
+        "stage": "hlc_gci",
         "counts_as_training_experiment": True,
         "can_start_now": False,
         "status": "module_interface_ready_but_framework_integration_missing"
         if _report_not_nogo(hlcgci) and _report_not_nogo(consistency)
-        else "p1_b1_preconditions_incomplete",
+        else "hlc_gci_preconditions_incomplete",
         "evidence_reports": _present_reports(
             {
                 "hlcgci_interface": hlcgci,
@@ -241,10 +241,10 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
 
 
 def _build_e005_entry(root: Path) -> dict[str, Any]:
-    shuffled = _load_json(root, "docs_zh/mowa/mowa_p1_b1_shuffled_robot_sanity_plan_smoke.json")
+    shuffled = _load_json(root, "docs_zh/mowa/mowa_shuffled_robot_sanity_plan_smoke.json")
     return {
         "experiment_id": "E-005",
-        "stage": "P1-b1",
+        "stage": "hlc_gci",
         "counts_as_training_experiment": True,
         "can_start_now": False,
         "status": "plan_ready_only" if _report_not_nogo(shuffled) else "sanity_plan_missing",
@@ -271,7 +271,7 @@ def _build_e006_entry(root: Path) -> dict[str, Any]:
         status = "rollout_executed_with_noninformative_checkpoint"
     return {
         "experiment_id": "E-006",
-        "stage": "P0/P1",
+        "stage": "full_heads/future_latent_prior",
         "counts_as_training_experiment": True,
         "can_start_now": False,
         "status": status,
@@ -305,10 +305,10 @@ def _build_e007_entry(root: Path) -> dict[str, Any]:
 
 
 def _build_e008_entry(root: Path) -> dict[str, Any]:
-    diagnostic = _load_json(root, "docs_zh/mowa/mowa_p2_frozen_decoder_diagnostic_smoke.json")
+    diagnostic = _load_json(root, "docs_zh/mowa/mowa_frozen_decoder_diagnostic_smoke.json")
     return {
         "experiment_id": "E-008",
-        "stage": "P2",
+        "stage": "frozen_decoder_diagnostic",
         "counts_as_training_experiment": False,
         "can_start_now": False,
         "status": "diagnostic_plan_ready_only" if _report_not_nogo(diagnostic) else "diagnostic_plan_missing",
@@ -324,7 +324,7 @@ def _build_e009_entry(root: Path) -> dict[str, Any]:
     return _not_started_entry(
         root,
         experiment_id="E-009",
-        stage="P1-b2",
+        stage="latent_cache",
         message="Conditional experiment has not been triggered and has no readiness artifacts.",
     )
 

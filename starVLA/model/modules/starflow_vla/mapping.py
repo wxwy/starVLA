@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 
-STARFLOW_MAPPING_SCHEMA_VERSION = "p0_m3_v1"
+STARFLOW_MAPPING_SCHEMA_VERSION = "future_m3_v1"
 
 
 def _get_config_value(config: Any, path: tuple[str, ...], default: Any = None) -> Any:
@@ -37,7 +37,7 @@ def build_starflow_mapping(
     starvla_commit: str | None = None,
     config_schema: str | None = None,
 ) -> dict[str, Any]:
-    """构造可序列化的 StarFlow-VLA P0 映射记录。"""
+    """构造可序列化的 StarFlow-VLA future 映射记录。"""
     action_model_type = _get_config_value(
         config, ("framework", "action_model", "action_model_type"), "LayerwiseFM"
     )

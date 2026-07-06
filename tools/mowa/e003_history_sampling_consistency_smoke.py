@@ -145,7 +145,7 @@ def build_e003_history_sampling_consistency_smoke(repo_root: Path | str) -> dict
     }
 
     return {
-        "stage": "P1",
+        "stage": "future_latent_prior",
         "experiment_id": "E-003",
         "training_started": False,
         "checks": checks,

@@ -1,7 +1,7 @@
 project_short_name: MoWA
-stage: P0
+stage: full_heads
 experiment_id: E-001
-experiment_name: P0-FullHeads vs VLA baseline
+experiment_name: FullHeads vs VLA baseline
 config_role: launch_draft_not_executable
 
 launch:
@@ -13,14 +13,14 @@ launch:
   reason: short smoke training (1000 steps, bs4) completed; long-training resource policy, core SOT, and action-gain evidence remain unconfirmed for full-scale training
 
 references:
-  interface_config: configs/mowa/mowa_p0_fullheads_interface.yaml
+  interface_config: configs/mowa/mowa_full_heads_interface.yaml
   runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
   readiness_report: docs_zh/mowa/mowa_e001_readiness_smoke.json
   launch_candidate_smoke_report: docs_zh/mowa/mowa_e001_launch_candidate_smoke.json
   paired_comparison_smoke_report: docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json
   production_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json
   production_window_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
-  p0_train_smoke_report: docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json
+  full_heads_train_smoke_report: docs_zh/mowa/mowa_full_heads_constructible_train_smoke.json
   a100_throughput_smoke_report: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
 
 data:
@@ -36,7 +36,7 @@ data:
   production_preflight: smoke_passed
 
 model:
-  type: MoWAP0FullHeads
+  type: MoWAFutureFullHeads
   heads:
     full:
       - task_progress

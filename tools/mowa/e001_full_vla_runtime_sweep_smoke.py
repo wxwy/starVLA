@@ -102,7 +102,7 @@ def run_or_plan_runtime_sweep(
         ),
     }
     return {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": "E-001",
         "training_started": bool(execute),
         "bounded_runtime_sweep": True,

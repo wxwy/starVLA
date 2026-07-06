@@ -114,7 +114,7 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         ),
     }
     return {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": "E-001",
         "training_started": False,
         "launch_ready": bool(((launch_draft_cfg.get("launch") or {}).get("launch_ready"))),

@@ -1,4 +1,4 @@
-"""MoWA P0 ConstructibleHeads one-step train smoke."""
+"""MoWA Future ConstructibleHeads one-step train smoke."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from starVLA.model.modules.mowa import (
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run MoWA P0 ConstructibleHeads train smoke.")
+    parser = argparse.ArgumentParser(description="Run MoWA Future ConstructibleHeads train smoke.")
     parser.add_argument(
         "--data-root",
         type=Path,
@@ -62,7 +62,7 @@ def main() -> None:
         batch["masks"],
     )
     payload = {
-        "stage": "P0",
+        "stage": "full_heads",
         "module": "MoWAFutureConstructibleHeads",
         "sample_count": batch["metadata"]["sample_count"],
         "constructible_heads": list(MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
@@ -87,7 +87,7 @@ def main() -> None:
         "notes": [
             "One optimizer step only; this is not E-001 training.",
             "Features are smoke-only values derived from G0 labels.",
-            "Only two ConstructibleHeads are active; other P0 heads remain masked.",
+            "Only two ConstructibleHeads are active; other future heads remain masked.",
         ],
     }
     text = json.dumps(payload, ensure_ascii=False, indent=2)

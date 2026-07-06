@@ -55,8 +55,8 @@ from starVLA.mowa_constants import (
     MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
     MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
     MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
-    MOWA_P0_CONSTRUCTIBLE_HEADS,
-    MOWA_P0_FULL_HEADS,
+    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_FULL_HEADS,
 )
 
 from functools import partial
@@ -80,46 +80,46 @@ LE_ROBOT3_TASKS_FILENAME = "meta/tasks.parquet"
 LE_ROBOT3_EPISODE_FILENAME = "meta/episodes/*/*.parquet"
 
 
-def _mowa_p0_labels_enabled(data_cfg) -> bool:
+def _mowa_future_labels_enabled(data_cfg) -> bool:
     if data_cfg is None:
         return False
-    return bool(data_cfg.get("enable_mowa_p0_labels", False))
+    return bool(data_cfg.get("enable_mowa_future_labels", False))
 
 
-def _attach_mowa_p0_labels(sample: dict, dataset, trajectory_id: int, base_index: int) -> dict:
-    if not _mowa_p0_labels_enabled(getattr(dataset, "data_cfg", None)):
+def _attach_mowa_future_labels(sample: dict, dataset, trajectory_id: int, base_index: int) -> dict:
+    if not _mowa_future_labels_enabled(getattr(dataset, "data_cfg", None)):
         return sample
 
     trajectory_data = getattr(dataset, "curr_traj_data", None)
     if trajectory_data is None:
         trajectory_data = dataset.get_trajectory_data(trajectory_id)
     if len(trajectory_data) == 0:
-        raise ValueError(f"MoWA P0 labels require non-empty trajectory: {trajectory_id}")
+        raise ValueError(f"MoWA future labels require non-empty trajectory: {trajectory_id}")
 
     row_index = min(int(base_index), len(trajectory_data) - 1)
     row = trajectory_data.iloc[row_index]
     required_columns = ("frame_index", "next.reward", "next.done")
     missing = tuple(column for column in required_columns if column not in trajectory_data.columns)
     if missing:
-        raise ValueError(f"MoWA P0 labels missing required columns: {missing}")
+        raise ValueError(f"MoWA future labels missing required columns: {missing}")
 
     denominator = max(len(trajectory_data) - 1, 1)
     reward = float(row["next.reward"])
     done = bool(row["next.done"])
-    masks = {head: head in MOWA_P0_CONSTRUCTIBLE_HEADS for head in MOWA_P0_FULL_HEADS}
+    masks = {head: head in MOWA_FUTURE_CONSTRUCTIBLE_HEADS for head in MOWA_FUTURE_FULL_HEADS}
     # Production targets are tensor-ready values; class_mapping_status stays in
     # metadata while smoke label reports may keep a richer dict for inspection.
-    sample["mowa_p0_targets"] = {
+    sample["mowa_future_targets"] = {
         "task_progress": float(row["frame_index"]) / denominator,
         "action_outcome_class": [reward, 1.0 if done else 0.0],
     }
-    sample["mowa_p0_masks"] = masks
-    sample["mowa_p0_metadata"] = {
+    sample["mowa_future_masks"] = masks
+    sample["mowa_future_metadata"] = {
         "trajectory_id": int(trajectory_id),
         "base_index": int(base_index),
         "row_index": row_index,
-        "constructible_heads": list(MOWA_P0_CONSTRUCTIBLE_HEADS),
-        "masked_heads": [head for head in MOWA_P0_FULL_HEADS if not masks[head]],
+        "constructible_heads": list(MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
+        "masked_heads": [head for head in MOWA_FUTURE_FULL_HEADS if not masks[head]],
         "label_status": "constructible_from_parquet_fields",
         "class_mapping_status": MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
         "class_mapping_version": MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
@@ -1430,7 +1430,7 @@ class LeRobotSingleDataset(Dataset):
         raw_data = self.get_step_data(trajectory_id, base_index)
         data = self.transforms(raw_data)
         sample = self._pack_sample(data)
-        return _attach_mowa_p0_labels(sample, self, trajectory_id, base_index)
+        return _attach_mowa_future_labels(sample, self, trajectory_id, base_index)
 
     def _pack_sample(self, data: dict) -> dict:
         """Pack transformed modality data into training sample format."""
@@ -2440,7 +2440,7 @@ class LeRobotMixtureDataset(Dataset):
                 raw_data = dataset.get_step_data(trajectory_id, step)    
                 data = dataset.transforms(raw_data)
                 sample = dataset._pack_sample(data)
-                sample = _attach_mowa_p0_labels(sample, dataset, trajectory_id, step)
+                sample = _attach_mowa_future_labels(sample, dataset, trajectory_id, step)
                 
                 return sample
                 

@@ -20,9 +20,9 @@ framework:
     future_action_window_size: 7
     past_action_window_size: 0
   mowa:
-    enable_p0_supervision_probe: true
-    p0_supervision_hidden_dim: 32
-    p0_supervision_active_heads:
+    enable_future_supervision_probe: true
+    future_supervision_hidden_dim: 32
+    future_supervision_active_heads:
       - task_progress
       - action_outcome_class
     enable_action_bridge_probe: true
@@ -44,7 +44,7 @@ datasets:
     obs_image_size: [224, 224]
     delete_pause_frame: false
     video_backend: torchvision_av
-    enable_mowa_p0_labels: true
+    enable_mowa_future_labels: true
 
 trainer:
   full_path_dry_run_only: true

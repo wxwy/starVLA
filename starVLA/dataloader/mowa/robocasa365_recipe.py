@@ -116,7 +116,7 @@ def inspect_mowa_robocasa365_atomic_core_recipe(
             else "TBD: recipe available; profile/leakage/labels still Data Gate"
         ),
         notes=(
-            "This recipe is the fixed MoWA P0/P1/P2 primary comparison data domain.",
+            "This recipe is the fixed MoWA primary comparison data domain.",
             "Availability does not imply G0 pass; obs fps/action Hz/window/labels remain Data Gate.",
             f"All task paths are registry-confirmed target/human atomic tasks; runtime profile status is {DATA_GATE}.",
         ),

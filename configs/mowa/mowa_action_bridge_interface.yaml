@@ -4,7 +4,7 @@ task_id: M5-001
 config_role: interface_draft_not_launch
 bridge:
   type: MoWAActionBridge
-  input_feature_source: P0FutureFeatures.hidden_features
+  input_feature_source: MoWAFutureFeatures.hidden_features
   interface_defaults:
     wam_feature_dim: 32
     action_hidden_dim: 2048
@@ -62,8 +62,8 @@ integration_boundary:
   default_injection: adapter_selected_by_action_model_type
   note: framework_forward_integrated means a concrete framework already calls the adapter in forward; adapter_helper availability alone does not start training or change existing action heads.
 data_gate:
-  p0_future_features: interface_ready
-  p1_future_features: Data Gate
+  full_heads_future_features: interface_ready
+  latent_prior_future_features: Data Gate
   production_wam_hz: Data Gate
   production_window: Data Gate
   e001_preflight_target_wam_hz: 5

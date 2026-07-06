@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from omegaconf import OmegaConf
+from starVLA.mowa_constants import MOWA_FUTURE_CONSTRUCTIBLE_HEADS
 
 DEFAULT_LONG_TRAINING_CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_long_training_candidate.yaml")
 
@@ -67,14 +68,20 @@ def build_e001_long_training_config_preview(
         "layerwise_bridge_feature_source": _select(
             cfg, "framework.mowa.layerwise_bridge_feature_source"
         ),
+        "layerwise_bridge_active_heads": tuple(
+            _select(cfg, "framework.mowa.layerwise_bridge_active_heads") or ()
+        ),
+        "future_supervision_active_heads": tuple(
+            _select(cfg, "framework.mowa.future_supervision_active_heads") or ()
+        ),
         "enable_mowa_future_labels": _select(cfg, "datasets.vla_data.enable_mowa_future_labels"),
         "checkpoint_format": _select(cfg, "trainer.checkpoint_format"),
         "save_checkpoint_as_directory": _select(cfg, "trainer.save_checkpoint_as_directory"),
     }
     checks = {
         "config_created": config_path.is_file(),
-        "uses_4090_batch_profile": per_device_batch_size == 1
-        and gradient_accumulation_steps == 32
+        "uses_4090_batch_profile": per_device_batch_size == 2
+        and gradient_accumulation_steps == 16
         and effective_batch_size == 32,
         "marks_mowa_main_experiment_role": _select(cfg, "experiment_role") == "mowa_main",
         "max_steps_not_smoke_1000": _select(cfg, "trainer.max_train_steps") == 80000,
@@ -88,7 +95,11 @@ def build_e001_long_training_config_preview(
         is True
         and _select(cfg, "framework.mowa.enable_future_supervision_loss") is True
         and _select(cfg, "framework.mowa.layerwise_bridge_feature_source")
-        == "mowa_future_feature_heads",
+        == "mowa_future_feature_heads"
+        and tuple(_select(cfg, "framework.mowa.layerwise_bridge_active_heads") or ())
+        == MOWA_FUTURE_CONSTRUCTIBLE_HEADS
+        and tuple(_select(cfg, "framework.mowa.future_supervision_active_heads") or ())
+        == MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
         "keeps_mowa_ckpt_root": _select(cfg, "run_root_dir") == "playground/mowa_ckpt",
     }
     main_launch_ready = all(checks.values()) and experiment_role == "mowa_main"

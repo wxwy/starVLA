@@ -496,7 +496,7 @@ P0 label coverage 初判：
 | worker_sample_count | 16 |
 | failed_sample_count | 0 |
 | p0_smoke_sample_count | 30 |
-| p0_fullheads_interface_config | `configs/mowa/mowa_p0_fullheads_interface.yaml` |
+| p0_fullheads_interface_config | `configs/mowa/mowa_full_heads_interface.yaml` |
 | e001_launch_draft_config | `configs/mowa/mowa_e001_launch_draft.yaml` |
 | e001_runtime_policy_draft_config | `configs/mowa/mowa_e001_runtime_policy_draft.yaml` |
 | class_mapping_status | Data Gate |

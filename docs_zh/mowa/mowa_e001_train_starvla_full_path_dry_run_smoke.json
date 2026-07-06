@@ -1,143 +1,42 @@
 {
-  "stage": "P0",
+  "stage": "full_heads",
   "experiment_id": "E-001",
   "training_started": false,
   "checks": {
     "dry_run_config_created": true,
-    "dry_run_report_created": true,
-    "entrypoint_is_train_starvla": true,
-    "full_path_dry_run_only": true,
-    "training_not_started": true,
-    "checkpoint_not_saved": true,
-    "wandb_not_started": true,
-    "robocasa_data_mix": true,
-    "framework_qwenoft": true,
-    "mowa_action_bridge_probe_enabled": true,
-    "mowa_future_supervision_probe_enabled": true,
-    "mowa_future_supervision_labels_forward_evaluated": true,
-    "batch_fetched": true,
-    "mowa_future_labels_enabled": true,
-    "mowa_p0_labels_enabled": true,
-    "batch_has_mowa_p0_targets": true,
-    "batch_has_mowa_p0_masks": true,
-    "forward_evaluated": true,
-    "forward_has_mowa_future_supervision_loss": true,
-    "forward_has_action_loss": true
+    "dry_run_report_created": false,
+    "entrypoint_is_train_starvla": false,
+    "full_path_dry_run_only": false,
+    "training_not_started": false,
+    "checkpoint_not_saved": false,
+    "wandb_not_started": false,
+    "robocasa_data_mix": false,
+    "framework_qwenoft": false,
+    "mowa_action_bridge_probe_enabled": false,
+    "mowa_future_supervision_probe_enabled": false,
+    "mowa_future_supervision_labels_forward_evaluated": false,
+    "batch_fetched": false,
+    "mowa_future_labels_enabled": false,
+    "batch_has_mowa_future_targets": false,
+    "batch_has_mowa_future_masks": false,
+    "forward_evaluated": false,
+    "forward_has_mowa_future_supervision_loss": false,
+    "forward_has_action_loss": false
   },
   "reports": {
     "dry_run_config": "configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml",
     "dry_run_report": "docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json"
   },
   "observed": {
-    "run_id": "MoWA-E-001_train_starvla_full_path_dry_run",
-    "framework": {
-      "name": "QwenOFT",
-      "starflow_ft_variant": "config_defined",
-      "action_model_type": "MLP",
-      "num_target_vision_tokens": null,
-      "state_mode": null,
-      "total_params": 4510105396,
-      "trainable_params": 4510105396,
-      "mowa_action_bridge_probe_enabled": true,
-      "mowa_layerwise_bridge_coupling_enabled": false,
-      "mowa_layerwise_bridge_coupling_status": "not_coupled_in_full_path_dry_run",
-      "mowa_layerwise_bridge_feature_source": null,
-      "mowa_future_supervision_probe_enabled": true,
-      "mowa_future_supervision_active_heads": [
-        "task_progress",
-        "action_outcome_class"
-      ],
-      "mowa_future_supervision_label_status": "forward_evaluated_in_full_path_dry_run",
-      "mowa_p0_supervision_probe_enabled": true,
-      "mowa_p0_supervision_active_heads": [
-        "task_progress",
-        "action_outcome_class"
-      ],
-      "mowa_p0_supervision_label_status": "forward_evaluated_in_full_path_dry_run"
-    },
-    "data": {
-      "dataset_py": "lerobot_datasets",
-      "data_mix": "robocasa365_open_drawer_target_human",
-      "data_root_dir": "playground/Datasets/robocasa365",
-      "per_device_batch_size": 1,
-      "dataloader_type": "DataLoader",
-      "dataloader_length": 137431,
-      "mowa_future_labels_enabled": true,
-      "mowa_p0_labels_enabled": true,
-      "batch_summary": {
-        "fetched": true,
-        "type": "list",
-        "length": 1,
-        "first_item_type": "dict",
-        "first_item_keys": [
-          "action",
-          "image",
-          "lang",
-          "mowa_p0_masks",
-          "mowa_p0_metadata",
-          "mowa_p0_targets",
-          "robot_tag"
-        ],
-        "first_item_image": {
-          "type": "list",
-          "length": 3
-        },
-        "first_item_lang": {
-          "type": "str"
-        },
-        "first_item_action": {
-          "type": "ndarray",
-          "shape": [
-            16,
-            12
-          ]
-        },
-        "first_item_mowa_p0_targets": {
-          "type": "dict",
-          "keys": [
-            "action_outcome_class",
-            "task_progress"
-          ]
-        },
-        "first_item_mowa_p0_masks": {
-          "type": "dict",
-          "keys": [
-            "action_outcome_class",
-            "failure_risk",
-            "manipulation_readiness",
-            "next_best_view_score",
-            "object_visibility_future",
-            "subgoal_feasibility",
-            "task_progress"
-          ]
-        },
-        "first_item_mowa_p0_metadata": {
-          "type": "dict",
-          "keys": [
-            "base_index",
-            "class_mapping_status",
-            "constructible_heads",
-            "label_status",
-            "masked_heads",
-            "row_index",
-            "trajectory_id"
-          ]
-        }
-      }
-    },
-    "trainer": {
-      "max_train_steps": 1,
-      "gradient_accumulation_steps": 1,
-      "total_batch_size": 1,
-      "checkpoint_format": "lightweight",
-      "save_interval": 1000,
-      "eval_interval": 1000
-    }
+    "run_id": null,
+    "framework": null,
+    "data": null,
+    "trainer": null
   },
   "unresolved_items": [
     "This validates QwenOFT StarVLA full-path wiring, not MoWA action-bridge coupling.",
-    "MoWA P0 supervision loss is forward-evaluated but not added to action_loss.",
+    "MoWA future supervision loss is forward-evaluated but not added to action_loss.",
     "No checkpoint/save/resume launch policy is confirmed."
   ],
-  "go_no_go": "TBD: train_starvla full-path dry-run smoke passed; MoWA training integration remains gated"
+  "go_no_go": "No-Go: train_starvla full-path dry-run smoke incomplete"
 }

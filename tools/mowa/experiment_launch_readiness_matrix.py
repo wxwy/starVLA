@@ -128,7 +128,6 @@ def _build_e001_entry(root: Path) -> dict[str, Any]:
     readiness = _load_json(root, "docs_zh/mowa/mowa_e001_readiness_smoke.json")
     launch_candidate = _load_json(root, "docs_zh/mowa/mowa_e001_launch_candidate_smoke.json")
     comparison = _load_json(root, "docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json")
-    throughput = _load_json(root, "docs_zh/mowa/mowa_e001_starflow_ft0_training_throughput_smoke_check.json")
     launch_ready = bool((launch_candidate.get("launch_guard") or {}).get("launch_ready"))
     readiness_nogo = str(readiness.get("go_no_go", "")).startswith("No-Go")
     status = "bounded_executable_but_full_launch_blocked" if launch_ready and readiness_nogo else (
@@ -146,7 +145,6 @@ def _build_e001_entry(root: Path) -> dict[str, Any]:
                 "readiness": readiness,
                 "launch_candidate": launch_candidate,
                 "paired_comparison": comparison,
-                "save_resume_smoke": throughput,
             }
         ),
         "blocking_items": blockers,
@@ -154,7 +152,6 @@ def _build_e001_entry(root: Path) -> dict[str, Any]:
             "launch_candidate_launch_ready": launch_ready,
             "readiness_is_not_nogo": not readiness_nogo,
             "paired_comparison_present": _report_exists(comparison),
-            "save_resume_smoke_present": _report_exists(throughput),
         },
     }
 
@@ -257,40 +254,24 @@ def _build_e005_entry(root: Path) -> dict[str, Any]:
 
 
 def _build_e006_entry(root: Path) -> dict[str, Any]:
-    eval_load = _load_json(root, "docs_zh/mowa/mowa_e006_eval_load_smoke.json")
-    intervention = _load_json(root, "docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json")
-    forward = _load_json(root, "docs_zh/mowa/mowa_e006_checkpoint_intervention_forward_smoke.json")
-    preflight = _load_json(root, "docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json")
-    rollout = _load_json(root, "docs_zh/mowa/mowa_e006_policy_rollout_smoke.json")
-    rollout_success_rates = _extract_rollout_success_rates(rollout)
-    rollout_executed = bool(rollout.get("eval_started"))
-    status = "policy_path_executable_but_action_gain_unproven"
-    if not (_report_not_nogo(eval_load) and _report_not_nogo(intervention) and _report_not_nogo(forward)):
-        status = "coupling_evidence_incomplete"
-    elif rollout_executed and rollout_success_rates and max(rollout_success_rates) <= 0.0:
-        status = "rollout_executed_with_noninformative_checkpoint"
     return {
         "experiment_id": "E-006",
         "stage": "full_heads/future_latent_prior",
         "counts_as_training_experiment": True,
         "can_start_now": False,
-        "status": status,
-        "evidence_reports": _present_reports(
-            {
-                "eval_load": eval_load,
-                "synthetic_intervention": intervention,
-                "checkpoint_forward": forward,
-                "policy_rollout_preflight": preflight,
-                "policy_rollout": rollout,
-            }
-        ),
-        "blocking_items": _build_e006_blockers(rollout, rollout_success_rates),
+        "status": "coupling_evidence_incomplete",
+        "evidence_reports": [],
+        "blocking_items": [
+            "E-006 coupling evidence reports reference deleted checkpoints and have been cleared. "
+            "Regenerate eval-load, intervention, forward, preflight and rollout reports with a "
+            "meaningful trained checkpoint before claiming coupling gain."
+        ],
         "checks": {
-            "eval_load_passed": _report_not_nogo(eval_load),
-            "synthetic_intervention_passed": _report_not_nogo(intervention),
-            "checkpoint_forward_passed": _report_not_nogo(forward),
-            "rollout_preflight_passed": _report_not_nogo(preflight),
-            "rollout_executed": rollout_executed,
+            "eval_load_passed": False,
+            "synthetic_intervention_passed": False,
+            "checkpoint_forward_passed": False,
+            "rollout_preflight_passed": False,
+            "rollout_executed": False,
         },
     }
 
@@ -362,18 +343,6 @@ def _not_started_entry(root: Path, *, experiment_id: str, stage: str, message: s
     }
 
 
-def _build_e006_blockers(rollout: dict[str, Any], success_rates: list[float]) -> list[str]:
-    blockers = list(rollout.get("unresolved_items") or [])
-    if success_rates and max(success_rates) <= 0.0:
-        blockers.append(
-            "Current rollout evidence is dominated by a weak checkpoint; "
-            "replace with a meaningful trained checkpoint before claiming coupling gain."
-        )
-    if rollout.get("rollout_blocker"):
-        blockers.append(f"Recorded rollout blocker: {rollout['rollout_blocker']}")
-    return blockers
-
-
 def _global_blockers(entries: list[dict[str, Any]]) -> list[str]:
     blockers: list[str] = []
     for entry in entries:
@@ -414,16 +383,6 @@ def _merged_unresolved(*payloads: dict[str, Any]) -> list[str]:
             merged.append(item)
             seen.add(item)
     return merged
-
-
-def _extract_rollout_success_rates(payload: dict[str, Any]) -> list[float]:
-    rates: list[float] = []
-    for run in payload.get("runs") or []:
-        result = run.get("rollout_result") or {}
-        value = result.get("success_rate")
-        if isinstance(value, (int, float)):
-            rates.append(float(value))
-    return rates
 
 
 if __name__ == "__main__":

@@ -21,7 +21,8 @@ M3：P1-b0 Latent-Only future prior。
 
 - `tools/mowa/`
 - `starVLA/model/modules/mowa/`
-- `configs/mowa/mowa_p1_b0_*.yaml`
+- `configs/mowa/mowa_latent_cache_builder_design.yaml`
+- `configs/mowa/mowa_future_latent_prior_interface.yaml`
 - `tests/mowa/`
 - `docs_zh/mowa/07_implementation_log.md`
 

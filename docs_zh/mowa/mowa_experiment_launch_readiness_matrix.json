@@ -42,33 +42,30 @@
     },
     {
       "experiment_id": "E-001",
-      "stage": "P0",
+      "stage": "full_heads",
       "counts_as_training_experiment": true,
       "can_start_now": false,
       "status": "bounded_executable_but_full_launch_blocked",
       "evidence_reports": [
         "readiness",
         "launch_candidate",
-        "paired_comparison",
-        "save_resume_smoke"
+        "paired_comparison"
       ],
       "blocking_items": [
         "E-001 launch draft records bounded approved state only, not full-scale launch approval",
         "runtime policy draft and launch candidate must stay synchronized",
         "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
-        "E-001 executable command candidate exists; keep command/runtime/launch state synchronized",
-        "E-006 rollout outcome is recorded in the rollout smoke report; action-gain evidence remains pending"
+        "E-001 executable command candidate exists; keep command/runtime/launch state synchronized"
       ],
       "checks": {
         "launch_candidate_launch_ready": true,
         "readiness_is_not_nogo": false,
-        "paired_comparison_present": true,
-        "save_resume_smoke_present": true
+        "paired_comparison_present": true
       }
     },
     {
       "experiment_id": "E-002",
-      "stage": "P0",
+      "stage": "full_heads",
       "counts_as_training_experiment": true,
       "can_start_now": false,
       "status": "runtime_integrated_but_training_gated",
@@ -89,7 +86,7 @@
     },
     {
       "experiment_id": "E-003",
-      "stage": "P1-b0",
+      "stage": "future_latent_prior",
       "counts_as_training_experiment": true,
       "can_start_now": false,
       "status": "interface_ready_but_latent_cache_builder_missing",
@@ -99,8 +96,8 @@
         "history_sampling_consistency"
       ],
       "blocking_items": [
-        "This smoke validates the P1-b0 future latent prior interface only; no latent cache builder is executed.",
-        "history_latent remains blocked at P1-b0 and must stay out of model inputs.",
+        "This smoke validates the future latent prior interface only; no latent cache builder is executed.",
+        "history_latent remains blocked at future latent prior stage and must stay out of model inputs.",
         "latent shape / encoder / cache artifact statuses remain Data Gate until real Wan cache builder is approved.",
         "This design smoke plans cache artifacts only and does not execute Wan encoder or VAE.",
         "Latency, latent shape and cache hash remain Data Gate until real builder approval.",
@@ -116,7 +113,7 @@
     },
     {
       "experiment_id": "E-004",
-      "stage": "P1-b1",
+      "stage": "hlc_gci",
       "counts_as_training_experiment": true,
       "can_start_now": false,
       "status": "module_interface_ready_but_framework_integration_missing",
@@ -138,7 +135,7 @@
     },
     {
       "experiment_id": "E-005",
-      "stage": "P1-b1",
+      "stage": "hlc_gci",
       "counts_as_training_experiment": true,
       "can_start_now": false,
       "status": "plan_ready_only",
@@ -147,7 +144,7 @@
       ],
       "blocking_items": [
         "This smoke validates pair construction only and does not execute rollout.",
-        "Real shuffled-robot evidence still depends on trained P1-b1 checkpoints.",
+        "Real shuffled-robot evidence still depends on trained checkpoints.",
         "Metric drop is an expectation to test later, not a measured result here."
       ],
       "checks": {
@@ -156,29 +153,20 @@
     },
     {
       "experiment_id": "E-006",
-      "stage": "P0/P1",
+      "stage": "full_heads/future_latent_prior",
       "counts_as_training_experiment": true,
       "can_start_now": false,
-      "status": "rollout_executed_with_noninformative_checkpoint",
-      "evidence_reports": [
-        "eval_load",
-        "synthetic_intervention",
-        "checkpoint_forward",
-        "policy_rollout_preflight",
-        "policy_rollout"
-      ],
+      "status": "coupling_evidence_incomplete",
+      "evidence_reports": [],
       "blocking_items": [
-        "This is a tiny RoboCasa365 rollout smoke, not a statistically powered benchmark.",
-        "If the client or simulator fails, inspect per-intervention server/client logs under artifact_dir.",
-        "Formal E-006 evidence requires more episodes/seeds after this smoke path is stable.",
-        "Current rollout evidence is dominated by a weak checkpoint; replace with a meaningful trained checkpoint before claiming coupling gain."
+        "E-006 coupling evidence reports reference deleted checkpoints and have been cleared. Regenerate eval-load, intervention, forward, preflight and rollout reports with a meaningful trained checkpoint before claiming coupling gain."
       ],
       "checks": {
-        "eval_load_passed": true,
-        "synthetic_intervention_passed": true,
-        "checkpoint_forward_passed": true,
-        "rollout_preflight_passed": true,
-        "rollout_executed": true
+        "eval_load_passed": false,
+        "synthetic_intervention_passed": false,
+        "checkpoint_forward_passed": false,
+        "rollout_preflight_passed": false,
+        "rollout_executed": false
       }
     },
     {
@@ -197,7 +185,7 @@
     },
     {
       "experiment_id": "E-008",
-      "stage": "P2",
+      "stage": "frozen_decoder_diagnostic",
       "counts_as_training_experiment": false,
       "can_start_now": false,
       "status": "diagnostic_plan_ready_only",
@@ -211,7 +199,7 @@
     },
     {
       "experiment_id": "E-009",
-      "stage": "P1-b2",
+      "stage": "latent_cache",
       "counts_as_training_experiment": true,
       "can_start_now": false,
       "status": "not_started",
@@ -242,10 +230,10 @@
   "global_blockers": [
     "E-001: E-001 launch draft records bounded approved state only, not full-scale launch approval",
     "E-002: This is the single static E-002 comparison entry only; runtime integration exists but training remains gated.",
-    "E-003: This smoke validates the P1-b0 future latent prior interface only; no latent cache builder is executed.",
+    "E-003: This smoke validates the future latent prior interface only; no latent cache builder is executed.",
     "E-004: This smoke validates interface shape and gate range only.",
     "E-005: This smoke validates pair construction only and does not execute rollout.",
-    "E-006: This is a tiny RoboCasa365 rollout smoke, not a statistically powered benchmark.",
+    "E-006: E-006 coupling evidence reports reference deleted checkpoints and have been cleared. Regenerate eval-load, intervention, forward, preflight and rollout reports with a meaningful trained checkpoint before claiming coupling gain.",
     "E-007: No proxy-learned alpha readiness report exists yet.",
     "E-009: Conditional experiment has not been triggered and has no readiness artifacts."
   ],

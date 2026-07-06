@@ -1,5 +1,5 @@
 {
-  "stage": "P0",
+  "stage": "full_heads",
   "experiment_id": "E-001",
   "training_started": false,
   "launch_ready": false,
@@ -7,7 +7,7 @@
     "training_smoke_config_created": true,
     "training_command_draft_created": true,
     "runtime_policy_created": true,
-    "a100_throughput_report_created": true,
+    "a100_throughput_report_created": false,
     "launch_ready_false": true,
     "training_started_false": true,
     "dry_run_only_true": true,
@@ -24,7 +24,7 @@
     "eval_load_smoke_recorded": true,
     "full_vla_runtime_sweep_recorded": true,
     "bounded_smoke_command_not_full_launch": true,
-    "a100_smoke_passed": true,
+    "a100_smoke_passed": false,
     "full_vla_runtime_sweep_bs4_passed": true,
     "readiness_training_not_started": true
   },
@@ -36,22 +36,9 @@
     "full_vla_runtime_sweep_report": "docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json"
   },
   "observed": {
-    "stable_candidate": {
-      "per_device_batch_size": 8,
-      "gradient_accumulation_steps": 8,
-      "effective_batch_size": 64,
-      "status": "ok",
-      "optimizer_steps": 3,
-      "micro_steps": 24,
-      "step_time_sec": 0.14424942016601563,
-      "wall_step_time_sec": 0.14429347364542386,
-      "samples_per_sec": 443.6759601968788,
-      "peak_vram_gb": 0.04040336608886719,
-      "peak_reserved_gb": 0.060546875,
-      "loss": 0.03417038917541504
-    },
-    "gpu": "NVIDIA A100-SXM4-80GB",
-    "throughput_scope": "MoWAP0FullHeads+MoWAActionBridge"
+    "stable_candidate": {},
+    "gpu": null,
+    "throughput_scope": null
   },
   "unresolved_items": [
     "full E-001 training entrypoint remains TBD",

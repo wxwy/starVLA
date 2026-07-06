@@ -1,5 +1,5 @@
 {
-  "stage": "P1-b0",
+  "stage": "future_latent_prior",
   "task_id": "M3-001",
   "experiment_id": "E-003",
   "training_started": false,
@@ -15,10 +15,10 @@
     "input_policy_future_action_forbidden": true,
     "input_policy_future_rgb_target_only": true
   },
-  "config": "configs/mowa/mowa_p1_b0_latent_cache_builder_design.yaml",
+  "config": "configs/mowa/mowa_latent_cache_builder_design.yaml",
   "observed": {
     "dataset_path": "playground/Datasets/robocasa365/target/atomic/OpenDrawer/20250816/lerobot",
-    "cache_root": "playground/mowa_latent_cache/p1_builder_design",
+    "cache_root": "playground/mowa_latent_cache/future_latent_cache_builder_design",
     "encoder_name": "wan2.2-ti2v-builder-design",
     "entry_count": 9,
     "missing_video_count": 9,

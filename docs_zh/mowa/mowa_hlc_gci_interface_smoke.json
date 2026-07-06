@@ -1,5 +1,5 @@
 {
-  "stage": "P1-b1",
+  "stage": "hlc_gci",
   "task_id": "M4-001",
   "experiment_id": "E-004",
   "training_started": false,
@@ -14,7 +14,7 @@
     "gate_init_status_data_gate": true,
     "shape_status_data_gate": true
   },
-  "config": "configs/mowa/mowa_p1_b1_hlcgci_interface.yaml",
+  "config": "configs/mowa/mowa_hlc_gci_interface.yaml",
   "observed": {
     "compressed_history_shape": [
       2,
@@ -29,8 +29,8 @@
       4,
       1024
     ],
-    "gate_min": 0.4516485631465912,
-    "gate_max": 0.538432776927948
+    "gate_min": 0.4622219502925873,
+    "gate_max": 0.5393584370613098
   },
   "unresolved_items": [
     "This smoke validates interface shape and gate range only.",

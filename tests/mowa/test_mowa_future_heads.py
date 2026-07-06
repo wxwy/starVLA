@@ -782,7 +782,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                             "keys": [
                                 "action_loss",
                                 "mowa_future_supervision_loss",
-                                "mowa_future_supervision_loss",
+                                "mowa_p0_supervision_loss",
                             ],
                         },
                     }
@@ -2058,6 +2058,76 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertEqual(trainer.optimizer.step_calls, 1)
         self.assertEqual(trainer.optimizer.zero_grad_calls, 1)
         self.assertEqual(trainer.lr_scheduler.step_calls, 1)
+
+    def test_train_starvla_train_step_accepts_legacy_p0_supervision_loss_key(self):
+        from types import SimpleNamespace
+
+        import torch
+
+        from starVLA.training.train_starvla import VLATrainer
+
+        class _DummyModel:
+            def forward(self, batch_vla):
+                return {
+                    "action_loss": torch.tensor(2.0, requires_grad=True),
+                    "mowa_p0_supervision_loss": torch.tensor(4.0, requires_grad=True),
+                }
+
+            def parameters(self):
+                return []
+
+        class _DummyAccelerator:
+            def __init__(self):
+                self.sync_gradients = True
+                self.backward_calls = []
+
+            def accumulate(self, model):
+                from contextlib import nullcontext
+
+                return nullcontext()
+
+            def backward(self, loss):
+                self.backward_calls.append(loss.detach().item())
+
+            def clip_grad_norm_(self, parameters, max_norm):
+                return None
+
+        class _DummyOptimizer:
+            def __init__(self):
+                self.step_calls = 0
+                self.zero_grad_calls = 0
+
+            def step(self):
+                self.step_calls += 1
+
+            def zero_grad(self):
+                self.zero_grad_calls += 1
+
+        class _DummyScheduler:
+            def __init__(self):
+                self.step_calls = 0
+
+            def step(self):
+                self.step_calls += 1
+
+        trainer = object.__new__(VLATrainer)
+        trainer.config = SimpleNamespace(
+            trainer=SimpleNamespace(
+                enable_mowa_future_supervision_loss=True,
+                loss_scale=SimpleNamespace(mowa_future_supervision=0.25),
+                gradient_clipping=None,
+            )
+        )
+        trainer.model = _DummyModel()
+        trainer.accelerator = _DummyAccelerator()
+        trainer.optimizer = _DummyOptimizer()
+        trainer.lr_scheduler = _DummyScheduler()
+
+        metrics = trainer._train_step([{"dummy": True}])
+
+        self.assertAlmostEqual(trainer.accelerator.backward_calls[-1], 3.0)
+        self.assertEqual(metrics["action_dit_loss"], 2.0)
+        self.assertEqual(metrics["mowa_future_supervision_loss"], 4.0)
 
     def test_e006_policy_rollout_preflight_builds_gated_commands(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -1455,7 +1455,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
 
         self.assertTrue(report["checks"]["checkpoint_under_mowa_ckpt"])
         self.assertTrue(report["checks"]["model_shards_exist"])
-        self.assertTrue(report["checks"]["trainer_state_step_2"])
+        self.assertTrue(report["checks"]["trainer_state_matches_checkpoint"])
         self.assertTrue(report["checks"]["mapping_framework_starflow"])
         self.assertTrue(report["checks"]["mapping_action_head_layerwisefm"])
         self.assertTrue(report["checks"]["model_load_executed_or_not_required"])
@@ -1509,6 +1509,60 @@ class MoWAP0HeadsTest(unittest.TestCase):
         )
         self.assertTrue(report["checks"]["checkpoint_under_mowa_ckpt"])
         self.assertTrue(report["checks"]["final_model_dir_exists"])
+
+    def test_e006_eval_load_accepts_non_step2_checkpoint_when_path_matches(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_bs4_candidate"
+                / "checkpoints"
+                / "steps_1000"
+            )
+            final_model = checkpoint.parents[1] / "final_model"
+            (root / "configs" / "mowa").mkdir(parents=True)
+            checkpoint.mkdir(parents=True)
+            final_model.mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e006_eval_load_smoke.yaml").write_text(
+                "checkpoint:\n  checkpoint_root_policy: playground/mowa_ckpt\n",
+                encoding="utf-8",
+            )
+            (checkpoint / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 1000}),
+                encoding="utf-8",
+            )
+            (checkpoint / "starflow_mapping.json").write_text(
+                json.dumps({"framework_name": "StarFlowVLA", "action_head": "LayerwiseFM"}),
+                encoding="utf-8",
+            )
+            for name in (
+                "model.safetensors.index.json",
+                "config.full.yaml",
+                "dataset_statistics.json",
+                "optimizer_rank_00000.pt",
+                "scheduler.pt",
+                "random_states_0.pkl",
+            ):
+                (checkpoint / name).write_bytes(b"placeholder")
+            (checkpoint / "model-00001.safetensors").write_bytes(b"placeholder")
+
+            from tools.mowa.e006_eval_load_smoke import build_e006_eval_load_smoke
+
+            report = build_e006_eval_load_smoke(
+                root,
+                checkpoint=Path(
+                    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000"
+                ),
+                final_model=Path(
+                    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/final_model"
+                ),
+                execute_load=False,
+            )
+
+        self.assertEqual(report["observed"]["expected_completed_steps"], 1000)
+        self.assertTrue(report["checks"]["trainer_state_matches_checkpoint"])
 
     def test_e006_eval_load_resolves_latest_complete_checkpoint_alias(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2904,4 +2958,161 @@ class MoWAP0HeadsTest(unittest.TestCase):
         self.assertEqual(
             state_dict["mowa_layerwise_bridge_future_feature_heads.trunk.0.bias"],
             "legacy_bias",
+        )
+
+    def test_steps_1000_offline_diagnostic_detects_wired_but_zero_gain_case(self):
+        from tools.mowa.e001_steps_1000_offline_diagnostic import _diagnose_checkpoint_behavior
+
+        forward_report = {
+            "action_loss_delta_vs_baseline": {
+                "baseline": 0.0,
+                "zero": 0.01,
+                "batch_shuffle": -0.02,
+                "head_mask_control": 0.015,
+            }
+        }
+        rollout_report = {
+            "runs": [
+                {"intervention": "baseline", "rollout_result": {"success_rate": 0.0}},
+                {"intervention": "zero", "rollout_result": {"success_rate": 0.0}},
+            ]
+        }
+
+        diagnosis = _diagnose_checkpoint_behavior(forward_report, rollout_report)
+
+        self.assertEqual(diagnosis["forward_sensitivity"], "observable_effect")
+        self.assertEqual(diagnosis["max_rollout_success_rate"], 0.0)
+        self.assertEqual(
+            diagnosis["verdict"],
+            "bridge_is_wired_but_checkpoint_has_no_action_gain",
+        )
+
+    def test_steps_1000_offline_diagnostic_detects_weak_bridge_case(self):
+        from tools.mowa.e001_steps_1000_offline_diagnostic import _diagnose_checkpoint_behavior
+
+        forward_report = {
+            "action_loss_delta_vs_baseline": {
+                "baseline": 0.0,
+                "zero": 1e-6,
+                "batch_shuffle": -2e-6,
+                "head_mask_control": 3e-6,
+            }
+        }
+        rollout_report = {
+            "runs": [
+                {"intervention": "baseline", "rollout_result": {"success_rate": 0.0}},
+                {"intervention": "zero", "rollout_result": {"success_rate": 0.0}},
+            ]
+        }
+
+        diagnosis = _diagnose_checkpoint_behavior(forward_report, rollout_report)
+
+        self.assertEqual(diagnosis["forward_sensitivity"], "no_observable_effect")
+        self.assertEqual(
+            diagnosis["verdict"],
+            "checkpoint_is_undertrained_and_bridge_effect_is_weak",
+        )
+
+    def test_steps_1000_offline_diagnostic_reuses_existing_forward_report(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_bs4_candidate"
+                / "checkpoints"
+                / "steps_1000"
+            )
+            final_model = checkpoint.parents[1] / "final_model"
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            checkpoint.mkdir(parents=True)
+            final_model.mkdir(parents=True)
+            (root / "configs" / "mowa" / "mowa_e006_eval_load_smoke.yaml").write_text(
+                "checkpoint:\n  checkpoint_root_policy: playground/mowa_ckpt\n",
+                encoding="utf-8",
+            )
+            for name in (
+                "model.safetensors.index.json",
+                "config.full.yaml",
+                "dataset_statistics.json",
+                "optimizer_rank_00000.pt",
+                "scheduler.pt",
+                "random_states_0.pkl",
+                "starflow_mapping.json",
+            ):
+                (checkpoint / name).write_text("{}", encoding="utf-8")
+            (checkpoint / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 1000}),
+                encoding="utf-8",
+            )
+            (checkpoint / "model-00001.safetensors").write_bytes(b"placeholder")
+            (root / "docs_zh" / "mowa" / "mowa_e006_checkpoint_intervention_forward_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "checkpoint": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+                        "checks": {"checkpoint_exists": True},
+                        "interventions": [
+                            "baseline",
+                            "zero",
+                            "batch_shuffle",
+                            "head_mask_control",
+                        ],
+                        "action_loss_delta_vs_baseline": {
+                            "baseline": 0.0,
+                            "zero": 0.001,
+                            "batch_shuffle": 0.02,
+                            "head_mask_control": 0.03,
+                        },
+                        "runs": [
+                            {"intervention": "baseline", "forward": {"action_loss": 0.1}},
+                            {"intervention": "zero", "forward": {"action_loss": 0.101}},
+                            {"intervention": "batch_shuffle", "forward": {"action_loss": 0.12}},
+                            {"intervention": "head_mask_control", "forward": {"action_loss": 0.13}},
+                        ],
+                        "go_no_go": "TBD",
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            (root / "docs_zh" / "mowa" / "mowa_e006_policy_rollout_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "eval_started": True,
+                        "runs": [
+                            {
+                                "intervention": "baseline",
+                                "rollout_result": {"success_rate": 0.0},
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_steps_1000_offline_diagnostic import (
+                build_e001_steps_1000_offline_diagnostic,
+            )
+
+            report = build_e001_steps_1000_offline_diagnostic(
+                root,
+                checkpoint=Path(
+                    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000"
+                ),
+                batch_size=2,
+                execute_forward_smoke=False,
+                execute_eval_load=False,
+            )
+
+        self.assertEqual(report["diagnosis"]["forward_sensitivity"], "observable_effect")
+        self.assertEqual(
+            report["diagnosis"]["verdict"],
+            "bridge_is_wired_but_checkpoint_has_no_action_gain",
+        )
+        self.assertEqual(
+            report["forward"]["action_loss_delta_vs_baseline"]["head_mask_control"],
+            0.03,
         )

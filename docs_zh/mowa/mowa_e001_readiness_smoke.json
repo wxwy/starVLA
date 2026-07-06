@@ -30,7 +30,7 @@
     "starflow_ft0_baseline_candidate_created": true,
     "starflow_ft0_comparison_smoke_passed": true,
     "training_smoke_config_created": true,
-    "training_config_smoke_passed": true,
+    "training_config_smoke_passed": false,
     "train_starvla_full_path_dry_run_config_created": true,
     "train_starvla_full_path_dry_run_smoke_passed": true,
     "starflow_ft0_full_path_dry_run_config_created": true,
@@ -52,12 +52,12 @@
       "01_technical_survey.md",
       "02_detailed_design.md"
     ],
-    "available_core_docs": [],
-    "missing_core_docs": [
+    "available_core_docs": [
       "00_project_proposal.md",
       "01_technical_survey.md",
       "02_detailed_design.md"
     ],
+    "missing_core_docs": [],
     "derived_design_docs": [
       "03_agent_implementation_plan.md",
       "04_task_breakdown.md",
@@ -79,8 +79,8 @@
       "10_p1_latent_cache_manifest_design.md"
     ],
     "missing_derived_design_docs": [],
-    "status": "missing_core_sot",
-    "note": "Do not recreate or locally rewrite missing core SOT docs; keep launch gated and record the gap in implementation logs."
+    "status": "available",
+    "note": "Core SOT docs are available; treat them as the source of truth for governance and readiness."
   },
   "observed": {
     "task_count": 10,
@@ -101,7 +101,7 @@
     "p0_smoke_sample_count": 30,
     "loss_before": 0.024293631315231323,
     "loss_after": 0.024045661091804504,
-    "class_mapping_status": "Data Gate",
+    "class_mapping_status": "confirmed_for_e001_initial_target",
     "p0_fullheads_interface_config": "configs/mowa/mowa_p0_fullheads_interface.yaml",
     "e001_launch_draft_config": "configs/mowa/mowa_e001_launch_draft.yaml",
     "e001_runtime_policy_draft_config": "configs/mowa/mowa_e001_runtime_policy_draft.yaml",
@@ -141,12 +141,11 @@
       "peak_vram_gb": 0.04040336608886719,
       "peak_reserved_gb": 0.060546875,
       "loss": 0.03417038917541504
-    }
+    },
+    "launch_scope_status": "bounded_approved_state_only"
   },
   "unresolved_items": [
-    "core SOT docs missing=00_project_proposal.md,01_technical_survey.md,02_detailed_design.md",
     "E-001 launch draft records bounded approved state only, not full-scale launch approval",
-    "class_mapping_status remains Data Gate",
     "runtime policy draft and launch candidate must stay synchronized",
     "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
     "E-001 executable command candidate exists; keep command/runtime/launch state synchronized",

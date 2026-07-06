@@ -156,7 +156,7 @@ def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAP
             required,
             columns,
             "mask if reward/done unavailable",
-            "Candidate from next.reward / next.done; class mapping remains Data Gate.",
+            "Candidate from next.reward / next.done; class mapping is frozen for E-001 initial target.",
         )
 
     return MoWAP0HeadCoverage(

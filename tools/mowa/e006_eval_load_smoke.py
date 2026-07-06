@@ -67,6 +67,7 @@ def build_e006_eval_load_smoke(
     trainer_state = _read_json(checkpoint_path / "trainer_state.json") or {}
     mapping = _read_json(checkpoint_path / "starflow_mapping.json") or {}
     load_result = _execute_model_load(checkpoint_path) if execute_load else {"executed": False}
+    expected_completed_steps = _expected_completed_steps_from_checkpoint(checkpoint)
     checks = {
         "config_created": (root / E006_CONFIG).is_file(),
         "checkpoint_under_mowa_ckpt": str(checkpoint).startswith("playground/mowa_ckpt/"),
@@ -77,7 +78,10 @@ def build_e006_eval_load_smoke(
         "config_full_exists": (checkpoint_path / "config.full.yaml").is_file(),
         "dataset_statistics_exists": (checkpoint_path / "dataset_statistics.json").is_file(),
         "starflow_mapping_exists": (checkpoint_path / "starflow_mapping.json").is_file(),
-        "trainer_state_step_2": trainer_state.get("completed_steps") == 2,
+        "trainer_state_matches_checkpoint": (
+            expected_completed_steps is not None
+            and trainer_state.get("completed_steps") == expected_completed_steps
+        ),
         "optimizer_state_exists": (checkpoint_path / "optimizer_rank_00000.pt").is_file(),
         "scheduler_state_exists": (checkpoint_path / "scheduler.pt").is_file(),
         "rng_state_exists": any(checkpoint_path.glob("random_states_*.pkl")),
@@ -100,6 +104,7 @@ def build_e006_eval_load_smoke(
         "observed": {
             "checkpoint": str(checkpoint),
             "final_model": str(final_model),
+            "expected_completed_steps": expected_completed_steps,
             "trainer_state": trainer_state,
             "starflow_mapping": mapping,
             "model_load": load_result,
@@ -177,6 +182,14 @@ def _load_default_checkpoint_paths(repo_root: Path) -> tuple[Path, Path]:
             checkpoint_root_policy=checkpoint_root_policy,
         ),
     )
+
+
+def _expected_completed_steps_from_checkpoint(checkpoint: Path) -> int | None:
+    checkpoint_name = Path(checkpoint).name
+    if not checkpoint_name.startswith("steps_"):
+        return None
+    suffix = checkpoint_name.removeprefix("steps_")
+    return int(suffix) if suffix.isdigit() else None
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:

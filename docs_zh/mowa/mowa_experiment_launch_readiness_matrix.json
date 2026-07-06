@@ -53,9 +53,7 @@
         "save_resume_smoke"
       ],
       "blocking_items": [
-        "core SOT docs missing=00_project_proposal.md,01_technical_survey.md,02_detailed_design.md",
         "E-001 launch draft records bounded approved state only, not full-scale launch approval",
-        "class_mapping_status remains Data Gate",
         "runtime policy draft and launch candidate must stay synchronized",
         "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
         "E-001 executable command candidate exists; keep command/runtime/launch state synchronized",
@@ -242,7 +240,7 @@
     }
   ],
   "global_blockers": [
-    "E-001: core SOT docs missing=00_project_proposal.md,01_technical_survey.md,02_detailed_design.md",
+    "E-001: E-001 launch draft records bounded approved state only, not full-scale launch approval",
     "E-002: This is the single static E-002 comparison entry only; runtime integration exists but training remains gated.",
     "E-003: This smoke validates the P1-b0 future latent prior interface only; no latent cache builder is executed.",
     "E-004: This smoke validates interface shape and gate range only.",

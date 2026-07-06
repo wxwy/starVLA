@@ -1,6 +1,6 @@
 {
   "stage": "P0",
-  "module": "MoWAP0ConstructibleHeads",
+  "module": "MoWAFutureConstructibleHeads",
   "sample_count": 30,
   "constructible_heads": [
     "task_progress",
@@ -36,8 +36,9 @@
     "action_outcome_class": 0.014741317369043827,
     "total": 0.024045661091804504
   },
-  "class_mapping_status": "Data Gate",
-  "go_no_go": "TBD: train smoke passed; production training remains Data Gate",
+  "class_mapping_status": "confirmed_for_e001_initial_target",
+  "class_mapping_version": "reward_done_vector_v1",
+  "go_no_go": "TBD: train smoke passed; class mapping is frozen for E-001 while broader production training remains gated",
   "notes": [
     "One optimizer step only; this is not E-001 training.",
     "Features are smoke-only values derived from G0 labels.",

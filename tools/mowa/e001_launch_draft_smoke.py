@@ -88,10 +88,10 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
         "launch_draft_reason_current": (
             "final WAM feature source are not confirmed" not in launch_draft
             and (
-                "resource policy, core SOT, class mapping, and action-gain "
+                "resource policy, core SOT, and action-gain "
                 "evidence are not confirmed"
                 in launch_draft
-                or "long-training resource policy, core SOT, class mapping, "
+                or "long-training resource policy, core SOT, "
                 "and action-gain evidence remain unconfirmed for full-scale training"
                 in launch_draft
             )
@@ -131,7 +131,6 @@ def build_e001_launch_draft_smoke(repo_root: Path | str) -> dict[str, Any]:
             "a100_throughput_report": str(A100_THROUGHPUT_REPORT),
         },
         "unresolved_items": [
-            "class_mapping_status remains Data Gate",
             "batch size 4, expected VRAM and runtime are bounded full-VLA smoke observed only, "
             "not long-training confirmed",
             "runtime policy is approved only for current bounded E-001 scope, not for broader action-gain claims",

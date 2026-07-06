@@ -6,7 +6,7 @@
   "training_started": false,
   "eval_started": false,
   "execute_requested": true,
-  "checkpoint": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
+  "checkpoint": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
   "batch_size": 2,
   "interventions": [
     "baseline",
@@ -30,16 +30,16 @@
   "runs": [
     {
       "intervention": "baseline",
-      "run_id": "MoWA-E-006_checkpoint_forward_baseline_20260704_110916",
-      "run_dir": "playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_baseline_20260704_110916",
-      "report_path": "docs_zh/mowa/e006_checkpoint_intervention_forward/20260704_110916_baseline.json",
+      "run_id": "MoWA-E-006_checkpoint_forward_baseline_20260706_082921",
+      "run_dir": "playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_baseline_20260706_082921",
+      "report_path": "docs_zh/mowa/e006_checkpoint_intervention_forward/20260706_082921_baseline.json",
       "command": [
         "/disk/rl/starVLA/.venv/bin/python",
         "starVLA/training/train_starvla.py",
         "--config_yaml",
         "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
         "--run_id",
-        "MoWA-E-006_checkpoint_forward_baseline_20260704_110916",
+        "MoWA-E-006_checkpoint_forward_baseline_20260706_082921",
         "--run_root_dir",
         "playground/mowa_ckpt",
         "--datasets.vla_data.per_device_batch_size",
@@ -49,15 +49,15 @@
         "--trainer.full_path_dry_run_load_checkpoint",
         "true",
         "--trainer.full_path_dry_run_checkpoint",
-        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
+        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
         "--trainer.full_path_dry_run_report",
-        "docs_zh/mowa/e006_checkpoint_intervention_forward/20260704_110916_baseline.json",
+        "docs_zh/mowa/e006_checkpoint_intervention_forward/20260706_082921_baseline.json",
         "--trainer.disable_wandb",
         "true"
       ],
       "command_result": {
         "returncode": 0,
-        "elapsed_sec": 60.86585825693328,
+        "elapsed_sec": 57.07840113097336,
         "tail": [
           "Distributed environment: DistributedType.NO",
           "Num processes: 1",
@@ -67,22 +67,22 @@
           "",
           "Mixed precision type: no",
           "",
-          "07/04 [11:09:26] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2220",
-          "                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2223",
+          "07/06 [08:29:30] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2347",
+          "                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2350",
           "                          for access tracking                                   ",
           "",
           "Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]",
-          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 19.20it/s]",
-          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 19.16it/s]",
+          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 10.28it/s]",
+          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 10.27it/s]",
           "Total number of DiT parameters:  532326426",
           "✅ loaded <full_model> model parameters",
-          "07/04 [11:09:35] INFO     | >> Creating VLA Dataset with    train_starvla.py:687",
+          "07/06 [08:29:39] INFO     | >> Creating VLA Dataset with    train_starvla.py:746",
           "                          Mixture                                               ",
           "                          `robocasa365_open_drawer_target_h                     ",
           "                          uman`                                                 ",
           "/disk/rl/starVLA/.venv/lib/python3.11/site-packages/albumentations/__init__.py:13: UserWarning: A new version of Albumentations is available: 2.0.8 (you have 1.4.18). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.",
           "  check_for_updates()",
-          "07/04 [11:09:39] WARNING  | >>  DataConfig for                    registry.py:70",
+          "07/06 [08:29:42] WARNING  | >>  DataConfig for                    registry.py:70",
           "                          robot_type='ur5_robochallenge' has no                 ",
           "                          `embodiment_tag` classvar; defaulting                 ",
           "                          to EmbodimentTag.NEW_EMBODIMENT.                      ",
@@ -102,15 +102,16 @@
           "                          'panda_omron_robocasa365')]                           ",
           "Initialized dataset lerobot with EmbodimentTag.NEW_EMBODIMENT",
           "Dataset lengths: [137431]",
-          "Merged dataset statistics saved to: playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_baseline_20260704_110916/dataset_statistics.json",
+          "Merged dataset statistics saved to: playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_baseline_20260706_082921/dataset_statistics.json",
           "Used action keys (reordered): ['end_effector_position', 'end_effector_rotation', 'gripper_close', 'base_motion', 'control_mode']",
           "Used state keys (reordered): ['base_position', 'base_rotation', 'end_effector_position_relative', 'end_effector_rotation_relative', 'gripper_qpos']",
-          "07/04 [11:10:15] INFO     | >> MoWA E-001 train_starvla     train_starvla.py:949",
-          "                          full-path dry-run report saved at                     ",
-          "                          docs_zh/mowa/e006_checkpoint_inte                     ",
-          "                          rvention_forward/20260704_110916_                     ",
-          "                          baseline.json                                         ",
-          "                 INFO     | >> MoWA E-001 train_starvla    train_starvla.py:2264",
+          "07/06 [08:30:17] INFO     | >> MoWA E-001 train_starvla    train_starvla.py:1040",
+          "                          full-path dry-run report saved                        ",
+          "                          at                                                    ",
+          "                          docs_zh/mowa/e006_checkpoint_int                      ",
+          "                          ervention_forward/20260706_08292                      ",
+          "                          1_baseline.json                                       ",
+          "                 INFO     | >> MoWA E-001 train_starvla    train_starvla.py:2392",
           "                          full-path dry-run complete;                           ",
           "                          training skipped.                                     "
         ]
@@ -119,8 +120,15 @@
         "evaluated": true,
         "keys": [
           "action_loss",
+          "mowa_future_supervision_active_heads",
+          "mowa_future_supervision_available",
+          "mowa_future_supervision_loss",
+          "mowa_future_supervision_losses",
+          "mowa_future_supervision_masked_heads",
           "mowa_layerwise_bridge_active_heads",
+          "mowa_layerwise_bridge_adapted_vl_embed_shape",
           "mowa_layerwise_bridge_attention_mask_shape",
+          "mowa_layerwise_bridge_bridge_token_shape",
           "mowa_layerwise_bridge_coupled",
           "mowa_layerwise_bridge_feature_source",
           "mowa_layerwise_bridge_intervention",
@@ -129,7 +137,7 @@
           "mowa_layerwise_bridge_masked_heads",
           "mowa_layerwise_bridge_token_shape"
         ],
-        "action_loss": 8.296131134033203,
+        "action_loss": 0.0613509863615036,
         "mowa_layerwise_bridge_coupled": true,
         "mowa_layerwise_bridge_intervention": "baseline",
         "mowa_layerwise_bridge_intervention_applied": true,
@@ -139,6 +147,16 @@
           2,
           1024
         ],
+        "mowa_layerwise_bridge_bridge_token_shape": [
+          2,
+          2,
+          1024
+        ],
+        "mowa_layerwise_bridge_adapted_vl_embed_shape": [
+          2,
+          345,
+          1024
+        ],
         "mowa_layerwise_bridge_attention_mask_shape": [
           2,
           345
@@ -155,10 +173,28 @@
           "subgoal_feasibility",
           "object_visibility_future"
         ],
+        "mowa_future_supervision_available": true,
+        "mowa_future_supervision_active_heads": [
+          "task_progress",
+          "action_outcome_class"
+        ],
+        "mowa_future_supervision_masked_heads": [
+          "manipulation_readiness",
+          "failure_risk",
+          "next_best_view_score",
+          "subgoal_feasibility",
+          "object_visibility_future"
+        ],
+        "mowa_future_supervision_loss": 0.24958831071853638,
+        "mowa_future_supervision_losses": [
+          "action_outcome_class",
+          "task_progress",
+          "total"
+        ],
         "metric_scope": "one_batch_no_backward_forward_dry_run",
-        "elapsed_sec": 35.73735573398881,
+        "elapsed_sec": 34.714906155946665,
         "batch_size": 2,
-        "samples_per_sec": 0.05596384956086316,
+        "samples_per_sec": 0.05761213903375049,
         "cuda_available": true,
         "cuda_device": "cuda",
         "cuda_device_name": "NVIDIA A100-SXM4-80GB",
@@ -171,23 +207,23 @@
       "checkpoint_load": {
         "requested": true,
         "loaded": true,
-        "path": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
-        "resolved_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
-        "elapsed_sec": 2.4605303519638255
+        "path": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+        "resolved_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+        "elapsed_sec": 2.2580669859889895
       }
     },
     {
       "intervention": "zero",
-      "run_id": "MoWA-E-006_checkpoint_forward_zero_20260704_110916",
-      "run_dir": "playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_zero_20260704_110916",
-      "report_path": "docs_zh/mowa/e006_checkpoint_intervention_forward/20260704_110916_zero.json",
+      "run_id": "MoWA-E-006_checkpoint_forward_zero_20260706_082921",
+      "run_dir": "playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_zero_20260706_082921",
+      "report_path": "docs_zh/mowa/e006_checkpoint_intervention_forward/20260706_082921_zero.json",
       "command": [
         "/disk/rl/starVLA/.venv/bin/python",
         "starVLA/training/train_starvla.py",
         "--config_yaml",
         "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
         "--run_id",
-        "MoWA-E-006_checkpoint_forward_zero_20260704_110916",
+        "MoWA-E-006_checkpoint_forward_zero_20260706_082921",
         "--run_root_dir",
         "playground/mowa_ckpt",
         "--datasets.vla_data.per_device_batch_size",
@@ -197,15 +233,15 @@
         "--trainer.full_path_dry_run_load_checkpoint",
         "true",
         "--trainer.full_path_dry_run_checkpoint",
-        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
+        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
         "--trainer.full_path_dry_run_report",
-        "docs_zh/mowa/e006_checkpoint_intervention_forward/20260704_110916_zero.json",
+        "docs_zh/mowa/e006_checkpoint_intervention_forward/20260706_082921_zero.json",
         "--trainer.disable_wandb",
         "true"
       ],
       "command_result": {
         "returncode": 0,
-        "elapsed_sec": 63.640555809950456,
+        "elapsed_sec": 55.16194292297587,
         "tail": [
           "Distributed environment: DistributedType.NO",
           "Num processes: 1",
@@ -215,22 +251,22 @@
           "",
           "Mixed precision type: no",
           "",
-          "07/04 [11:10:32] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2220",
-          "                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2223",
+          "07/06 [08:30:27] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2347",
+          "                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2350",
           "                          for access tracking                                   ",
           "",
           "Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]",
-          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 19.23it/s]",
-          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 19.18it/s]",
+          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 12.09it/s]",
+          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 12.07it/s]",
           "Total number of DiT parameters:  532326426",
           "✅ loaded <full_model> model parameters",
-          "07/04 [11:10:40] INFO     | >> Creating VLA Dataset with    train_starvla.py:687",
+          "07/06 [08:30:34] INFO     | >> Creating VLA Dataset with    train_starvla.py:746",
           "                          Mixture                                               ",
           "                          `robocasa365_open_drawer_target_h                     ",
           "                          uman`                                                 ",
-          "/disk/rl/starVLA/.venv/lib/python3.11/site-packages/albumentations/check_version.py:49: UserWarning: Error fetching version info <urlopen error _ssl.c:989: The handshake operation timed out>",
-          "  data = fetch_version_info()",
-          "07/04 [11:10:44] WARNING  | >>  DataConfig for                    registry.py:70",
+          "/disk/rl/starVLA/.venv/lib/python3.11/site-packages/albumentations/__init__.py:13: UserWarning: A new version of Albumentations is available: 2.0.8 (you have 1.4.18). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.",
+          "  check_for_updates()",
+          "07/06 [08:30:37] WARNING  | >>  DataConfig for                    registry.py:70",
           "                          robot_type='ur5_robochallenge' has no                 ",
           "                          `embodiment_tag` classvar; defaulting                 ",
           "                          to EmbodimentTag.NEW_EMBODIMENT.                      ",
@@ -250,15 +286,16 @@
           "                          'panda_omron_robocasa365')]                           ",
           "Initialized dataset lerobot with EmbodimentTag.NEW_EMBODIMENT",
           "Dataset lengths: [137431]",
-          "Merged dataset statistics saved to: playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_zero_20260704_110916/dataset_statistics.json",
+          "Merged dataset statistics saved to: playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_zero_20260706_082921/dataset_statistics.json",
           "Used action keys (reordered): ['end_effector_position', 'end_effector_rotation', 'gripper_close', 'base_motion', 'control_mode']",
           "Used state keys (reordered): ['base_position', 'base_rotation', 'end_effector_position_relative', 'end_effector_rotation_relative', 'gripper_qpos']",
-          "07/04 [11:11:19] INFO     | >> MoWA E-001 train_starvla     train_starvla.py:949",
-          "                          full-path dry-run report saved at                     ",
-          "                          docs_zh/mowa/e006_checkpoint_inte                     ",
-          "                          rvention_forward/20260704_110916_                     ",
-          "                          zero.json                                             ",
-          "                 INFO     | >> MoWA E-001 train_starvla    train_starvla.py:2264",
+          "07/06 [08:31:12] INFO     | >> MoWA E-001 train_starvla    train_starvla.py:1040",
+          "                          full-path dry-run report saved                        ",
+          "                          at                                                    ",
+          "                          docs_zh/mowa/e006_checkpoint_int                      ",
+          "                          ervention_forward/20260706_08292                      ",
+          "                          1_zero.json                                           ",
+          "                 INFO     | >> MoWA E-001 train_starvla    train_starvla.py:2392",
           "                          full-path dry-run complete;                           ",
           "                          training skipped.                                     "
         ]
@@ -267,8 +304,15 @@
         "evaluated": true,
         "keys": [
           "action_loss",
+          "mowa_future_supervision_active_heads",
+          "mowa_future_supervision_available",
+          "mowa_future_supervision_loss",
+          "mowa_future_supervision_losses",
+          "mowa_future_supervision_masked_heads",
           "mowa_layerwise_bridge_active_heads",
+          "mowa_layerwise_bridge_adapted_vl_embed_shape",
           "mowa_layerwise_bridge_attention_mask_shape",
+          "mowa_layerwise_bridge_bridge_token_shape",
           "mowa_layerwise_bridge_coupled",
           "mowa_layerwise_bridge_feature_source",
           "mowa_layerwise_bridge_intervention",
@@ -277,7 +321,7 @@
           "mowa_layerwise_bridge_masked_heads",
           "mowa_layerwise_bridge_token_shape"
         ],
-        "action_loss": 7.832876682281494,
+        "action_loss": 0.06188950315117836,
         "mowa_layerwise_bridge_coupled": true,
         "mowa_layerwise_bridge_intervention": "zero",
         "mowa_layerwise_bridge_intervention_applied": true,
@@ -287,6 +331,16 @@
           2,
           1024
         ],
+        "mowa_layerwise_bridge_bridge_token_shape": [
+          2,
+          2,
+          1024
+        ],
+        "mowa_layerwise_bridge_adapted_vl_embed_shape": [
+          2,
+          345,
+          1024
+        ],
         "mowa_layerwise_bridge_attention_mask_shape": [
           2,
           345
@@ -303,10 +357,28 @@
           "subgoal_feasibility",
           "object_visibility_future"
         ],
+        "mowa_future_supervision_available": true,
+        "mowa_future_supervision_active_heads": [
+          "task_progress",
+          "action_outcome_class"
+        ],
+        "mowa_future_supervision_masked_heads": [
+          "manipulation_readiness",
+          "failure_risk",
+          "next_best_view_score",
+          "subgoal_feasibility",
+          "object_visibility_future"
+        ],
+        "mowa_future_supervision_loss": 0.24958831071853638,
+        "mowa_future_supervision_losses": [
+          "action_outcome_class",
+          "task_progress",
+          "total"
+        ],
         "metric_scope": "one_batch_no_backward_forward_dry_run",
-        "elapsed_sec": 34.49207183497492,
+        "elapsed_sec": 34.693952666944824,
         "batch_size": 2,
-        "samples_per_sec": 0.05798433940323649,
+        "samples_per_sec": 0.05764693401180343,
         "cuda_available": true,
         "cuda_device": "cuda",
         "cuda_device_name": "NVIDIA A100-SXM4-80GB",
@@ -319,23 +391,23 @@
       "checkpoint_load": {
         "requested": true,
         "loaded": true,
-        "path": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
-        "resolved_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
-        "elapsed_sec": 1.8387403669767082
+        "path": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+        "resolved_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+        "elapsed_sec": 2.096277464996092
       }
     },
     {
       "intervention": "batch_shuffle",
-      "run_id": "MoWA-E-006_checkpoint_forward_batch_shuffle_20260704_110916",
-      "run_dir": "playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_batch_shuffle_20260704_110916",
-      "report_path": "docs_zh/mowa/e006_checkpoint_intervention_forward/20260704_110916_batch_shuffle.json",
+      "run_id": "MoWA-E-006_checkpoint_forward_batch_shuffle_20260706_082921",
+      "run_dir": "playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_batch_shuffle_20260706_082921",
+      "report_path": "docs_zh/mowa/e006_checkpoint_intervention_forward/20260706_082921_batch_shuffle.json",
       "command": [
         "/disk/rl/starVLA/.venv/bin/python",
         "starVLA/training/train_starvla.py",
         "--config_yaml",
         "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
         "--run_id",
-        "MoWA-E-006_checkpoint_forward_batch_shuffle_20260704_110916",
+        "MoWA-E-006_checkpoint_forward_batch_shuffle_20260706_082921",
         "--run_root_dir",
         "playground/mowa_ckpt",
         "--datasets.vla_data.per_device_batch_size",
@@ -345,15 +417,15 @@
         "--trainer.full_path_dry_run_load_checkpoint",
         "true",
         "--trainer.full_path_dry_run_checkpoint",
-        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
+        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
         "--trainer.full_path_dry_run_report",
-        "docs_zh/mowa/e006_checkpoint_intervention_forward/20260704_110916_batch_shuffle.json",
+        "docs_zh/mowa/e006_checkpoint_intervention_forward/20260706_082921_batch_shuffle.json",
         "--trainer.disable_wandb",
         "true"
       ],
       "command_result": {
         "returncode": 0,
-        "elapsed_sec": 57.44173991889693,
+        "elapsed_sec": 54.54533250303939,
         "tail": [
           "Distributed environment: DistributedType.NO",
           "Num processes: 1",
@@ -363,21 +435,22 @@
           "",
           "Mixed precision type: no",
           "",
-          "07/04 [11:11:30] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2220",
-          "                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2223",
+          "07/06 [08:31:22] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2347",
+          "                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2350",
           "                          for access tracking                                   ",
           "",
           "Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]",
-          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 26.65it/s]",
+          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 12.24it/s]",
+          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 12.22it/s]",
           "Total number of DiT parameters:  532326426",
           "✅ loaded <full_model> model parameters",
-          "07/04 [11:11:38] INFO     | >> Creating VLA Dataset with    train_starvla.py:687",
+          "07/06 [08:31:30] INFO     | >> Creating VLA Dataset with    train_starvla.py:746",
           "                          Mixture                                               ",
           "                          `robocasa365_open_drawer_target_h                     ",
           "                          uman`                                                 ",
           "/disk/rl/starVLA/.venv/lib/python3.11/site-packages/albumentations/__init__.py:13: UserWarning: A new version of Albumentations is available: 2.0.8 (you have 1.4.18). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.",
           "  check_for_updates()",
-          "07/04 [11:11:40] WARNING  | >>  DataConfig for                    registry.py:70",
+          "07/06 [08:31:32] WARNING  | >>  DataConfig for                    registry.py:70",
           "                          robot_type='ur5_robochallenge' has no                 ",
           "                          `embodiment_tag` classvar; defaulting                 ",
           "                          to EmbodimentTag.NEW_EMBODIMENT.                      ",
@@ -397,15 +470,16 @@
           "                          'panda_omron_robocasa365')]                           ",
           "Initialized dataset lerobot with EmbodimentTag.NEW_EMBODIMENT",
           "Dataset lengths: [137431]",
-          "Merged dataset statistics saved to: playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_batch_shuffle_20260704_110916/dataset_statistics.json",
+          "Merged dataset statistics saved to: playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_batch_shuffle_20260706_082921/dataset_statistics.json",
           "Used action keys (reordered): ['end_effector_position', 'end_effector_rotation', 'gripper_close', 'base_motion', 'control_mode']",
           "Used state keys (reordered): ['base_position', 'base_rotation', 'end_effector_position_relative', 'end_effector_rotation_relative', 'gripper_qpos']",
-          "07/04 [11:12:16] INFO     | >> MoWA E-001 train_starvla     train_starvla.py:949",
-          "                          full-path dry-run report saved at                     ",
-          "                          docs_zh/mowa/e006_checkpoint_inte                     ",
-          "                          rvention_forward/20260704_110916_                     ",
-          "                          batch_shuffle.json                                    ",
-          "                 INFO     | >> MoWA E-001 train_starvla    train_starvla.py:2264",
+          "07/06 [08:32:07] INFO     | >> MoWA E-001 train_starvla    train_starvla.py:1040",
+          "                          full-path dry-run report saved                        ",
+          "                          at                                                    ",
+          "                          docs_zh/mowa/e006_checkpoint_int                      ",
+          "                          ervention_forward/20260706_08292                      ",
+          "                          1_batch_shuffle.json                                  ",
+          "                 INFO     | >> MoWA E-001 train_starvla    train_starvla.py:2392",
           "                          full-path dry-run complete;                           ",
           "                          training skipped.                                     "
         ]
@@ -414,8 +488,15 @@
         "evaluated": true,
         "keys": [
           "action_loss",
+          "mowa_future_supervision_active_heads",
+          "mowa_future_supervision_available",
+          "mowa_future_supervision_loss",
+          "mowa_future_supervision_losses",
+          "mowa_future_supervision_masked_heads",
           "mowa_layerwise_bridge_active_heads",
+          "mowa_layerwise_bridge_adapted_vl_embed_shape",
           "mowa_layerwise_bridge_attention_mask_shape",
+          "mowa_layerwise_bridge_bridge_token_shape",
           "mowa_layerwise_bridge_coupled",
           "mowa_layerwise_bridge_feature_source",
           "mowa_layerwise_bridge_intervention",
@@ -424,7 +505,7 @@
           "mowa_layerwise_bridge_masked_heads",
           "mowa_layerwise_bridge_token_shape"
         ],
-        "action_loss": 8.136273384094238,
+        "action_loss": 0.12114302068948746,
         "mowa_layerwise_bridge_coupled": true,
         "mowa_layerwise_bridge_intervention": "batch_shuffle",
         "mowa_layerwise_bridge_intervention_applied": true,
@@ -434,6 +515,16 @@
           2,
           1024
         ],
+        "mowa_layerwise_bridge_bridge_token_shape": [
+          2,
+          2,
+          1024
+        ],
+        "mowa_layerwise_bridge_adapted_vl_embed_shape": [
+          2,
+          345,
+          1024
+        ],
         "mowa_layerwise_bridge_attention_mask_shape": [
           2,
           345
@@ -450,10 +541,28 @@
           "subgoal_feasibility",
           "object_visibility_future"
         ],
+        "mowa_future_supervision_available": true,
+        "mowa_future_supervision_active_heads": [
+          "task_progress",
+          "action_outcome_class"
+        ],
+        "mowa_future_supervision_masked_heads": [
+          "manipulation_readiness",
+          "failure_risk",
+          "next_best_view_score",
+          "subgoal_feasibility",
+          "object_visibility_future"
+        ],
+        "mowa_future_supervision_loss": 0.24958831071853638,
+        "mowa_future_supervision_losses": [
+          "action_outcome_class",
+          "task_progress",
+          "total"
+        ],
         "metric_scope": "one_batch_no_backward_forward_dry_run",
-        "elapsed_sec": 35.65585667092819,
+        "elapsed_sec": 33.96422181511298,
         "batch_size": 2,
-        "samples_per_sec": 0.056091766871799474,
+        "samples_per_sec": 0.05888549459154883,
         "cuda_available": true,
         "cuda_device": "cuda",
         "cuda_device_name": "NVIDIA A100-SXM4-80GB",
@@ -466,23 +575,23 @@
       "checkpoint_load": {
         "requested": true,
         "loaded": true,
-        "path": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
-        "resolved_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
-        "elapsed_sec": 1.7833859759848565
+        "path": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+        "resolved_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+        "elapsed_sec": 2.065687302965671
       }
     },
     {
       "intervention": "head_mask_control",
-      "run_id": "MoWA-E-006_checkpoint_forward_head_mask_control_20260704_110916",
-      "run_dir": "playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_head_mask_control_20260704_110916",
-      "report_path": "docs_zh/mowa/e006_checkpoint_intervention_forward/20260704_110916_head_mask_control.json",
+      "run_id": "MoWA-E-006_checkpoint_forward_head_mask_control_20260706_082921",
+      "run_dir": "playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_head_mask_control_20260706_082921",
+      "report_path": "docs_zh/mowa/e006_checkpoint_intervention_forward/20260706_082921_head_mask_control.json",
       "command": [
         "/disk/rl/starVLA/.venv/bin/python",
         "starVLA/training/train_starvla.py",
         "--config_yaml",
         "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
         "--run_id",
-        "MoWA-E-006_checkpoint_forward_head_mask_control_20260704_110916",
+        "MoWA-E-006_checkpoint_forward_head_mask_control_20260706_082921",
         "--run_root_dir",
         "playground/mowa_ckpt",
         "--datasets.vla_data.per_device_batch_size",
@@ -492,15 +601,15 @@
         "--trainer.full_path_dry_run_load_checkpoint",
         "true",
         "--trainer.full_path_dry_run_checkpoint",
-        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
+        "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
         "--trainer.full_path_dry_run_report",
-        "docs_zh/mowa/e006_checkpoint_intervention_forward/20260704_110916_head_mask_control.json",
+        "docs_zh/mowa/e006_checkpoint_intervention_forward/20260706_082921_head_mask_control.json",
         "--trainer.disable_wandb",
         "true"
       ],
       "command_result": {
         "returncode": 0,
-        "elapsed_sec": 60.55948335805442,
+        "elapsed_sec": 54.468661315971985,
         "tail": [
           "Distributed environment: DistributedType.NO",
           "Num processes: 1",
@@ -510,21 +619,22 @@
           "",
           "Mixed precision type: no",
           "",
-          "07/04 [11:12:26] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2220",
-          "                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2223",
+          "07/06 [08:32:16] INFO     | >> VLA Training :: Warming Up  train_starvla.py:2347",
+          "                 INFO     | >> ✅ Configuration wrapped    train_starvla.py:2350",
           "                          for access tracking                                   ",
           "",
           "Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]",
-          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 24.78it/s]",
+          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00,  9.84it/s]",
+          "Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00,  9.82it/s]",
           "Total number of DiT parameters:  532326426",
           "✅ loaded <full_model> model parameters",
-          "07/04 [11:12:33] INFO     | >> Creating VLA Dataset with    train_starvla.py:687",
+          "07/06 [08:32:24] INFO     | >> Creating VLA Dataset with    train_starvla.py:746",
           "                          Mixture                                               ",
           "                          `robocasa365_open_drawer_target_h                     ",
           "                          uman`                                                 ",
           "/disk/rl/starVLA/.venv/lib/python3.11/site-packages/albumentations/__init__.py:13: UserWarning: A new version of Albumentations is available: 2.0.8 (you have 1.4.18). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.",
           "  check_for_updates()",
-          "07/04 [11:12:36] WARNING  | >>  DataConfig for                    registry.py:70",
+          "07/06 [08:32:26] WARNING  | >>  DataConfig for                    registry.py:70",
           "                          robot_type='ur5_robochallenge' has no                 ",
           "                          `embodiment_tag` classvar; defaulting                 ",
           "                          to EmbodimentTag.NEW_EMBODIMENT.                      ",
@@ -544,15 +654,16 @@
           "                          'panda_omron_robocasa365')]                           ",
           "Initialized dataset lerobot with EmbodimentTag.NEW_EMBODIMENT",
           "Dataset lengths: [137431]",
-          "Merged dataset statistics saved to: playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_head_mask_control_20260704_110916/dataset_statistics.json",
+          "Merged dataset statistics saved to: playground/mowa_ckpt/MoWA-E-006_checkpoint_forward_head_mask_control_20260706_082921/dataset_statistics.json",
           "Used action keys (reordered): ['end_effector_position', 'end_effector_rotation', 'gripper_close', 'base_motion', 'control_mode']",
           "Used state keys (reordered): ['base_position', 'base_rotation', 'end_effector_position_relative', 'end_effector_rotation_relative', 'gripper_qpos']",
-          "07/04 [11:13:17] INFO     | >> MoWA E-001 train_starvla     train_starvla.py:949",
-          "                          full-path dry-run report saved at                     ",
-          "                          docs_zh/mowa/e006_checkpoint_inte                     ",
-          "                          rvention_forward/20260704_110916_                     ",
-          "                          head_mask_control.json                                ",
-          "                 INFO     | >> MoWA E-001 train_starvla    train_starvla.py:2264",
+          "07/06 [08:33:01] INFO     | >> MoWA E-001 train_starvla    train_starvla.py:1040",
+          "                          full-path dry-run report saved                        ",
+          "                          at                                                    ",
+          "                          docs_zh/mowa/e006_checkpoint_int                      ",
+          "                          ervention_forward/20260706_08292                      ",
+          "                          1_head_mask_control.json                              ",
+          "                 INFO     | >> MoWA E-001 train_starvla    train_starvla.py:2392",
           "                          full-path dry-run complete;                           ",
           "                          training skipped.                                     "
         ]
@@ -561,8 +672,15 @@
         "evaluated": true,
         "keys": [
           "action_loss",
+          "mowa_future_supervision_active_heads",
+          "mowa_future_supervision_available",
+          "mowa_future_supervision_loss",
+          "mowa_future_supervision_losses",
+          "mowa_future_supervision_masked_heads",
           "mowa_layerwise_bridge_active_heads",
+          "mowa_layerwise_bridge_adapted_vl_embed_shape",
           "mowa_layerwise_bridge_attention_mask_shape",
+          "mowa_layerwise_bridge_bridge_token_shape",
           "mowa_layerwise_bridge_coupled",
           "mowa_layerwise_bridge_feature_source",
           "mowa_layerwise_bridge_intervention",
@@ -571,14 +689,24 @@
           "mowa_layerwise_bridge_masked_heads",
           "mowa_layerwise_bridge_token_shape"
         ],
-        "action_loss": 7.788688659667969,
+        "action_loss": 0.09294392913579941,
         "mowa_layerwise_bridge_coupled": true,
         "mowa_layerwise_bridge_intervention": "head_mask_control",
         "mowa_layerwise_bridge_intervention_applied": true,
-        "mowa_layerwise_bridge_intervention_note": null,
+        "mowa_layerwise_bridge_intervention_note": "rebuilt_from_constructible_head_outputs",
         "mowa_layerwise_bridge_token_shape": [
           2,
           2,
+          1024
+        ],
+        "mowa_layerwise_bridge_bridge_token_shape": [
+          2,
+          2,
+          1024
+        ],
+        "mowa_layerwise_bridge_adapted_vl_embed_shape": [
+          2,
+          345,
           1024
         ],
         "mowa_layerwise_bridge_attention_mask_shape": [
@@ -597,10 +725,28 @@
           "subgoal_feasibility",
           "object_visibility_future"
         ],
+        "mowa_future_supervision_available": true,
+        "mowa_future_supervision_active_heads": [
+          "task_progress",
+          "action_outcome_class"
+        ],
+        "mowa_future_supervision_masked_heads": [
+          "manipulation_readiness",
+          "failure_risk",
+          "next_best_view_score",
+          "subgoal_feasibility",
+          "object_visibility_future"
+        ],
+        "mowa_future_supervision_loss": 0.24958831071853638,
+        "mowa_future_supervision_losses": [
+          "action_outcome_class",
+          "task_progress",
+          "total"
+        ],
         "metric_scope": "one_batch_no_backward_forward_dry_run",
-        "elapsed_sec": 40.151622115052305,
+        "elapsed_sec": 34.01704369299114,
         "batch_size": 2,
-        "samples_per_sec": 0.049811188057835076,
+        "samples_per_sec": 0.05879405682781539,
         "cuda_available": true,
         "cuda_device": "cuda",
         "cuda_device_name": "NVIDIA A100-SXM4-80GB",
@@ -613,17 +759,17 @@
       "checkpoint_load": {
         "requested": true,
         "loaded": true,
-        "path": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
-        "resolved_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2",
-        "elapsed_sec": 1.8946039869915694
+        "path": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+        "resolved_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+        "elapsed_sec": 2.104465879034251
       }
     }
   ],
   "action_loss_delta_vs_baseline": {
     "baseline": 0.0,
-    "zero": -0.463254451751709,
-    "batch_shuffle": -0.15985774993896484,
-    "head_mask_control": -0.5074424743652344
+    "zero": 0.0005385167896747589,
+    "batch_shuffle": 0.059792034327983856,
+    "head_mask_control": 0.03159294277429581
   },
   "unresolved_items": [
     "This is one real RoboCasa batch forward smoke with checkpoint weights, not environment rollout.",

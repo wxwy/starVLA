@@ -8,6 +8,9 @@ from typing import Any
 
 from starVLA.dataloader.mowa.schema import DATA_GATE
 from starVLA.mowa_constants import (
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
     MOWA_P0_CONSTRUCTIBLE_HEADS,
     MOWA_P0_FULL_HEADS,
     MOWA_P0_MASKED_HEADS,
@@ -64,7 +67,7 @@ def build_mowa_p0_constructible_label_smoke(
     """Build smoke-only P0 labels for currently constructible heads.
 
     该函数只读取 parquet 标量字段，输出 dry-run targets/masks。
-    它不定义 production 阈值，不冻结 action outcome class mapping，
+    它不定义 production 阈值，
     不启动训练，也不把任何标签放入 WAM inputs。
     """
 
@@ -84,7 +87,7 @@ def build_mowa_p0_constructible_label_smoke(
         notes=(
             "Smoke-only labels are targets, not WAM inputs.",
             "task_progress is normalized by episode row count for dry-run only.",
-            "action_outcome_class keeps raw next.reward/next.done; class mapping remains Data Gate.",
+            "action_outcome_class uses the frozen E-001 mapping [next_reward, next_done_flag].",
             "Non-constructible P0 heads stay masked.",
         ),
     )
@@ -149,7 +152,9 @@ def _build_episode_samples(
                     "action_outcome_class": {
                         "next_reward": float(reward),
                         "next_done": bool(done),
-                        "class_mapping_status": DATA_GATE,
+                        "class_mapping_status": MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+                        "class_mapping_version": MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
+                        "class_mapping_note": MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
                     },
                 },
                 masks=masks,
@@ -159,7 +164,7 @@ def _build_episode_samples(
                 },
                 data_gate={
                     "thresholds": DATA_GATE,
-                    "class_mapping": DATA_GATE,
+                    "class_mapping": MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
                     "window": DATA_GATE,
                 },
             )

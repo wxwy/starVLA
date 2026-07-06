@@ -27,7 +27,7 @@ training:
   lr: 0.001
   max_samples: 30
 data_gate:
-  class_mapping: Data Gate
+  class_mapping: confirmed_for_e001_initial_target
   wam_hz: Data Gate
   history_window: Data Gate
   future_window: Data Gate

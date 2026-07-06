@@ -52,6 +52,9 @@ from starVLA.dataloader.gr00t_lerobot.schema import (
 from starVLA.dataloader.gr00t_lerobot.transform import ComposedModalityTransform
 from starVLA.dataloader.gr00t_lerobot.transform.state_action import StateActionTransform
 from starVLA.mowa_constants import (
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
     MOWA_P0_CONSTRUCTIBLE_HEADS,
     MOWA_P0_FULL_HEADS,
 )
@@ -118,7 +121,9 @@ def _attach_mowa_p0_labels(sample: dict, dataset, trajectory_id: int, base_index
         "constructible_heads": list(MOWA_P0_CONSTRUCTIBLE_HEADS),
         "masked_heads": [head for head in MOWA_P0_FULL_HEADS if not masks[head]],
         "label_status": "constructible_from_parquet_fields",
-        "class_mapping_status": "Data Gate",
+        "class_mapping_status": MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+        "class_mapping_version": MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
+        "class_mapping_note": MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
     }
     return sample
 

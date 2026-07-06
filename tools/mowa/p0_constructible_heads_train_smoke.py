@@ -79,7 +79,11 @@ def main() -> None:
             key: float(value.detach().cpu()) for key, value in losses_after.items()
         },
         "class_mapping_status": batch["metadata"]["class_mapping_status"],
-        "go_no_go": "TBD: train smoke passed; production training remains Data Gate",
+        "class_mapping_version": batch["metadata"].get("class_mapping_version"),
+        "go_no_go": (
+            "TBD: train smoke passed; class mapping is frozen for E-001 "
+            "while broader production training remains gated"
+        ),
         "notes": [
             "One optimizer step only; this is not E-001 training.",
             "Features are smoke-only values derived from G0 labels.",

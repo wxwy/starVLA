@@ -379,7 +379,7 @@ class Qwen_PI_v3(baseframework):
             getattr(
                 mowa_cfg,
                 "enable_future_supervision_loss",
-                getattr(mowa_cfg, "enable_future_supervision_loss", False),
+                getattr(mowa_cfg, "enable_p0_supervision_loss", False),
             )
         )
         self.mowa_future_supervision_probe = None
@@ -388,7 +388,7 @@ class Qwen_PI_v3(baseframework):
             getattr(
                 mowa_cfg,
                 "future_supervision_active_heads",
-                getattr(mowa_cfg, "future_supervision_active_heads", MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
+                getattr(mowa_cfg, "p0_supervision_active_heads", MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
             )
         )
         if not self.mowa_future_supervision_loss_enabled:
@@ -398,14 +398,14 @@ class Qwen_PI_v3(baseframework):
             getattr(
                 mowa_cfg,
                 "future_supervision_hidden_dim",
-                getattr(mowa_cfg, "future_supervision_hidden_dim", 32),
+                getattr(mowa_cfg, "p0_supervision_hidden_dim", 32),
             )
         )
         action_outcome_loss_type = str(
             getattr(
                 mowa_cfg,
                 "future_supervision_action_outcome_loss_type",
-                getattr(mowa_cfg, "future_supervision_action_outcome_loss_type", "mse"),
+                getattr(mowa_cfg, "p0_supervision_action_outcome_loss_type", "mse"),
             )
         )
         self.mowa_future_supervision_probe = self._build_mowa_future_head_module(
@@ -449,15 +449,20 @@ class Qwen_PI_v3(baseframework):
 
     @staticmethod
     def _rewrite_mowa_checkpoint_state_dict_keys_for_compatibility(state_dict) -> None:
-        legacy_prefix = "mowa_layerwise_bridge_future_heads."
         future_prefix = "mowa_layerwise_bridge_future_feature_heads."
+        legacy_prefixes = (
+            "mowa_layerwise_bridge_future_heads.",
+            "mowa_layerwise_bridge_p0_heads.",
+        )
         for key in list(state_dict.keys()):
-            if not key.startswith(legacy_prefix):
-                continue
-            future_key = key.replace(legacy_prefix, future_prefix, 1)
-            if future_key in state_dict:
-                continue
-            state_dict[future_key] = state_dict.pop(key)
+            for legacy_prefix in legacy_prefixes:
+                if not key.startswith(legacy_prefix):
+                    continue
+                future_key = key.replace(legacy_prefix, future_prefix, 1)
+                if future_key not in state_dict:
+                    state_dict[future_key] = state_dict[key]
+                state_dict.pop(key, None)
+                break
 
     def _load_from_state_dict(
         self,

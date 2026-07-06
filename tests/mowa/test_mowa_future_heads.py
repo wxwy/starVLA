@@ -437,8 +437,8 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "06_data_gate_report.md",
                 "07_implementation_log.md",
                 "08_starvla_data_benchmark_support_matrix.md",
-                "09_p0_label_builder_design.md",
-                "10_p1_latent_cache_manifest_design.md",
+                "09_future_label_builder_design.md",
+                "10_future_latent_cache_manifest_design.md",
             ):
                 (docs_root / name).write_text("# placeholder\n", encoding="utf-8")
 
@@ -461,6 +461,80 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 item.startswith("core SOT docs missing=")
                 for item in report["unresolved_items"]
             )
+        )
+        self.assertEqual(report["legacy_fallback_reports"], {})
+        self.assertEqual(report["sot"]["legacy_fallback_derived_design_docs"], {})
+
+    def test_e001_readiness_prefers_new_named_artifacts_without_legacy_fallback(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            docs_root = root / "docs_zh" / "mowa"
+            docs_root.mkdir(parents=True)
+            for name in (
+                "00_project_proposal.md",
+                "01_technical_survey.md",
+                "02_detailed_design.md",
+                "03_agent_implementation_plan.md",
+                "04_task_breakdown.md",
+                "05_experiment_registry.md",
+                "06_data_gate_report.md",
+                "07_implementation_log.md",
+                "08_starvla_data_benchmark_support_matrix.md",
+                "09_future_label_builder_design.md",
+                "10_future_latent_cache_manifest_design.md",
+            ):
+                (docs_root / name).write_text("# placeholder\n", encoding="utf-8")
+            (docs_root / "mowa_g0_robocasa365_atomic_core_recipe_smoke.json").write_text(
+                json.dumps({"available_task_count": 10, "missing_task_count": 0}),
+                encoding="utf-8",
+            )
+            (docs_root / "mowa_full_heads_constructible_train_smoke.json").write_text(
+                json.dumps(
+                    {
+                        "go_no_go": "TBD: train smoke passed",
+                        "loss_before": 1.0,
+                        "loss_after": 0.5,
+                        "class_mapping_status": "Frozen",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            atomic_root = docs_root / "g0_atomic_core_smoke"
+            atomic_root.mkdir()
+            payload = {
+                "split_status": "smoke_passed",
+                "worker_status": "smoke_passed",
+                "distributed_sampler_status": "smoke_passed",
+                "future_action_leakage_status": "smoke_passed",
+                "failed_sample_count": 0,
+                "window_config": {
+                    "history_steps": 4,
+                    "future_steps": 1,
+                    "action_chunk_steps": 10,
+                },
+            }
+            (atomic_root / "mowa_g0_atomic_core_production_preflight_smoke.json").write_text(
+                json.dumps(payload),
+                encoding="utf-8",
+            )
+            (atomic_root / "mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json").write_text(
+                json.dumps(payload),
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e001_readiness_smoke import build_e001_readiness_report
+
+            report = build_e001_readiness_report(root)
+
+        self.assertEqual(report["legacy_fallback_reports"], {})
+        self.assertEqual(
+            report["resolved_reports"]["full_heads_constructible_train_smoke"],
+            "docs_zh/mowa/mowa_full_heads_constructible_train_smoke.json",
+        )
+        self.assertEqual(report["sot"]["legacy_fallback_derived_design_docs"], {})
+        self.assertEqual(
+            report["sot"]["resolved_derived_design_docs"]["09_future_label_builder_design.md"],
+            "09_future_label_builder_design.md",
         )
 
     def test_e006_coupling_intervention_smoke_runs_without_training(self):
@@ -2559,6 +2633,47 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         )
         self.assertEqual(probe_owner.mowa_future_supervision_probe.config.hidden_dim, 6)
 
+    def test_qwenoft_mowa_future_supervision_accepts_legacy_p0_probe_fields(self):
+        try:
+            import torch.nn as nn
+            from omegaconf import OmegaConf
+        except ImportError:
+            self.skipTest("torch or omegaconf is not available")
+
+        from starVLA.model.framework.VLM4A.QwenOFT import Qwenvl_OFT
+
+        cfg = OmegaConf.create(
+            {
+                "framework": {
+                    "action_model": {"action_hidden_dim": 8},
+                    "mowa": {
+                        "enable_p0_supervision_probe": True,
+                        "p0_supervision_hidden_dim": 5,
+                        "p0_supervision_active_heads": [
+                            "task_progress",
+                            "action_outcome_class",
+                        ],
+                        "p0_supervision_action_outcome_loss_type": "cross_entropy_done",
+                    },
+                }
+            }
+        )
+        probe_owner = object.__new__(Qwenvl_OFT)
+        nn.Module.__init__(probe_owner)
+        probe_owner.config = cfg
+        probe_owner._setup_mowa_future_supervision_probe()
+
+        self.assertTrue(probe_owner.mowa_future_supervision_probe_enabled)
+        self.assertEqual(
+            probe_owner.mowa_future_supervision_active_heads,
+            ("task_progress", "action_outcome_class"),
+        )
+        self.assertEqual(probe_owner.mowa_future_supervision_probe.config.hidden_dim, 5)
+        self.assertEqual(
+            probe_owner.mowa_future_supervision_probe.config.action_outcome_loss_type,
+            "cross_entropy_done",
+        )
+
     def test_qwenoft_mowa_future_supervision_accepts_action_outcome_loss_type(self):
         try:
             import torch.nn as nn
@@ -2876,6 +2991,14 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertEqual(missing_keys, [])
         self.assertEqual(unexpected_keys, [])
 
+        missing_keys, unexpected_keys = _filter_strict_key_mismatches(
+            {"mowa_layerwise_bridge_future_feature_heads.trunk.0.weight"},
+            {"mowa_layerwise_bridge_p0_heads.trunk.0.weight"},
+        )
+
+        self.assertEqual(missing_keys, [])
+        self.assertEqual(unexpected_keys, [])
+
     def test_qwenpi_rewrites_legacy_mowa_checkpoint_keys_for_compatibility(self):
         from starVLA.model.framework.VLM4A.QwenPI_v3 import Qwen_PI_v3
 
@@ -2887,6 +3010,26 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         Qwen_PI_v3._rewrite_mowa_checkpoint_state_dict_keys_for_compatibility(state_dict)
 
         self.assertNotIn("mowa_layerwise_bridge_future_heads.trunk.0.weight", state_dict)
+        self.assertEqual(
+            state_dict["mowa_layerwise_bridge_future_feature_heads.trunk.0.weight"],
+            "legacy_weight",
+        )
+        self.assertEqual(
+            state_dict["mowa_layerwise_bridge_future_feature_heads.trunk.0.bias"],
+            "legacy_bias",
+        )
+
+    def test_qwenpi_rewrites_older_p0_mowa_checkpoint_keys_for_compatibility(self):
+        from starVLA.model.framework.VLM4A.QwenPI_v3 import Qwen_PI_v3
+
+        state_dict = {
+            "mowa_layerwise_bridge_p0_heads.trunk.0.weight": "legacy_weight",
+            "mowa_layerwise_bridge_p0_heads.trunk.0.bias": "legacy_bias",
+        }
+
+        Qwen_PI_v3._rewrite_mowa_checkpoint_state_dict_keys_for_compatibility(state_dict)
+
+        self.assertNotIn("mowa_layerwise_bridge_p0_heads.trunk.0.weight", state_dict)
         self.assertEqual(
             state_dict["mowa_layerwise_bridge_future_feature_heads.trunk.0.weight"],
             "legacy_weight",

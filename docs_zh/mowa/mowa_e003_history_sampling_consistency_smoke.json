@@ -1,5 +1,5 @@
 {
-  "stage": "P1",
+  "stage": "future_latent_prior",
   "experiment_id": "E-003",
   "training_started": false,
   "checks": {

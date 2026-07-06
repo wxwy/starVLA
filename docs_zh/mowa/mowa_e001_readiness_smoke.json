@@ -7,12 +7,19 @@
     "recipe": "docs_zh/mowa/mowa_g0_robocasa365_atomic_core_recipe_smoke.json",
     "production_preflight": "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json",
     "production_window_preflight": "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json",
-    "p0_constructible_heads_train_smoke": "docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json"
+    "full_heads_constructible_train_smoke": "docs_zh/mowa/mowa_full_heads_constructible_train_smoke.json"
   },
+  "resolved_reports": {
+    "recipe": "docs_zh/mowa/mowa_g0_robocasa365_atomic_core_recipe_smoke.json",
+    "production_preflight": "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json",
+    "production_window_preflight": "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json",
+    "full_heads_constructible_train_smoke": "docs_zh/mowa/mowa_full_heads_constructible_train_smoke.json"
+  },
+  "legacy_fallback_reports": {},
   "checks": {
     "recipe_available": true,
     "production_preflight_passed": true,
-    "p0_constructible_heads_one_step_smoke_passed": true,
+    "full_heads_constructible_one_step_smoke_passed": true,
     "production_window_5hz_preflight_passed": true,
     "full_heads_interface_created": true,
     "e001_launch_draft_created": true,
@@ -56,8 +63,8 @@
       "06_data_gate_report.md",
       "07_implementation_log.md",
       "08_starvla_data_benchmark_support_matrix.md",
-      "09_p0_label_builder_design.md",
-      "10_p1_latent_cache_manifest_design.md"
+      "09_future_label_builder_design.md",
+      "10_future_latent_cache_manifest_design.md"
     ],
     "available_derived_design_docs": [
       "03_agent_implementation_plan.md",
@@ -66,10 +73,21 @@
       "06_data_gate_report.md",
       "07_implementation_log.md",
       "08_starvla_data_benchmark_support_matrix.md",
-      "09_p0_label_builder_design.md",
-      "10_p1_latent_cache_manifest_design.md"
+      "09_future_label_builder_design.md",
+      "10_future_latent_cache_manifest_design.md"
     ],
     "missing_derived_design_docs": [],
+    "resolved_derived_design_docs": {
+      "03_agent_implementation_plan.md": "03_agent_implementation_plan.md",
+      "04_task_breakdown.md": "04_task_breakdown.md",
+      "05_experiment_registry.md": "05_experiment_registry.md",
+      "06_data_gate_report.md": "06_data_gate_report.md",
+      "07_implementation_log.md": "07_implementation_log.md",
+      "08_starvla_data_benchmark_support_matrix.md": "08_starvla_data_benchmark_support_matrix.md",
+      "09_future_label_builder_design.md": "09_future_label_builder_design.md",
+      "10_future_latent_cache_manifest_design.md": "10_future_latent_cache_manifest_design.md"
+    },
+    "legacy_fallback_derived_design_docs": {},
     "status": "available",
     "note": "Core SOT docs are available; treat them as the source of truth for governance and readiness."
   },
@@ -89,7 +107,7 @@
     "future_steps": 5,
     "action_chunk_steps": 10,
     "production_window_preflight_report": "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json",
-    "p0_constructible_heads_smoke_sample_count": 30,
+    "full_heads_constructible_smoke_sample_count": 30,
     "loss_before": 0.024293631315231323,
     "loss_after": 0.024045661091804504,
     "class_mapping_status": "confirmed_for_e001_initial_target",

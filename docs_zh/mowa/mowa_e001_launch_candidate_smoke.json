@@ -6,7 +6,7 @@
   "checks": {
     "launch_candidate_config_created": true,
     "command_candidate_config_created": true,
-    "runtime_sweep_bs4_report_created": true,
+    "runtime_sweep_bs4_report_created": false,
     "candidate_has_launch_guard": true,
     "candidate_launch_state_consistent": true,
     "command_has_launch_guard": true,
@@ -21,11 +21,11 @@
     "candidate_grad_accum_1": true,
     "candidate_max_steps_1000": true,
     "candidate_save_interval_1000": true,
-    "candidate_wandb_disabled": true,
+    "candidate_wandb_mode_disabled": true,
     "candidate_checkpoint_root_mowa_ckpt": true,
     "runtime_policy_state_matches_candidate": true,
     "final_parameter_alignment_passed": true,
-    "runtime_sweep_bs4_passed": true
+    "runtime_sweep_bs4_passed": false
   },
   "configs": {
     "launch_candidate": "configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml",
@@ -88,9 +88,9 @@
         "candidate": true,
         "command_candidate": true
       },
-      "disable_wandb": {
-        "candidate": true,
-        "command_candidate": true
+      "wandb_mode": {
+        "candidate": "disabled_for_initial_training",
+        "command_candidate": "disabled_for_initial_training"
       },
       "logging_frequency": {
         "candidate": 10,
@@ -106,7 +106,7 @@
       "run_root_dir": true,
       "checkpoint_format": true,
       "save_checkpoint_as_directory": true,
-      "disable_wandb": true,
+      "wandb_mode": true,
       "logging_frequency": true
     },
     "runtime_policy_traceability": {
@@ -150,9 +150,9 @@
         "runtime_policy": true,
         "match": true
       },
-      "disable_wandb": {
-        "candidate": true,
-        "runtime_policy": true,
+      "wandb_mode": {
+        "candidate": "disabled_for_initial_training",
+        "runtime_policy": "disabled_for_initial_training",
         "match": true
       },
       "logging_frequency": {
@@ -170,7 +170,7 @@
       "run_root_dir": true,
       "checkpoint_format": true,
       "save_checkpoint_as_directory": true,
-      "disable_wandb": true,
+      "wandb_mode": true,
       "logging_frequency": true
     },
     "mismatched_fields": [],
@@ -182,5 +182,5 @@
     "launch_ready is true; keep checkpoint/save-resume evidence aligned with the approved config.",
     "E-006 action-gain rollout evidence remains pending."
   ],
-  "go_no_go": "TBD: launch candidate is wired and launch-approved"
+  "go_no_go": "No-Go: launch candidate wiring incomplete"
 }

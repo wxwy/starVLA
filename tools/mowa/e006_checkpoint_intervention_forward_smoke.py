@@ -147,8 +147,8 @@ def build_command(
         str(checkpoint),
         "--trainer.full_path_dry_run_report",
         str(report_path),
-        "--trainer.disable_wandb",
-        "true",
+        "--wandb_mode",
+        "disabled_for_initial_training",
     ]
 
 

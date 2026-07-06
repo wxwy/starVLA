@@ -121,9 +121,9 @@
       "baseline": 1,
       "mowa": 1
     },
-    "trainer.disable_wandb": {
-      "baseline": true,
-      "mowa": true
+    "wandb_mode": {
+      "baseline": "disabled_for_initial_training",
+      "mowa": "disabled_for_initial_training"
     },
     "trainer.save_interval": {
       "baseline": 1000,
@@ -155,7 +155,7 @@
     "datasets.vla_data.per_device_batch_size": true,
     "trainer.max_train_steps": true,
     "trainer.gradient_accumulation_steps": true,
-    "trainer.disable_wandb": true,
+    "wandb_mode": true,
     "trainer.save_interval": true
   },
   "runtime_symmetry": {

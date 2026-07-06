@@ -11,6 +11,7 @@ experiment_id: E-001
 seed: 42
 wandb_entity: your_wandb_entity
 wandb_project: mowa
+wandb_mode: disabled_for_initial_training
 is_debug: false
 version_id: "0.21"
 
@@ -76,7 +77,6 @@ datasets:
     enable_mowa_future_labels: true
 
 trainer:
-  disable_wandb: true
   enable_mowa_future_supervision_loss: true
   max_train_steps: 1000
   num_warmup_steps: 0

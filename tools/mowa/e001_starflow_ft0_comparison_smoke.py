@@ -42,7 +42,7 @@ INVARIANT_PATHS = (
     "datasets.vla_data.per_device_batch_size",
     "trainer.max_train_steps",
     "trainer.gradient_accumulation_steps",
-    "trainer.disable_wandb",
+    "wandb_mode",
     "trainer.save_interval",
 )
 ALLOWED_RUNTIME_DIFFERENCE_PATHS = (

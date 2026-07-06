@@ -152,8 +152,8 @@ def _run_training_command(root: Path, run_id: str, *, max_train_steps: int, is_r
         "1",
         "--trainer.eval_interval",
         "1000000",
-        "--trainer.disable_wandb",
-        "true",
+        "--wandb_mode",
+        "disabled_for_initial_training",
         "--trainer.is_resume",
         "true" if is_resume else "false",
     ]

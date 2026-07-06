@@ -47,7 +47,6 @@ from accelerate.logging import get_logger
 from accelerate.utils import (
     DeepSpeedSchedulerWrapper,
     DistributedType,
-    GradientAccumulationPlugin,
     MODEL_NAME,
     RNG_STATE_NAME,
     SAMPLER_NAME,
@@ -90,16 +89,7 @@ _use_accelerate_deepspeed = (
     os.environ.get("ACCELERATE_USE_DEEPSPEED", "").lower() in ("true", "1")
     or os.environ.get("ACCELERATE_DEEPSPEED_CONFIG_FILE", "") != ""
 )
-deepspeed_plugin = DeepSpeedPlugin() if (_num_processes > 1 and not _use_accelerate_deepspeed) else None
-gradient_accumulation_plugin = GradientAccumulationPlugin(
-    num_steps=int(os.environ.get("ACCELERATE_GRADIENT_ACCUMULATION_STEPS", "1")),
-    sync_each_batch=True,
-)
-accelerator = Accelerator(
-    deepspeed_plugin=deepspeed_plugin,
-    gradient_accumulation_plugin=gradient_accumulation_plugin,
-)
-accelerator.print(accelerator.state)
+accelerator = None
 
 STARTUP_CHECKPOINT_STAGE_THREAD = None
 STARTUP_CHECKPOINT_STAGE_ERROR = None
@@ -118,6 +108,18 @@ def _get_config_path(cfg, path, default=None):
         except AttributeError:
             return default
     return current
+
+
+def _resolve_wandb_mode(cfg) -> str:
+    wandb_mode = getattr(cfg, "wandb_mode", None)
+    if wandb_mode is not None:
+        return str(wandb_mode).strip().lower()
+    return "online"
+
+
+def _wandb_mode_disables_logging(cfg) -> bool:
+    mode = _resolve_wandb_mode(cfg)
+    return mode == "offline" or mode.startswith("disabled")
 
 
 def _touch_training_audit_config(cfg) -> None:
@@ -166,6 +168,15 @@ def _enforce_launch_guard(cfg, *, full_path_dry_run_only: bool) -> None:
         f"human_confirmed={human_confirmed}. "
         "Set launch_ready=true, policy_confirmed=true, and, when "
         "requires_human_confirmation=true, human_confirmed=true only after explicit approval."
+    )
+
+
+def _build_accelerator(cfg):
+    deepspeed_plugin = DeepSpeedPlugin() if (_num_processes > 1 and not _use_accelerate_deepspeed) else None
+    gradient_accumulation_steps = int(getattr(cfg.trainer, "gradient_accumulation_steps", 1))
+    return Accelerator(
+        deepspeed_plugin=deepspeed_plugin,
+        gradient_accumulation_steps=gradient_accumulation_steps,
     )
 
 # Initialize logger
@@ -1277,8 +1288,8 @@ class VLATrainer(TrainerUtils):
 
     def _init_wandb(self):
         """Initialize Weights & Biases."""
-        if bool(getattr(self.config.trainer, "disable_wandb", False)):
-            logger.info("W&B disabled by trainer.disable_wandb.")
+        if _wandb_mode_disables_logging(self.config):
+            logger.info("W&B disabled by wandb_mode.")
             return
         if self.accelerator.is_main_process:
             raw_wandb_run_id = getattr(self.config, "wandb_run_id", None) or self.config.run_id
@@ -1715,7 +1726,7 @@ class VLATrainer(TrainerUtils):
                 self.completed_steps * self.accelerator.gradient_accumulation_steps / len(self.vla_train_dataloader),
                 2,
             )
-            if not bool(getattr(self.config.trainer, "disable_wandb", False)):
+            if not _wandb_mode_disables_logging(self.config):
                 wandb.log(metrics, step=self.completed_steps)
             logger.info(f"Step {self.completed_steps}, Loss: {metrics})")
             self._write_runtime_metrics(metrics)
@@ -1981,7 +1992,7 @@ class VLATrainer(TrainerUtils):
             logger.info(f"Training complete. Final model saved at {final_checkpoint}")
             self._enqueue_checkpoint_sync(final_checkpoint)
 
-        if self.accelerator.is_main_process and not bool(getattr(self.config.trainer, "disable_wandb", False)):
+        if self.accelerator.is_main_process and not _wandb_mode_disables_logging(self.config):
             wandb.finish()
 
         self.accelerator.wait_for_everyone()
@@ -2340,6 +2351,10 @@ for raw_path in sys.argv[1:]:
 
 
 def main(cfg) -> None:
+    global accelerator
+    accelerator = _build_accelerator(cfg)
+    accelerator.print(accelerator.state)
+
     logger.info("VLA Training :: Warming Up")
 
     cfg = wrap_config(cfg)

@@ -64,7 +64,6 @@ logging:
   wandb_mode: disabled_for_initial_training
   wandb_project: mowa
   logging_frequency: 10
-  disable_wandb: true
 
 launch_requirements:
   require_recipe_available: true

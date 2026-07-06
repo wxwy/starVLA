@@ -1,5 +1,5 @@
 {
-  "stage": "P0",
+  "stage": "full_heads",
   "experiment_id": "E-001",
   "training_started": false,
   "launch_ready": true,
@@ -25,7 +25,7 @@
     "launch_draft_reason_current": true,
     "launch_blocker_mentions_action_gain_not_feature_source": true,
     "a100_smoke_no_longer_waiting_for_a100": true,
-    "a100_throughput_report_created": true,
+    "a100_throughput_report_created": false,
     "readiness_training_not_started": true,
     "readiness_launch_candidate_smoke_passed": true,
     "readiness_starflow_comparison_smoke_passed": true
@@ -47,7 +47,7 @@
     "executable training command candidate and launch candidate must remain synchronized with runtime policy",
     "action-gain evidence remains unvalidated"
   ],
-  "go_no_go": "TBD: launch draft records approved bounded E-001 state; full-scale claims remain gated",
+  "go_no_go": "No-Go: launch draft prerequisites incomplete",
   "notes": [
     "This smoke does not start training.",
     "Training command draft remains dry-run-only; command candidate records the currently approved bounded launch state."

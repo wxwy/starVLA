@@ -382,7 +382,11 @@ class Qwenvl_OFT(baseframework):
     def _setup_mowa_future_supervision_probe(self) -> None:
         mowa_cfg = getattr(self.config.framework, "mowa", None)
         self.mowa_future_supervision_probe_enabled = bool(
-            getattr(mowa_cfg, "enable_future_supervision_probe", False)
+            getattr(
+                mowa_cfg,
+                "enable_future_supervision_probe",
+                getattr(mowa_cfg, "enable_p0_supervision_probe", False),
+            )
         )
         self.mowa_future_supervision_probe = None
         self.mowa_future_supervision_active_heads = tuple(
@@ -391,7 +395,7 @@ class Qwenvl_OFT(baseframework):
                 "future_supervision_active_heads",
                 getattr(
                     mowa_cfg,
-                    "future_supervision_active_heads",
+                    "p0_supervision_active_heads",
                     MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
                 ),
             )
@@ -404,14 +408,14 @@ class Qwenvl_OFT(baseframework):
             getattr(
                 mowa_cfg,
                 "future_supervision_hidden_dim",
-                getattr(mowa_cfg, "future_supervision_hidden_dim", 32),
+                getattr(mowa_cfg, "p0_supervision_hidden_dim", 32),
             )
         )
         action_outcome_loss_type = str(
             getattr(
                 mowa_cfg,
                 "future_supervision_action_outcome_loss_type",
-                getattr(mowa_cfg, "future_supervision_action_outcome_loss_type", "mse"),
+                getattr(mowa_cfg, "p0_supervision_action_outcome_loss_type", "mse"),
             )
         )
         self.mowa_future_supervision_probe = MoWAFutureFeatureHeads(

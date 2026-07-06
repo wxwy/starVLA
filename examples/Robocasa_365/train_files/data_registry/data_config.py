@@ -62,7 +62,7 @@ class PandaOmronRoboCasa365DataConfig:
     language_keys = ["annotation.human.task_description"]
 
     observation_indices = [0]
-    action_indices = list(range(16))
+    action_indices = list(range(8))
 
     def modality_config(self):
         return {

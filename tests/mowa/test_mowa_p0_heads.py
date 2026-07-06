@@ -508,7 +508,7 @@ class MoWAP0HeadsTest(unittest.TestCase):
                     "  human_confirmed: true\n"
                     "  training_completed_1000_steps: true\n"
                     "  reason: short smoke training (1000 steps, bs4) completed; long-training resource policy, "
-                    "core SOT, class mapping, and action-gain evidence remain unconfirmed for full-scale training\n"
+                    "core SOT, and action-gain evidence remain unconfirmed for full-scale training\n"
                     "launch_blockers:\n"
                     "  - StarFlow ft0 baseline/MoWA launch candidates are aligned and gated, "
                     "but action-gain evidence is not validated\n"
@@ -3029,6 +3029,17 @@ class MoWAP0HeadsTest(unittest.TestCase):
             (root / "docs_zh" / "mowa").mkdir(parents=True)
             checkpoint.mkdir(parents=True)
             final_model.mkdir(parents=True)
+            baseline_checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_starflow_ft0_baseline_bs4_candidate"
+                / "checkpoints"
+                / "steps_1000"
+            )
+            baseline_final_model = baseline_checkpoint.parents[1] / "final_model"
+            baseline_checkpoint.mkdir(parents=True)
+            baseline_final_model.mkdir(parents=True)
             (root / "configs" / "mowa" / "mowa_e006_eval_load_smoke.yaml").write_text(
                 "checkpoint:\n  checkpoint_root_policy: playground/mowa_ckpt\n",
                 encoding="utf-8",
@@ -3043,15 +3054,24 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 "starflow_mapping.json",
             ):
                 (checkpoint / name).write_text("{}", encoding="utf-8")
+                (baseline_checkpoint / name).write_text("{}", encoding="utf-8")
             (checkpoint / "trainer_state.json").write_text(
                 json.dumps({"completed_steps": 1000}),
                 encoding="utf-8",
             )
+            (baseline_checkpoint / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 1000}),
+                encoding="utf-8",
+            )
             (checkpoint / "model-00001.safetensors").write_bytes(b"placeholder")
+            (baseline_checkpoint / "model-00001.safetensors").write_bytes(b"placeholder")
             (root / "docs_zh" / "mowa" / "mowa_e006_checkpoint_intervention_forward_smoke.json").write_text(
                 json.dumps(
                     {
-                        "checkpoint": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+                        "checkpoint": (
+                            "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate"
+                            "/checkpoints/steps_1000"
+                        ),
                         "checks": {"checkpoint_exists": True},
                         "interventions": [
                             "baseline",
@@ -3092,7 +3112,6 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-
             from tools.mowa.e001_steps_1000_offline_diagnostic import (
                 build_e001_steps_1000_offline_diagnostic,
             )
@@ -3101,6 +3120,9 @@ class MoWAP0HeadsTest(unittest.TestCase):
                 root,
                 checkpoint=Path(
                     "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000"
+                ),
+                baseline_checkpoint=Path(
+                    "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_baseline_bs4_candidate/checkpoints/steps_1000"
                 ),
                 batch_size=2,
                 execute_forward_smoke=False,

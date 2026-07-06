@@ -26,8 +26,8 @@ framework:
     action_model_type: LayerwiseFM
     action_dim: 12
     state_dim: 16
-    action_horizon: 16
-    future_action_window_size: 15
+    action_horizon: 8
+    future_action_window_size: 7
     past_action_window_size: 0
     repeated_diffusion_steps: 1
     num_inference_timesteps: 4

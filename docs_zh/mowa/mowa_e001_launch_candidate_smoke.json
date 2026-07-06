@@ -1,5 +1,5 @@
 {
-  "stage": "P0",
+  "stage": "full_heads",
   "experiment_id": "E-001",
   "training_started": false,
   "launch_ready": true,

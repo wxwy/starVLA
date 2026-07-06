@@ -20,7 +20,7 @@ M4：P1-b1 HLC-GCI robot-history-conditioned latent WAM。
 ## 允许修改文件
 
 - `starVLA/model/modules/mowa/`
-- `configs/mowa/mowa_p1_b1_hlc_gci.yaml`
+- `configs/mowa/mowa_hlc_gci_interface.yaml`
 - `tests/mowa/`
 - `docs_zh/mowa/07_implementation_log.md`
 

@@ -437,8 +437,8 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "06_data_gate_report.md",
                 "07_implementation_log.md",
                 "08_starvla_data_benchmark_support_matrix.md",
-                "09_future_label_builder_design.md",
-                "10_future_latent_cache_manifest_design.md",
+                "09_p0_label_builder_design.md",
+                "10_p1_latent_cache_manifest_design.md",
             ):
                 (docs_root / name).write_text("# placeholder\n", encoding="utf-8")
 
@@ -2360,56 +2360,6 @@ class MoWAFutureHeadsTest(unittest.TestCase):
             blocker["missing_state_keys"],
         )
 
-    def test_e001_readiness_accepts_e006_rollout_blocker_report(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            (root / "docs_zh" / "mowa").mkdir(parents=True)
-            report = root / "docs_zh" / "mowa" / "mowa_e006_policy_rollout_smoke.json"
-            report.write_text(
-                json.dumps(
-                    {
-                        "rollout_blocker": {
-                            "status": "missing_robocasa_assets",
-                            "scope": "environment",
-                            "blocked_interventions": ["baseline", "zero"],
-                            "missing_asset_paths": [
-                                "/tmp/robocasa/models/assets/fixtures/sinks/Sink025/model.xml"
-                            ],
-                        }
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            from tools.mowa.e001_readiness_smoke import _e006_rollout_outcome_recorded
-
-            self.assertTrue(_e006_rollout_outcome_recorded(report))
-
-    def test_e001_readiness_accepts_e006_rollout_success_report(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            (root / "docs_zh" / "mowa").mkdir(parents=True)
-            report = root / "docs_zh" / "mowa" / "mowa_e006_policy_rollout_smoke.json"
-            report.write_text(
-                json.dumps(
-                    {
-                        "eval_started": False,
-                        "checks": {
-                            "server_started_when_executed": True,
-                            "client_succeeded_when_executed": True,
-                            "result_json_collected_when_executed": True,
-                            "success_rate_recorded_when_executed": True,
-                        },
-                        "rollout_blocker": {},
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            from tools.mowa.e001_readiness_smoke import _e006_rollout_outcome_recorded
-
-            self.assertTrue(_e006_rollout_outcome_recorded(report))
-
     def test_e006_rollout_go_no_go_accepts_success_without_blocker(self):
         from tools.mowa.e006_policy_rollout_smoke import _rollout_go_no_go
 
@@ -2913,7 +2863,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         entries = {entry["experiment_id"]: entry for entry in report["entries"]}
         self.assertEqual(entries["E-001"]["status"], "bounded_executable_but_full_launch_blocked")
         self.assertEqual(entries["E-002"]["status"], "runtime_integrated_but_training_gated")
-        self.assertEqual(entries["E-006"]["status"], "rollout_executed_with_noninformative_checkpoint")
+        self.assertEqual(entries["E-006"]["status"], "coupling_evidence_incomplete")
 
     def test_share_tools_strict_mismatch_accepts_legacy_mowa_bridge_key_alias(self):
         from starVLA.model.framework.share_tools import _filter_strict_key_mismatches

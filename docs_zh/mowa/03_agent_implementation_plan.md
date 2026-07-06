@@ -36,7 +36,7 @@
 |---|---|
 | 阶段目标 | 设计并实现 P0FullHeads 与可选 P0GatedHeads 接口，建立 P0 label coverage report 和 action bridge 输入。 |
 | 输入文档 | `02_detailed_design.md` 第 5、8、10、11 章，M1 G0 输出。 |
-| 允许修改范围 | `starVLA/model/modules/mowa/`、`configs/mowa/mowa_p0_fullheads.yaml`、`tests/mowa/`、P0 文档与日志。 |
+| 允许修改范围 | `starVLA/model/modules/mowa/`、`configs/mowa/mowa_full_heads_interface.yaml`、`tests/mowa/`、P0 文档与日志。 |
 | 禁止修改范围 | P1 latent 模型；P2 decoder；LayerwiseFM 内部主逻辑；新增 P0 head。 |
 | 输出文件 | P0FullHeads skeleton、P0 label report、可选 P0GatedHeads 计划。 |
 | 测试命令 | `pytest tests/mowa -q`；P0 smoke train/eval 命令由实现阶段补充。 |
@@ -50,7 +50,7 @@
 |---|---|
 | 阶段目标 | 设计 Wan latent cache builder 与 P1-b0 latent future prior 接口，不默认解码像素。 |
 | 输入文档 | `02_detailed_design.md` 第 6、8、9、10、11 章，G0 latent cache smoke。 |
-| 允许修改范围 | `tools/mowa/`、`starVLA/model/modules/mowa/`、`configs/mowa/mowa_p1_b0_*.yaml`、`tests/mowa/`。 |
+| 允许修改范围 | `tools/mowa/`、`starVLA/model/modules/mowa/`、`configs/mowa/mowa_latent_cache_builder_design.yaml`、`configs/mowa/mowa_future_latent_prior_interface.yaml`、`tests/mowa/`。 |
 | 禁止修改范围 | P1-b1 HLC-GCI 训练主逻辑；P2 continuous video；Wan DiT full fine-tune 默认路线。 |
 | 输出文件 | latent cache design、P1-b0 interface、cache smoke report。 |
 | 测试命令 | latent cache smoke、shape test、bridge compatibility test。 |
@@ -64,7 +64,7 @@
 |---|---|
 | 阶段目标 | 设计 HLC-GCI 模块接口、history sampling 一致性测试和 shuffled-robot sanity 计划。 |
 | 输入文档 | `02_detailed_design.md` 第 6、8、10、11、14 章，M3 输出。 |
-| 允许修改范围 | `starVLA/model/modules/mowa/`、`tests/mowa/`、`configs/mowa/mowa_p1_b1_hlc_gci.yaml`、日志和报告。 |
+| 允许修改范围 | `starVLA/model/modules/mowa/`、`tests/mowa/`、`configs/mowa/mowa_hlc_gci_interface.yaml`、日志和报告。 |
 | 禁止修改范围 | future action leakage；LayerwiseFM 内部重写；Rec-HLC 默认主线；P2 主训练闭环。 |
 | 输出文件 | HLC-GCI skeleton、shape/gate tests、history consistency test、shuffled sanity report。 |
 | 测试命令 | `pytest tests/mowa -q`，重点覆盖 shape、gate、leakage、history sampling consistency。 |

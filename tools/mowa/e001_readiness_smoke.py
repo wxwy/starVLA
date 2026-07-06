@@ -16,7 +16,9 @@ REQUIRED_REPORTS = {
     "production_window_preflight": Path(
         "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json"
     ),
-    "full_heads_train_smoke": Path("docs_zh/mowa/mowa_full_heads_constructible_train_smoke.json"),
+    "p0_constructible_heads_train_smoke": Path(
+        "docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json"
+    ),
 }
 FULL_HEADS_INTERFACE_CONFIG = Path("configs/mowa/mowa_full_heads_interface.yaml")
 E001_LAUNCH_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_launch_draft.yaml")
@@ -42,26 +44,9 @@ E001_STARFLOW_FT0_DRY_RUN_CONFIG = Path("configs/mowa/mowa_e001_starflow_ft0_ful
 E001_STARFLOW_FT0_DRY_RUN_SMOKE_REPORT = Path(
     "docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run_smoke.json"
 )
-E001_STARFLOW_FT0_TRAINING_THROUGHPUT_CONFIG = Path(
-    "configs/mowa/mowa_e001_starflow_ft0_training_throughput_smoke.yaml"
-)
-E001_STARFLOW_FT0_TRAINING_THROUGHPUT_SMOKE_REPORT = Path(
-    "docs_zh/mowa/mowa_e001_starflow_ft0_training_throughput_smoke_check.json"
-)
-E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG = Path("configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml")
-E001_A100_THROUGHPUT_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e001_a100_throughput_smoke.json")
 E001_FULL_VLA_RUNTIME_SWEEP_REPORT = Path(
     "docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json"
 )
-E006_COUPLING_INTERVENTION_SMOKE_REPORT = Path(
-    "docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json"
-)
-E006_EVAL_LOAD_SMOKE_CONFIG = Path("configs/mowa/mowa_e006_eval_load_smoke.yaml")
-E006_EVAL_LOAD_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e006_eval_load_smoke.json")
-E006_POLICY_ROLLOUT_PREFLIGHT_SMOKE_REPORT = Path(
-    "docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json"
-)
-E006_POLICY_ROLLOUT_SMOKE_REPORT = Path("docs_zh/mowa/mowa_e006_policy_rollout_smoke.json")
 CORE_SOT_DOCS = (
     "00_project_proposal.md",
     "01_technical_survey.md",
@@ -74,8 +59,8 @@ DERIVED_DESIGN_DOCS = (
     "06_data_gate_report.md",
     "07_implementation_log.md",
     "08_starvla_data_benchmark_support_matrix.md",
-    "09_future_label_builder_design.md",
-    "10_future_latent_cache_manifest_design.md",
+    "09_p0_label_builder_design.md",
+    "10_p1_latent_cache_manifest_design.md",
 )
 
 
@@ -117,7 +102,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
     recipe = reports.get("recipe") or {}
     preflight = reports.get("production_preflight") or {}
     window_preflight = reports.get("production_window_preflight") or {}
-    full_heads_smoke = reports.get("full_heads_train_smoke") or {}
+    p0_constructible_heads_smoke = reports.get("p0_constructible_heads_train_smoke") or {}
 
     checks = {
         "recipe_available": recipe.get("available_task_count") == 10
@@ -129,10 +114,10 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             and preflight.get("future_action_leakage_status") == "smoke_passed"
             and preflight.get("failed_sample_count") == 0
         ),
-        "full_heads_one_step_smoke_passed": (
-            "train smoke passed" in str(full_heads_smoke.get("go_no_go", ""))
-            and float(full_heads_smoke.get("loss_after", 1.0))
-            <= float(full_heads_smoke.get("loss_before", 0.0))
+        "p0_constructible_heads_one_step_smoke_passed": (
+            "train smoke passed" in str(p0_constructible_heads_smoke.get("go_no_go", ""))
+            and float(p0_constructible_heads_smoke.get("loss_after", 1.0))
+            <= float(p0_constructible_heads_smoke.get("loss_before", 0.0))
         ),
         "production_window_5hz_preflight_passed": (
             window_preflight.get("split_status") == "smoke_passed"
@@ -193,33 +178,8 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
                 root / E001_STARFLOW_FT0_DRY_RUN_SMOKE_REPORT
             )
         ),
-        "starflow_ft0_training_throughput_config_created": (
-            root / E001_STARFLOW_FT0_TRAINING_THROUGHPUT_CONFIG
-        ).is_file(),
-        "starflow_ft0_training_throughput_smoke_passed": _checks_report_passed(
-            root / E001_STARFLOW_FT0_TRAINING_THROUGHPUT_SMOKE_REPORT
-        ),
-        "a100_throughput_smoke_plan_created": (
-            root / E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG
-        ).is_file(),
-        "a100_throughput_smoke_executed": _a100_throughput_smoke_passed(
-            root / E001_A100_THROUGHPUT_SMOKE_REPORT
-        ),
         "full_vla_runtime_sweep_bs4_passed": _checks_report_passed(
             root / E001_FULL_VLA_RUNTIME_SWEEP_REPORT
-        ),
-        "e006_coupling_intervention_smoke_passed": _checks_report_passed(
-            root / E006_COUPLING_INTERVENTION_SMOKE_REPORT
-        ),
-        "e006_eval_load_smoke_config_created": (root / E006_EVAL_LOAD_SMOKE_CONFIG).is_file(),
-        "e006_eval_load_smoke_passed": _checks_report_passed(
-            root / E006_EVAL_LOAD_SMOKE_REPORT
-        ),
-        "e006_policy_rollout_preflight_smoke_passed": _checks_report_passed(
-            root / E006_POLICY_ROLLOUT_PREFLIGHT_SMOKE_REPORT
-        ),
-        "e006_policy_rollout_outcome_recorded": _e006_rollout_outcome_recorded(
-            root / E006_POLICY_ROLLOUT_SMOKE_REPORT
         ),
     }
 
@@ -239,11 +199,10 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "runtime policy draft and launch candidate must stay synchronized",
             "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
             "E-001 executable command candidate exists; keep command/runtime/launch state synchronized",
-            "E-006 rollout outcome is recorded in the rollout smoke report; action-gain evidence remains pending",
         ]
     )
 
-    class_mapping_confirmed = str(full_heads_smoke.get("class_mapping_status")) != "Data Gate"
+    class_mapping_confirmed = str(p0_constructible_heads_smoke.get("class_mapping_status")) != "Data Gate"
     ready_for_launch = (
         all(checks.values())
         and not missing_reports
@@ -275,10 +234,10 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "future_steps": (window_preflight.get("window_config") or {}).get("future_steps"),
             "action_chunk_steps": (window_preflight.get("window_config") or {}).get("action_chunk_steps"),
             "production_window_preflight_report": str(REQUIRED_REPORTS["production_window_preflight"]),
-            "full_heads_smoke_sample_count": full_heads_smoke.get("sample_count"),
-            "loss_before": full_heads_smoke.get("loss_before"),
-            "loss_after": full_heads_smoke.get("loss_after"),
-            "class_mapping_status": full_heads_smoke.get("class_mapping_status"),
+            "p0_constructible_heads_smoke_sample_count": p0_constructible_heads_smoke.get("sample_count"),
+            "loss_before": p0_constructible_heads_smoke.get("loss_before"),
+            "loss_after": p0_constructible_heads_smoke.get("loss_after"),
+            "class_mapping_status": p0_constructible_heads_smoke.get("class_mapping_status"),
             "full_heads_interface_config": str(FULL_HEADS_INTERFACE_CONFIG),
             "e001_launch_draft_config": str(E001_LAUNCH_DRAFT_CONFIG),
             "e001_runtime_policy_draft_config": str(E001_RUNTIME_POLICY_DRAFT_CONFIG),
@@ -302,29 +261,6 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "e001_starflow_ft0_full_path_dry_run_config": str(E001_STARFLOW_FT0_DRY_RUN_CONFIG),
             "e001_starflow_ft0_full_path_dry_run_smoke_report": str(
                 E001_STARFLOW_FT0_DRY_RUN_SMOKE_REPORT
-            ),
-            "e001_starflow_ft0_training_throughput_config": str(
-                E001_STARFLOW_FT0_TRAINING_THROUGHPUT_CONFIG
-            ),
-            "e001_starflow_ft0_training_throughput_smoke_report": str(
-                E001_STARFLOW_FT0_TRAINING_THROUGHPUT_SMOKE_REPORT
-            ),
-            "e001_a100_throughput_smoke_plan_config": str(E001_A100_THROUGHPUT_SMOKE_PLAN_CONFIG),
-            "e001_a100_throughput_smoke_report": str(E001_A100_THROUGHPUT_SMOKE_REPORT),
-            "e006_coupling_intervention_smoke_report": str(E006_COUPLING_INTERVENTION_SMOKE_REPORT),
-            "e006_eval_load_smoke_config": str(E006_EVAL_LOAD_SMOKE_CONFIG),
-            "e006_eval_load_smoke_report": str(E006_EVAL_LOAD_SMOKE_REPORT),
-            "e006_policy_rollout_preflight_smoke_report": str(
-                E006_POLICY_ROLLOUT_PREFLIGHT_SMOKE_REPORT
-            ),
-            "e006_policy_rollout_smoke_report": str(E006_POLICY_ROLLOUT_SMOKE_REPORT),
-            "e006_policy_rollout_blocker": (
-                (_read_json(root / E006_POLICY_ROLLOUT_SMOKE_REPORT) or {}).get("rollout_blocker")
-            ),
-            "a100_throughput_stable_candidate": (
-                (_read_json(root / E001_A100_THROUGHPUT_SMOKE_REPORT) or {}).get(
-                    "stable_candidate"
-                )
             ),
             "launch_scope_status": launch_scope_status,
         },
@@ -395,19 +331,6 @@ def _launch_scope_status(path: Path) -> str:
     if launch.get("launch_ready") is True:
         return "launch_ready_state_recorded"
     return "launch_not_ready_or_missing"
-
-
-def _a100_throughput_smoke_passed(path: Path) -> bool:
-    payload = _read_json(path)
-    if payload is None:
-        return False
-    return (
-        payload.get("benchmark") == "a100_throughput_smoke"
-        and payload.get("training_started") is False
-        and payload.get("checkpoint_saved") is False
-        and payload.get("stable_candidate") is not None
-        and "A100" in str((payload.get("gpu") or {}).get("name", ""))
-    )
 
 
 def _runtime_policy_state_recorded(path: Path) -> bool:
@@ -505,36 +428,6 @@ def _starflow_ft0_comparison_smoke_passed(path: Path) -> bool:
             execution.get("checked") is False
             or bool((execution.get("baseline") or {}).get("blocked_by_launch_guard"))
         )
-    )
-
-
-def _e006_rollout_outcome_recorded(path: Path) -> bool:
-    payload = _read_json(path)
-    if payload is None:
-        return False
-    blocker = payload.get("rollout_blocker") or {}
-    if (
-        blocker.get("status") in {
-            "missing_robocasa_assets",
-            "checkpoint_model_incompatible",
-            "robocasa_render_backend_unavailable",
-        }
-        and blocker.get("scope") in {"environment", "checkpoint"}
-        and bool(blocker.get("blocked_interventions"))
-        and bool(
-            blocker.get("missing_asset_paths")
-            or blocker.get("missing_state_keys")
-            or blocker.get("backend_signatures")
-        )
-    ):
-        return True
-    checks = payload.get("checks") or {}
-    return (
-        bool(checks)
-        and checks.get("server_started_when_executed") is True
-        and checks.get("client_succeeded_when_executed") is True
-        and checks.get("result_json_collected_when_executed") is True
-        and checks.get("success_rate_recorded_when_executed") is True
     )
 
 

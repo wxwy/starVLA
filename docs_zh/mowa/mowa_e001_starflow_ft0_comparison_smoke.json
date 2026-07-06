@@ -1,5 +1,5 @@
 {
-  "stage": "P0",
+  "stage": "full_heads",
   "experiment_id": "E-001",
   "training_started": false,
   "baseline_config": "configs/mowa/mowa_e001_starflow_ft0_baseline_candidate.yaml",
@@ -13,8 +13,8 @@
     "mowa_launch_state_consistent": true,
     "baseline_bridge_disabled": true,
     "mowa_bridge_enabled": true,
-    "baseline_p0_labels_disabled": true,
-    "mowa_p0_labels_enabled": true,
+    "baseline_future_labels_disabled": true,
+    "mowa_future_labels_enabled": true,
     "paired_invariants_match": true,
     "paired_runtime_symmetry_passed": true,
     "official_ft0_is_reference_only": true
@@ -66,12 +66,12 @@
       "mowa": 16
     },
     "framework.action_model.action_horizon": {
-      "baseline": 16,
-      "mowa": 16
+      "baseline": 8,
+      "mowa": 8
     },
     "framework.action_model.future_action_window_size": {
-      "baseline": 15,
-      "mowa": 15
+      "baseline": 7,
+      "mowa": 7
     },
     "framework.action_model.past_action_window_size": {
       "baseline": 0,
@@ -163,7 +163,7 @@
     "compared_path_count": 95,
     "matched_path_count": 81,
     "allowed_difference_paths": [
-      "datasets.vla_data.enable_mowa_p0_labels",
+      "datasets.vla_data.enable_mowa_future_labels",
       "framework.mowa.action_hidden_dim",
       "framework.mowa.enable_future_supervision_loss",
       "framework.mowa.enable_layerwise_bridge_token_coupling",
@@ -181,7 +181,7 @@
     "unexpected_difference_paths": [],
     "missing_required_difference_paths": [],
     "allowed_differences": {
-      "datasets.vla_data.enable_mowa_p0_labels": {
+      "datasets.vla_data.enable_mowa_future_labels": {
         "baseline": false,
         "mowa": true
       },
@@ -206,7 +206,7 @@
       },
       "framework.mowa.layerwise_bridge_feature_source": {
         "baseline": null,
-        "mowa": "mowa_p0_fullheads"
+        "mowa": "mowa_future_feature_heads"
       },
       "framework.mowa.num_bridge_tokens": {
         "baseline": null,
@@ -248,13 +248,13 @@
       "baseline": false,
       "mowa": true
     },
-    "datasets.vla_data.enable_mowa_p0_labels": {
+    "datasets.vla_data.enable_mowa_future_labels": {
       "baseline": false,
       "mowa": true
     },
     "framework.mowa.layerwise_bridge_feature_source": {
       "baseline": null,
-      "mowa": "mowa_p0_fullheads"
+      "mowa": "mowa_future_feature_heads"
     },
     "framework.mowa.num_bridge_tokens": {
       "baseline": null,

@@ -20,8 +20,8 @@ M2：P0 Video-Generation-Free WAM。
 ## 允许修改文件
 
 - `starVLA/model/modules/mowa/`
-- `configs/mowa/mowa_p0_fullheads.yaml`
-- `configs/mowa/mowa_p0_gatedheads.yaml`，仅 optional
+- `configs/mowa/mowa_full_heads_interface.yaml`
+- `configs/mowa/mowa_e002_future_gated_heads_candidate.yaml`，仅 optional
 - `tests/mowa/`
 - `docs_zh/mowa/07_implementation_log.md`
 

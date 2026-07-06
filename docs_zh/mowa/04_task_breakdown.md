@@ -121,7 +121,7 @@
 | 所属阶段 | M2 |
 | 目标 | 设计七类冻结 P0 heads、mask loss 和 P0FutureFeatures。 |
 | 输入依据 | 详细设计第 5 章。 |
-| 允许修改文件 | `starVLA/model/modules/mowa/`、`configs/mowa/mowa_p0_fullheads.yaml`、`tests/mowa/`。 |
+| 允许修改文件 | `starVLA/model/modules/mowa/`、`configs/mowa/mowa_full_heads_interface.yaml`、`tests/mowa/`。 |
 | 禁止修改文件 | 新增未冻结 head；LayerwiseFM 内部。 |
 | 预期输出 | `MoWAP0FullHeads` interface draft。 |
 | 单元测试或 smoke test | head list/mask loss shape test。 |
@@ -175,7 +175,7 @@
 | 所属阶段 | M3 |
 | 目标 | 设计 current/future/history RGB 到 Wan latent cache 的 smoke 流程。 |
 | 输入依据 | 详细设计第 4.3、6、9 章。 |
-| 允许修改文件 | `tools/mowa/`、`tests/mowa/`、`configs/mowa/mowa_p1_b0_*.yaml`、日志。 |
+| 允许修改文件 | `tools/mowa/`、`tests/mowa/`、`configs/mowa/mowa_latent_cache_builder_design.yaml`、`configs/mowa/mowa_future_latent_prior_interface.yaml`、日志。 |
 | 禁止修改文件 | 训练新 decoder；把 future frames 输入 WAM input。 |
 | 预期输出 | `MoWALatentCacheBuilder` design。 |
 | 单元测试或 smoke test | latent cache smoke、cache hash test。 |

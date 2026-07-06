@@ -225,15 +225,21 @@ class Qwenvl_OFT(baseframework):
 
         output = {"action_loss": action_loss}
         if mowa_future_supervision_probe is not None:
-            output["mowa_future_supervision_available"] = mowa_future_supervision_probe["supervision_available"]
-            output["mowa_future_supervision_active_heads"] = mowa_future_supervision_probe["active_heads"]
-            output["mowa_future_supervision_masked_heads"] = mowa_future_supervision_probe["masked_heads"]
+            output["mowa_p0_supervision_available"] = mowa_future_supervision_probe[
+                "supervision_available"
+            ]
+            output["mowa_p0_supervision_active_heads"] = mowa_future_supervision_probe[
+                "active_heads"
+            ]
+            output["mowa_p0_supervision_masked_heads"] = mowa_future_supervision_probe[
+                "masked_heads"
+            ]
             output["mowa_future_supervision_available"] = mowa_future_supervision_probe["supervision_available"]
             output["mowa_future_supervision_active_heads"] = mowa_future_supervision_probe["active_heads"]
             output["mowa_future_supervision_masked_heads"] = mowa_future_supervision_probe["masked_heads"]
             if mowa_future_supervision_probe["loss"] is not None:
-                output["mowa_future_supervision_loss"] = mowa_future_supervision_probe["loss"]
-                output["mowa_future_supervision_losses"] = mowa_future_supervision_probe["losses"]
+                output["mowa_p0_supervision_loss"] = mowa_future_supervision_probe["loss"]
+                output["mowa_p0_supervision_losses"] = mowa_future_supervision_probe["losses"]
                 output["mowa_future_supervision_loss"] = mowa_future_supervision_probe["loss"]
                 output["mowa_future_supervision_losses"] = mowa_future_supervision_probe["losses"]
         if mowa_probe is not None:

@@ -939,7 +939,7 @@ def _write_full_path_dry_run_report(
         "forward_evaluated_in_full_path_dry_run"
         if (
             "mowa_future_supervision_loss" in ((forward_summary or {}).get("keys") or [])
-            or "mowa_future_supervision_loss" in ((forward_summary or {}).get("keys") or [])
+            or "mowa_p0_supervision_loss" in ((forward_summary or {}).get("keys") or [])
         )
         else "not_evaluated_in_full_path_dry_run"
     )
@@ -996,9 +996,6 @@ def _write_full_path_dry_run_report(
             "mowa_future_supervision_probe_enabled": mowa_supervision_enabled,
             "mowa_future_supervision_active_heads": mowa_supervision_active_heads,
             "mowa_future_supervision_label_status": mowa_supervision_label_status,
-            "mowa_future_supervision_probe_enabled": mowa_supervision_enabled,
-            "mowa_future_supervision_active_heads": mowa_supervision_active_heads,
-            "mowa_future_supervision_label_status": mowa_supervision_label_status,
         },
         "data": {
             "dataset_py": cfg.datasets.vla_data.dataset_py,
@@ -1007,7 +1004,6 @@ def _write_full_path_dry_run_report(
             "per_device_batch_size": int(cfg.datasets.vla_data.per_device_batch_size),
             "dataloader_type": type(dataloader).__name__,
             "dataloader_length": len(dataloader) if hasattr(dataloader, "__len__") else None,
-            "mowa_future_labels_enabled": mowa_labels_enabled,
             "mowa_future_labels_enabled": mowa_labels_enabled,
             "batch_summary": batch_summary or {"fetched": False},
         },
@@ -1900,7 +1896,7 @@ class VLATrainer(TrainerUtils):
                 total_loss = action_loss
                 mowa_future_supervision_loss = output_dict.get("mowa_future_supervision_loss")
                 if mowa_future_supervision_loss is None:
-                    mowa_future_supervision_loss = output_dict.get("mowa_future_supervision_loss")
+                    mowa_future_supervision_loss = output_dict.get("mowa_p0_supervision_loss")
                 if (
                     bool(getattr(self.config.trainer, "enable_mowa_future_supervision_loss", False))
                     and mowa_future_supervision_loss is not None

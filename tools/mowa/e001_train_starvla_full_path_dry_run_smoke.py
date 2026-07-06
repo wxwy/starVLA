@@ -66,7 +66,7 @@ def build_train_starvla_full_path_dry_run_smoke(repo_root: Path | str) -> dict[s
         "forward_evaluated": forward.get("evaluated") is True,
         "forward_has_mowa_future_supervision_loss": (
             "mowa_future_supervision_loss" in forward_keys
-            or "mowa_future_supervision_loss" in forward_keys
+            or "mowa_p0_supervision_loss" in forward_keys
         ),
         "forward_has_action_loss": "action_loss" in forward_keys,
     }
@@ -107,12 +107,12 @@ def _read_json(path: Path) -> dict[str, Any] | None:
 def _get_future_supervision_value(framework: dict[str, Any], suffix: str) -> Any:
     return framework.get(
         f"mowa_future_supervision_{suffix}",
-        framework.get(f"mowa_future_supervision_{suffix}"),
+        framework.get(f"mowa_p0_supervision_{suffix}"),
     )
 
 
 def _get_future_labels_enabled(data: dict[str, Any]) -> Any:
-    return data.get("mowa_future_labels_enabled", data.get("mowa_future_labels_enabled"))
+    return data.get("mowa_future_labels_enabled", data.get("mowa_p0_labels_enabled"))
 
 
 if __name__ == "__main__":

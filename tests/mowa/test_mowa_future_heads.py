@@ -1046,11 +1046,11 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "datasets:\n"
                 "  vla_data:\n"
                 "    per_device_batch_size: 4\n"
+                "wandb_mode: disabled_for_initial_training\n"
                 "trainer:\n"
                 "  max_train_steps: 1000\n"
                 "  save_interval: 1000\n"
                 "  gradient_accumulation_steps: 1\n"
-                "  disable_wandb: true\n"
                 "  checkpoint_format: lightweight\n"
                 "  save_checkpoint_as_directory: true\n"
                 "  logging_frequency: 10\n",
@@ -1074,7 +1074,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "  save_interval: 1000\n"
                 "  save_checkpoint_as_directory: true\n"
                 "logging:\n"
-                "  disable_wandb: true\n"
+                "  wandb_mode: disabled_for_initial_training\n"
                 "  logging_frequency: 10\n",
                 encoding="utf-8",
             )
@@ -1090,7 +1090,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "  save_interval: initial_target_1000\n"
                 "  save_checkpoint_as_directory: true\n"
                 "logging:\n"
-                "  disable_wandb: true\n"
+                "  wandb_mode: disabled_for_initial_training\n"
                 "  logging_frequency: 10\n"
                 "status:\n"
                 "  launch_ready: false\n"
@@ -1149,11 +1149,11 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "datasets:\n"
                 "  vla_data:\n"
                 "    per_device_batch_size: 4\n"
+                "wandb_mode: disabled_for_initial_training\n"
                 "trainer:\n"
                 "  max_train_steps: 1000\n"
                 "  save_interval: 1000\n"
                 "  gradient_accumulation_steps: 1\n"
-                "  disable_wandb: true\n"
                 "  checkpoint_format: lightweight\n"
                 "  save_checkpoint_as_directory: true\n"
                 "  logging_frequency: 10\n",
@@ -1177,7 +1177,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "  save_interval: 1000\n"
                 "  save_checkpoint_as_directory: true\n"
                 "logging:\n"
-                "  disable_wandb: true\n"
+                "  wandb_mode: disabled_for_initial_training\n"
                 "  logging_frequency: 10\n",
                 encoding="utf-8",
             )
@@ -1193,7 +1193,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "  save_interval: initial_target_1000\n"
                 "  save_checkpoint_as_directory: true\n"
                 "logging:\n"
-                "  disable_wandb: true\n"
+                "  wandb_mode: disabled_for_initial_training\n"
                 "  logging_frequency: 10\n"
                 "status:\n"
                 "  launch_ready: false\n"
@@ -1240,11 +1240,11 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "datasets:\n"
                 "  vla_data:\n"
                 "    per_device_batch_size: 4\n"
+                "wandb_mode: disabled_for_initial_training\n"
                 "trainer:\n"
                 "  max_train_steps: 1000\n"
                 "  save_interval: 1000\n"
                 "  gradient_accumulation_steps: 1\n"
-                "  disable_wandb: true\n"
                 "  checkpoint_format: lightweight\n"
                 "  save_checkpoint_as_directory: true\n"
                 "  logging_frequency: 10\n",
@@ -1269,7 +1269,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "  save_interval: 1000\n"
                 "  save_checkpoint_as_directory: true\n"
                 "logging:\n"
-                "  disable_wandb: true\n"
+                "  wandb_mode: disabled_for_initial_training\n"
                 "  logging_frequency: 10\n",
                 encoding="utf-8",
             )
@@ -1285,7 +1285,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 "  save_interval: initial_target_1000\n"
                 "  save_checkpoint_as_directory: true\n"
                 "logging:\n"
-                "  disable_wandb: true\n"
+                "  wandb_mode: disabled_for_initial_training\n"
                 "  logging_frequency: 10\n"
                 "status:\n"
                 "  resource_policy_confirmed: true\n"
@@ -1313,6 +1313,86 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["command_launch_state_matches_candidate"])
         self.assertTrue(report["checks"]["runtime_policy_state_matches_candidate"])
         self.assertEqual(report["go_no_go"], "TBD: launch candidate is wired and launch-approved")
+
+    def test_e001_long_training_config_preview_uses_4090_profile(self):
+        from tools.mowa.e001_long_training_config_preview import (
+            build_e001_long_training_config_preview,
+        )
+
+        report = build_e001_long_training_config_preview(Path("."))
+
+        self.assertTrue(report["launch_ready"])
+        self.assertTrue(report["checks"]["config_created"])
+        self.assertTrue(report["checks"]["uses_4090_batch_profile"])
+        self.assertTrue(report["checks"]["marks_mowa_main_experiment_role"])
+        self.assertTrue(report["checks"]["wandb_project_is_mowa"])
+        self.assertTrue(report["checks"]["wandb_entity_is_expected"])
+        self.assertTrue(report["checks"]["wandb_mode_is_online"])
+        self.assertTrue(report["checks"]["max_steps_not_smoke_1000"])
+        self.assertTrue(report["checks"]["freeze_modules_is_qwen_vl_interface"])
+        self.assertTrue(report["checks"]["keeps_future_supervision_chain"])
+        self.assertTrue(report["checks"]["keeps_mowa_ckpt_root"])
+        self.assertEqual(report["resolved_final_values"]["experiment_role"], "mowa_main")
+        self.assertEqual(report["resolved_final_values"]["per_device_batch_size"], 1)
+        self.assertEqual(report["resolved_final_values"]["gradient_accumulation_steps"], 32)
+        self.assertEqual(report["resolved_final_values"]["effective_batch_size"], 32)
+        self.assertEqual(report["resolved_final_values"]["max_train_steps"], 80000)
+        self.assertEqual(report["resolved_final_values"]["num_warmup_steps"], 500)
+        self.assertEqual(report["resolved_final_values"]["freeze_modules"], "qwen_vl_interface")
+        self.assertEqual(report["resolved_final_values"]["wandb_project"], "MoWA")
+        self.assertEqual(report["resolved_final_values"]["wandb_mode"], "online")
+        self.assertEqual(
+            report["resolved_final_values"]["wandb_entity"],
+            "silencewx-harbin-institute-of-technology",
+        )
+        self.assertIsNone(report["resolved_final_values"].get("disable_wandb"))
+        self.assertEqual(report["resolved_final_values"]["run_root_dir"], "playground/mowa_ckpt")
+        self.assertEqual(
+            report["resolved_final_values"]["layerwise_bridge_feature_source"],
+            "mowa_future_feature_heads",
+        )
+        self.assertEqual(report["go_no_go"], "TBD: long-training config preview passed; launch approved")
+
+    def test_e001_baseline_long_training_config_preview_uses_4090_profile(self):
+        from tools.mowa.e001_long_training_config_preview import (
+            build_e001_long_training_config_preview,
+        )
+
+        report = build_e001_long_training_config_preview(
+            Path("."),
+            "configs/mowa/mowa_e001_starflow_ft0_baseline_long_training_candidate.yaml",
+        )
+
+        self.assertTrue(report["launch_ready"])
+        self.assertTrue(report["checks"]["config_created"])
+        self.assertFalse(report["checks"]["keeps_future_supervision_chain"])
+        self.assertEqual(report["resolved_final_values"]["experiment_role"], "mowa_baseline")
+        self.assertEqual(report["resolved_final_values"]["per_device_batch_size"], 1)
+        self.assertEqual(report["resolved_final_values"]["gradient_accumulation_steps"], 32)
+        self.assertEqual(report["resolved_final_values"]["effective_batch_size"], 32)
+        self.assertEqual(report["resolved_final_values"]["max_train_steps"], 80000)
+        self.assertEqual(report["resolved_final_values"]["num_warmup_steps"], 500)
+        self.assertEqual(report["resolved_final_values"]["freeze_modules"], "qwen_vl_interface")
+        self.assertEqual(report["resolved_final_values"]["enable_future_supervision_loss"], False)
+        self.assertEqual(report["resolved_final_values"]["enable_layerwise_bridge_token_coupling"], False)
+        self.assertEqual(report["resolved_final_values"]["enable_mowa_future_labels"], False)
+        self.assertEqual(report["resolved_final_values"]["wandb_project"], "MoWA")
+        self.assertEqual(report["resolved_final_values"]["wandb_mode"], "online")
+        self.assertEqual(
+            report["resolved_final_values"]["wandb_entity"],
+            "silencewx-harbin-institute-of-technology",
+        )
+        self.assertIsNone(report["resolved_final_values"].get("disable_wandb"))
+        self.assertEqual(report["go_no_go"], "TBD: long-training config preview passed; launch approved")
+
+    def test_train_starvla_build_accelerator_uses_config_gradient_accumulation_steps(self):
+        from omegaconf import OmegaConf
+        from starVLA.training.train_starvla import _build_accelerator
+
+        cfg = OmegaConf.create({"trainer": {"gradient_accumulation_steps": 32}})
+        accelerator = _build_accelerator(cfg)
+
+        self.assertEqual(accelerator.gradient_accumulation_steps, 32)
 
     def test_e001_starflow_ft0_comparison_smoke_pins_only_mowa_delta(self):
         from tools.mowa.e001_starflow_ft0_comparison_smoke import (

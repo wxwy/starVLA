@@ -87,7 +87,10 @@ def build_e001_launch_candidate_smoke(repo_root: Path | str) -> dict[str, Any]:
         "candidate_grad_accum_1": _text_contains(candidate, "gradient_accumulation_steps: 1"),
         "candidate_max_steps_1000": _text_contains(candidate, "max_train_steps: 1000"),
         "candidate_save_interval_1000": _text_contains(candidate, "save_interval: 1000"),
-        "candidate_wandb_disabled": _text_contains(candidate, "disable_wandb: true"),
+        "candidate_wandb_mode_disabled": _text_contains(
+            candidate,
+            "wandb_mode: disabled_for_initial_training",
+        ),
         "candidate_checkpoint_root_mowa_ckpt": _text_contains(candidate, "run_root_dir: playground/mowa_ckpt"),
         "runtime_policy_state_matches_candidate": _runtime_policy_matches_launch_candidate(
             runtime_policy_status,
@@ -279,9 +282,9 @@ def _build_final_parameter_alignment(
             "candidate": _select(candidate, "trainer.save_checkpoint_as_directory"),
             "command_candidate": _select(command, "checkpoint_policy.save_checkpoint_as_directory"),
         },
-        "disable_wandb": {
-            "candidate": _select(candidate, "trainer.disable_wandb"),
-            "command_candidate": _select(command, "logging.disable_wandb"),
+        "wandb_mode": {
+            "candidate": _select(candidate, "wandb_mode"),
+            "command_candidate": _select(command, "logging.wandb_mode"),
         },
         "logging_frequency": {
             "candidate": _select(candidate, "trainer.logging_frequency"),
@@ -345,11 +348,11 @@ def _build_final_parameter_alignment(
             "match": _select(candidate, "trainer.save_checkpoint_as_directory")
             == _select(runtime_policy, "checkpoint.save_checkpoint_as_directory"),
         },
-        "disable_wandb": {
-            "candidate": _select(candidate, "trainer.disable_wandb"),
-            "runtime_policy": _select(runtime_policy, "logging.disable_wandb"),
-            "match": _select(candidate, "trainer.disable_wandb")
-            == _select(runtime_policy, "logging.disable_wandb"),
+        "wandb_mode": {
+            "candidate": _select(candidate, "wandb_mode"),
+            "runtime_policy": _select(runtime_policy, "logging.wandb_mode"),
+            "match": _select(candidate, "wandb_mode")
+            == _select(runtime_policy, "logging.wandb_mode"),
         },
         "logging_frequency": {
             "candidate": _select(candidate, "trainer.logging_frequency"),

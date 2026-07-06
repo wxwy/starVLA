@@ -41,7 +41,6 @@ checkpoint_policy:
 
 logging:
   wandb_mode: disabled_for_initial_training
-  disable_wandb: true
   logging_frequency: 10
 
 notes:

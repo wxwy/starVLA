@@ -1,11 +1,11 @@
 # P0-M6-H2-total-baseline: StarFlow LIBERO 4-in-1 Qwen3VL-4B MLP baseline（bs32）
 
 > **实验代号**: H2-total-baseline / P0-M6  
-> **状态**: 🟢 训练运行中  
+> **状态**: ✅ 训练已完成  
 > **run_id**: `P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260703_0928`  
 > **启动时间**: 2026-07-03 09:28 CST  
-> **当前更新**: 2026-07-06 19:19:00 CST
-> **tmux 会话**: `train`（attached）  
+> **完成时间**: 2026-07-06 ~19:18 CST  
+> **当前更新**: 2026-07-06 19:25:00 CST
 > **配置来源**: `configs/starflow_vla/stage2_mlp_baseline.yaml`
 
 ---
@@ -87,24 +87,30 @@ P0-M6 **Stage2 MLP baseline**：使用纯 MLP action head（无 DiT、无 future
 
 ## 训练进度
 
-> 最后更新：2026-07-06 10:19:00 CST
+> 最后更新：2026-07-06 19:25:00 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **79982 / 80000**（99.98%） 🔥 |
-| **完成比例** | 99.98% |
-| **单步耗时** | ~3.42 s/it |
-| **数据加载耗时** | ~0.000 s |
-| **模型前向/反向耗时** | ~0.159 s |
-| **已运行时间** | 约 74 小时 |
-| **预计剩余时间** | < 1 分钟 |
-| **最新 checkpoint** | `steps_80000` |
+| **最终 Step** | **80000 / 80000**（100%） ✅ |
+| **完成比例** | 100% |
+| **平均单步耗时** | ~3.3 s/it |
+| **总运行时间** | 约 74 小时（Jul 3 09:28 → Jul 6 ~19:18） |
+| **最终 checkpoint** | `steps_80000` |
+
+### 最终 Loss 总结
+
+| 指标 | 值 |
+|------|-----|
+| 初始 loss | 0.2493（step 940） |
+| 最终 loss | 0.1068（step 79980） |
+| 最低 loss | **0.0838**（step 69080） |
+| 后半程均值 | ~0.10–0.12 |
 
 ### Loss 记录（部分）
 
 | Step | action_dit_loss | 备注 |
 |------|----------------|------|
-| 940 | 0.2493 | |
+| 940 | 0.2493 | 初始 |
 | 1000 | 0.2277 | |
 | 5000 | 0.1997 | |
 | 10000 | 0.1702 | |
@@ -243,12 +249,15 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 ## 备注
 
 - 本实验为 Stage2 MLP baseline，验证纯 MLP action head 在 StarFlowVLA 中的收敛表现。
-- MLP head 参数量远小于 DiT，显存仅 ~10.3 GB（42%），单步耗时 ~3.5 s，3.2 天可完成 80000 steps。
-- 对照 P0-M7（ft64 DiT）：loss 更低（~0.1 vs ~0.25），但显存更高（96.9% vs 42%），单步更慢（9.2 s vs 3.5 s）。
+- **✅ 已完成**：2026-07-06 ~19:18 CST，历时 74 小时（3.1 天）。
+- **最终成果**：loss 0.25 → 0.084（最低）/ 0.107（最终），MLP 收敛远超预期。
+- MLP head 参数量远小于 DiT，显存仅 ~10.3 GB（42%），单步耗时 ~3.3 s。
+- 对照 P0-M7（ft64 DiT）：MLP 最终 loss 0.11 接近 DiT 的 0.10，但显存仅 42%（vs 97%），速度快 3 倍（3.3s vs 9.2s）。
+- 结论：纯 MLP action head 在 StarFlowVLA 框架中可达到 DiT 级 loss 水平，成本极低。
 - GPU 利用率偏低（32%），可能因 per_device_batch_size=1 + grad_accum=32 导致 GPU 在 micro-step 间有空闲。
 - 可考虑增大 per_device_batch_size 提高 GPU 利用率（目前显存余量充足，~14 GB 空闲）。
 - `action_dit_loss` 命名是历史遗留，实际为 MLP 输出的 MSE loss。
 
 ---
 
-*本文档将持续更新。*
+*训练已于 2026-07-06 ~19:18 CST 完成。本文档停止更新。*

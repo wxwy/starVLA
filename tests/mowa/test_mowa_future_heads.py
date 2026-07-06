@@ -1333,8 +1333,8 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["keeps_future_supervision_chain"])
         self.assertTrue(report["checks"]["keeps_mowa_ckpt_root"])
         self.assertEqual(report["resolved_final_values"]["experiment_role"], "mowa_main")
-        self.assertEqual(report["resolved_final_values"]["per_device_batch_size"], 1)
-        self.assertEqual(report["resolved_final_values"]["gradient_accumulation_steps"], 32)
+        self.assertEqual(report["resolved_final_values"]["per_device_batch_size"], 2)
+        self.assertEqual(report["resolved_final_values"]["gradient_accumulation_steps"], 16)
         self.assertEqual(report["resolved_final_values"]["effective_batch_size"], 32)
         self.assertEqual(report["resolved_final_values"]["max_train_steps"], 80000)
         self.assertEqual(report["resolved_final_values"]["num_warmup_steps"], 500)
@@ -1350,6 +1350,14 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertEqual(
             report["resolved_final_values"]["layerwise_bridge_feature_source"],
             "mowa_future_feature_heads",
+        )
+        self.assertEqual(
+            report["resolved_final_values"]["layerwise_bridge_active_heads"],
+            ("task_progress", "action_outcome_class"),
+        )
+        self.assertEqual(
+            report["resolved_final_values"]["future_supervision_active_heads"],
+            ("task_progress", "action_outcome_class"),
         )
         self.assertEqual(report["go_no_go"], "TBD: long-training config preview passed; launch approved")
 
@@ -1367,8 +1375,8 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertTrue(report["checks"]["config_created"])
         self.assertFalse(report["checks"]["keeps_future_supervision_chain"])
         self.assertEqual(report["resolved_final_values"]["experiment_role"], "mowa_baseline")
-        self.assertEqual(report["resolved_final_values"]["per_device_batch_size"], 1)
-        self.assertEqual(report["resolved_final_values"]["gradient_accumulation_steps"], 32)
+        self.assertEqual(report["resolved_final_values"]["per_device_batch_size"], 2)
+        self.assertEqual(report["resolved_final_values"]["gradient_accumulation_steps"], 16)
         self.assertEqual(report["resolved_final_values"]["effective_batch_size"], 32)
         self.assertEqual(report["resolved_final_values"]["max_train_steps"], 80000)
         self.assertEqual(report["resolved_final_values"]["num_warmup_steps"], 500)

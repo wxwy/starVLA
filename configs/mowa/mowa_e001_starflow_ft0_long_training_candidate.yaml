@@ -6,7 +6,7 @@ launch_guard:
   human_confirmed: true
   reason: formal long-training launch for 4090 profile; confirmed for execution
 
-run_id: MoWA-E-001_starflow_ft0_mowa_4090_long_260706_1700
+run_id: MoWA-E-001_starflow_ft0_mowa_4090_long_260706_1740
 run_root_dir: playground/mowa_ckpt
 experiment_id: E-001
 experiment_role: mowa_main
@@ -56,6 +56,9 @@ framework:
     enable_future_supervision_loss: true
     layerwise_bridge_feature_source: mowa_future_feature_heads
     layerwise_bridge_active_heads:
+      - task_progress
+      - action_outcome_class
+    future_supervision_active_heads:
       - task_progress
       - action_outcome_class
     wam_feature_dim: 1024

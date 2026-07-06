@@ -42,7 +42,6 @@
     "a100_throughput_report": "docs_zh/mowa/mowa_e001_a100_throughput_smoke.json"
   },
   "unresolved_items": [
-    "class_mapping_status remains Data Gate",
     "batch size 4, expected VRAM and runtime are bounded full-VLA smoke observed only, not long-training confirmed",
     "runtime policy is approved only for current bounded E-001 scope, not for broader action-gain claims",
     "executable training command candidate and launch candidate must remain synchronized with runtime policy",

@@ -40,3 +40,9 @@ MOWA_FUTURE_FEATURE_SOURCE_ALIASES = (
     MOWA_FUTURE_FEATURE_HEADS_SOURCE,
     MOWA_P0_FULLHEADS_FEATURE_SOURCE,
 )
+
+MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS = "confirmed_for_e001_initial_target"
+MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION = "reward_done_vector_v1"
+MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE = (
+    "action_outcome_class uses [next_reward, next_done_flag] in this order."
+)

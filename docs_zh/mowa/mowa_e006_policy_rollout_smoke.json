@@ -8,7 +8,8 @@
   "launch_ready": false,
   "execute_requested": true,
   "config": "configs/mowa/mowa_e006_policy_rollout_candidate.yaml",
-  "artifact_dir": "docs_zh/mowa/e006_policy_rollout/20260705_204919",
+  "checkpoint": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000",
+  "artifact_dir": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764",
   "checks": {
     "preflight_report_exists": true,
     "checkpoint_exists": true,
@@ -18,7 +19,7 @@
     "client_succeeded_when_executed": true,
     "result_json_collected_when_executed": true,
     "success_rate_recorded_when_executed": true,
-    "structured_blocker_recorded_when_executed": false
+    "structured_rollout_outcome_recorded_when_executed": true
   },
   "rollout_blocker": {},
   "runs": [
@@ -60,14 +61,14 @@
       ],
       "executed": true,
       "server_started": true,
-      "elapsed_sec": 187.31133596005384,
-      "server_log": "docs_zh/mowa/e006_policy_rollout/20260705_204919/baseline/server.log",
-      "client_log": "docs_zh/mowa/e006_policy_rollout/20260705_204919/baseline/client.log",
+      "elapsed_sec": 91.01963759900536,
+      "server_log": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/baseline/server.log",
+      "client_log": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/baseline/client.log",
       "client_result": {
         "returncode": 0,
-        "elapsed_sec": 89.28372276003938,
-        "started_at_unix": 1783255858.0274765,
-        "completed_at_unix": 1783255947.3112001,
+        "elapsed_sec": 59.0046749090543,
+        "started_at_unix": 1783302265.0343492,
+        "completed_at_unix": 1783302324.0390253,
         "failure_category": null,
         "tail": [
           "[robosuite WARNING] No private macro file found! (macros.py:57)",
@@ -88,9 +89,9 @@
           "[robosuite WARNING] It is recommended to use a private macro file (macros.py:58)",
           "[robosuite WARNING] To setup, run: python /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/scripts/setup_macros.py (macros.py:59)",
           "[robosuite WARNING] Could not import robosuite_models. Some robots may not be available. If you want to use these robots, please install robosuite_models from source (https://github.com/ARISE-Initiative/robosuite_models) or through pip install. (__init__.py:30)",
-          "[robosuite WARNING] Could not load the mink-based whole-body IK. Make sure you install related import properly (e.g. pip install mink==0.0.5), otherwise you will not be able to use the default IK controller setting for GR1 robot. (__init__.py:40)",
           "[robosuite WARNING] Could not import robosuite_models. Some robots may not be available. If you want to use these robots, please install robosuite_models from source (https://github.com/ARISE-Initiative/robosuite_models) or through pip install. (__init__.py:30)",
           "[robosuite WARNING] Could not load the mink-based whole-body IK. Make sure you install related import properly (e.g. pip install mink==0.0.5), otherwise you will not be able to use the default IK controller setting for GR1 robot. (__init__.py:40)",
+          "[robosuite WARNING] Could not load the mink-based whole-body IK. Make sure you install related import properly (e.g. pip install mink==0.0.5), otherwise you will not be able to use the default IK controller setting for GR1 robot. (__init__.py:40)",
           "[robosuite INFO] Loading controller configuration from: /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/controllers/config/robots/default_pandaomron.json (composite_controller_factory.py:121)",
           "[robosuite INFO] Loading controller configuration from: /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/controllers/config/robots/default_pandaomron.json (composite_controller_factory.py:121)",
           "/disk/rl/starVLA/.robocase/lib/python3.11/site-packages/gymnasium/utils/passive_env_checker.py:159: UserWarning: \u001b[33mWARN: The obs returned by the `reset()` method is not within the observation space.\u001b[0m",
@@ -105,7 +106,7 @@
           "Creating OpenDrawer with split=target",
           "WARNING: mimicgen environments not imported since mimicgen is not installed!",
           "Creating OpenDrawer with split=target",
-          "[robocasa365] 2 eps done in 22.4s",
+          "[robocasa365] 2 eps done in 16.0s",
           "",
           "=== robocasa/OpenDrawer ===",
           "success rate: 0.00 (0/2)"
@@ -119,7 +120,7 @@
           false
         ]
       },
-      "copied_result_json": "docs_zh/mowa/e006_policy_rollout/20260705_204919/baseline/robocasa_OpenDrawer.json"
+      "copied_result_json": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/baseline/robocasa_OpenDrawer.json"
     },
     {
       "intervention": "zero",
@@ -159,14 +160,14 @@
       ],
       "executed": true,
       "server_started": true,
-      "elapsed_sec": 109.03322479000781,
-      "server_log": "docs_zh/mowa/e006_policy_rollout/20260705_204919/zero/server.log",
-      "client_log": "docs_zh/mowa/e006_policy_rollout/20260705_204919/zero/client.log",
+      "elapsed_sec": 114.03150163404644,
+      "server_log": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/zero/server.log",
+      "client_log": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/zero/client.log",
       "client_result": {
         "returncode": 0,
-        "elapsed_sec": 67.01444212498609,
-        "started_at_unix": 1783255989.8504243,
-        "completed_at_unix": 1783256056.8648677,
+        "elapsed_sec": 70.01520696200896,
+        "started_at_unix": 1783302368.5282514,
+        "completed_at_unix": 1783302438.5434594,
         "failure_category": null,
         "tail": [
           "[robosuite WARNING] No private macro file found! (macros.py:57)",
@@ -183,12 +184,12 @@
           "[robosuite WARNING] No private macro file found! (macros.py:57)",
           "[robosuite WARNING] No private macro file found! (macros.py:57)",
           "[robosuite WARNING] It is recommended to use a private macro file (macros.py:58)",
-          "[robosuite WARNING] To setup, run: python /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/scripts/setup_macros.py (macros.py:59)",
           "[robosuite WARNING] It is recommended to use a private macro file (macros.py:58)",
           "[robosuite WARNING] To setup, run: python /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/scripts/setup_macros.py (macros.py:59)",
+          "[robosuite WARNING] To setup, run: python /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/scripts/setup_macros.py (macros.py:59)",
+          "[robosuite WARNING] Could not import robosuite_models. Some robots may not be available. If you want to use these robots, please install robosuite_models from source (https://github.com/ARISE-Initiative/robosuite_models) or through pip install. (__init__.py:30)",
           "[robosuite WARNING] Could not import robosuite_models. Some robots may not be available. If you want to use these robots, please install robosuite_models from source (https://github.com/ARISE-Initiative/robosuite_models) or through pip install. (__init__.py:30)",
           "[robosuite WARNING] Could not load the mink-based whole-body IK. Make sure you install related import properly (e.g. pip install mink==0.0.5), otherwise you will not be able to use the default IK controller setting for GR1 robot. (__init__.py:40)",
-          "[robosuite WARNING] Could not import robosuite_models. Some robots may not be available. If you want to use these robots, please install robosuite_models from source (https://github.com/ARISE-Initiative/robosuite_models) or through pip install. (__init__.py:30)",
           "[robosuite WARNING] Could not load the mink-based whole-body IK. Make sure you install related import properly (e.g. pip install mink==0.0.5), otherwise you will not be able to use the default IK controller setting for GR1 robot. (__init__.py:40)",
           "[robosuite INFO] Loading controller configuration from: /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/controllers/config/robots/default_pandaomron.json (composite_controller_factory.py:121)",
           "[robosuite INFO] Loading controller configuration from: /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/controllers/config/robots/default_pandaomron.json (composite_controller_factory.py:121)",
@@ -204,7 +205,7 @@
           "Creating OpenDrawer with split=target",
           "WARNING: mimicgen environments not imported since mimicgen is not installed!",
           "Creating OpenDrawer with split=target",
-          "[robocasa365] 2 eps done in 20.2s",
+          "[robocasa365] 2 eps done in 19.8s",
           "",
           "=== robocasa/OpenDrawer ===",
           "success rate: 0.00 (0/2)"
@@ -218,7 +219,7 @@
           false
         ]
       },
-      "copied_result_json": "docs_zh/mowa/e006_policy_rollout/20260705_204919/zero/robocasa_OpenDrawer.json"
+      "copied_result_json": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/zero/robocasa_OpenDrawer.json"
     },
     {
       "intervention": "batch_shuffle",
@@ -258,14 +259,14 @@
       ],
       "executed": true,
       "server_started": true,
-      "elapsed_sec": 120.5542766849976,
-      "server_log": "docs_zh/mowa/e006_policy_rollout/20260705_204919/batch_shuffle/server.log",
-      "client_log": "docs_zh/mowa/e006_policy_rollout/20260705_204919/batch_shuffle/client.log",
+      "elapsed_sec": 88.97442939097527,
+      "server_log": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/batch_shuffle/server.log",
+      "client_log": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/batch_shuffle/client.log",
       "client_result": {
         "returncode": 0,
-        "elapsed_sec": 76.53614796302281,
-        "started_at_unix": 1783256101.3080633,
-        "completed_at_unix": 1783256177.8442128,
+        "elapsed_sec": 62.96000353002455,
+        "started_at_unix": 1783302465.0285704,
+        "completed_at_unix": 1783302527.9885778,
         "failure_category": null,
         "tail": [
           "[robosuite WARNING] No private macro file found! (macros.py:57)",
@@ -280,10 +281,10 @@
           "[robocasa365] running 2 eps on robocasa/OpenDrawer",
           "Creating OpenDrawer with split=target",
           "[robosuite WARNING] No private macro file found! (macros.py:57)",
+          "[robosuite WARNING] It is recommended to use a private macro file (macros.py:58)",
+          "[robosuite WARNING] To setup, run: python /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/scripts/setup_macros.py (macros.py:59)",
           "[robosuite WARNING] No private macro file found! (macros.py:57)",
           "[robosuite WARNING] It is recommended to use a private macro file (macros.py:58)",
-          "[robosuite WARNING] It is recommended to use a private macro file (macros.py:58)",
-          "[robosuite WARNING] To setup, run: python /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/scripts/setup_macros.py (macros.py:59)",
           "[robosuite WARNING] To setup, run: python /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/scripts/setup_macros.py (macros.py:59)",
           "[robosuite WARNING] Could not import robosuite_models. Some robots may not be available. If you want to use these robots, please install robosuite_models from source (https://github.com/ARISE-Initiative/robosuite_models) or through pip install. (__init__.py:30)",
           "[robosuite WARNING] Could not load the mink-based whole-body IK. Make sure you install related import properly (e.g. pip install mink==0.0.5), otherwise you will not be able to use the default IK controller setting for GR1 robot. (__init__.py:40)",
@@ -303,7 +304,7 @@
           "Creating OpenDrawer with split=target",
           "WARNING: mimicgen environments not imported since mimicgen is not installed!",
           "Creating OpenDrawer with split=target",
-          "[robocasa365] 2 eps done in 27.1s",
+          "[robocasa365] 2 eps done in 20.5s",
           "",
           "=== robocasa/OpenDrawer ===",
           "success rate: 0.00 (0/2)"
@@ -317,7 +318,7 @@
           false
         ]
       },
-      "copied_result_json": "docs_zh/mowa/e006_policy_rollout/20260705_204919/batch_shuffle/robocasa_OpenDrawer.json"
+      "copied_result_json": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/batch_shuffle/robocasa_OpenDrawer.json"
     },
     {
       "intervention": "head_mask_control",
@@ -357,14 +358,14 @@
       ],
       "executed": true,
       "server_started": true,
-      "elapsed_sec": 94.92751795297954,
-      "server_log": "docs_zh/mowa/e006_policy_rollout/20260705_204919/head_mask_control/server.log",
-      "client_log": "docs_zh/mowa/e006_policy_rollout/20260705_204919/head_mask_control/client.log",
+      "elapsed_sec": 87.37320436502341,
+      "server_log": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/head_mask_control/server.log",
+      "client_log": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/head_mask_control/client.log",
       "client_result": {
         "returncode": 0,
-        "elapsed_sec": 62.91203565103933,
-        "started_at_unix": 1783256210.4849403,
-        "completed_at_unix": 1783256273.396977,
+        "elapsed_sec": 59.35824455402326,
+        "started_at_unix": 1783302556.4785485,
+        "completed_at_unix": 1783302615.8367958,
         "failure_category": null,
         "tail": [
           "[robosuite WARNING] No private macro file found! (macros.py:57)",
@@ -392,17 +393,13 @@
           "[robosuite INFO] Loading controller configuration from: /disk/rl/starVLA/.robocase/lib/python3.11/site-packages/robosuite/controllers/config/robots/default_pandaomron.json (composite_controller_factory.py:121)",
           "/disk/rl/starVLA/.robocase/lib/python3.11/site-packages/gymnasium/utils/passive_env_checker.py:159: UserWarning: \u001b[33mWARN: The obs returned by the `reset()` method is not within the observation space.\u001b[0m",
           "  logger.warn(f\"{pre} is not within the observation space.\")",
-          "/disk/rl/starVLA/.robocase/lib/python3.11/site-packages/gymnasium/utils/passive_env_checker.py:159: UserWarning: \u001b[33mWARN: The obs returned by the `reset()` method is not within the observation space.\u001b[0m",
-          "  logger.warn(f\"{pre} is not within the observation space.\")",
-          "/disk/rl/starVLA/.robocase/lib/python3.11/site-packages/gymnasium/utils/passive_env_checker.py:159: UserWarning: \u001b[33mWARN: The obs returned by the `step()` method is not within the observation space.\u001b[0m",
-          "  logger.warn(f\"{pre} is not within the observation space.\")",
           "/disk/rl/starVLA/.robocase/lib/python3.11/site-packages/gymnasium/utils/passive_env_checker.py:159: UserWarning: \u001b[33mWARN: The obs returned by the `step()` method is not within the observation space.\u001b[0m",
           "  logger.warn(f\"{pre} is not within the observation space.\")",
           "WARNING: mimicgen environments not imported since mimicgen is not installed!",
           "Creating OpenDrawer with split=target",
           "WARNING: mimicgen environments not imported since mimicgen is not installed!",
           "Creating OpenDrawer with split=target",
-          "[robocasa365] 2 eps done in 18.7s",
+          "[robocasa365] 2 eps done in 17.5s",
           "",
           "=== robocasa/OpenDrawer ===",
           "success rate: 0.00 (0/2)"
@@ -416,7 +413,7 @@
           false
         ]
       },
-      "copied_result_json": "docs_zh/mowa/e006_policy_rollout/20260705_204919/head_mask_control/robocasa_OpenDrawer.json"
+      "copied_result_json": "docs_zh/mowa/e006_policy_rollout/20260706_094353_009764/head_mask_control/robocasa_OpenDrawer.json"
     }
   ],
   "success_rate_delta_vs_baseline": {
@@ -430,5 +427,5 @@
     "If the client or simulator fails, inspect per-intervention server/client logs under artifact_dir.",
     "Formal E-006 evidence requires more episodes/seeds after this smoke path is stable."
   ],
-  "go_no_go": "No-Go: E-006 rollout smoke incomplete"
+  "go_no_go": "TBD: E-006 rollout smoke executed; review success deltas before any claim"
 }

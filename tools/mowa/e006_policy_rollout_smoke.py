@@ -30,6 +30,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run MoWA E-006 RoboCasa365 policy rollout smoke.")
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--config", type=Path, default=CONFIG)
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional checkpoint override. When omitted, uses the checkpoint reference from config.",
+    )
     parser.add_argument("--output", type=Path, default=ROLLOUT_OUTPUT)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--server-ready-timeout", type=int, default=900)
@@ -41,6 +47,7 @@ def main() -> None:
     payload = run_or_plan_e006_policy_rollout_smoke(
         args.repo_root,
         config_path=args.config,
+        checkpoint_override=args.checkpoint,
         execute=args.execute,
         server_ready_timeout=args.server_ready_timeout,
     )
@@ -56,20 +63,24 @@ def run_or_plan_e006_policy_rollout_smoke(
     repo_root: Path | str,
     *,
     config_path: Path = CONFIG,
+    checkpoint_override: Path | None = None,
     execute: bool,
     server_ready_timeout: int,
 ) -> dict[str, Any]:
     root = Path(repo_root)
     cfg = OmegaConf.load(root / config_path)
-    cfg.checkpoint = str(
-        resolve_mowa_checkpoint_reference(
+    checkpoint_reference = (
+        checkpoint_override
+        if checkpoint_override is not None
+        else resolve_mowa_checkpoint_reference(
             root,
             cfg.checkpoint,
             checkpoint_root_policy=cfg.checkpoint_root_policy,
         )
     )
+    cfg.checkpoint = str(checkpoint_reference)
     commands = _build_rollout_commands(cfg)
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     artifact_dir = ARTIFACT_ROOT / stamp
     runs = []
     for intervention, command_set in commands.items():
@@ -127,6 +138,7 @@ def run_or_plan_e006_policy_rollout_smoke(
         "launch_ready": False,
         "execute_requested": bool(execute),
         "config": str(config_path),
+        "checkpoint": str(cfg.checkpoint),
         "artifact_dir": str(artifact_dir),
         "checks": checks,
         "rollout_blocker": rollout_blocker,

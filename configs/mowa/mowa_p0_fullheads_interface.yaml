@@ -35,7 +35,6 @@ training:
   counted_in_experiment_budget: true
   launch_blockers:
     - E-001 launch draft not executable
-    - class_mapping_status remains Data Gate
     - checkpoint/save/resume strategy not confirmed
     - batch size, expected VRAM and runtime not confirmed
 data_gate:
@@ -44,4 +43,4 @@ data_gate:
   wam_hz: 5
   history_window: 2.0s_10_steps
   future_window: 1.0s_5_steps
-  class_mapping: Data Gate
+  class_mapping: confirmed_for_e001_initial_target

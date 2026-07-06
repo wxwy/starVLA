@@ -131,7 +131,6 @@ def build_e001_training_config_smoke(repo_root: Path | str) -> dict[str, Any]:
             "runtime policy draft not confirmed",
             "checkpoint/save/resume policy not confirmed for launch",
             "MoWA checkpoint root is reserved as playground/mowa_ckpt and must not be mixed into playground/Checkpoints",
-            "class_mapping_status remains Data Gate",
             "full VLA E-001 throughput is bounded-smoke observed only, not long-training confirmed",
         ],
         "go_no_go": (

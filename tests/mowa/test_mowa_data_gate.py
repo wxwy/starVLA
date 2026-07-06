@@ -33,6 +33,7 @@ from starVLA.dataloader.mowa import (
     select_mowa_leakage_anchor_indices,
     select_mowa_smoke_anchor_index,
 )
+from starVLA.mowa_constants import MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS
 
 
 class MoWADataGateTest(unittest.TestCase):
@@ -537,7 +538,10 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertTrue(sample["masks"]["action_outcome_class"])
         self.assertFalse(sample["masks"]["manipulation_readiness"])
         self.assertFalse(sample["masks"]["object_visibility_future"])
-        self.assertEqual(sample["labels"]["action_outcome_class"]["class_mapping_status"], DATA_GATE)
+        self.assertEqual(
+            sample["labels"]["action_outcome_class"]["class_mapping_status"],
+            MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+        )
 
     def test_atomic_core_batch_dataloader_smoke_combines_windows_and_labels(self):
         try:

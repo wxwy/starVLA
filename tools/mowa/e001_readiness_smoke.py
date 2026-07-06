@@ -236,7 +236,6 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
     unresolved_items.extend(
         [
             "E-001 launch draft records bounded approved state only, not full-scale launch approval",
-            "class_mapping_status remains Data Gate",
             "runtime policy draft and launch candidate must stay synchronized",
             "batch size 4, expected VRAM and runtime are bounded-smoke observed only, not long-training confirmed",
             "E-001 executable command candidate exists; keep command/runtime/launch state synchronized",
@@ -251,6 +250,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         and sot_status["status"] == "available"
         and class_mapping_confirmed
     )
+    launch_scope_status = _launch_scope_status(root / E001_LAUNCH_DRAFT_CONFIG)
     return {
         "stage": "P0",
         "experiment_id": "E-001",
@@ -326,6 +326,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
                     "stable_candidate"
                 )
             ),
+            "launch_scope_status": launch_scope_status,
         },
         "unresolved_items": unresolved_items,
         "go_no_go": (
@@ -373,10 +374,27 @@ def _sot_docs_status(root: Path) -> dict[str, Any]:
         "missing_derived_design_docs": missing_derived,
         "status": "available" if not missing_core else "missing_core_sot",
         "note": (
-            "Do not recreate or locally rewrite missing core SOT docs; keep launch gated "
+            "Core SOT docs are available; treat them as the source of truth for governance "
+            "and readiness."
+            if not missing_core
+            else "Do not recreate or locally rewrite missing core SOT docs; keep launch gated "
             "and record the gap in implementation logs."
         ),
     }
+
+
+def _launch_scope_status(path: Path) -> str:
+    payload = _read_yaml(path)
+    launch = (payload or {}).get("launch") or {}
+    if (
+        launch.get("launch_ready") is True
+        and launch.get("training_started") is True
+        and launch.get("training_completed_1000_steps") is True
+    ):
+        return "bounded_approved_state_only"
+    if launch.get("launch_ready") is True:
+        return "launch_ready_state_recorded"
+    return "launch_not_ready_or_missing"
 
 
 def _a100_throughput_smoke_passed(path: Path) -> bool:

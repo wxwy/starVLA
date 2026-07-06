@@ -10,7 +10,7 @@ launch:
   requires_human_confirmation: true
   human_confirmed: true
   training_completed_1000_steps: true
-  reason: short smoke training (1000 steps, bs4) completed; long-training resource policy, core SOT, class mapping, and action-gain evidence remain unconfirmed for full-scale training
+  reason: short smoke training (1000 steps, bs4) completed; long-training resource policy, core SOT, and action-gain evidence remain unconfirmed for full-scale training
 
 references:
   interface_config: configs/mowa/mowa_p0_fullheads_interface.yaml
@@ -56,7 +56,7 @@ model:
       - subgoal_feasibility
       - object_visibility_future
   label_policy: mask_missing_heads
-  class_mapping_status: Data Gate
+  class_mapping_status: confirmed_for_e001_initial_target
 
 training:
   counted_in_experiment_budget: true
@@ -105,8 +105,6 @@ logging:
   logging_frequency: 10
 
 launch_blockers:
-  - SOT docs 00/01/02 are not available in docs_zh/mowa
-  - class_mapping_status remains Data Gate
   - resource policy remains unconfirmed for full E-001 long training
   - StarFlow ft0 baseline/MoWA launch candidates are aligned and gated, but action-gain evidence is not validated
   - batch size 4 / expected VRAM are bounded-smoke observed only, not long-training confirmed

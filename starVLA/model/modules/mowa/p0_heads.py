@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from starVLA.mowa_constants import (
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
     MOWA_FUTURE_FULL_HEADS,
     MOWA_FUTURE_HEAD_OUTPUT_DIMS,
 )
@@ -274,7 +277,9 @@ def build_mowa_p0_constructible_batch_from_smoke(
         "metadata": {
             "sample_count": len(features),
             "sample_meta": sample_meta,
-            "class_mapping_status": "Data Gate",
+            "class_mapping_status": MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+            "class_mapping_version": MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
+            "class_mapping_note": MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
             "source": "G0 smoke labels",
         },
     }

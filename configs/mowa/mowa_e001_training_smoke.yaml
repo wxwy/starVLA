@@ -40,7 +40,7 @@ model:
     - next_best_view_score
     - subgoal_feasibility
     - object_visibility_future
-  class_mapping_status: Data Gate
+  class_mapping_status: confirmed_for_e001_initial_target
 
 temporal_policy:
   raw_action_hz: 20
@@ -86,8 +86,6 @@ logging:
   logging_frequency: target_10
 
 launch_blockers:
-  - SOT docs 00/01/02 are not available in docs_zh/mowa
-  - class_mapping_status remains Data Gate
   - runtime policy draft not confirmed
   - executable E-001 training entrypoint remains TBD
   - full VLA E-001 throughput is not measured

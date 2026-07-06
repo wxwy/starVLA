@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中
 > **run_id**: `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848`
 > **启动时间**: 2026-07-03 08:48 CST
-> **当前更新**: 2026-07-06 23:14 CST
+> **当前更新**: 2026-07-06 23:26 CST
 > **tmux 会话**: `train-0`
 > **配置来源**: `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml`
 
@@ -92,7 +92,7 @@ P0-M5 **Stage 1 StarFlowVLA 默认路径**：使用 LayerwiseFM (DiT) action mod
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **44340 / 80000**（55.4%） |
+| **当前 Step** | **44440 / 80000**（55.6%） |
 | **完成比例** | 55.4% |
 | **单步耗时** | ~7.0 s/it |
 | **数据加载耗时** | ~0.000 s |

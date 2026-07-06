@@ -174,7 +174,7 @@ def build_mowa_latent_cache_contract_smoke(
         "observation.images.robot0_agentview_right",
     ),
 ) -> MoWALatentCacheContractSmoke:
-    """Plan deterministic P1 latent cache artifact paths without encoding."""
+    """Plan deterministic future latent cache artifact paths without encoding."""
 
     manifest = build_mowa_latent_cache_manifest_smoke(
         dataset_path,
@@ -210,8 +210,7 @@ def build_mowa_latent_cache_contract_smoke(
     )
 
 
-# Runtime-facing aliases. Existing latent-cache names are kept for reports and
-# tools that still refer to the P1 experiment stage.
+# Runtime-facing aliases.
 MoWAFutureLatentCacheManifestEntry = MoWALatentCacheManifestEntry
 MoWAFutureLatentCacheManifestSmoke = MoWALatentCacheManifestSmoke
 MoWAFutureLatentCacheContractEntry = MoWALatentCacheContractEntry

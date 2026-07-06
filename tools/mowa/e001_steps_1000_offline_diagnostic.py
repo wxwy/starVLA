@@ -116,7 +116,7 @@ def build_e001_steps_1000_offline_diagnostic(
         "baseline_rollout_was_executed": baseline_rollout.get("eval_started") is True,
     }
     return {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": "E-001",
         "diagnostic_name": "steps_1000_offline_diagnostic",
         "training_started": False,
@@ -300,7 +300,7 @@ def _likely_causes(
             "Baseline 和 MoWA rollout 都是 0，当前不能把问题归因到 bridge 本身。",
             (
                 "先检查训练步数、OpenDrawer 数据域难度、"
-                "监督强度和动作分布，而不是继续扩展 E-002/P1。"
+                "监督强度和动作分布，而不是继续扩展 E-002/future_latent_prior。"
             ),
             (
                 "MoWA forward intervention 仍可用于确认桥接是否接通，"

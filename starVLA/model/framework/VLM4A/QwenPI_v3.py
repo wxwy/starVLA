@@ -379,7 +379,7 @@ class Qwen_PI_v3(baseframework):
             getattr(
                 mowa_cfg,
                 "enable_future_supervision_loss",
-                getattr(mowa_cfg, "enable_p0_supervision_loss", False),
+                getattr(mowa_cfg, "enable_future_supervision_loss", False),
             )
         )
         self.mowa_future_supervision_probe = None
@@ -388,7 +388,7 @@ class Qwen_PI_v3(baseframework):
             getattr(
                 mowa_cfg,
                 "future_supervision_active_heads",
-                getattr(mowa_cfg, "p0_supervision_active_heads", MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
+                getattr(mowa_cfg, "future_supervision_active_heads", MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
             )
         )
         if not self.mowa_future_supervision_loss_enabled:
@@ -398,14 +398,14 @@ class Qwen_PI_v3(baseframework):
             getattr(
                 mowa_cfg,
                 "future_supervision_hidden_dim",
-                getattr(mowa_cfg, "p0_supervision_hidden_dim", 32),
+                getattr(mowa_cfg, "future_supervision_hidden_dim", 32),
             )
         )
         action_outcome_loss_type = str(
             getattr(
                 mowa_cfg,
                 "future_supervision_action_outcome_loss_type",
-                getattr(mowa_cfg, "p0_supervision_action_outcome_loss_type", "mse"),
+                getattr(mowa_cfg, "future_supervision_action_outcome_loss_type", "mse"),
             )
         )
         self.mowa_future_supervision_probe = self._build_mowa_future_head_module(
@@ -449,7 +449,7 @@ class Qwen_PI_v3(baseframework):
 
     @staticmethod
     def _rewrite_mowa_checkpoint_state_dict_keys_for_compatibility(state_dict) -> None:
-        legacy_prefix = "mowa_layerwise_bridge_p0_heads."
+        legacy_prefix = "mowa_layerwise_bridge_future_heads."
         future_prefix = "mowa_layerwise_bridge_future_feature_heads."
         for key in list(state_dict.keys()):
             if not key.startswith(legacy_prefix):
@@ -628,7 +628,7 @@ class Qwen_PI_v3(baseframework):
         supervision_probe = getattr(self, "mowa_future_supervision_probe", None)
         if supervision_probe is None:
             raise RuntimeError("MoWA future supervision loss is enabled but not initialized.")
-        if not examples or not all("mowa_p0_targets" in example for example in examples):
+        if not examples or not all("mowa_future_targets" in example for example in examples):
             return {
                 "supervision_available": False,
                 "loss": None,
@@ -651,12 +651,12 @@ class Qwen_PI_v3(baseframework):
         )
         for head in MOWA_FUTURE_FULL_HEADS:
             head_active = head in active_heads and all(
-                bool((example.get("mowa_p0_masks") or {}).get(head, False)) for example in examples
+                bool((example.get("mowa_future_masks") or {}).get(head, False)) for example in examples
             )
             masks[head] = head_active
             if not head_active:
                 continue
-            values = [example["mowa_p0_targets"][head] for example in examples]
+            values = [example["mowa_future_targets"][head] for example in examples]
             targets[head] = torch.as_tensor(values, device=device, dtype=hidden_features.dtype)
 
         if not any(masks.values()):

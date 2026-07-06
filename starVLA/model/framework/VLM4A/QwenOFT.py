@@ -144,7 +144,7 @@ class Qwenvl_OFT(baseframework):
 
         # L1 loss
         self.l1_loss = nn.L1Loss()
-        self._setup_mowa_p0_supervision_probe()
+        self._setup_mowa_future_supervision_probe()
         self._setup_mowa_action_bridge_probe()
 
     def forward(
@@ -211,7 +211,7 @@ class Qwenvl_OFT(baseframework):
             )  # [B, chunk_len, H]
             action_queries = action_queries.to(dtype=next(self.action_model.parameters()).dtype)
             pred_actions = self.action_model.predict_action(action_queries)  # (B, chunk_len, action_dim)
-            mowa_p0_probe = self._maybe_run_mowa_p0_supervision_probe(action_queries, examples)
+            mowa_future_supervision_probe = self._maybe_run_mowa_future_supervision_probe(action_queries, examples)
             mowa_probe = self._maybe_run_mowa_action_bridge_probe(action_queries)
 
             # Label alignment: take the last chunk_len segment
@@ -224,18 +224,18 @@ class Qwenvl_OFT(baseframework):
             action_loss = self.l1_loss(pred_actions, actions_target)
 
         output = {"action_loss": action_loss}
-        if mowa_p0_probe is not None:
-            output["mowa_p0_supervision_available"] = mowa_p0_probe["supervision_available"]
-            output["mowa_p0_supervision_active_heads"] = mowa_p0_probe["active_heads"]
-            output["mowa_p0_supervision_masked_heads"] = mowa_p0_probe["masked_heads"]
-            output["mowa_future_supervision_available"] = mowa_p0_probe["supervision_available"]
-            output["mowa_future_supervision_active_heads"] = mowa_p0_probe["active_heads"]
-            output["mowa_future_supervision_masked_heads"] = mowa_p0_probe["masked_heads"]
-            if mowa_p0_probe["loss"] is not None:
-                output["mowa_p0_supervision_loss"] = mowa_p0_probe["loss"]
-                output["mowa_p0_supervision_losses"] = mowa_p0_probe["losses"]
-                output["mowa_future_supervision_loss"] = mowa_p0_probe["loss"]
-                output["mowa_future_supervision_losses"] = mowa_p0_probe["losses"]
+        if mowa_future_supervision_probe is not None:
+            output["mowa_future_supervision_available"] = mowa_future_supervision_probe["supervision_available"]
+            output["mowa_future_supervision_active_heads"] = mowa_future_supervision_probe["active_heads"]
+            output["mowa_future_supervision_masked_heads"] = mowa_future_supervision_probe["masked_heads"]
+            output["mowa_future_supervision_available"] = mowa_future_supervision_probe["supervision_available"]
+            output["mowa_future_supervision_active_heads"] = mowa_future_supervision_probe["active_heads"]
+            output["mowa_future_supervision_masked_heads"] = mowa_future_supervision_probe["masked_heads"]
+            if mowa_future_supervision_probe["loss"] is not None:
+                output["mowa_future_supervision_loss"] = mowa_future_supervision_probe["loss"]
+                output["mowa_future_supervision_losses"] = mowa_future_supervision_probe["losses"]
+                output["mowa_future_supervision_loss"] = mowa_future_supervision_probe["loss"]
+                output["mowa_future_supervision_losses"] = mowa_future_supervision_probe["losses"]
         if mowa_probe is not None:
             output["mowa_bridge_probe_loss"] = mowa_probe["probe_loss"]
             output["mowa_bridge_probe_token_shape"] = mowa_probe["token_shape"]
@@ -379,24 +379,24 @@ class Qwenvl_OFT(baseframework):
         action_queries = last_hidden.gather(dim=1, index=expanded_index)  # [B, chunk_len, H]
         return action_queries
 
-    def _setup_mowa_p0_supervision_probe(self) -> None:
+    def _setup_mowa_future_supervision_probe(self) -> None:
         mowa_cfg = getattr(self.config.framework, "mowa", None)
-        self.mowa_p0_supervision_probe_enabled = bool(
-            getattr(mowa_cfg, "enable_p0_supervision_probe", False)
+        self.mowa_future_supervision_probe_enabled = bool(
+            getattr(mowa_cfg, "enable_future_supervision_probe", False)
         )
-        self.mowa_p0_supervision_probe = None
-        self.mowa_p0_supervision_active_heads = tuple(
+        self.mowa_future_supervision_probe = None
+        self.mowa_future_supervision_active_heads = tuple(
             getattr(
                 mowa_cfg,
                 "future_supervision_active_heads",
                 getattr(
                     mowa_cfg,
-                    "p0_supervision_active_heads",
+                    "future_supervision_active_heads",
                     MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
                 ),
             )
         )
-        if not self.mowa_p0_supervision_probe_enabled:
+        if not self.mowa_future_supervision_probe_enabled:
             return
 
         action_hidden_dim = int(self.config.framework.action_model.action_hidden_dim)
@@ -404,17 +404,17 @@ class Qwenvl_OFT(baseframework):
             getattr(
                 mowa_cfg,
                 "future_supervision_hidden_dim",
-                getattr(mowa_cfg, "p0_supervision_hidden_dim", 32),
+                getattr(mowa_cfg, "future_supervision_hidden_dim", 32),
             )
         )
         action_outcome_loss_type = str(
             getattr(
                 mowa_cfg,
                 "future_supervision_action_outcome_loss_type",
-                getattr(mowa_cfg, "p0_supervision_action_outcome_loss_type", "mse"),
+                getattr(mowa_cfg, "future_supervision_action_outcome_loss_type", "mse"),
             )
         )
-        self.mowa_p0_supervision_probe = MoWAFutureFeatureHeads(
+        self.mowa_future_supervision_probe = MoWAFutureFeatureHeads(
             MoWAFutureFeatureHeadsConfig(
                 input_dim=action_hidden_dim,
                 hidden_dim=hidden_dim,
@@ -422,18 +422,18 @@ class Qwenvl_OFT(baseframework):
             )
         )
 
-    def _maybe_run_mowa_p0_supervision_probe(
+    def _maybe_run_mowa_future_supervision_probe(
         self,
         action_queries: torch.Tensor,
         examples: List[dict],
     ) -> dict | None:
-        if not self.mowa_p0_supervision_probe_enabled:
+        if not self.mowa_future_supervision_probe_enabled:
             return None
-        if self.mowa_p0_supervision_probe is None:
-            raise RuntimeError("MoWA P0 supervision probe is enabled but not initialized.")
+        if self.mowa_future_supervision_probe is None:
+            raise RuntimeError("MoWA future supervision probe is enabled but not initialized.")
 
         hidden_features = action_queries.mean(dim=1)
-        if not examples or not all("mowa_p0_targets" in example for example in examples):
+        if not examples or not all("mowa_future_targets" in example for example in examples):
             return {
                 "supervision_available": False,
                 "loss": None,
@@ -446,13 +446,13 @@ class Qwenvl_OFT(baseframework):
         masks = {}
         device = hidden_features.device
         for head in MOWA_FUTURE_FULL_HEADS:
-            head_active = head in self.mowa_p0_supervision_active_heads and all(
-                bool((example.get("mowa_p0_masks") or {}).get(head, False)) for example in examples
+            head_active = head in self.mowa_future_supervision_active_heads and all(
+                bool((example.get("mowa_future_masks") or {}).get(head, False)) for example in examples
             )
             masks[head] = head_active
             if not head_active:
                 continue
-            values = [example["mowa_p0_targets"][head] for example in examples]
+            values = [example["mowa_future_targets"][head] for example in examples]
             targets[head] = torch.as_tensor(values, device=device, dtype=hidden_features.dtype)
 
         if not any(masks.values()):
@@ -464,7 +464,7 @@ class Qwenvl_OFT(baseframework):
                 "masked_heads": MOWA_FUTURE_FULL_HEADS,
             }
 
-        loss, losses, _ = self.mowa_p0_supervision_probe.compute_loss(hidden_features, targets, masks)
+        loss, losses, _ = self.mowa_future_supervision_probe.compute_loss(hidden_features, targets, masks)
         return {
             "supervision_available": True,
             "loss": loss,

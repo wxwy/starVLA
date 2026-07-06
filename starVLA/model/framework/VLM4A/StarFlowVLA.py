@@ -1,7 +1,7 @@
 # Copyright 2026 StarFlow-VLA contributors. All rights reserved.
 """StarFlow-VLA framework facade。
 
-本文件只提供 StarFlowVLA 的 StarVLA registry 入口。P0 阶段不复制
+本文件只提供 StarFlowVLA 的 StarVLA registry 入口。当前阶段不复制
 QwenPI_v3 的主体构建、forward 或 predict_action 逻辑，而是继承
 Qwen_PI_v3，并通过 mapping 元数据记录 StarVLA-native 实现边界。
 """

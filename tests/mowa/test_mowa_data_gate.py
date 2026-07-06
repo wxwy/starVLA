@@ -21,11 +21,11 @@ from starVLA.dataloader.mowa import (
     build_mowa_g0_report_skeleton,
     build_mowa_latent_cache_contract_smoke,
     build_mowa_latent_cache_manifest_smoke,
-    build_mowa_p0_constructible_label_smoke,
+    build_mowa_future_constructible_label_smoke,
     build_mowa_robocasa365_local_smoke_report,
     build_mowa_shuffled_episode_pairs,
     fixed_size_list_shape,
-    inspect_mowa_p0_label_coverage,
+    inspect_mowa_future_label_coverage,
     inspect_mowa_robocasa365_atomic_core_recipe,
     inspect_robocasa365_lerobot_dataset_smoke,
     inspect_robocasa365_lerobot_episode_schema,
@@ -116,7 +116,7 @@ class MoWADataGateTest(unittest.TestCase):
             timestamps=[0, 1, 2, 3, 4, 5],
             observations={"rgb_front": "Data Gate", "robot_state": "Data Gate"},
             actions={"canonical_action": "Data Gate"},
-            wam_targets={"p0_labels": "Data Gate", "future_wan_latent": "Data Gate"},
+            wam_targets={"future_labels": "Data Gate", "future_wan_latent": "Data Gate"},
             metadata={"obs_fps": DATA_GATE, "action_hz": DATA_GATE},
         )
 
@@ -401,7 +401,7 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertNotIn("action_chunk_target", sample.inputs)
         sample.validate()
 
-    def test_robocasa365_dataset_smoke_checks_boundaries_and_p0_coverage(self):
+    def test_robocasa365_dataset_smoke_checks_boundaries_and_future_coverage(self):
         try:
             import pyarrow  # noqa: F401
         except ImportError:
@@ -423,8 +423,8 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertEqual(payload["sampled_row_counts"], (6, 7))
         self.assertEqual(payload["boundary_smoke"]["cross_episode_leakage_status"], "smoke_passed")
         self.assertEqual(payload["boundary_smoke"]["future_action_leakage_status"], "smoke_passed")
-        self.assertIn("task_progress", payload["p0_label_coverage"])
-        self.assertIn("action_outcome_class", payload["p0_label_coverage"])
+        self.assertIn("task_progress", payload["future_label_coverage"])
+        self.assertIn("action_outcome_class", payload["future_label_coverage"])
         self.assertEqual(payload["boundary_smoke"]["window_config"]["status"], "smoke_only_target")
 
     def test_atomic_core_recipe_reports_missing_and_available_tasks(self):
@@ -489,7 +489,7 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertEqual(profile["history_window_status"], DATA_GATE)
         self.assertEqual(profile["future_window_status"], DATA_GATE)
 
-    def test_p0_label_coverage_reports_constructible_and_masked_heads(self):
+    def test_future_label_coverage_reports_constructible_and_masked_heads(self):
         try:
             import pyarrow  # noqa: F401
         except ImportError:
@@ -499,7 +499,7 @@ class MoWADataGateTest(unittest.TestCase):
             root = Path(tmpdir)
             dataset_path = root / MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH
             self._write_minimal_robocasa_parquet_dataset(dataset_path, lengths=(6, 7))
-            report = inspect_mowa_p0_label_coverage(dataset_path, episode_indices=(0, 1)).to_dict()
+            report = inspect_mowa_future_label_coverage(dataset_path, episode_indices=(0, 1)).to_dict()
 
         self.assertEqual(report["sampled_episode_indices"], (0, 1))
         self.assertIn("frame_index", report["available_columns"])
@@ -513,7 +513,7 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertEqual(by_head["manipulation_readiness"]["status"], DATA_GATE)
         self.assertEqual(by_head["subgoal_feasibility"]["status"], DATA_GATE)
 
-    def test_p0_constructible_label_builder_keeps_unvalidated_heads_masked(self):
+    def test_future_constructible_label_builder_keeps_unvalidated_heads_masked(self):
         try:
             import pyarrow  # noqa: F401
         except ImportError:
@@ -523,7 +523,7 @@ class MoWADataGateTest(unittest.TestCase):
             root = Path(tmpdir)
             dataset_path = root / MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH
             self._write_minimal_robocasa_parquet_dataset(dataset_path, lengths=(6,))
-            report = build_mowa_p0_constructible_label_smoke(
+            report = build_mowa_future_constructible_label_smoke(
                 dataset_path,
                 episode_indices=(0,),
                 preview_rows=3,
@@ -568,7 +568,7 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertIn("history_actions", first["input_keys"])
         self.assertIn("action_chunk_target", first["target_keys"])
         self.assertFalse(first["future_action_in_inputs"])
-        self.assertEqual(first["p0_label_keys"], ("action_outcome_class", "task_progress"))
+        self.assertEqual(first["future_label_keys"], ("action_outcome_class", "task_progress"))
 
     def test_atomic_core_leakage_gate_scans_episode_metadata(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -714,12 +714,12 @@ class MoWADataGateTest(unittest.TestCase):
             build_mowa_latent_cache_contract_smoke,
         )
 
-    def test_p1_latent_cache_builder_design_smoke_passes(self):
-        from tools.mowa.p1_latent_cache_builder_design_smoke import (
-            build_p1_latent_cache_builder_design_smoke,
+    def test_latent_cache_builder_design_smoke_passes(self):
+        from tools.mowa.latent_cache_builder_design_smoke import (
+            build_latent_cache_builder_design_smoke,
         )
 
-        report = build_p1_latent_cache_builder_design_smoke(Path("."))
+        report = build_latent_cache_builder_design_smoke(Path("."))
 
         self.assertFalse(report["training_started"])
         self.assertTrue(all(report["checks"].values()))
@@ -747,12 +747,12 @@ class MoWADataGateTest(unittest.TestCase):
 
         self.assertEqual(pairs, ((0, 1), (1, 4), (4, 0)))
 
-    def test_p1_b1_shuffled_robot_sanity_plan_smoke_passes(self):
-        from tools.mowa.p1_b1_shuffled_robot_sanity_plan_smoke import (
-            build_p1_b1_shuffled_robot_sanity_plan_smoke,
+    def test_shuffled_robot_sanity_plan_smoke_passes(self):
+        from tools.mowa.shuffled_robot_sanity_plan_smoke import (
+            build_shuffled_robot_sanity_plan_smoke,
         )
 
-        report = build_p1_b1_shuffled_robot_sanity_plan_smoke(Path("."))
+        report = build_shuffled_robot_sanity_plan_smoke(Path("."))
 
         self.assertFalse(report["training_started"])
         self.assertTrue(all(report["checks"].values()))
@@ -775,8 +775,8 @@ class MoWADataGateTest(unittest.TestCase):
             "TBD: final report template smoke passed",
         )
 
-    def test_p2_frozen_decoder_diagnostic_plan_smoke_passes(self):
-        from tools.mowa.p2_frozen_decoder_diagnostic_smoke import _build_smoke
+    def test_frozen_decoder_diagnostic_plan_smoke_passes(self):
+        from tools.mowa.frozen_decoder_diagnostic_smoke import _build_smoke
 
         report = _build_smoke()
 
@@ -784,7 +784,7 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertTrue(all(report["checks"].values()))
         self.assertEqual(
             report["go_no_go"],
-            "TBD: P2 diagnostic plan smoke passed; real decoder runs remain gated",
+            "TBD: frozen decoder diagnostic plan smoke passed; real decoder runs remain gated",
         )
 
 

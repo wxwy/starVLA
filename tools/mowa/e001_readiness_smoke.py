@@ -16,9 +16,9 @@ REQUIRED_REPORTS = {
     "production_window_preflight": Path(
         "docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json"
     ),
-    "p0_train_smoke": Path("docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json"),
+    "full_heads_train_smoke": Path("docs_zh/mowa/mowa_full_heads_constructible_train_smoke.json"),
 }
-P0_FULLHEADS_INTERFACE_CONFIG = Path("configs/mowa/mowa_p0_fullheads_interface.yaml")
+FULL_HEADS_INTERFACE_CONFIG = Path("configs/mowa/mowa_full_heads_interface.yaml")
 E001_LAUNCH_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_launch_draft.yaml")
 E001_RUNTIME_POLICY_DRAFT_CONFIG = Path("configs/mowa/mowa_e001_runtime_policy_draft.yaml")
 MOWA_ACTION_BRIDGE_INTERFACE_CONFIG = Path("configs/mowa/mowa_action_bridge_interface.yaml")
@@ -74,8 +74,8 @@ DERIVED_DESIGN_DOCS = (
     "06_data_gate_report.md",
     "07_implementation_log.md",
     "08_starvla_data_benchmark_support_matrix.md",
-    "09_p0_label_builder_design.md",
-    "10_p1_latent_cache_manifest_design.md",
+    "09_future_label_builder_design.md",
+    "10_future_latent_cache_manifest_design.md",
 )
 
 
@@ -117,7 +117,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
     recipe = reports.get("recipe") or {}
     preflight = reports.get("production_preflight") or {}
     window_preflight = reports.get("production_window_preflight") or {}
-    p0_smoke = reports.get("p0_train_smoke") or {}
+    full_heads_smoke = reports.get("full_heads_train_smoke") or {}
 
     checks = {
         "recipe_available": recipe.get("available_task_count") == 10
@@ -129,10 +129,10 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             and preflight.get("future_action_leakage_status") == "smoke_passed"
             and preflight.get("failed_sample_count") == 0
         ),
-        "p0_one_step_smoke_passed": (
-            "train smoke passed" in str(p0_smoke.get("go_no_go", ""))
-            and float(p0_smoke.get("loss_after", 1.0))
-            <= float(p0_smoke.get("loss_before", 0.0))
+        "full_heads_one_step_smoke_passed": (
+            "train smoke passed" in str(full_heads_smoke.get("go_no_go", ""))
+            and float(full_heads_smoke.get("loss_after", 1.0))
+            <= float(full_heads_smoke.get("loss_before", 0.0))
         ),
         "production_window_5hz_preflight_passed": (
             window_preflight.get("split_status") == "smoke_passed"
@@ -140,7 +140,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             and window_preflight.get("future_action_leakage_status") == "smoke_passed"
             and window_preflight.get("failed_sample_count") == 0
         ),
-        "p0_fullheads_interface_created": (root / P0_FULLHEADS_INTERFACE_CONFIG).is_file(),
+        "full_heads_interface_created": (root / FULL_HEADS_INTERFACE_CONFIG).is_file(),
         "e001_launch_draft_created": (root / E001_LAUNCH_DRAFT_CONFIG).is_file(),
         "e001_launch_draft_state_recorded": _launch_draft_state_recorded(
             root / E001_LAUNCH_DRAFT_CONFIG
@@ -243,7 +243,7 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
         ]
     )
 
-    class_mapping_confirmed = str(p0_smoke.get("class_mapping_status")) != "Data Gate"
+    class_mapping_confirmed = str(full_heads_smoke.get("class_mapping_status")) != "Data Gate"
     ready_for_launch = (
         all(checks.values())
         and not missing_reports
@@ -252,9 +252,9 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
     )
     launch_scope_status = _launch_scope_status(root / E001_LAUNCH_DRAFT_CONFIG)
     return {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": "E-001",
-        "experiment_name": "P0-FullHeads vs VLA baseline",
+        "experiment_name": "FullHeads vs VLA baseline",
         "training_started": False,
         "reports": {name: str(path) for name, path in REQUIRED_REPORTS.items()},
         "checks": checks,
@@ -275,11 +275,11 @@ def build_e001_readiness_report(repo_root: Path | str) -> dict[str, Any]:
             "future_steps": (window_preflight.get("window_config") or {}).get("future_steps"),
             "action_chunk_steps": (window_preflight.get("window_config") or {}).get("action_chunk_steps"),
             "production_window_preflight_report": str(REQUIRED_REPORTS["production_window_preflight"]),
-            "p0_smoke_sample_count": p0_smoke.get("sample_count"),
-            "loss_before": p0_smoke.get("loss_before"),
-            "loss_after": p0_smoke.get("loss_after"),
-            "class_mapping_status": p0_smoke.get("class_mapping_status"),
-            "p0_fullheads_interface_config": str(P0_FULLHEADS_INTERFACE_CONFIG),
+            "full_heads_smoke_sample_count": full_heads_smoke.get("sample_count"),
+            "loss_before": full_heads_smoke.get("loss_before"),
+            "loss_after": full_heads_smoke.get("loss_after"),
+            "class_mapping_status": full_heads_smoke.get("class_mapping_status"),
+            "full_heads_interface_config": str(FULL_HEADS_INTERFACE_CONFIG),
             "e001_launch_draft_config": str(E001_LAUNCH_DRAFT_CONFIG),
             "e001_runtime_policy_draft_config": str(E001_RUNTIME_POLICY_DRAFT_CONFIG),
             "mowa_action_bridge_interface_config": str(MOWA_ACTION_BRIDGE_INTERFACE_CONFIG),

@@ -239,11 +239,11 @@ def _collect_checkpoint_keys_from_index(checkpoint_dir: Path) -> set[str]:
 
 
 def _expand_checkpoint_key_for_compatibility(key: str) -> set[str]:
-    if key.startswith("mowa_layerwise_bridge_p0_heads."):
+    if key.startswith("mowa_layerwise_bridge_future_heads."):
         return {
             key,
             key.replace(
-                "mowa_layerwise_bridge_p0_heads.",
+                "mowa_layerwise_bridge_future_heads.",
                 "mowa_layerwise_bridge_future_feature_heads.",
                 1,
             ),
@@ -257,7 +257,7 @@ def _expand_model_key_for_compatibility(key: str) -> set[str]:
             key,
             key.replace(
                 "mowa_layerwise_bridge_future_feature_heads.",
-                "mowa_layerwise_bridge_p0_heads.",
+                "mowa_layerwise_bridge_future_heads.",
                 1,
             ),
         }

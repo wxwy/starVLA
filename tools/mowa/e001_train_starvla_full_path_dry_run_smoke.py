@@ -58,21 +58,20 @@ def build_train_starvla_full_path_dry_run_smoke(repo_root: Path | str) -> dict[s
             == "forward_evaluated_in_full_path_dry_run"
         ),
         "batch_fetched": (data.get("batch_summary") or {}).get("fetched") is True,
-        "mowa_future_labels_enabled": _get_future_labels_enabled(data) is True,
-        "mowa_p0_labels_enabled": data.get("mowa_p0_labels_enabled") is True,
-        "batch_has_mowa_p0_targets": "mowa_p0_targets"
+        "mowa_future_labels_enabled": data.get("mowa_future_labels_enabled") is True,
+        "batch_has_mowa_future_targets": "mowa_future_targets"
         in ((data.get("batch_summary") or {}).get("first_item_keys") or []),
-        "batch_has_mowa_p0_masks": "mowa_p0_masks"
+        "batch_has_mowa_future_masks": "mowa_future_masks"
         in ((data.get("batch_summary") or {}).get("first_item_keys") or []),
         "forward_evaluated": forward.get("evaluated") is True,
         "forward_has_mowa_future_supervision_loss": (
             "mowa_future_supervision_loss" in forward_keys
-            or "mowa_p0_supervision_loss" in forward_keys
+            or "mowa_future_supervision_loss" in forward_keys
         ),
         "forward_has_action_loss": "action_loss" in forward_keys,
     }
     return {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": "E-001",
         "training_started": False,
         "checks": checks,
@@ -88,7 +87,7 @@ def build_train_starvla_full_path_dry_run_smoke(repo_root: Path | str) -> dict[s
         },
         "unresolved_items": [
             "This validates QwenOFT StarVLA full-path wiring, not MoWA action-bridge coupling.",
-            "MoWA P0 supervision loss is forward-evaluated but not added to action_loss.",
+            "MoWA future supervision loss is forward-evaluated but not added to action_loss.",
             "No checkpoint/save/resume launch policy is confirmed.",
         ],
         "go_no_go": (
@@ -108,12 +107,12 @@ def _read_json(path: Path) -> dict[str, Any] | None:
 def _get_future_supervision_value(framework: dict[str, Any], suffix: str) -> Any:
     return framework.get(
         f"mowa_future_supervision_{suffix}",
-        framework.get(f"mowa_p0_supervision_{suffix}"),
+        framework.get(f"mowa_future_supervision_{suffix}"),
     )
 
 
 def _get_future_labels_enabled(data: dict[str, Any]) -> Any:
-    return data.get("mowa_future_labels_enabled", data.get("mowa_p0_labels_enabled"))
+    return data.get("mowa_future_labels_enabled", data.get("mowa_future_labels_enabled"))
 
 
 if __name__ == "__main__":

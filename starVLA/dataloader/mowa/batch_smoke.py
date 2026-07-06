@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from starVLA.dataloader.mowa.p0_label_builder import build_mowa_p0_label_smoke_sample
+from starVLA.dataloader.mowa.full_head_label_builder import build_mowa_future_label_smoke_sample
 from starVLA.dataloader.mowa.robocasa365_adapter import inspect_robocasa365_lerobot_episode_schema
 from starVLA.dataloader.mowa.robocasa365_recipe import (
     MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS,
@@ -30,9 +30,9 @@ class MoWABatchSmokeSample:
     action_target_indices: tuple[int, ...]
     input_keys: tuple[str, ...]
     target_keys: tuple[str, ...]
-    p0_label_keys: tuple[str, ...]
-    p0_mask_true_heads: tuple[str, ...]
-    p0_mask_false_heads: tuple[str, ...]
+    future_label_keys: tuple[str, ...]
+    future_mask_true_heads: tuple[str, ...]
+    future_mask_false_heads: tuple[str, ...]
     boundary_mask: Mapping[str, bool]
     future_action_in_inputs: bool
 
@@ -48,9 +48,9 @@ class MoWABatchSmokeSample:
             "action_target_indices": self.action_target_indices,
             "input_keys": self.input_keys,
             "target_keys": self.target_keys,
-            "p0_label_keys": self.p0_label_keys,
-            "p0_mask_true_heads": self.p0_mask_true_heads,
-            "p0_mask_false_heads": self.p0_mask_false_heads,
+            "future_label_keys": self.future_label_keys,
+            "future_mask_true_heads": self.future_mask_true_heads,
+            "future_mask_false_heads": self.future_mask_false_heads,
             "boundary_mask": dict(self.boundary_mask),
             "future_action_in_inputs": self.future_action_in_inputs,
         }
@@ -112,7 +112,7 @@ def build_mowa_atomic_core_batch_dataloader_smoke(
             )
             anchor_index = select_mowa_smoke_anchor_index(schema.row_count, window_config)
             window_sample = sampler.sample(schema.unified_episode, anchor_index=anchor_index)
-            label_sample = build_mowa_p0_label_smoke_sample(
+            label_sample = build_mowa_future_label_smoke_sample(
                 dataset_path,
                 episode_index=episode_index,
                 row_index=anchor_index,
@@ -131,9 +131,9 @@ def build_mowa_atomic_core_batch_dataloader_smoke(
                     action_target_indices=window_sample.action_target_indices,
                     input_keys=tuple(sorted(window_sample.inputs.keys())),
                     target_keys=tuple(sorted(window_sample.targets.keys())),
-                    p0_label_keys=tuple(sorted(label_sample.labels.keys())),
-                    p0_mask_true_heads=true_heads,
-                    p0_mask_false_heads=false_heads,
+                    future_label_keys=tuple(sorted(label_sample.labels.keys())),
+                    future_mask_true_heads=true_heads,
+                    future_mask_false_heads=false_heads,
                     boundary_mask=window_sample.boundary_mask,
                     future_action_in_inputs="action_chunk_target" in window_sample.inputs,
                 )
@@ -141,8 +141,8 @@ def build_mowa_atomic_core_batch_dataloader_smoke(
 
     future_action_ok = all(not sample.future_action_in_inputs for sample in samples)
     label_ok = all(
-        sample.p0_label_keys == ("action_outcome_class", "task_progress")
-        and sample.p0_mask_true_heads == ("task_progress", "action_outcome_class")
+        sample.future_label_keys == ("action_outcome_class", "task_progress")
+        and sample.future_mask_true_heads == ("task_progress", "action_outcome_class")
         for sample in samples
     )
     return MoWABatchDataloaderSmoke(

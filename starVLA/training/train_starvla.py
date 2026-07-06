@@ -770,7 +770,7 @@ def _summarize_batch(batch) -> dict:
             summary["first_item_type"] = type(first).__name__
             if isinstance(first, dict):
                 summary["first_item_keys"] = sorted(str(key) for key in first.keys())
-                for key in ("image", "lang", "action", "state", "mowa_p0_targets", "mowa_p0_masks", "mowa_p0_metadata"):
+                for key in ("image", "lang", "action", "state", "mowa_future_targets", "mowa_future_masks", "mowa_future_metadata"):
                     if key in first:
                         value = first[key]
                         value_summary = {"type": type(value).__name__}
@@ -920,31 +920,31 @@ def _write_full_path_dry_run_report(
     )
     trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
     total_params = sum(param.numel() for param in model.parameters())
-    mowa_labels_enabled = bool(getattr(cfg.datasets.vla_data, "enable_mowa_p0_labels", False))
+    mowa_labels_enabled = bool(getattr(cfg.datasets.vla_data, "enable_mowa_future_labels", False))
     mowa_supervision_enabled = bool(
         getattr(
             model,
             "mowa_future_supervision_loss_enabled",
-            getattr(model, "mowa_p0_supervision_probe_enabled", False),
+            getattr(model, "mowa_future_supervision_probe_enabled", False),
         )
     )
     mowa_supervision_active_heads = list(
         getattr(
             model,
             "mowa_future_supervision_active_heads",
-            getattr(model, "mowa_p0_supervision_active_heads", ()),
+            getattr(model, "mowa_future_supervision_active_heads", ()),
         )
     )
     mowa_supervision_label_status = (
         "forward_evaluated_in_full_path_dry_run"
         if (
             "mowa_future_supervision_loss" in ((forward_summary or {}).get("keys") or [])
-            or "mowa_p0_supervision_loss" in ((forward_summary or {}).get("keys") or [])
+            or "mowa_future_supervision_loss" in ((forward_summary or {}).get("keys") or [])
         )
         else "not_evaluated_in_full_path_dry_run"
     )
     payload = {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": getattr(cfg, "experiment_id", "E-001"),
         "entrypoint": "starVLA/training/train_starvla.py",
         "full_path_dry_run_only": True,
@@ -996,9 +996,9 @@ def _write_full_path_dry_run_report(
             "mowa_future_supervision_probe_enabled": mowa_supervision_enabled,
             "mowa_future_supervision_active_heads": mowa_supervision_active_heads,
             "mowa_future_supervision_label_status": mowa_supervision_label_status,
-            "mowa_p0_supervision_probe_enabled": mowa_supervision_enabled,
-            "mowa_p0_supervision_active_heads": mowa_supervision_active_heads,
-            "mowa_p0_supervision_label_status": mowa_supervision_label_status,
+            "mowa_future_supervision_probe_enabled": mowa_supervision_enabled,
+            "mowa_future_supervision_active_heads": mowa_supervision_active_heads,
+            "mowa_future_supervision_label_status": mowa_supervision_label_status,
         },
         "data": {
             "dataset_py": cfg.datasets.vla_data.dataset_py,
@@ -1008,7 +1008,7 @@ def _write_full_path_dry_run_report(
             "dataloader_type": type(dataloader).__name__,
             "dataloader_length": len(dataloader) if hasattr(dataloader, "__len__") else None,
             "mowa_future_labels_enabled": mowa_labels_enabled,
-            "mowa_p0_labels_enabled": mowa_labels_enabled,
+            "mowa_future_labels_enabled": mowa_labels_enabled,
             "batch_summary": batch_summary or {"fetched": False},
         },
         "optimizer": {
@@ -1030,7 +1030,7 @@ def _write_full_path_dry_run_report(
             "This dry-run stops before prepare_training(), wandb, checkpoint saving, and train().",
             "Checkpoint loading is optional and only runs when trainer.full_path_dry_run_load_checkpoint is true.",
             "It validates StarVLA build/data/optimizer/trainer wiring only.",
-            "MoWA P0 supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
+            "MoWA future supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
             "MoWA bridge coupling into LayerwiseFM action generation is only active when the MoWA gated config enables it.",
         ],
     }
@@ -1900,7 +1900,7 @@ class VLATrainer(TrainerUtils):
                 total_loss = action_loss
                 mowa_future_supervision_loss = output_dict.get("mowa_future_supervision_loss")
                 if mowa_future_supervision_loss is None:
-                    mowa_future_supervision_loss = output_dict.get("mowa_p0_supervision_loss")
+                    mowa_future_supervision_loss = output_dict.get("mowa_future_supervision_loss")
                 if (
                     bool(getattr(self.config.trainer, "enable_mowa_future_supervision_loss", False))
                     and mowa_future_supervision_loss is not None

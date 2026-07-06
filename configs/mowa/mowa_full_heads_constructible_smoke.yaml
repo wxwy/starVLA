@@ -1,8 +1,8 @@
 project_short_name: MoWA
-stage: P0
+stage: full_heads
 experiment_id: smoke_not_counted
 model:
-  type: MoWAP0ConstructibleHeads
+  type: MoWAFutureConstructibleHeads
   input_dim: 4
   hidden_dim: 32
 heads:

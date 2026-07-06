@@ -1,4 +1,4 @@
-"""MoWA G0 P0 constructible label builder smoke check."""
+"""MoWA G0 future label coverage smoke check."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ from pathlib import Path
 
 from starVLA.dataloader.mowa import (
     MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH,
-    build_mowa_p0_constructible_label_smoke,
+    inspect_mowa_future_label_coverage,
 )
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run MoWA P0 constructible label builder smoke.")
+    parser = argparse.ArgumentParser(description="Run MoWA future label coverage smoke check.")
     parser.add_argument(
         "--data-root",
         type=Path,
@@ -30,9 +30,8 @@ def parse_args() -> argparse.Namespace:
         type=int,
         nargs="+",
         default=[0, 1, 4],
-        help="Episode indices to sample for label builder smoke.",
+        help="Episode indices to sample for field-level coverage.",
     )
-    parser.add_argument("--preview-rows", type=int, default=8)
     parser.add_argument(
         "--output",
         type=Path,
@@ -44,10 +43,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    report = build_mowa_p0_constructible_label_smoke(
+    report = inspect_mowa_future_label_coverage(
         args.data_root / args.relative_path,
         episode_indices=tuple(args.episode_indices),
-        preview_rows=args.preview_rows,
     )
     payload = json.dumps(report.to_dict(), ensure_ascii=False, indent=2)
 

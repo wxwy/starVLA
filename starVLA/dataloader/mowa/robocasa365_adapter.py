@@ -80,7 +80,7 @@ class MoWARoboCasa365DatasetSmoke:
     min_episode_length: int | str
     max_episode_length: int | str
     boundary_smoke: dict[str, Any]
-    p0_label_coverage: dict[str, str]
+    future_label_coverage: dict[str, str]
     unresolved_items: tuple[str, ...]
 
     def to_dict(self) -> dict[str, Any]:
@@ -92,7 +92,7 @@ class MoWARoboCasa365DatasetSmoke:
             "min_episode_length": self.min_episode_length,
             "max_episode_length": self.max_episode_length,
             "boundary_smoke": self.boundary_smoke,
-            "p0_label_coverage": self.p0_label_coverage,
+            "future_label_coverage": self.future_label_coverage,
             "unresolved_items": self.unresolved_items,
         }
 
@@ -208,7 +208,7 @@ def inspect_robocasa365_lerobot_episode_schema(
             }
         },
         wam_targets={
-            "p0_labels": DATA_GATE,
+            "future_labels": DATA_GATE,
             "future_wan_latent": DATA_GATE,
         },
         metadata={
@@ -305,7 +305,7 @@ def inspect_robocasa365_lerobot_dataset_smoke(
     episode_indices: tuple[int, ...] = (0, 1, 4),
     window_config: MoWAWindowConfig | None = None,
 ) -> MoWARoboCasa365DatasetSmoke:
-    """只读检查多个 episode 的边界与 P0 label coverage 初判。"""
+    """只读检查多个 episode 的边界与 Future label coverage 初判。"""
 
     root = Path(dataset_path)
     episodes = _read_episode_rows(root / "meta" / "episodes.jsonl")
@@ -365,9 +365,9 @@ def inspect_robocasa365_lerobot_dataset_smoke(
                 else TBD
             ),
         },
-        p0_label_coverage=_build_p0_label_coverage(),
+        future_label_coverage=_build_future_label_coverage(),
         unresolved_items=(
-            "P0 labels are coverage candidates only; no label builder has been validated.",
+            "Future labels are coverage candidates only; no label builder has been validated.",
             "obs fps / action Hz / training windows remain Data Gate until profiling.",
             "full leakage gate still needs production sampler coverage across train/val splits.",
         ),
@@ -477,7 +477,7 @@ def _rounded_deltas(values: tuple[float, ...]) -> tuple[float, ...]:
     return tuple(round(values[idx] - values[idx - 1], 6) for idx in range(1, len(values)))
 
 
-def _build_p0_label_coverage() -> dict[str, str]:
+def _build_future_label_coverage() -> dict[str, str]:
     return {
         "task_progress": "candidate_from_frame_index_and_episode_length; Data Gate",
         "manipulation_readiness": "candidate_from_state_action_reward; Data Gate",

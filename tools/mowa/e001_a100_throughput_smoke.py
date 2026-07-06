@@ -1,6 +1,6 @@
 """MoWA E-001 A100 throughput smoke.
 
-This is a smoke-only benchmark for the current P0 FullHeads + action bridge
+This is a smoke-only benchmark for the current Future FullHeads + action bridge
 interface. It does not launch E-001 training, save checkpoints, or modify
 checkpoint/resume logic.
 """
@@ -124,7 +124,7 @@ def run_a100_throughput_smoke(args: argparse.Namespace) -> dict[str, Any]:
     successful = [item for item in results if item.get("status") == "ok"]
     stable_candidate = _select_stable_candidate(successful)
     return {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": "E-001",
         "benchmark": "a100_throughput_smoke",
         "training_started": False,

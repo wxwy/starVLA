@@ -305,12 +305,12 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         self.assertEqual(action_model.captured_vl_shapes, [(2, 5, 4), (2, 5, 4)])
         self.assertEqual(action_model.captured_attention_mask_shape, (2, 5))
 
-    def test_mowa_layerwise_bridge_can_use_p0_fullheads_feature_source(self):
+    def test_mowa_layerwise_bridge_can_use_future_feature_heads_source(self):
         model = object.__new__(StarFlowVLA)
         torch.nn.Module.__init__(model)
         model.config = _minimal_config_with_mowa_layerwise_coupling(
             True,
-            feature_source="mowa_p0_fullheads",
+            feature_source="mowa_future_feature_heads",
         )
         model.config.trainer = {"repeated_diffusion_steps": 1}
         model.action_horizon = 8
@@ -335,7 +335,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         )
 
         self.assertTrue(output["mowa_layerwise_bridge_coupled"])
-        self.assertEqual(output["mowa_layerwise_bridge_feature_source"], "mowa_p0_fullheads")
+        self.assertEqual(output["mowa_layerwise_bridge_feature_source"], "mowa_future_feature_heads")
         self.assertEqual(
             output["mowa_layerwise_bridge_active_heads"],
             ("task_progress", "action_outcome_class"),
@@ -454,7 +454,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
             model.config = _minimal_config_with_mowa_layerwise_coupling(
                 True,
                 intervention,
-                feature_source="mowa_p0_fullheads",
+                feature_source="mowa_future_feature_heads",
             )
             model.config.trainer = {"repeated_diffusion_steps": 1}
             model.action_horizon = 8
@@ -605,11 +605,11 @@ class StarFlowVLAReuseTest(unittest.TestCase):
                     "image": [],
                     "lang": "open the drawer",
                     "action": np.zeros((8, 7), dtype=np.float32),
-                    "mowa_p0_targets": {
+                    "mowa_future_targets": {
                         "task_progress": 0.5,
                         "action_outcome_class": [0.0, 1.0],
                     },
-                    "mowa_p0_masks": {
+                    "mowa_future_masks": {
                         "task_progress": True,
                         "action_outcome_class": True,
                     },

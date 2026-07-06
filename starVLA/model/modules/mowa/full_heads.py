@@ -1,4 +1,4 @@
-"""MoWA Future Feature Heads module (formerly P0 Heads)."""
+"""MoWA Future Feature Heads module."""
 
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ class MoWAFutureConstructibleHeads:
                     losses["action_outcome_class"] = loss
                     active_losses.append(loss)
                 if not active_losses:
-                    raise ValueError("MoWA P0 ConstructibleHeads loss requires at least one active mask.")
+                    raise ValueError("MoWA Future ConstructibleHeads loss requires at least one active mask.")
                 total = torch.stack(active_losses).sum()
                 losses["total"] = total
                 return total, losses, outputs
@@ -164,7 +164,7 @@ class MoWAFutureFullHeads:
                     if not bool(masks.get(head, False)):
                         continue
                     if head not in targets:
-                        raise KeyError(f"MoWA P0 FullHeads active head missing target: {head}")
+                        raise KeyError(f"MoWA Future FullHeads active head missing target: {head}")
                     loss = _compute_mowa_head_loss(
                         head,
                         outputs[head],
@@ -174,7 +174,7 @@ class MoWAFutureFullHeads:
                     losses[head] = loss
                     active_losses.append(loss)
                 if not active_losses:
-                    raise ValueError("MoWA P0 FullHeads loss requires at least one active mask.")
+                    raise ValueError("MoWA Future FullHeads loss requires at least one active mask.")
                 total = torch.stack(active_losses).sum()
                 losses["total"] = total
                 return total, losses, outputs
@@ -204,17 +204,7 @@ def _compute_mowa_head_loss(
     raise ValueError(f"Unsupported MoWA action_outcome_loss_type: {action_outcome_loss_type}")
 
 
-# Backward-compatible P0 aliases (deprecated — prefer Future* names).
-MoWAP0ConstructibleHeadsConfig = MoWAFutureConstructibleHeadsConfig
-MoWAP0FullHeadsConfig = MoWAFutureFullHeadsConfig
-P0FutureFeatures = MoWAFutureFeatures
-MoWAP0ConstructibleHeads = MoWAFutureConstructibleHeads
-MoWAP0FullHeads = MoWAFutureFullHeads
-MoWAFutureFeatureHeadsConfig = MoWAFutureFullHeadsConfig  # convenient alias
-MoWAFutureFeatureHeads = MoWAFutureFullHeads             # convenient alias
-
-
-def build_mowa_p0_constructible_batch_from_smoke(
+def build_mowa_future_constructible_batch_from_smoke(
     data_root: Path | str,
     *,
     max_samples: int = 32,
@@ -226,7 +216,7 @@ def build_mowa_p0_constructible_batch_from_smoke(
 
     import torch
 
-    from starVLA.dataloader.mowa.p0_label_builder import build_mowa_p0_label_smoke_sample
+    from starVLA.dataloader.mowa.full_head_label_builder import build_mowa_future_label_smoke_sample
     from starVLA.dataloader.mowa.robocasa365_recipe import (
         MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS,
     )
@@ -239,7 +229,7 @@ def build_mowa_p0_constructible_batch_from_smoke(
     for task, relative_path in MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS.items():
         dataset_path = root / relative_path
         for episode_index in (0, 1, 4):
-            label = build_mowa_p0_label_smoke_sample(
+            label = build_mowa_future_label_smoke_sample(
                 dataset_path,
                 episode_index=episode_index,
                 row_index=3,
@@ -285,4 +275,6 @@ def build_mowa_p0_constructible_batch_from_smoke(
     }
 
 
-build_mowa_future_constructible_batch_from_smoke = build_mowa_p0_constructible_batch_from_smoke
+# Semantic aliases used by framework-level code.
+MoWAFutureFeatureHeadsConfig = MoWAFutureFullHeadsConfig
+MoWAFutureFeatureHeads = MoWAFutureFullHeads

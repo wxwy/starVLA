@@ -58,13 +58,13 @@ ALLOWED_RUNTIME_DIFFERENCE_PATHS = (
     "framework.mowa.wam_feature_dim",
     "framework.mowa.action_hidden_dim",
     "framework.mowa.num_bridge_tokens",
-    "datasets.vla_data.enable_mowa_p0_labels",
+    "datasets.vla_data.enable_mowa_future_labels",
     "trainer.enable_mowa_future_supervision_loss",
 )
 REQUIRED_RUNTIME_DIFFERENCE_PATHS = (
     "framework.mowa.enable_layerwise_bridge_token_coupling",
     "framework.mowa.enable_future_supervision_loss",
-    "datasets.vla_data.enable_mowa_p0_labels",
+    "datasets.vla_data.enable_mowa_future_labels",
     "trainer.enable_mowa_future_supervision_loss",
 )
 
@@ -132,11 +132,11 @@ def build_starflow_ft0_comparison_smoke(
         "mowa_bridge_enabled": (
             _select(mowa, "framework.mowa.enable_layerwise_bridge_token_coupling") is True
         ),
-        "baseline_p0_labels_disabled": (
-            _select(baseline, "datasets.vla_data.enable_mowa_p0_labels") is False
+        "baseline_future_labels_disabled": (
+            _select(baseline, "datasets.vla_data.enable_mowa_future_labels") is False
         ),
-        "mowa_p0_labels_enabled": (
-            _select(mowa, "datasets.vla_data.enable_mowa_p0_labels") is True
+        "mowa_future_labels_enabled": (
+            _select(mowa, "datasets.vla_data.enable_mowa_future_labels") is True
         ),
         "paired_invariants_match": all(invariant_matches.values()),
         "paired_runtime_symmetry_passed": runtime_symmetry["passed"],
@@ -170,7 +170,7 @@ def build_starflow_ft0_comparison_smoke(
             launch_guard_execution["mowa"]["blocked_by_launch_guard"]
         )
     return {
-        "stage": "P0",
+        "stage": "full_heads",
         "experiment_id": "E-001",
         "training_started": False,
         "baseline_config": str(BASELINE_CONFIG),
@@ -186,7 +186,7 @@ def build_starflow_ft0_comparison_smoke(
                 "baseline": False,
                 "mowa": True,
             },
-            "datasets.vla_data.enable_mowa_p0_labels": {
+            "datasets.vla_data.enable_mowa_future_labels": {
                 "baseline": False,
                 "mowa": True,
             },

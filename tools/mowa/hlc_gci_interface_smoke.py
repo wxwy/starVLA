@@ -1,4 +1,4 @@
-"""MoWA P1-b1 HLC-GCI interface smoke."""
+"""MoWA HLC-GCI interface smoke."""
 
 from __future__ import annotations
 
@@ -14,12 +14,12 @@ from starVLA.dataloader.mowa import DATA_GATE
 from starVLA.model.modules.mowa import MoWAHLCGCI, MoWAHLCGCIConfig
 
 
-CONFIG = Path("configs/mowa/mowa_p1_b1_hlcgci_interface.yaml")
-OUTPUT = Path("docs_zh/mowa/mowa_p1_b1_hlcgci_interface_smoke.json")
+CONFIG = Path("configs/mowa/mowa_hlc_gci_interface.yaml")
+OUTPUT = Path("docs_zh/mowa/mowa_hlc_gci_interface_smoke.json")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run MoWA P1-b1 HLC-GCI interface smoke.")
+    parser = argparse.ArgumentParser(description="Run MoWA HLC-GCI interface smoke.")
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--config", type=Path, default=CONFIG)
     parser.add_argument("--output", type=Path, default=OUTPUT)
@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    payload = build_p1_b1_hlcgci_interface_smoke(args.repo_root, args.config)
+    payload = build_hlc_gci_interface_smoke(args.repo_root, args.config)
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -37,7 +37,7 @@ def main() -> None:
         print(text)
 
 
-def build_p1_b1_hlcgci_interface_smoke(
+def build_hlc_gci_interface_smoke(
     repo_root: Path | str,
     config_path: Path = CONFIG,
 ) -> dict[str, Any]:
@@ -86,7 +86,7 @@ def build_p1_b1_hlcgci_interface_smoke(
         "shape_status_data_gate": str(cfg.status.shape_status) == DATA_GATE,
     }
     return {
-        "stage": "P1-b1",
+        "stage": "hlc_gci",
         "task_id": "M4-001",
         "experiment_id": "E-004",
         "training_started": False,

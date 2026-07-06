@@ -1,4 +1,4 @@
-"""MoWA P1 latent cache contract smoke check."""
+"""MoWA future latent cache contract smoke check."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from starVLA.dataloader.mowa import (
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run MoWA P1 latent cache contract smoke check.")
+    parser = argparse.ArgumentParser(description="Run MoWA future latent cache contract smoke check.")
     parser.add_argument(
         "--data-root",
         type=Path,
@@ -28,8 +28,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--cache-root",
         type=Path,
-        default=Path("playground/mowa_latent_cache/p1_contract"),
-        help="Planned latent cache root. Default: playground/mowa_latent_cache/p1_contract",
+        default=Path("playground/mowa_latent_cache/future_latent_cache_contract"),
+        help="Planned latent cache root. Default: playground/mowa_latent_cache/future_latent_cache_contract",
     )
     parser.add_argument(
         "--encoder-name",

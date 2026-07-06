@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P2
+stage: frozen_decoder_diagnostic
 experiment_id: E-008
 experiment_name: Frozen decoder diagnostic
 config_role: diagnostic_plan
@@ -7,7 +7,7 @@ task_id: M6-001
 
 purpose:
   summary: >
-    P2 frozen decoder is a DIAGNOSTIC tool only.  It serves failure
+    Future frozen decoder is a DIAGNOSTIC tool only.  It serves failure
     analysis, debugging, and demo visualisation.  It is NOT a trainable
     module, NOT a continuous video generator, and does NOT fine-tune
     Wan2.2-VAE.
@@ -47,7 +47,7 @@ launch:
   launch_ready: false
   eval_started: false
   requires_human_confirmation: true
-  reason: P2 is a diagnostic aid; not on the critical path for E-001/E-006
+  reason: Future frozen decoder is a diagnostic aid; not on the critical path for E-001/E-006
 
 checks:
   plan_exists: true

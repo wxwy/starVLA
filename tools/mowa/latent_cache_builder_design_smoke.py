@@ -1,4 +1,4 @@
-"""MoWA P1 latent cache builder design smoke."""
+"""MoWA future latent cache builder design smoke."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ from omegaconf import OmegaConf
 from starVLA.dataloader.mowa import DATA_GATE, build_mowa_latent_cache_contract_smoke
 
 
-CONFIG = Path("configs/mowa/mowa_p1_b0_latent_cache_builder_design.yaml")
-OUTPUT = Path("docs_zh/mowa/mowa_p1_latent_cache_builder_design_smoke.json")
+CONFIG = Path("configs/mowa/mowa_latent_cache_builder_design.yaml")
+OUTPUT = Path("docs_zh/mowa/mowa_latent_cache_builder_design_smoke.json")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run MoWA P1 latent cache builder design smoke.")
+    parser = argparse.ArgumentParser(description="Run MoWA future latent cache builder design smoke.")
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--config", type=Path, default=CONFIG)
     parser.add_argument("--output", type=Path, default=OUTPUT)
@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    payload = build_p1_latent_cache_builder_design_smoke(args.repo_root, args.config)
+    payload = build_latent_cache_builder_design_smoke(args.repo_root, args.config)
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -35,7 +35,7 @@ def main() -> None:
         print(text)
 
 
-def build_p1_latent_cache_builder_design_smoke(
+def build_latent_cache_builder_design_smoke(
     repo_root: Path | str,
     config_path: Path = CONFIG,
 ) -> dict[str, Any]:
@@ -62,7 +62,7 @@ def build_p1_latent_cache_builder_design_smoke(
         "input_policy_future_rgb_target_only": str(builder_cfg.input_policy.future_rgb) == "target_only",
     }
     return {
-        "stage": "P1-b0",
+        "stage": "future_latent_prior",
         "task_id": "M3-001",
         "experiment_id": "E-003",
         "training_started": False,

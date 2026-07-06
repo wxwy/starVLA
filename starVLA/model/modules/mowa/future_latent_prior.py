@@ -53,7 +53,7 @@ class MoWAFutureLatentPrior:
                 history_latent: Any | None = None,
             ) -> MoWAFutureLatentPriorOutput:
                 if history_latent is not None:
-                    raise ValueError("MoWA P1-b0 future latent prior does not accept history_latent input.")
+                    raise ValueError("MoWA future latent prior does not accept history_latent input.")
                 if current_latent.dim() != 2:
                     raise ValueError("current_latent must have shape [B, D].")
                 if text_hidden.dim() != 2:
@@ -111,7 +111,4 @@ class MoWAFutureLatentPrior:
         return _TorchMoWAFutureLatentPrior(*args, **kwargs)
 
 
-# Backward-compatible P1 aliases (deprecated — prefer Future* names).
-MoWAP1B0FutureLatentPriorConfig = MoWAFutureLatentPriorConfig
-MoWAP1B0FutureLatentPriorOutput = MoWAFutureLatentPriorOutput
-MoWAP1B0FutureLatentPrior = MoWAFutureLatentPrior
+

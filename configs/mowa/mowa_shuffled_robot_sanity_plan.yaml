@@ -1,5 +1,5 @@
 project_short_name: MoWA
-stage: P1-b1
+stage: hlc_gci
 task_id: M4-003
 experiment_id: E-005
 config_role: shuffled_robot_sanity_plan_smoke
@@ -21,4 +21,4 @@ status:
 
 unresolved_items:
   - This smoke only validates pair construction and plan constraints.
-  - Real shuffled-robot evaluation still depends on trained P1-b1 checkpoints.
+  - Real shuffled-robot evaluation still depends on trained checkpoints.

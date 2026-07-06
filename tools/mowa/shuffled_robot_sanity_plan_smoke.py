@@ -1,4 +1,4 @@
-"""MoWA P1-b1 shuffled-robot sanity plan smoke."""
+"""MoWA shuffled-robot sanity plan smoke."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ from omegaconf import OmegaConf
 from starVLA.dataloader.mowa import DATA_GATE, build_mowa_shuffled_episode_pairs
 
 
-CONFIG = Path("configs/mowa/mowa_p1_b1_shuffled_robot_sanity_plan.yaml")
-OUTPUT = Path("docs_zh/mowa/mowa_p1_b1_shuffled_robot_sanity_plan_smoke.json")
+CONFIG = Path("configs/mowa/mowa_shuffled_robot_sanity_plan.yaml")
+OUTPUT = Path("docs_zh/mowa/mowa_shuffled_robot_sanity_plan_smoke.json")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run MoWA P1-b1 shuffled-robot sanity plan smoke.")
+    parser = argparse.ArgumentParser(description="Run MoWA shuffled-robot sanity plan smoke.")
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--config", type=Path, default=CONFIG)
     parser.add_argument("--output", type=Path, default=OUTPUT)
@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    payload = build_p1_b1_shuffled_robot_sanity_plan_smoke(args.repo_root, args.config)
+    payload = build_shuffled_robot_sanity_plan_smoke(args.repo_root, args.config)
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -35,7 +35,7 @@ def main() -> None:
         print(text)
 
 
-def build_p1_b1_shuffled_robot_sanity_plan_smoke(
+def build_shuffled_robot_sanity_plan_smoke(
     repo_root: Path | str,
     config_path: Path = CONFIG,
 ) -> dict[str, Any]:
@@ -55,7 +55,7 @@ def build_p1_b1_shuffled_robot_sanity_plan_smoke(
         "leakage_status_data_gate": str(cfg.status.leakage_status) == DATA_GATE,
     }
     return {
-        "stage": "P1-b1",
+        "stage": "hlc_gci",
         "task_id": "M4-003",
         "experiment_id": "E-005",
         "training_started": False,
@@ -69,7 +69,7 @@ def build_p1_b1_shuffled_robot_sanity_plan_smoke(
         },
         "unresolved_items": [
             "This smoke validates pair construction only and does not execute rollout.",
-            "Real shuffled-robot evidence still depends on trained P1-b1 checkpoints.",
+            "Real shuffled-robot evidence still depends on trained checkpoints.",
             "Metric drop is an expectation to test later, not a measured result here.",
         ],
         "go_no_go": (

@@ -41,9 +41,9 @@ class AtomicTaskLabelBuilder(ABC):
         *,
         failure_risk_horizon: int = 10,
         subgoal_horizon: int = 20,
-        readiness_horizon: int = 5,
-        readiness_progress_delta: float = 0.1,
-        readiness_distance_threshold: float = 0.05,
+        readiness_horizon: int = 10,
+        readiness_progress_delta: float | None = None,
+        readiness_distance_threshold: float | None = None,
         enable_kinematics: bool = True,
         repo_root: Path | None = None,
     ) -> dict[str, Any]:
@@ -219,4 +219,3 @@ def make_default_masks(unmasked_heads: tuple[str, ...] | None = None) -> dict[st
     if unmasked_heads is None:
         unmasked_heads = MOWA_FUTURE_CONSTRUCTIBLE_HEADS
     return {head: head in unmasked_heads for head in MOWA_FUTURE_FULL_HEADS}
-

@@ -66,7 +66,7 @@ class SingleDofTaskSchema:
     # Readiness proximity threshold in meters.
     readiness_distance_threshold: float = 0.05
     # Fallback progress-imminence delta when kinematics unavailable.
-    readiness_progress_delta: float = 0.1
+    readiness_progress_delta: float = 0.05
     # Schema version string for audit metadata.
     schema_version: str = "single_dof_v1"
     # Subgoal id.
@@ -119,16 +119,27 @@ class SingleDofTaskBuilder(AtomicTaskLabelBuilder):
         *,
         failure_risk_horizon: int = 10,
         subgoal_horizon: int = 20,
-        readiness_horizon: int = 5,
-        readiness_progress_delta: float = 0.1,
-        readiness_distance_threshold: float = 0.05,
+        readiness_horizon: int = 10,
+        readiness_progress_delta: float | None = None,
+        readiness_distance_threshold: float | None = None,
         enable_kinematics: bool = True,
         repo_root: Path | None = None,
     ) -> dict[str, Any]:
+        if readiness_horizon is None:
+            readiness_horizon = 10
+        if readiness_progress_delta is None:
+            readiness_progress_delta = self.schema.readiness_progress_delta
+        if readiness_distance_threshold is None:
+            readiness_distance_threshold = self.schema.readiness_distance_threshold
+
         if model_path is None:
             model_path = states_path.parent / "model.xml.gz"
         if ep_meta_path is None:
             ep_meta_path = states_path.parent / "ep_meta.json"
+        if readiness_progress_delta is None:
+            readiness_progress_delta = self.schema.readiness_progress_delta
+        if readiness_distance_threshold is None:
+            readiness_distance_threshold = self.schema.readiness_distance_threshold
 
         if not ep_meta_path.is_file():
             raise FileNotFoundError(f"Episode extras missing: {ep_meta_path}")

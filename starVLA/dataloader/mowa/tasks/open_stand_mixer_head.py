@@ -28,7 +28,7 @@ class OpenStandMixerHeadLabelBuilder(SingleDofTaskBuilder):
                 manipulated_body_template=None,
                 completion_threshold=0.95,
                 readiness_distance_threshold=0.05,
-                readiness_progress_delta=0.1,
+                readiness_progress_delta=0.05,
                 schema_version="open_stand_mixer_head_v1",
                 subgoal_id="open_stand_mixer_head",
             )

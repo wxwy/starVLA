@@ -25,7 +25,7 @@ class OpenDrawerLabelBuilder(SingleDofTaskBuilder):
                 progress_normalizer=_default_slide_normalizer,
                 completion_threshold=0.95,
                 readiness_distance_threshold=0.05,
-                readiness_progress_delta=0.1,
+                readiness_progress_delta=0.05,
                 schema_version="opendrawer_open_drawer_v1",
                 subgoal_id="open_drawer",
             )

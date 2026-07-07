@@ -24,7 +24,7 @@ class TurnOnElectricKettleLabelBuilder(SingleDofTaskBuilder):
                 manipulated_body_template="{fixture_ref}_switch",
                 completion_threshold=0.95,
                 readiness_distance_threshold=0.05,
-                readiness_progress_delta=0.1,
+                readiness_progress_delta=0.05,
                 schema_version="turn_on_electric_kettle_v1",
                 subgoal_id="turn_on_electric_kettle",
             )

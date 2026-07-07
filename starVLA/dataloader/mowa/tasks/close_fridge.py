@@ -44,6 +44,11 @@ class CloseFridgeLabelBuilder(AtomicTaskLabelBuilder):
     must reach the closed state for the average to hit the completion threshold.
     """
 
+    # Task-specific readiness defaults: fridge doors close slowly, so use a
+    # longer horizon and a smaller progress delta than the global fallback.
+    default_readiness_horizon: int = 15
+    default_readiness_progress_delta: float = 0.03
+
     @property
     def task_name(self) -> str:
         return "CloseFridge"
@@ -83,12 +88,19 @@ class CloseFridgeLabelBuilder(AtomicTaskLabelBuilder):
         *,
         failure_risk_horizon: int = 10,
         subgoal_horizon: int = 20,
-        readiness_horizon: int = 5,
-        readiness_progress_delta: float = 0.1,
-        readiness_distance_threshold: float = 0.05,
+        readiness_horizon: int | None = None,
+        readiness_progress_delta: float | None = None,
+        readiness_distance_threshold: float | None = None,
         enable_kinematics: bool = True,
         repo_root: Path | None = None,
     ) -> dict[str, Any]:
+        if readiness_horizon is None:
+            readiness_horizon = self.default_readiness_horizon
+        if readiness_progress_delta is None:
+            readiness_progress_delta = self.default_readiness_progress_delta
+        if readiness_distance_threshold is None:
+            readiness_distance_threshold = 0.05
+
         if model_path is None:
             model_path = states_path.parent / "model.xml.gz"
         if ep_meta_path is None:

@@ -58,12 +58,19 @@ class RewardBasedTaskBuilder(AtomicTaskLabelBuilder):
         *,
         failure_risk_horizon: int = 10,
         subgoal_horizon: int = 20,
-        readiness_horizon: int = 5,
-        readiness_progress_delta: float = 0.1,
-        readiness_distance_threshold: float = 0.05,
+        readiness_horizon: int = 10,
+        readiness_progress_delta: float | None = None,
+        readiness_distance_threshold: float | None = None,
         enable_kinematics: bool = True,
         repo_root: Path | None = None,
     ) -> dict[str, Any]:
+        if readiness_horizon is None:
+            readiness_horizon = 10
+        if readiness_progress_delta is None:
+            readiness_progress_delta = 0.05
+        if readiness_distance_threshold is None:
+            readiness_distance_threshold = 0.05
+
         try:
             import pyarrow.parquet as pq
         except ImportError as exc:

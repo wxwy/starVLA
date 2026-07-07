@@ -44,7 +44,7 @@ class CloseBlenderLidLabelBuilder(SingleDofTaskBuilder):
                 progress_normalizer=_blender_lid_progress_normalizer,
                 completion_threshold=0.95,
                 readiness_distance_threshold=0.05,
-                readiness_progress_delta=0.1,
+                readiness_progress_delta=0.05,
                 schema_version="close_blender_lid_v2",
                 subgoal_id="close_blender_lid",
             )

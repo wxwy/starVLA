@@ -20,7 +20,7 @@ class OpenCabinetLabelBuilder(SingleDofTaskBuilder):
                 manipulated_body_template="{fixture_ref}_door_main",
                 completion_threshold=0.95,
                 readiness_distance_threshold=0.05,
-                readiness_progress_delta=0.1,
+                readiness_progress_delta=0.05,
                 schema_version="opencabinet_open_door_v1",
                 subgoal_id="open_cabinet_door",
             )

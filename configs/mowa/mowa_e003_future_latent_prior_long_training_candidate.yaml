@@ -1,0 +1,72 @@
+project_short_name: MoWA
+stage: future_latent_prior
+task_id: M3-002
+experiment_id: E-003
+config_role: future_latent_prior_long_training_candidate
+
+launch_guard:
+  launch_ready: true
+  requires_human_confirmation: true
+  human_confirmed: true
+  policy_confirmed: true
+  reason: formal long-training draft for E-003 future latent prior; execution entrypoint remains to be wired
+
+run_id: MoWA-E-003_future_latent_prior_4090_long_draft
+run_root_dir: playground/mowa_ckpt
+experiment_role: mowa_future_latent_prior
+seed: 42
+wandb_entity: silencewx-harbin-institute-of-technology
+wandb_project: MoWA
+wandb_mode: online
+is_debug: false
+version_id: "0.21"
+
+latent_cache:
+  dataset_path: playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot
+  cache_root: playground/mowa_latent_cache/e003_wan2_2_latent_cache_smoke
+  encoder_name: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  encoder_version: wan2.2-ti2v-5b-diffusers
+  encoder_kind: wan2.2-vae
+  encoder_model_path: playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  latent_dim: 1024
+  episode_indices: [0, 1, 4]
+  anchor_mode: smoke
+  current_window_steps: 1
+  future_window_steps: 8
+  history_window_steps: 8
+  allow_partial_windows: false
+  overwrite: false
+  materialize_cache_for_dry_run: false
+  video_keys:
+    - observation.images.robot0_eye_in_hand
+    - observation.images.robot0_agentview_left
+    - observation.images.robot0_agentview_right
+
+interface:
+  current_latent_dim: 1024
+  text_hidden_dim: 2048
+  hidden_dim: 2048
+  future_latent_dim: 1024
+  batch_size_smoke: 2
+  input_policy: current_latent_plus_text_only
+  target_policy: future_latent_only
+
+training:
+  per_device_batch_size: 2
+  gradient_accumulation_steps: 16
+  effective_batch_size: 32
+  max_train_steps: 80000
+  num_warmup_steps: 500
+  save_interval: 2000
+  eval_interval: 2000
+  logging_frequency: 50
+  checkpoint_format: lightweight
+  checkpoint_max_shard_size: 4GB
+  save_checkpoint_as_directory: true
+  resume_policy: resume_latest_complete_only
+  delete_or_overwrite_policy: no_delete_without_confirmation
+
+notes:
+  - This is a formal long-training draft for future_latent_prior wired to starVLA/training/train_starvla.py.
+  - Training framework integration, latent-cache batch loading, and future-latent loss are present.
+  - Remaining gap: the cache root still reuses the validated Wan2.2 smoke path; replace with a production cache.

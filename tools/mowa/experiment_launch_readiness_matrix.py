@@ -188,27 +188,76 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
     prior = _load_json(root, "docs_zh/mowa/mowa_future_latent_prior_interface_smoke.json")
     builder = _load_json(root, "docs_zh/mowa/mowa_latent_cache_builder_design_smoke.json")
     consistency = _load_json(root, "docs_zh/mowa/mowa_e003_history_sampling_consistency_smoke.json")
-    blockers = _merged_unresolved(prior, builder, consistency)
+    config_preview = _load_json(root, "docs_zh/mowa/mowa_e003_future_latent_prior_config_preview.json")
+    cache_dry_run = _load_json(root, "docs_zh/mowa/mowa_e003_future_latent_prior_train_dry_run.json")
+    launch_smoke = _load_json(root, "docs_zh/mowa/mowa_e003_future_latent_prior_launch_smoke.json")
+    long_training_launch = _load_json(
+        root,
+        "docs_zh/mowa/mowa_e003_future_latent_prior_long_training_launch_smoke.json",
+    )
+    blockers = _merged_unresolved(prior, builder, consistency, config_preview, cache_dry_run)
     blockers.extend(
         [
-            "Next required step is a fake-encoder latent cache writer/validator/loader loop; "
-            "plan-only manifest and contract smoke are not sufficient for E-003 dry-run.",
-            "E-003 must add config preview and train dry-run on real cache batches before any formal training launch.",
+            "Latent-cache batches and MoWAFutureLatentPrior are now wired into train_starvla; "
+            "next required step is a production-scale cache and an E-003 full-path dry-run.",
+            "The long-training config still reuses the smoke cache root (3 episodes); "
+            "replace with a real-scale cache before formal training.",
         ]
     )
+    if not _report_not_nogo(launch_smoke):
+        blockers.append("E-003 launch smoke has not yet passed on the real Wan2.2 cache path.")
+    if not _report_not_nogo(long_training_launch):
+        blockers.append("E-003 formal long-training launch smoke has not yet passed.")
     return {
         "experiment_id": "E-003",
         "stage": "future_latent_prior",
         "counts_as_training_experiment": True,
-        "can_start_now": False,
-        "status": "interface_ready_but_latent_cache_builder_missing"
-        if _report_not_nogo(prior) and _report_not_nogo(builder) and _report_not_nogo(consistency)
-        else "future_latent_prior_preconditions_incomplete",
+        "can_start_now": bool(
+            _report_not_nogo(prior)
+            and _report_not_nogo(builder)
+            and _report_not_nogo(consistency)
+            and _report_not_nogo(config_preview)
+            and _report_not_nogo(cache_dry_run)
+            and _report_not_nogo(launch_smoke)
+            and _report_not_nogo(long_training_launch)
+        ),
+        "status": (
+            "launchable_now"
+            if _report_not_nogo(prior)
+            and _report_not_nogo(builder)
+            and _report_not_nogo(consistency)
+            and _report_not_nogo(config_preview)
+            and _report_not_nogo(cache_dry_run)
+            and _report_not_nogo(launch_smoke)
+            and _report_not_nogo(long_training_launch)
+            else (
+                "launch_candidate_present_but_training_integration_missing"
+                if _report_not_nogo(prior)
+                and _report_not_nogo(builder)
+                and _report_not_nogo(consistency)
+                and _report_not_nogo(config_preview)
+                and _report_not_nogo(cache_dry_run)
+                and _report_not_nogo(launch_smoke)
+                else (
+                "interface_ready_but_cache_dry_run_ready"
+                if _report_not_nogo(prior)
+                and _report_not_nogo(builder)
+                and _report_not_nogo(consistency)
+                and _report_not_nogo(config_preview)
+                and _report_not_nogo(cache_dry_run)
+                else "future_latent_prior_preconditions_incomplete"
+                )
+            )
+        ),
         "evidence_reports": _present_reports(
             {
                 "future_latent_prior_interface": prior,
                 "latent_cache_builder_design": builder,
                 "history_sampling_consistency": consistency,
+                "future_latent_prior_config_preview": config_preview,
+                "future_latent_prior_train_dry_run": cache_dry_run,
+                "future_latent_prior_launch_smoke": launch_smoke,
+                "future_latent_prior_long_training_launch": long_training_launch,
             }
         ),
         "blocking_items": blockers,
@@ -216,45 +265,123 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
             "future_latent_prior_interface_passed": _report_not_nogo(prior),
             "latent_cache_builder_design_passed": _report_not_nogo(builder),
             "history_sampling_consistency_passed": _report_not_nogo(consistency),
+            "future_latent_prior_config_preview_passed": _report_not_nogo(config_preview),
+            "future_latent_prior_train_dry_run_passed": _report_not_nogo(cache_dry_run),
+            "future_latent_prior_launch_smoke_passed": _report_not_nogo(launch_smoke),
+            "future_latent_prior_long_training_launch_passed": _report_not_nogo(long_training_launch),
         },
     }
 
 
 def _build_e004_entry(root: Path) -> dict[str, Any]:
+    config_preview = _load_json(root, "docs_zh/mowa/mowa_e004_hlc_gci_config_preview.json")
     hlcgci = _load_json(root, "docs_zh/mowa/mowa_hlc_gci_interface_smoke.json")
     consistency = _load_json(root, "docs_zh/mowa/mowa_e003_history_sampling_consistency_smoke.json")
-    blockers = _merged_unresolved(hlcgci, consistency)
+    launch_smoke = _load_json(root, "docs_zh/mowa/mowa_e004_hlc_gci_launch_smoke.json")
+    long_training_launch = _load_json(
+        root,
+        "docs_zh/mowa/mowa_e004_hlc_gci_long_training_launch_smoke.json",
+    )
+    checkpoint_preflight = _load_json(
+        root,
+        "docs_zh/mowa/mowa_e004_hlc_gci_checkpoint_preflight_smoke.json",
+    )
+    policy_rollout = _load_json(root, "docs_zh/mowa/mowa_e004_hlc_gci_policy_rollout_smoke.json")
+    blockers = _merged_unresolved(
+        config_preview,
+        hlcgci,
+        consistency,
+        launch_smoke,
+        long_training_launch,
+        checkpoint_preflight,
+        policy_rollout,
+    )
     blockers.extend(
         [
-            "E-004 is blocked on E-003 fake-encoder cache loop and E-003 config preview/dry-run evidence.",
-            "HLC-GCI interface alone is insufficient; history latent cache and framework integration remain missing.",
+            "history_latent batches and MoWAHLCGCI are now wired into train_starvla as conditioning; "
+            "next required step is a production-scale cache and an E-004 full-path dry-run.",
+            "The long-training config still reuses the smoke cache root (3 episodes); "
+            "replace with a real-scale cache before formal training.",
+            "E-004 rollout remains gated on a trained E-003/E-004 checkpoint and success metrics.",
         ]
     )
+    if not _report_not_nogo(launch_smoke):
+        blockers.append("E-004 launch smoke has not yet passed on the synthetic HLC-GCI path.")
+    if not _report_not_nogo(long_training_launch):
+        blockers.append("E-004 formal long-training launch smoke has not yet passed.")
+    if not _report_not_nogo(checkpoint_preflight):
+        blockers.append("E-004 checkpoint-backed preflight has not yet passed on a complete checkpoint reference.")
+    if not _report_not_nogo(policy_rollout):
+        blockers.append("E-004 checkpoint-backed policy rollout smoke has not yet passed.")
     return {
         "experiment_id": "E-004",
         "stage": "hlc_gci",
         "counts_as_training_experiment": True,
-        "can_start_now": False,
-        "status": "module_interface_ready_but_framework_integration_missing"
-        if _report_not_nogo(hlcgci) and _report_not_nogo(consistency)
-        else "hlc_gci_preconditions_incomplete",
+        "can_start_now": bool(
+            _report_not_nogo(config_preview)
+            and _report_not_nogo(hlcgci)
+            and _report_not_nogo(consistency)
+            and _report_not_nogo(launch_smoke)
+            and _report_not_nogo(long_training_launch)
+            and _report_not_nogo(checkpoint_preflight)
+            and _report_not_nogo(policy_rollout)
+        ),
+        "status": (
+            "launchable_now"
+            if _report_not_nogo(config_preview)
+            and _report_not_nogo(hlcgci)
+            and _report_not_nogo(consistency)
+            and _report_not_nogo(launch_smoke)
+            and _report_not_nogo(long_training_launch)
+            and _report_not_nogo(checkpoint_preflight)
+            and _report_not_nogo(policy_rollout)
+            else (
+                "config_preview_and_interface_ready_but_framework_integration_missing"
+                if _report_not_nogo(config_preview)
+                and _report_not_nogo(hlcgci)
+                and _report_not_nogo(consistency)
+                else "hlc_gci_preconditions_incomplete"
+            )
+        ),
         "evidence_reports": _present_reports(
             {
+                "hlcgci_config_preview": config_preview,
                 "hlcgci_interface": hlcgci,
                 "history_sampling_consistency": consistency,
+                "hlcgci_launch_smoke": launch_smoke,
+                "hlcgci_long_training_launch": long_training_launch,
+                "hlcgci_checkpoint_preflight": checkpoint_preflight,
+                "hlcgci_policy_rollout": policy_rollout,
             }
         ),
         "blocking_items": blockers,
         "checks": {
+            "hlcgci_config_preview_passed": _report_not_nogo(config_preview),
             "hlcgci_interface_passed": _report_not_nogo(hlcgci),
             "history_sampling_consistency_passed": _report_not_nogo(consistency),
+            "hlcgci_launch_smoke_passed": _report_not_nogo(launch_smoke),
+            "hlcgci_long_training_launch_passed": _report_not_nogo(long_training_launch),
+            "hlcgci_checkpoint_preflight_passed": _report_not_nogo(checkpoint_preflight),
+            "hlcgci_policy_rollout_passed": _report_not_nogo(policy_rollout),
+            "hlcgci_policy_rollout_zero_success": (
+                bool(policy_rollout)
+                and all(
+                    (run.get("rollout_result") or {}).get("success_rate") == 0.0
+                    for run in (policy_rollout.get("runs") or [])
+                )
+            ),
         },
     }
 
 
 def _build_e005_entry(root: Path) -> dict[str, Any]:
     shuffled = _load_json(root, "docs_zh/mowa/mowa_shuffled_robot_sanity_plan_smoke.json")
+    checkpoint_preflight = _load_json(
+        root,
+        "docs_zh/mowa/mowa_e005_shuffled_robot_checkpoint_preflight_smoke.json",
+    )
     blockers = list(shuffled.get("unresolved_items") or [])
+    blockers.extend(list(checkpoint_preflight.get("unresolved_items") or []))
     blockers.extend(
         [
             "E-005 requires a meaningful E-004 checkpoint; shuffled-robot plan/smoke alone is not execution evidence.",
@@ -266,11 +393,23 @@ def _build_e005_entry(root: Path) -> dict[str, Any]:
         "stage": "hlc_gci",
         "counts_as_training_experiment": True,
         "can_start_now": False,
-        "status": "plan_ready_only" if _report_not_nogo(shuffled) else "sanity_plan_missing",
-        "evidence_reports": _present_reports({"shuffled_robot_sanity_plan": shuffled}),
+        "status": (
+            "checkpoint_preflight_ready_only"
+            if _report_not_nogo(checkpoint_preflight)
+            else "plan_ready_only"
+            if _report_not_nogo(shuffled)
+            else "sanity_plan_missing"
+        ),
+        "evidence_reports": _present_reports(
+            {
+                "shuffled_robot_sanity_plan": shuffled,
+                "shuffled_robot_checkpoint_preflight": checkpoint_preflight,
+            }
+        ),
         "blocking_items": blockers,
         "checks": {
             "sanity_plan_present": _report_not_nogo(shuffled),
+            "checkpoint_preflight_passed": _report_not_nogo(checkpoint_preflight),
         },
     }
 

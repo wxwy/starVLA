@@ -46,4 +46,4 @@ logging:
 notes:
   - This command candidate records the train_starvla entrypoint for E-004 long training.
   - The HLC-GCI module and history-latent batch contract are wired into train_starvla as conditioning.
-  - Remaining gap: the long-training config still points to the smoke-scale latent cache root.
+  - The production cache root must be materialized with build_future_latent_cache.py before launching.

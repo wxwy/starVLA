@@ -199,9 +199,7 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
     blockers.extend(
         [
             "Latent-cache batches and MoWAFutureLatentPrior are now wired into train_starvla; "
-            "next required step is a production-scale cache and an E-003 full-path dry-run.",
-            "The long-training config still reuses the smoke cache root (3 episodes); "
-            "replace with a real-scale cache before formal training.",
+            "next required step is materializing the production cache root and an E-003 full-path dry-run.",
         ]
     )
     if not _report_not_nogo(launch_smoke):
@@ -299,9 +297,7 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
     blockers.extend(
         [
             "history_latent batches and MoWAHLCGCI are now wired into train_starvla as conditioning; "
-            "next required step is a production-scale cache and an E-004 full-path dry-run.",
-            "The long-training config still reuses the smoke cache root (3 episodes); "
-            "replace with a real-scale cache before formal training.",
+            "next required step is materializing the production cache root and an E-004 full-path dry-run.",
             "E-004 rollout remains gated on a trained E-003/E-004 checkpoint and success metrics.",
         ]
     )

@@ -46,4 +46,4 @@ logging:
 notes:
   - This command candidate records the train_starvla entrypoint for E-003 long training.
   - The future_latent_prior module, latent-cache batch contract, and future-latent loss are wired into train_starvla.
-  - Remaining gap: the long-training config still points to the smoke-scale latent cache root.
+  - The production cache root must be materialized with build_future_latent_cache.py before launching.

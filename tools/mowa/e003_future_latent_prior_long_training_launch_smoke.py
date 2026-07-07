@@ -110,9 +110,9 @@ def build_e003_future_latent_prior_long_training_launch_smoke(
             else "No-Go: E-003 long-training launch candidate is not training-integrated"
         ),
         "unresolved_items": [
-            "Training framework wiring is present but a real-scale latent cache is still needed.",
-            "The long-training config reuses the smoke cache root (3 episodes); replace with production cache.",
+            "Training framework wiring is present; the production cache root is configured but must be materialized.",
             "No E-003-specific train_starvla full-path dry-run has been executed end-to-end.",
+            "Resume/save policy smoke for the E-003 future-latent module has not been run.",
         ],
     }
 

@@ -13,12 +13,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
 import numpy as np
 import torch
+import torch.nn as nn
 
 from starVLA.dataloader.mowa.sampler import select_mowa_smoke_anchor_index
 
@@ -51,6 +53,8 @@ class MoWALatentCacheBuildConfig:
     cache_root: Path
     encoder_name: str = "wan-fake-encoder"
     encoder_version: str = "fake-v1"
+    encoder_kind: str = "fake"
+    encoder_model_path: Path | None = None
     latent_dim: int = 1024
     video_keys: tuple[str, ...] = (
         "observation.images.robot0_eye_in_hand",
@@ -76,6 +80,10 @@ class MoWALatentCacheBuildConfig:
             raise ValueError(f"latent_dim must be positive, got {self.latent_dim}.")
         if not self.video_keys:
             raise ValueError("video_keys must be non-empty.")
+        if self.encoder_kind not in {"fake", "wan2.2-vae"}:
+            raise ValueError(f"encoder_kind must be fake/wan2.2-vae, got {self.encoder_kind!r}.")
+        if self.encoder_kind == "wan2.2-vae" and self.encoder_model_path is None:
+            raise ValueError("encoder_model_path must be provided when encoder_kind='wan2.2-vae'.")
         if self.current_window_steps <= 0:
             raise ValueError("current_window_steps must be positive.")
         if self.future_window_steps <= 0:
@@ -108,6 +116,8 @@ class MoWALatentCacheBuildConfig:
             "cache_root": str(self.cache_root),
             "encoder_name": self.encoder_name,
             "encoder_version": self.encoder_version,
+            "encoder_kind": self.encoder_kind,
+            "encoder_model_path": str(self.encoder_model_path) if self.encoder_model_path is not None else None,
             "latent_dim": self.latent_dim,
             "video_keys": self.video_keys,
             "current_window_steps": self.current_window_steps,
@@ -313,6 +323,140 @@ class MoWAFakeLatentEncoderAdapter:
         return torch.from_numpy(latent)
 
 
+class MoWAWanVaeLatentEncoderAdapter:
+    """Encode video windows with Wan2.2 VAE and pool them into 1D latents."""
+
+    def __init__(
+        self,
+        *,
+        model_path: Path | str,
+        latent_dim: int = 1024,
+        encoder_name: str = "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+        encoder_version: str = "wan2.2-vae-v1",
+        video_backend: str = "opencv",
+    ) -> None:
+        self.encoder_name = encoder_name
+        self.encoder_version = encoder_version
+        self.latent_dim = latent_dim
+        self.model_path = Path(model_path)
+        self.video_backend = video_backend
+        self._projection_seed = 42
+        self._vae = None
+        self._video_processor = None
+        self._torch_dtype = None
+        self._projection = None
+
+    def _ensure_loaded(self) -> None:
+        if self._vae is not None and self._video_processor is not None:
+            return
+        try:
+            from diffusers import AutoencoderKLWan
+            from diffusers.video_processor import VideoProcessor
+        except ImportError as exc:
+            raise RuntimeError("MoWA Wan latent encoder requires diffusers.") from exc
+
+        if not self.model_path.exists():
+            raise FileNotFoundError(f"Wan2.2 model path not found: {self.model_path}")
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        dtype = torch.bfloat16 if device.type == "cuda" else torch.float32
+        self._vae = AutoencoderKLWan.from_pretrained(
+            str(self.model_path),
+            subfolder="vae",
+            torch_dtype=dtype,
+        ).to(device)
+        self._video_processor = VideoProcessor(vae_scale_factor=2 ** len(self._vae.temperal_downsample))
+        self._torch_dtype = dtype
+
+    def _load_frames(self, source_path: Path, frame_indices: tuple[int, ...]) -> list[Any]:
+        if self.video_backend == "decord":
+            try:
+                from starVLA.dataloader.gr00t_lerobot.video import get_frames_by_indices
+            except ImportError as exc:
+                raise RuntimeError("MoWA Wan latent encoder requires gr00t_lerobot video helpers.") from exc
+            try:
+                frames = get_frames_by_indices(
+                    str(source_path),
+                    list(frame_indices),
+                    video_backend="decord",
+                )
+            except ImportError as exc:
+                raise RuntimeError("MoWA Wan latent encoder requires decord for video_backend='decord'.") from exc
+            # gr00t_lerobot 的 decord 路径返回 RGB ndarray，这里直接交给 PIL。
+            return [frame for frame in frames]
+        if self.video_backend != "opencv":
+            raise NotImplementedError(
+                f"Unsupported video_backend={self.video_backend!r}; only 'opencv' and 'decord' are available."
+            )
+        try:
+            import cv2
+        except ImportError as exc:
+            raise RuntimeError("MoWA Wan latent encoder requires opencv-python.") from exc
+
+        cap = cv2.VideoCapture(str(source_path))
+        if not cap.isOpened():
+            raise RuntimeError(f"Failed to open video: {source_path}")
+        frames: list[Any] = []
+        try:
+            for frame_index in frame_indices:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+                ok, frame = cap.read()
+                if not ok:
+                    raise ValueError(f"Unable to read frame at index {frame_index} from {source_path}")
+                frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        finally:
+            cap.release()
+        return frames
+
+    def encode(
+        self,
+        *,
+        dataset_path: Path,
+        episode_index: int,
+        anchor_index: int,
+        video_key: str,
+        window_role: str,
+        frame_indices: tuple[int, ...],
+        row_count: int,
+        source_path: Path | None,
+        source_identity: str,
+    ) -> torch.Tensor:
+        del dataset_path, episode_index, anchor_index, video_key, window_role, row_count
+        if self.video_backend not in {"opencv", "decord"}:
+            raise NotImplementedError(
+                f"Unsupported video_backend={self.video_backend!r}; only 'opencv' and 'decord' are available."
+            )
+        if source_path is None or not source_path.is_file():
+            raise FileNotFoundError(f"Missing source video for Wan latent encoding: {source_path}")
+
+        self._ensure_loaded()
+        assert self._vae is not None and self._video_processor is not None and self._torch_dtype is not None
+
+        from PIL import Image
+
+        frames = self._load_frames(source_path, frame_indices)
+        pil_frames = [Image.fromarray(frame) for frame in frames]
+        video_tensor = self._video_processor.preprocess_video(
+            pil_frames,
+            height=480,
+            width=832,
+        )
+        device = next(self._vae.parameters()).device
+        video_tensor = video_tensor.to(device=device, dtype=self._torch_dtype)
+        with torch.inference_mode():
+            latents = self._vae.encode(video_tensor).latent_dist.sample()
+        if self._projection is None:
+            vae_channels = latents.shape[1]
+            with torch.random.fork_rng():
+                torch.manual_seed(self._projection_seed)
+                self._projection = nn.Linear(vae_channels, self.latent_dim).to(
+                    device=latents.device, dtype=latents.dtype
+                ).eval()
+        pooled = latents.float().mean(dim=(2, 3, 4))  # [B, vae_channels]
+        latent = self._projection(pooled.to(dtype=self._projection.weight.dtype)).reshape(-1)
+        return latent.to(dtype=torch.float32, device="cpu")
+
+
 def build_mowa_latent_cache(
     config: MoWALatentCacheBuildConfig,
     *,
@@ -321,11 +465,7 @@ def build_mowa_latent_cache(
     """Build a deterministic fake latent cache and optionally write it to disk."""
 
     config.validate()
-    encoder = encoder or MoWAFakeLatentEncoderAdapter(
-        encoder_name=config.encoder_name,
-        encoder_version=config.encoder_version,
-        latent_dim=config.latent_dim,
-    )
+    encoder = encoder or _build_latent_encoder_adapter(config)
 
     dataset_path = Path(config.dataset_path)
     cache_root = Path(config.cache_root)
@@ -364,6 +504,7 @@ def build_mowa_latent_cache(
                         anchor_index=anchor_index,
                         row_count=row_count,
                         steps=window_spec.steps,
+                        allow_partial_windows=config.allow_partial_windows,
                     )
                     if frame_indices is None:
                         skipped_boundary_count += 1
@@ -381,6 +522,9 @@ def build_mowa_latent_cache(
                         latent_dim=encoder.latent_dim,
                     )
                     cache_path = cache_root / f"{cache_key}.pt"
+                    if cache_path.exists() and not config.overwrite:
+                        skipped_existing_count += 1
+                        continue
                     latent = encoder.encode(
                         dataset_path=dataset_path,
                         episode_index=episode_index,
@@ -419,15 +563,11 @@ def build_mowa_latent_cache(
                         source_sha256=source_sha256,
                         latent_sha256=latent_sha256,
                         video_exists=source_path.is_file() if source_path is not None else False,
-                        cache_status="planned"
-                        if config.dry_run
-                        else ("exists_unverified" if cache_path.exists() and not config.overwrite else "written"),
+                        cache_status="planned" if config.dry_run else "written",
                         row_count=row_count,
                     )
                     planned_artifacts.append(artifact)
-                    if cache_path.exists() and not config.overwrite:
-                        skipped_existing_count += 1
-                    elif not config.dry_run:
+                    if not config.dry_run:
                         cache_path.parent.mkdir(parents=True, exist_ok=True)
                         torch.save(
                             {
@@ -453,7 +593,9 @@ def build_mowa_latent_cache(
         "video_key_count": len(config.video_keys),
         "dry_run": config.dry_run,
         "manifest_written": not config.dry_run,
-        "source_policy": "fake_encoder_cpu_only",
+        "allow_partial_windows": config.allow_partial_windows,
+        "source_policy": "wan2.2-vae" if config.encoder_kind == "wan2.2-vae" else "fake_encoder_cpu_only",
+        "encoder_kind": config.encoder_kind,
     }
     return MoWALatentCacheBuildReport(
         dataset_path=str(dataset_path),
@@ -473,10 +615,31 @@ def build_mowa_latent_cache(
         preview_artifacts=tuple(planned_artifacts[:8]),
         summary=summary,
         go_no_go=(
-            "TBD: fake latent cache planned; execute and validate before integration"
-            if planned_artifacts
-            else "No-Go: no latent cache artifacts were planned"
+            "TBD: latent cache write completed; validate cache before integration"
+            if written_artifact_count > 0
+            else (
+                "TBD: fake latent cache planned; execute and validate before integration"
+                if planned_artifacts
+                else "No-Go: no latent cache artifacts were planned"
+            )
         ),
+    )
+
+
+def _build_latent_encoder_adapter(config: MoWALatentCacheBuildConfig) -> MoWALatentEncoderAdapter:
+    if config.encoder_kind == "wan2.2-vae":
+        if config.encoder_model_path is None:
+            raise ValueError("encoder_model_path is required for Wan2.2 VAE encoder.")
+        return MoWAWanVaeLatentEncoderAdapter(
+            model_path=config.encoder_model_path,
+            latent_dim=config.latent_dim,
+            encoder_name=config.encoder_name,
+            encoder_version=config.encoder_version,
+        )
+    return MoWAFakeLatentEncoderAdapter(
+        encoder_name=config.encoder_name,
+        encoder_version=config.encoder_version,
+        latent_dim=config.latent_dim,
     )
 
 
@@ -566,10 +729,13 @@ def validate_mowa_latent_cache(
 class MoWALatentCacheDataset:
     """Read-only cache loader that groups artifacts by sample key."""
 
+    _payload_cache_maxsize = 128
+
     def __init__(self, cache_root: Path | str, manifest_path: Path | str | None = None):
         self.cache_root = Path(cache_root)
         self.manifest_path = Path(manifest_path) if manifest_path is not None else self.cache_root / "manifest.json"
         self._artifacts = self._load_artifacts()
+        self._payload_cache: OrderedDict[Path, dict[str, Any]] = OrderedDict()
         self._sample_keys = tuple(
             sorted(
                 {
@@ -623,7 +789,15 @@ class MoWALatentCacheDataset:
         grouped: dict[str, Any] = {}
         metadata: dict[str, Any] = {}
         for artifact in matching:
-            payload = torch.load(Path(artifact["cache_path"]), map_location="cpu")
+            cache_path = Path(artifact["cache_path"])
+            payload = self._payload_cache.get(cache_path)
+            if payload is None:
+                payload = torch.load(cache_path, map_location="cpu")
+            else:
+                self._payload_cache.move_to_end(cache_path)
+            self._payload_cache[cache_path] = payload
+            if len(self._payload_cache) > self._payload_cache_maxsize:
+                self._payload_cache.popitem(last=False)
             latent = payload["latent"]
             grouped[f"{artifact['window_role']}_latent"] = latent
             metadata[artifact["window_role"]] = payload["metadata"]
@@ -697,6 +871,8 @@ def _resolve_anchor_indices(
                 valid.append(anchor_index)
         return tuple(valid)
     if config.anchor_mode == "all":
+        if config.allow_partial_windows:
+            return tuple(range(row_count))
         first_anchor = max(
             max(spec.steps - 1 if spec.role == _WINDOW_ROLE_HISTORY else 0 for spec in window_specs),
             0,
@@ -738,6 +914,7 @@ def _frame_indices_for_window(
     anchor_index: int,
     row_count: int,
     steps: int,
+    allow_partial_windows: bool,
 ) -> tuple[int, ...] | None:
     if window_role == _WINDOW_ROLE_CURRENT:
         if anchor_index >= row_count:
@@ -746,13 +923,21 @@ def _frame_indices_for_window(
     if window_role == _WINDOW_ROLE_FUTURE:
         start = anchor_index + 1
         end = min(row_count, anchor_index + 1 + steps)
-        if end - start < steps:
+        if end <= start:
+            return None
+        if not allow_partial_windows and end - start < steps:
             return None
         return tuple(range(start, end))
     if window_role == _WINDOW_ROLE_HISTORY:
         start = anchor_index - steps + 1
         end = anchor_index + 1
-        if start < 0:
+        if end <= 0:
+            return None
+        if allow_partial_windows:
+            start = max(0, start)
+        elif start < 0:
+            return None
+        if start >= end:
             return None
         return tuple(range(start, end))
     raise ValueError(f"Unsupported window role: {window_role!r}.")
@@ -787,7 +972,11 @@ def _source_identity(
 
 def _sha256_for_source(source_path: Path | None, source_identity: str) -> str:
     if source_path is not None and source_path.is_file():
-        return hashlib.sha256(source_path.read_bytes()).hexdigest()
+        digest = hashlib.sha256()
+        with source_path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
     return hashlib.sha256(source_identity.encode("utf-8")).hexdigest()
 
 

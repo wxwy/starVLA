@@ -26,6 +26,7 @@ class SlideDishwasherRackLabelBuilder(SingleDofTaskBuilder):
                 joint_selector=select_most_displaced_joint("rack"),
                 handle_site_template=None,
                 manipulated_body_template="{fixture_ref}_rack0",
+                invert_progress=True,
                 completion_threshold=0.95,
                 readiness_distance_threshold=0.05,
                 readiness_progress_delta=0.1,

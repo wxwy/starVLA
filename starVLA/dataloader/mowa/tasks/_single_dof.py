@@ -57,6 +57,10 @@ class SingleDofTaskSchema:
     manipulated_body_template: str | None = None
     # Normalize raw qpos to [0, 1] progress.  If None, use raw qpos directly.
     progress_normalizer: Callable[[np.ndarray, tuple[float, ...]], np.ndarray] | None = None
+    # If True, flip the normalized progress so that the task goal is 1.0.
+    # Use this for "closing / turning off / sliding in" tasks where the default
+    # normalizer would make the goal state 0.0.
+    invert_progress: bool = False
     # Completion threshold in normalized (or raw) progress units.
     completion_threshold: float = 0.95
     # Readiness proximity threshold in meters.
@@ -155,6 +159,8 @@ class SingleDofTaskBuilder(AtomicTaskLabelBuilder):
             normalizer = _default_hinge_normalizer
         progress = normalizer(raw_qpos, joint_range)
         progress = np.asarray(progress, dtype=np.float64)
+        if self.schema.invert_progress:
+            progress = 1.0 - progress
 
         try:
             import pyarrow.parquet as pq

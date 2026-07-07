@@ -26,6 +26,7 @@ class TurnOffStoveLabelBuilder(SingleDofTaskBuilder):
                 joint_selector=select_most_displaced_joint("stove_main_group_knob_"),
                 handle_site_template=None,
                 manipulated_body_template=None,
+                invert_progress=True,
                 completion_threshold=0.95,
                 readiness_distance_threshold=0.05,
                 readiness_progress_delta=0.1,

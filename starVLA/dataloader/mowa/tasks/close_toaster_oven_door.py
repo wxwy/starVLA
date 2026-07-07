@@ -18,6 +18,7 @@ class CloseToasterOvenDoorLabelBuilder(SingleDofTaskBuilder):
                 joint_name_template="{fixture_ref}_door_joint",
                 handle_site_template="{fixture_ref}_door_handle_default_site",
                 manipulated_body_template="{fixture_ref}_door",
+                invert_progress=True,
                 completion_threshold=0.95,
                 readiness_distance_threshold=0.05,
                 readiness_progress_delta=0.1,

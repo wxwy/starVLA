@@ -2490,6 +2490,92 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         )
         self.assertTrue(all(run["executed"] is False for run in report["runs"]))
 
+    def test_e004_hlc_gci_policy_rollout_smoke_plan_does_not_execute(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_hlc_gci_rollout_smoke_test"
+                / "checkpoints"
+                / "steps_2"
+            )
+            checkpoint.mkdir(parents=True)
+            (checkpoint / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 2}),
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa" / "mowa_e004_hlc_gci_checkpoint_preflight_smoke.json").write_text(
+                json.dumps({"checks": {"ok": True}}),
+                encoding="utf-8",
+            )
+            config = root / "configs" / "mowa" / "mowa_e004_hlc_gci_policy_rollout_candidate.yaml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "project_short_name: MoWA",
+                        "stage: hlc_gci",
+                        "task_id: M4-001",
+                        "experiment_id: E-004",
+                        "experiment_name: HLC-GCI checkpoint-backed policy rollout smoke",
+                        "config_role: policy_rollout_candidate_not_launch",
+                        "launch_ready: false",
+                        "eval_started: false",
+                        "requires_human_confirmation: true",
+                        "checkpoint: "
+                        "playground/mowa_ckpt/MoWA-E-001_hlc_gci_rollout_smoke_test/checkpoints/steps_2",
+                        "checkpoint_root_policy: playground/mowa_ckpt",
+                        "server:",
+                        "  python: .venv/bin/python",
+                        "  entrypoint: deployment/model_server/server_policy.py",
+                        "  port_base: 5696",
+                        "  use_bf16: true",
+                        "  idle_timeout: 1800",
+                        "client:",
+                        "  python: .robocase/bin/python",
+                        "  module: examples.Robocasa_365.eval_files.simulation_env",
+                        "  env_name: robocasa/OpenDrawer",
+                        "  n_episodes: 2",
+                        "  n_envs: 2",
+                        "  max_episode_steps: 100",
+                        "  n_action_steps: 8",
+                        "  video_out_path: playground/eval_results/mowa_e004_robocasa365_open_drawer_smoke/videos",
+                        "interventions:",
+                        "  - baseline",
+                        "  - zero",
+                        "  - batch_shuffle",
+                        "  - head_mask_control",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e004_hlc_gci_policy_rollout_smoke import (
+                run_or_plan_e004_hlc_gci_policy_rollout_smoke,
+            )
+
+            report = run_or_plan_e004_hlc_gci_policy_rollout_smoke(
+                root,
+                config_path=Path("configs/mowa/mowa_e004_hlc_gci_policy_rollout_candidate.yaml"),
+                execute=False,
+                server_ready_timeout=1,
+            )
+
+        self.assertFalse(report["eval_started"])
+        self.assertTrue(report["checks"]["preflight_report_exists"])
+        self.assertTrue(report["checks"]["checkpoint_exists"])
+        self.assertTrue(report["checks"]["batch_shuffle_batch_size_gt_1"])
+        self.assertEqual(
+            {run["intervention"] for run in report["runs"]},
+            {"baseline", "zero", "batch_shuffle", "head_mask_control"},
+        )
+        self.assertTrue(all(run["executed"] is False for run in report["runs"]))
+        self.assertTrue(str(report["go_no_go"]).startswith("TBD: E-004"))
+
     def test_e006_rollout_assets_blocker_is_detected_from_failed_runs(self):
         from tools.mowa.e006_policy_rollout_smoke import _extract_rollout_blocker
 
@@ -2993,6 +3079,425 @@ class MoWAFutureHeadsTest(unittest.TestCase):
             "latent cache builder remains gated",
         )
 
+    def test_e003_future_latent_prior_config_preview_passes(self):
+        from tools.mowa.e003_future_latent_prior_config_preview import (
+            build_e003_future_latent_prior_config_preview,
+        )
+
+        report = build_e003_future_latent_prior_config_preview(Path("."))
+
+        self.assertEqual(report["experiment_id"], "E-003")
+        self.assertFalse(report["launch_ready"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: E-003 config preview passed; cache dry-run evidence still required",
+        )
+
+    def test_e003_future_latent_prior_train_dry_run_passes_with_fake_cache(self):
+        try:
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+        except ImportError:
+            self.skipTest("pyarrow is not available")
+
+        from tools.mowa.e003_future_latent_prior_train_dry_run import (
+            build_e003_future_latent_prior_train_dry_run,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / "dataset"
+            cache_root = root / "cache"
+            data_dir = dataset_path / "data" / "chunk-000"
+            data_dir.mkdir(parents=True)
+            for video_key in (
+                "observation.images.robot0_eye_in_hand",
+                "observation.images.robot0_agentview_left",
+                "observation.images.robot0_agentview_right",
+            ):
+                (dataset_path / "videos" / "chunk-000" / video_key).mkdir(parents=True)
+                (dataset_path / "videos" / "chunk-000" / video_key / "episode_000000.mp4").write_bytes(
+                    b"fake-video-bytes"
+                )
+
+            parquet = pa.table(
+                {
+                    "frame_index": pa.array(list(range(20)), type=pa.int64()),
+                    "episode_index": pa.array([0] * 20, type=pa.int64()),
+                    "task_index": pa.array([0] * 20, type=pa.int64()),
+                    "timestamp": pa.array([0.05 * idx for idx in range(20)], type=pa.float32()),
+                    "observation.state": pa.FixedSizeListArray.from_arrays(
+                        pa.array([float(value) for value in range(20 * 16)]),
+                        16,
+                    ),
+                    "action": pa.FixedSizeListArray.from_arrays(
+                        pa.array([float(value) for value in range(20 * 12)]),
+                        12,
+                    ),
+                    "next.reward": pa.array([0.0] * 19 + [1.0], type=pa.float32()),
+                    "next.done": pa.array([False] * 19 + [True]),
+                }
+            )
+            pq.write_table(parquet, data_dir / "episode_000000.parquet")
+
+            report = build_e003_future_latent_prior_train_dry_run(
+                Path("."),
+                dataset_path=dataset_path,
+                cache_root=cache_root,
+                execute_cache=True,
+            )
+
+        self.assertEqual(report["experiment_id"], "E-003")
+        self.assertTrue(report["execute_cache"])
+        self.assertEqual(report["batch_source"], "fake_cache_sample")
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: E-003 cache dry-run passed; real Wan cache builder remains gated",
+        )
+
+    def test_e003_wan2_2_latent_cache_smoke_gates_without_model_path(self):
+        from tools.mowa.e003_wan2_2_latent_cache_smoke import (
+            build_e003_wan2_2_latent_cache_smoke,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / "dataset"
+            dataset_path.mkdir(parents=True)
+
+            report = build_e003_wan2_2_latent_cache_smoke(
+                Path("."),
+                dataset_path=dataset_path,
+                cache_root=root / "cache",
+                model_path=root / "missing_model",
+            )
+
+        self.assertFalse(report["checks"]["model_path_exists"])
+        self.assertEqual(
+            report["go_no_go"],
+            "No-Go: Wan2.2 latent cache smoke missing model path",
+        )
+
+    def test_e003_wan2_2_latent_cache_smoke_passes_config_into_builder(self):
+        from tools.mowa import e003_wan2_2_latent_cache_smoke as wan_smoke
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / "dataset"
+            cache_root = root / "cache"
+            model_path = root / "Wan2.2-TI2V-5B-Diffusers"
+            dataset_path.mkdir(parents=True)
+            model_path.mkdir(parents=True)
+
+            captured = {}
+
+            class _DummyReport:
+                def to_dict(self):
+                    return {
+                        "planned_artifact_count": 1,
+                        "written_artifact_count": 1,
+                        "summary": {"encoder_kind": "wan2.2-vae"},
+                    }
+
+            def _fake_build(config):
+                captured["config"] = config
+                return _DummyReport()
+
+            original = wan_smoke.build_mowa_latent_cache
+            wan_smoke.build_mowa_latent_cache = _fake_build
+            try:
+                report = wan_smoke.build_e003_wan2_2_latent_cache_smoke(
+                    Path("."),
+                    dataset_path=dataset_path,
+                    cache_root=cache_root,
+                    model_path=model_path,
+                )
+            finally:
+                wan_smoke.build_mowa_latent_cache = original
+
+        self.assertTrue(report["checks"]["model_path_exists"])
+        self.assertTrue(report["checks"]["config_valid"])
+        self.assertEqual(captured["config"].encoder_kind, "wan2.2-vae")
+        self.assertEqual(captured["config"].encoder_model_path, model_path)
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: Wan2.2 latent cache smoke passed; real cache write still gated",
+        )
+
+    def test_e003_wan2_2_latent_cache_smoke_overwrite_when_execute(self):
+        from tools.mowa import e003_wan2_2_latent_cache_smoke as wan_smoke
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / "dataset"
+            cache_root = root / "cache"
+            model_path = root / "Wan2.2-TI2V-5B-Diffusers"
+            dataset_path.mkdir(parents=True)
+            model_path.mkdir(parents=True)
+
+            captured = {}
+
+            class _DummyReport:
+                def to_dict(self):
+                    return {
+                        "planned_artifact_count": 1,
+                        "written_artifact_count": 1,
+                        "summary": {"encoder_kind": "wan2.2-vae"},
+                    }
+
+            class _DummyValidationReport:
+                def to_dict(self):
+                    return {"all_ok": True}
+
+            def _fake_build(config):
+                captured["config"] = config
+                return _DummyReport()
+
+            def _fake_validate(path):
+                captured["validated_path"] = path
+                return _DummyValidationReport()
+
+            original_build = wan_smoke.build_mowa_latent_cache
+            original_validate = wan_smoke.validate_mowa_latent_cache
+            wan_smoke.build_mowa_latent_cache = _fake_build
+            wan_smoke.validate_mowa_latent_cache = _fake_validate
+            try:
+                report = wan_smoke.build_e003_wan2_2_latent_cache_smoke(
+                    Path("."),
+                    dataset_path=dataset_path,
+                    cache_root=cache_root,
+                    model_path=model_path,
+                    execute=True,
+                )
+            finally:
+                wan_smoke.build_mowa_latent_cache = original_build
+                wan_smoke.validate_mowa_latent_cache = original_validate
+
+        self.assertTrue(report["checks"]["build_report_written"])
+        self.assertTrue(report["checks"]["validation_ok"])
+        self.assertTrue(captured["config"].overwrite)
+        self.assertTrue(captured["config"].dry_run is False)
+        self.assertEqual(captured["validated_path"], cache_root)
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: Wan2.2 latent cache write and validation passed; training remains gated",
+        )
+
+    def test_e003_future_latent_prior_launch_smoke_passes_real_and_dry_runs(self):
+        from tools.mowa import e003_future_latent_prior_launch_smoke as launch_smoke
+
+        captured = {}
+
+        def _fake_real_smoke(*args, **kwargs):
+            captured["real_smoke"] = kwargs
+            return {
+                "go_no_go": "TBD: Wan2.2 latent cache write and validation passed; training remains gated",
+                "checks": {"config_valid": True, "build_report_written": True, "validation_ok": True},
+            }
+
+        def _fake_train_dry_run(*args, **kwargs):
+            captured["dry_run"] = kwargs
+            return {
+                "go_no_go": "TBD: E-003 cache dry-run passed; real Wan cache builder remains gated",
+                "checks": {
+                    "config_created": True,
+                    "launch_guard_closed": True,
+                    "cache_build_report_ok": True,
+                    "cache_validation_ok": True,
+                    "cache_dataset_sample_available": True,
+                    "model_forward_succeeds": True,
+                    "loss_is_finite": True,
+                    "history_latent_rejected": True,
+                    "history_latent_status_data_gate": True,
+                    "latent_shape_status_data_gate": True,
+                },
+            }
+
+        original_real_smoke = launch_smoke.build_e003_wan2_2_latent_cache_smoke
+        original_train_dry_run = launch_smoke.build_e003_future_latent_prior_train_dry_run
+        launch_smoke.build_e003_wan2_2_latent_cache_smoke = _fake_real_smoke
+        launch_smoke.build_e003_future_latent_prior_train_dry_run = _fake_train_dry_run
+        try:
+            report = launch_smoke.build_e003_future_latent_prior_launch_smoke(Path("."))
+        finally:
+            launch_smoke.build_e003_wan2_2_latent_cache_smoke = original_real_smoke
+            launch_smoke.build_e003_future_latent_prior_train_dry_run = original_train_dry_run
+
+        self.assertEqual(report["experiment_id"], "E-003")
+        self.assertTrue(report["launch_ready"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: E-003 launch smoke passed; formal long-running training remains gated",
+        )
+        self.assertTrue(captured["real_smoke"]["execute"])
+        self.assertTrue(captured["dry_run"]["execute_cache"])
+
+    def test_e004_hlc_gci_config_preview_passes(self):
+        from tools.mowa.e004_hlc_gci_config_preview import build_e004_hlc_gci_config_preview
+
+        report = build_e004_hlc_gci_config_preview(Path("."))
+
+        self.assertEqual(report["experiment_id"], "E-004")
+        self.assertFalse(report["launch_ready"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: E-004 config preview passed; rollout remains gated",
+        )
+
+    def test_e004_hlc_gci_launch_smoke_passes_preview_and_synthetic_train(self):
+        from tools.mowa import e004_hlc_gci_launch_smoke as launch_smoke
+
+        captured = {}
+
+        def _fake_preview(*args, **kwargs):
+            captured["preview"] = True
+            return {
+                "go_no_go": "TBD: E-004 config preview passed; rollout remains gated",
+                "checks": {
+                    "config_created": True,
+                    "launch_guard_closed": True,
+                    "injection_policy_condition_path_only": True,
+                    "history_source_robot_only": True,
+                    "future_action_policy_target_only": True,
+                    "leakage_guard_future_action_not_input": True,
+                    "history_sampling_status_data_gate": True,
+                    "gate_init_status_data_gate": True,
+                    "shape_status_data_gate": True,
+                    "references_present": True,
+                },
+            }
+
+        def _fake_interface(*args, **kwargs):
+            captured["interface"] = True
+            return {
+                "go_no_go": "TBD: HLC-GCI interface smoke passed; framework integration remains gated",
+                "checks": {
+                    "config_exists": True,
+                    "compressed_history_shape_expected": True,
+                    "gate_shape_expected": True,
+                    "gated_condition_shape_expected": True,
+                    "gate_values_in_unit_interval": True,
+                    "injection_policy_condition_path_only": True,
+                    "history_sampling_status_data_gate": True,
+                    "gate_init_status_data_gate": True,
+                    "shape_status_data_gate": True,
+                },
+            }
+
+        original_preview = launch_smoke.build_e004_hlc_gci_config_preview
+        original_interface = launch_smoke.build_hlc_gci_interface_smoke
+        launch_smoke.build_e004_hlc_gci_config_preview = _fake_preview
+        launch_smoke.build_hlc_gci_interface_smoke = _fake_interface
+        try:
+            report = launch_smoke.build_e004_hlc_gci_launch_smoke(Path("."))
+        finally:
+            launch_smoke.build_e004_hlc_gci_config_preview = original_preview
+            launch_smoke.build_hlc_gci_interface_smoke = original_interface
+
+        self.assertEqual(report["experiment_id"], "E-004")
+        self.assertTrue(report["launch_ready"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: E-004 launch smoke passed; rollout remains gated",
+        )
+        self.assertTrue(captured["preview"])
+        self.assertTrue(captured["interface"])
+
+    def test_e004_hlc_gci_checkpoint_preflight_passes_with_temp_checkpoint(self):
+        from tools.mowa.e004_hlc_gci_checkpoint_preflight_smoke import (
+            build_e004_hlc_gci_checkpoint_preflight_smoke,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checkpoint_dir = Path(tmpdir) / "checkpoint"
+            checkpoint_dir.mkdir(parents=True)
+            (checkpoint_dir / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 2}),
+                encoding="utf-8",
+            )
+
+            report = build_e004_hlc_gci_checkpoint_preflight_smoke(
+                Path("."),
+                checkpoint=checkpoint_dir,
+            )
+
+        self.assertEqual(report["experiment_id"], "E-004")
+        self.assertFalse(report["launch_ready"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: E-004 checkpoint-backed preflight passed; rollout remains gated",
+        )
+
+    def test_e003_future_latent_prior_long_training_config_preview_passes(self):
+        from tools.mowa.e003_future_latent_prior_long_training_config_preview import (
+            build_e003_future_latent_prior_long_training_config_preview,
+        )
+
+        report = build_e003_future_latent_prior_long_training_config_preview(Path("."))
+
+        self.assertEqual(report["experiment_id"], "E-003")
+        self.assertTrue(report["launch_ready"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: long-training config preview passed; launch wiring remains pending",
+        )
+
+    def test_e004_hlc_gci_long_training_config_preview_passes(self):
+        from tools.mowa.e004_hlc_gci_long_training_config_preview import (
+            build_e004_hlc_gci_long_training_config_preview,
+        )
+
+        report = build_e004_hlc_gci_long_training_config_preview(Path("."))
+
+        self.assertEqual(report["experiment_id"], "E-004")
+        self.assertTrue(report["launch_ready"])
+        self.assertTrue(all(report["checks"].values()))
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: long-training config preview passed; launch wiring remains pending",
+        )
+
+    def test_e003_future_latent_prior_long_training_launch_smoke_passes(self):
+        from tools.mowa.e003_future_latent_prior_long_training_launch_smoke import (
+            build_e003_future_latent_prior_long_training_launch_smoke,
+        )
+
+        report = build_e003_future_latent_prior_long_training_launch_smoke(Path("."))
+
+        self.assertEqual(report["experiment_id"], "E-003")
+        self.assertTrue(report["launch_ready"])
+        self.assertTrue(report["checks"]["future_latent_prior_integrated_in_training_framework"])
+        self.assertTrue(report["checks"]["latent_batch_contract_integrated_in_runtime_paths"])
+        self.assertTrue(report["checks"]["future_latent_loss_integrated_in_training_loop"])
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: E-003 long-training launch candidate passed; training command is wired",
+        )
+
+    def test_e004_hlc_gci_long_training_launch_smoke_passes(self):
+        from tools.mowa.e004_hlc_gci_long_training_launch_smoke import (
+            build_e004_hlc_gci_long_training_launch_smoke,
+        )
+
+        report = build_e004_hlc_gci_long_training_launch_smoke(Path("."))
+
+        self.assertEqual(report["experiment_id"], "E-004")
+        self.assertTrue(report["launch_ready"])
+        self.assertTrue(report["checks"]["hlcgci_integrated_in_training_framework"])
+        self.assertTrue(report["checks"]["history_latent_batch_contract_integrated_in_runtime_paths"])
+        self.assertTrue(report["checks"]["hlcgci_training_objective_integrated_in_training_loop"])
+        self.assertEqual(
+            report["go_no_go"],
+            "TBD: E-004 long-training launch candidate passed; training command is wired",
+        )
+
     def test_hlc_gci_interface_shapes_and_gate_range(self):
         try:
             import torch
@@ -3133,9 +3638,15 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertFalse(report["all_training_experiments_ready"])
         self.assertIn("E-001", report["not_ready_training_experiments"])
         self.assertIn("E-002", report["not_ready_training_experiments"])
+        self.assertIn("E-003", report["not_ready_training_experiments"])
+        self.assertIn("E-004", report["not_ready_training_experiments"])
         entries = {entry["experiment_id"]: entry for entry in report["entries"]}
         self.assertEqual(entries["E-001"]["status"], "bounded_executable_but_full_launch_blocked")
         self.assertEqual(entries["E-002"]["status"], "runtime_integrated_but_training_gated")
+        self.assertEqual(entries["E-003"]["status"], "launch_candidate_present_but_training_integration_missing")
+        self.assertEqual(entries["E-004"]["status"], "config_preview_and_interface_ready_but_framework_integration_missing")
+        self.assertTrue(entries["E-004"]["checks"]["hlcgci_policy_rollout_passed"])
+        self.assertTrue(entries["E-004"]["checks"]["hlcgci_policy_rollout_zero_success"])
         self.assertEqual(entries["E-006"]["status"], "coupling_evidence_incomplete")
 
     def test_share_tools_strict_mismatch_accepts_legacy_mowa_bridge_key_alias(self):

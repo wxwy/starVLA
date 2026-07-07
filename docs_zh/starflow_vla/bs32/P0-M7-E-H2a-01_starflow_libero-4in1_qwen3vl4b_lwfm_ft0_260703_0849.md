@@ -1,10 +1,10 @@
 # P0-M7-E-H2a-01: StarFlow LIBERO 4-in-1 Qwen3VL-4B future_tokens=0（bs32）
 
 > **实验代号**: E-H2a-01 / P0-M7  
-> **状态**: 🟢 训练运行中（step 22620/80000，约 28.3%）  
+> **状态**: 🟢 训练运行中（step 55155/80000，约 68.9%）  
 > **run_id**: `P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849`  
 > **启动时间**: 2026-07-03 08:53 CST  
-> **当前更新**: 2026-07-05 03:26 CST  
+> **当前更新**: 2026-07-07 18:26 CST  
 > **tmux 会话**: `train`  
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_0.yaml`
 
@@ -82,18 +82,18 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 训练进度
 
-> 最后更新：2026-07-05 03:26 CST（Docker 容器内实际可用资源）
+> 最后更新：2026-07-07 18:26 CST（Docker 容器内实际可用资源）
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | 22620 / 80,000（28.3%） |
-| **完成比例** | 28.3% |
-| **单步耗时** | ~6.85 s/it |
+| **当前 Step** | 55155 / 80,000（68.9%） |
+| **完成比例** | 68.9% |
+| **单步耗时** | ~6.75 s/it |
 | **数据加载耗时** | ~0.000 s |
-| **模型前向/反向耗时** | ~0.207 s |
-| **已运行时间** | 42 小时 32 分钟 |
-| **预计剩余时间** | ~4 天 13 小时 |
-| **预计总耗时** | ~6 天 2 小时 |
+| **模型前向/反向耗时** | ~0.214 s |
+| **已运行时间** | 103 小时 42 分钟 |
+| **预计剩余时间** | ~46 小时 30 分钟 |
+| **预计总耗时** | ~150 小时 12 分钟 |
 
 ### Loss 记录
 
@@ -236,18 +236,18 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 ## 系统资源占用
 
-> 最后更新：2026-07-05 03:26 CST（Docker 容器内实际可用资源）  
+> 最后更新：2026-07-07 18:26 CST（Docker 容器内实际可用资源）  
 > 注意：以下为 Docker 容器内实际可用资源
 
 ### GPU（NVIDIA GeForce RTX 4090）
 
 | 指标 | 值 |
 |------|-----|
-| **GPU 利用率** | 61% |
+| **GPU 利用率** | 49% |
 | **显存使用** | 24032 MiB / 24564 MiB（97.8%） |
 | **显存空闲** | 50 MiB |
-| **功耗** | 244.76 W / 450.00 W |
-| **温度** | 58°C |
+| **功耗** | 249.10 W / 450.00 W |
+| **温度** | 63°C |
 
 ### CPU / 内存（Docker 容器）
 
@@ -272,7 +272,8 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 /disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/
 ├── checkpoints/              # 模型 checkpoint
 │   ├── steps_250/            # 第一个 checkpoint
-│   └── steps_22500/          # ✅ 最新完整 checkpoint
+│   ├── steps_22500/          # 历史 checkpoint
+│   └── steps_55000/          # ✅ 最新完整 checkpoint
 ├── config.full.yaml          # 完整配置
 ├── config.yaml               # 访问过的配置快照
 ├── dataset_statistics.json   # 数据集统计信息
@@ -320,27 +321,27 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 ---
 
-## 自动监控状态**: 🟢 训练运行中（step 22620/80000，约 28.3%）  
+## 自动监控状态**: 🟢 训练运行中（step 55155/80000，约 68.9%）  
 
 | 字段 | 值 |
 | --- | --- |
-| 监控时间 | 2026-07-05 03:26 CST |
-| 训练状态**: 🟢 训练运行中（step 22620/80000，约 28.3%）  
+| 监控时间 | 2026-07-07 18:26 CST |
+| 训练状态**: 🟢 训练运行中（step 55155/80000，约 68.9%）  
 | run_id | `P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849` |
 | tmux 会话 | `train` |
-| 当前步数 | **22620 / 80000** |
-| 完成比例 | 28.3% |
-| 训练速度 | ~6.85 s/it |
+| 当前步数 | **55155 / 80000** |
+| 完成比例 | 68.9% |
+| 训练速度 | ~6.75 s/it |
 | data_time | 0.000 s |
-| model_time | 0.207 s |
-| 已运行时间 | 42:32:00 |
-| 预计剩余时间 | ~4d 13h |
-| 最新完整 checkpoint | `steps_22500` |
+| model_time | 0.214 s |
+| 已运行时间 | 103:42:56 |
+| 预计剩余时间 | ~46h 30m |
+| 最新完整 checkpoint | `steps_55000` |
 | GPU | NVIDIA GeForce RTX 4090 |
-| GPU 利用率 | 61% |
+| GPU 利用率 | 49% |
 | 显存使用 | 24032 MiB / 24564 MiB (97.8%) |
-| 功耗 | 244.76 W / 450.00 W |
-| 温度 | 58°C |
+| 功耗 | 249.10 W / 450.00 W |
+| 温度 | 63°C |
 | 内存总量 | 56 GiB（Docker 容器限制） |
 | 内存已用 | ~30.8 GiB |
 | 内存可用 | ~25.2 GiB |
@@ -350,3 +351,62 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 ---
 
 *本文档由 Claude 自动监控生成并持续更新。*
+
+---
+
+## LIBERO Goal 评估结果
+
+> 评估时间：2026-07-07 15:46 CST
+> Task Suite: **libero_goal** (10 tasks × 50 trials)
+> 评估设备: NVIDIA RTX 4090
+
+### steps_50000
+
+| 指标 | 值 |
+|------|-----|
+| **Success Rate** | **80.94%** |
+| 成功/总数 | 395 / 488 |
+
+| 任务 | 成功率 | 成功/总数 |
+|------|--------|-----------|
+| put the bowl on the plate | 100.00% | 50/50 |
+| turn on the stove | 100.00% | 50/50 |
+| put the bowl on the stove | 94.00% | 47/50 |
+| put the wine bottle on top of the cabinet | 92.00% | 46/50 |
+| open the middle drawer of the cabinet | 90.00% | 45/50 |
+| push the plate to the front of the stove | 90.00% | 45/50 |
+| put the bowl on top of the cabinet | 74.00% | 37/50 |
+| put the cream cheese in the bowl | 72.00% | 36/50 |
+| open the top drawer and put the bowl inside | 68.00% | 34/50 |
+| put the wine bottle on the rack | 13.16% | 5/38 |
+
+---
+
+## LIBERO Goal 评估结果
+
+> 评估时间：2026-07-07 15:47:31 CST
+> Task Suite: **libero_goal**
+> Trials per Task: **50**
+> 评估设备: NVIDIA RTX 4090
+
+| Step | Success Rate | 成功数/总数 |
+|------|-------------|-------------|
+| 50000 | **0.7900** (0.7900%) | 395/500 |
+
+### 各任务成功率
+
+```
+open the middle drawer of the cabinet: 45/50=90.00%
+open the top drawer and put the bowl inside: 34/50=68.00%
+push the plate to the front of the stove: 45/50=90.00%
+put the bowl on the plate: 50/50=100.00%
+put the bowl on the stove: 47/50=94.00%
+put the bowl on top of the cabinet: 37/50=74.00%
+put the cream cheese in the bowl: 36/50=72.00%
+put the wine bottle on the rack: 5/50=10.00%
+put the wine bottle on top of the cabinet: 46/50=92.00%
+turn on the stove: 50/50=100.00%
+```
+
+*评估报告路径：/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/steps_50000/eval_report.json*
+

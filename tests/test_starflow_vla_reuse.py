@@ -168,7 +168,11 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model.action_horizon = 8
         action_model = _CaptureActionModel()
         model.action_model = action_model
-        model._encode_vl_hidden_states = lambda images, instructions: ([torch.zeros(1, 1, 1)], None)
+        model._encode_vl_hidden_states = lambda images, instructions: (
+            [torch.zeros(1, 1, 1)],
+            None,
+            torch.zeros(1, 1, 1),
+        )
         examples = [
             {
                 "image": [],
@@ -192,7 +196,11 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model.action_horizon = 8
         action_model = _CaptureActionModel()
         model.action_model = action_model
-        model._encode_vl_hidden_states = lambda images, instructions: ([torch.zeros(1, 1, 1)], None)
+        model._encode_vl_hidden_states = lambda images, instructions: (
+            [torch.zeros(1, 1, 1)],
+            None,
+            torch.zeros(1, 1, 1),
+        )
         examples = [
             {
                 "image": [],
@@ -280,6 +288,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model._encode_vl_hidden_states = lambda images, instructions: (
             [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
             torch.ones(1, 3, dtype=torch.bool),
+            torch.zeros(1, 3, 1),
         )
         examples = [
             {
@@ -322,6 +331,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model._encode_vl_hidden_states = lambda images, instructions: (
             [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
             torch.ones(1, 3, dtype=torch.bool),
+            torch.zeros(1, 3, 1),
         )
 
         output = model.forward(
@@ -360,6 +370,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model._encode_vl_hidden_states = lambda images, instructions: (
             [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
             torch.ones(1, 3, dtype=torch.bool),
+            torch.zeros(1, 3, 1),
         )
 
         output = model.forward(
@@ -402,6 +413,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model._encode_vl_hidden_states = lambda images, instructions: (
             [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
             torch.ones(1, 3, dtype=torch.bool),
+            torch.zeros(1, 3, 1),
         )
 
         output = model.forward(
@@ -466,6 +478,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
             model._encode_vl_hidden_states = lambda images, instructions: (
                 [torch.zeros(2, 3, 4), torch.ones(2, 3, 4)],
                 torch.ones(2, 3, dtype=torch.bool),
+                torch.zeros(2, 3, 1),
             )
             examples = [
                 {
@@ -529,6 +542,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model._encode_vl_hidden_states = lambda images, instructions: (
             [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
             torch.ones(1, 3, dtype=torch.bool),
+            torch.zeros(1, 3, 1),
         )
 
         output = model.forward(
@@ -562,6 +576,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model._encode_vl_hidden_states = lambda images, instructions: (
             [torch.zeros(2, 3, 4), torch.ones(2, 3, 4)],
             torch.ones(2, 3, dtype=torch.bool),
+            torch.zeros(2, 3, 1),
         )
         examples = [
             {"image": [], "lang": "open the drawer"},
@@ -597,6 +612,7 @@ class StarFlowVLAReuseTest(unittest.TestCase):
         model._encode_vl_hidden_states = lambda images, instructions: (
             [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)],
             torch.ones(1, 3, dtype=torch.bool),
+            torch.zeros(1, 3, 1),
         )
 
         output = model.forward(

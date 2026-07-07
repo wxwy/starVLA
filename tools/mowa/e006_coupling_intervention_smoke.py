@@ -118,6 +118,7 @@ def _run_intervention(intervention: str) -> dict[str, Any]:
     model._encode_vl_hidden_states = lambda images, instructions: (
         [torch.zeros(2, 3, 4), torch.ones(2, 3, 4)],
         torch.ones(2, 3, dtype=torch.bool),
+        torch.zeros(2, 3, 1),
     )
     output = model.forward(_build_examples())
     bridge_tokens = action_model.vl_embs_list[0][:, -2:, :].detach().cpu()

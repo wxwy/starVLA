@@ -37,7 +37,12 @@ def _hinge_progress(raw_qpos: np.ndarray, joint_range: tuple[float, ...]) -> np.
 
 @register_atomic_task_label_builder
 class CloseFridgeLabelBuilder(AtomicTaskLabelBuilder):
-    """Build future labels for CloseFridge using all fridge door joints."""
+    """Build future labels for CloseFridge using total fridge door progress.
+
+    All detected fridge door joints contribute equally to the task progress via
+    their mean progress.  This reflects the total closing effort: both doors
+    must reach the closed state for the average to hit the completion threshold.
+    """
 
     @property
     def task_name(self) -> str:
@@ -95,13 +100,13 @@ class CloseFridgeLabelBuilder(AtomicTaskLabelBuilder):
         if not door_joints:
             raise ValueError(f"No fridge door joints found for {self.task_name}")
 
-        # Compute per-door progress and take the minimum (all doors must close).
+        # Compute per-door progress and aggregate by mean (total closing effort).
         per_door_progress: list[np.ndarray] = []
         for joint in door_joints:
             raw_qpos = states[:, joint["qpos_index"]]
             progress = _hinge_progress(raw_qpos, joint["range"])
             per_door_progress.append(np.asarray(progress, dtype=np.float64))
-        overall_progress = np.minimum.reduce(per_door_progress)
+        overall_progress = np.mean(np.stack(per_door_progress, axis=0), axis=0)
 
         try:
             import pyarrow.parquet as pq
@@ -167,7 +172,8 @@ class CloseFridgeLabelBuilder(AtomicTaskLabelBuilder):
             "manipulation_readiness_mask": manipulation_readiness_masks,
             "row_count": row_count,
             "door_joint_names": [j["name"] for j in door_joints],
-            "schema_version": "close_fridge_v2",
+            "door_progress": np.stack(per_door_progress, axis=1).astype(np.float64),
+            "schema_version": "close_fridge_v3",
             "readiness_schema_version": "close_fridge_progress_imminence_v1",
             "readiness_predicate": f"future progress gain >= {readiness_progress_delta}",
             "kinematics_available": False,

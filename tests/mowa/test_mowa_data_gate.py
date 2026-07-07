@@ -16,13 +16,18 @@ from starVLA.dataloader.mowa import (
     build_mowa_atomic_core_leakage_gate_smoke,
     build_mowa_atomic_core_production_preflight_smoke,
     build_mowa_atomic_core_temporal_profile,
+    build_mowa_failure_risk_data_gate_smoke,
     build_mowa_future_latent_cache_contract_smoke,
     build_mowa_future_latent_cache_manifest_smoke,
     build_mowa_g0_report_skeleton,
     build_mowa_latent_cache_contract_smoke,
     build_mowa_latent_cache_manifest_smoke,
+    build_mowa_opendrawer_future_label_sidecar_smoke,
     build_mowa_future_constructible_label_smoke,
+    build_mowa_future_label_source_audit,
     build_mowa_robocasa365_local_smoke_report,
+    build_mowa_opendrawer_state_mapping_audit,
+    build_mowa_opendrawer_subgoal_data_gate_smoke,
     build_mowa_shuffled_episode_pairs,
     fixed_size_list_shape,
     inspect_mowa_future_label_coverage,
@@ -118,6 +123,30 @@ class MoWADataGateTest(unittest.TestCase):
             actions={"canonical_action": "Data Gate"},
             wam_targets={"future_labels": "Data Gate", "future_wan_latent": "Data Gate"},
             metadata={"obs_fps": DATA_GATE, "action_hz": DATA_GATE},
+        )
+
+    def _write_minimal_opendrawer_extras(self, dataset_path: Path, states):
+        extras_dir = dataset_path / "extras" / "episode_000000"
+        extras_dir.mkdir(parents=True)
+        (extras_dir / "ep_meta.json").write_text(
+            json.dumps({"fixture_refs": {"drawer": "stack_1_left_group_4"}}),
+            encoding="utf-8",
+        )
+        (extras_dir / "model.xml.gz").write_bytes(
+            __import__("gzip").compress(
+                (
+                    "<mujoco><worldbody>"
+                    "<body><joint name='robot0_joint1' type='hinge' range='-1 1' />"
+                    "<joint name='stack_1_left_group_4_slidejoint' type='slide' range='-0.6 0' />"
+                    "</body></worldbody></mujoco>"
+                ).encode("utf-8")
+            )
+        )
+        import numpy as np
+
+        np.savez_compressed(
+            extras_dir / "states.npz",
+            states=np.array(states, dtype=float),
         )
 
     def test_unified_episode_rejects_non_monotonic_timestamps(self):
@@ -542,6 +571,188 @@ class MoWADataGateTest(unittest.TestCase):
             sample["labels"]["action_outcome_class"]["class_mapping_status"],
             MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
         )
+
+    def test_future_label_source_audit_reports_proxy_blockers(self):
+        try:
+            import pyarrow  # noqa: F401
+        except ImportError:
+            self.skipTest("pyarrow is not available")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            for relative_path in MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS.values():
+                dataset_path = root / relative_path
+                self._write_minimal_robocasa_parquet_dataset(dataset_path, lengths=(12,))
+            report = build_mowa_future_label_source_audit(
+                root,
+                repo_root=Path("."),
+                episode_indices=(0,),
+            ).to_dict()
+
+        self.assertEqual(report["available_task_count"], len(MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS))
+        self.assertEqual(report["summary"]["failure_risk_candidate_task_count"], len(report["tasks"]))
+        first = report["tasks"][0]
+        self.assertEqual(first["label_readiness"]["failure_risk"], "candidate_for_data_gate")
+        self.assertTrue(first["reward_done_audit"]["reward_is_sparse_0_1_on_sample"])
+        self.assertGreater(first["reward_done_audit"]["failure_risk_h10_labeled_count"], 0)
+        self.assertTrue(first["label_readiness"]["subgoal_feasibility"].startswith("blocked"))
+        self.assertTrue(first["label_readiness"]["manipulation_readiness"].startswith("blocked"))
+
+    def test_failure_risk_data_gate_smoke_reports_single_class_blocker(self):
+        try:
+            import pyarrow  # noqa: F401
+        except ImportError:
+            self.skipTest("pyarrow is not available")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            for relative_path in MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS.values():
+                dataset_path = root / relative_path
+                self._write_minimal_robocasa_parquet_dataset(dataset_path, lengths=(12,))
+            report = build_mowa_failure_risk_data_gate_smoke(
+                root,
+                horizon=10,
+                max_episodes_per_task=1,
+            ).to_dict()
+
+        self.assertEqual(report["available_task_count"], len(MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_TASK_PATHS))
+        self.assertEqual(report["summary"]["sparse_reward_task_count"], len(report["tasks"]))
+        self.assertEqual(report["summary"]["candidate_for_mask_lift_review_task_count"], 0)
+        first = report["tasks"][0]
+        self.assertGreater(first["labeled_count"], 0)
+        self.assertEqual(first["positive_count"], 0)
+        self.assertGreater(first["negative_count"], 0)
+        self.assertEqual(first["gate_status"], "blocked_by_single_class_distribution")
+        self.assertIsNone(first["next_done_phi_correlation"])
+        self.assertTrue(report["go_no_go"].startswith("No-Go: failure_risk proxy remains gated"))
+
+    def test_opendrawer_state_mapping_audit_recovers_drawer_joint_index(self):
+        try:
+            import pyarrow  # noqa: F401
+        except ImportError:
+            self.skipTest("pyarrow is not available")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH
+            self._write_minimal_robocasa_parquet_dataset(dataset_path, lengths=(12,))
+            self._write_minimal_opendrawer_extras(
+                dataset_path,
+                [
+                    [0.0, 0.1, 0.0, 0.0, 0.0],
+                    [0.05, 0.1, -0.35, 0.0, -0.1],
+                ],
+            )
+            report = build_mowa_opendrawer_state_mapping_audit(
+                dataset_path,
+                episode_indices=(0,),
+            ).to_dict()
+
+        self.assertEqual(report["fixture_ref_value"], "stack_1_left_group_4")
+        self.assertEqual(report["drawer_joint_name"], "stack_1_left_group_4_slidejoint")
+        self.assertEqual(report["state_vector_width"], 5)
+        self.assertEqual(report["inferred_nq"], 2)
+        self.assertEqual(report["inferred_nv"], 2)
+        self.assertEqual(report["drawer_qpos_state_index"], 2)
+        self.assertEqual(report["drawer_qvel_state_index"], 4)
+        self.assertTrue(report["summary"]["state_layout_matches_time_plus_qpos_plus_qvel"])
+        self.assertTrue(report["summary"]["subgoal_open_drawer_predicate_ready"])
+        sample = report["sampled_episodes"][0]
+        self.assertAlmostEqual(sample["drawer_qpos_last"], -0.35)
+        self.assertGreater(sample["drawer_normalized_open_max"], 0.95)
+
+    def test_opendrawer_subgoal_data_gate_smoke_reports_usable_distribution(self):
+        try:
+            import pyarrow  # noqa: F401
+        except ImportError:
+            self.skipTest("pyarrow is not available")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH
+            self._write_minimal_robocasa_parquet_dataset(dataset_path, lengths=(4,))
+            self._write_minimal_opendrawer_extras(
+                dataset_path,
+                [
+                    [0.0, 0.1, 0.0, 0.0, 0.0],
+                    [0.05, 0.1, -0.1, 0.0, -0.1],
+                    [0.10, 0.1, -0.34, 0.0, -0.1],
+                    [0.15, 0.1, -0.34, 0.0, 0.0],
+                ],
+            )
+            report = build_mowa_opendrawer_subgoal_data_gate_smoke(
+                dataset_path,
+                horizon=2,
+                max_episodes=1,
+            ).to_dict()
+
+        self.assertEqual(report["summary"]["state_success_episode_count"], 1)
+        self.assertEqual(report["summary"]["terminal_success_episode_count"], 1)
+        self.assertEqual(report["summary"]["aligned_success_episode_count"], 1)
+        self.assertEqual(report["summary"]["mismatched_episode_count"], 0)
+        self.assertGreater(report["summary"]["anchor_positive_count"], 0)
+        self.assertGreater(report["summary"]["anchor_negative_count"], 0)
+        self.assertTrue(report["go_no_go"].startswith("TBD: OpenDrawer open_drawer subgoal labels look usable"))
+        episode = report["sampled_episodes"][0]
+        self.assertEqual(episode["alignment_status"], "aligned_success")
+        self.assertGreaterEqual(episode["drawer_progress_max"], 0.95)
+
+    def test_opendrawer_future_label_sidecar_smoke_builds_three_head_audit_labels(self):
+        try:
+            import pyarrow  # noqa: F401
+        except ImportError:
+            self.skipTest("pyarrow is not available")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / MOWA_ROBOCASA365_OPEN_DRAWER_RELATIVE_PATH
+            self._write_minimal_robocasa_parquet_dataset(dataset_path, lengths=(4,))
+            self._write_minimal_opendrawer_extras(
+                dataset_path,
+                [
+                    [0.0, 0.1, 0.0, 0.0, 0.0],
+                    [0.05, 0.1, -0.1, 0.0, -0.1],
+                    [0.10, 0.1, -0.22, 0.0, -0.1],
+                    [0.15, 0.1, -0.34, 0.0, 0.0],
+                ],
+            )
+            report = build_mowa_opendrawer_future_label_sidecar_smoke(
+                dataset_path,
+                failure_risk_horizon=2,
+                subgoal_horizon=2,
+                readiness_horizon=2,
+                readiness_progress_delta=0.10,
+                max_episodes=1,
+            ).to_dict()
+
+        self.assertEqual(report["episode_count"], 1)
+        self.assertGreater(report["summary"]["step_count"], 0)
+        self.assertGreater(report["summary"]["failure_risk_labeled_count"], 0)
+        self.assertGreater(report["summary"]["subgoal_positive_count"], 0)
+        self.assertGreater(report["summary"]["manipulation_readiness_positive_count"], 0)
+        self.assertTrue(report["go_no_go"].startswith("TBD: OpenDrawer sidecar smoke built"))
+        self.assertEqual(report["schema_contract"]["subgoal"]["schema_version"], "opendrawer_open_drawer_v1")
+        self.assertEqual(report["schema_contract"]["subgoal"]["completion_threshold"], 0.95)
+        self.assertEqual(report["schema_contract"]["readiness"]["schema_version"], "opendrawer_open_proxy_v1")
+        self.assertEqual(report["schema_contract"]["readiness"]["threshold_version"], "readiness_progress_delta_v1")
+        episode = report["sampled_episodes"][0]
+        self.assertEqual(episode["alignment_status"], "aligned_success")
+        self.assertEqual(episode["schema_contract"], report["schema_contract"])
+        first_step = episode["steps"][0]
+        self.assertIn("failure_risk", first_step["labels"])
+        self.assertIn("subgoal_feasibility", first_step["labels"])
+        self.assertIn("manipulation_readiness", first_step["labels"])
+        self.assertEqual(first_step["labels"]["subgoal_schema_version"], "opendrawer_open_drawer_v1")
+        self.assertEqual(first_step["labels"]["readiness_schema_version"], "opendrawer_open_proxy_v1")
+        self.assertEqual(first_step["labels"]["subgoal_completion_threshold"], 0.95)
+        self.assertEqual(first_step["labels"]["threshold_version"], "readiness_progress_delta_v1")
+        self.assertTrue(first_step["masks"]["subgoal_feasibility"])
+        self.assertTrue(first_step["masks"]["manipulation_readiness"])
+        self.assertNotIn("future_action", " ".join(first_step["debug"].keys()))
+        self.assertEqual(first_step["debug"]["subgoal_schema_version"], "opendrawer_open_drawer_v1")
+        self.assertEqual(first_step["debug"]["readiness_schema_version"], "opendrawer_open_proxy_v1")
+        self.assertEqual(first_step["debug"]["readiness_progress_delta"], 0.10)
+        self.assertEqual(first_step["debug"]["profile_status"], "measured")
 
     def test_atomic_core_batch_dataloader_smoke_combines_windows_and_labels(self):
         try:

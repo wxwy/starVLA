@@ -7,13 +7,13 @@
   ],
   "constructible_heads": [
     "task_progress",
+    "manipulation_readiness",
+    "subgoal_feasibility",
     "action_outcome_class"
   ],
   "masked_heads": [
-    "manipulation_readiness",
     "failure_risk",
     "next_best_view_score",
-    "subgoal_feasibility",
     "object_visibility_future"
   ],
   "sample_count": 24,
@@ -26,15 +26,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -46,11 +51,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -62,15 +79,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -82,11 +104,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -98,15 +132,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -118,11 +157,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -134,15 +185,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -154,11 +210,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -170,15 +238,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -190,11 +263,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -206,15 +291,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -226,11 +316,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -242,15 +344,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -262,11 +369,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -278,15 +397,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -298,11 +422,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -314,15 +450,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -334,11 +475,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -350,15 +503,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -370,11 +528,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -386,15 +556,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -406,11 +581,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -422,15 +609,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -442,11 +634,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -458,15 +662,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -478,11 +687,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -494,15 +715,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -514,11 +740,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -530,15 +768,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -550,11 +793,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -566,15 +821,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -586,11 +846,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -602,15 +874,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -622,11 +899,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -638,15 +927,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -658,11 +952,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -674,15 +980,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -694,11 +1005,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -710,15 +1033,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -730,11 +1058,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -746,15 +1086,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -766,11 +1111,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -782,15 +1139,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -802,11 +1164,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -818,15 +1192,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -838,11 +1217,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     },
@@ -854,15 +1245,20 @@
         "action_outcome_class": {
           "next_reward": 0.0,
           "next_done": false,
-          "class_mapping_status": "Data Gate"
-        }
+          "class_mapping_status": "confirmed_for_e001_initial_target",
+          "class_mapping_version": "reward_done_vector_v1",
+          "class_mapping_note": "action_outcome_class uses [next_reward, next_done_flag] in this order."
+        },
+        "subgoal_feasibility": 0.0,
+        "manipulation_readiness": 0.0,
+        "failure_risk": 0.0
       },
       "masks": {
         "task_progress": true,
-        "manipulation_readiness": false,
+        "manipulation_readiness": true,
         "failure_risk": false,
         "next_best_view_score": false,
-        "subgoal_feasibility": false,
+        "subgoal_feasibility": true,
         "object_visibility_future": false,
         "action_outcome_class": true
       },
@@ -874,11 +1270,23 @@
         "action_outcome_class": [
           "next.reward",
           "next.done"
+        ],
+        "subgoal_feasibility": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "manipulation_readiness": [
+          "drawer_progress",
+          "extras/states.npz"
+        ],
+        "failure_risk": [
+          "next.reward",
+          "next.done"
         ]
       },
       "data_gate": {
         "thresholds": "Data Gate",
-        "class_mapping": "Data Gate",
+        "class_mapping": "confirmed_for_e001_initial_target",
         "window": "Data Gate"
       }
     }
@@ -886,7 +1294,7 @@
   "notes": [
     "Smoke-only labels are targets, not WAM inputs.",
     "task_progress is normalized by episode row count for dry-run only.",
-    "action_outcome_class keeps raw next.reward/next.done; class mapping remains Data Gate.",
-    "Non-constructible P0 heads stay masked."
+    "action_outcome_class uses the frozen E-001 mapping [next_reward, next_done_flag].",
+    "Non-constructible future heads stay masked; OpenDrawer cache may unmask subgoal_feasibility/manipulation_readiness."
   ]
 }

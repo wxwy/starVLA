@@ -8,6 +8,12 @@ M3：P1-b0 Latent-Only future prior。
 
 设计或实现 Wan latent cache builder 与 P1-b0 latent future prior 接口。P1-b0 只使用视觉/语言 future latent prior，不注入 robot history latent，不解码像素作为默认路径。
 
+当前推荐推进顺序：
+
+1. 先实现 fake-encoder 版 latent cache writer / validator / loader 闭环。
+2. 再把 `MoWAFutureLatentPrior` 从 synthetic tensor smoke 接到真实 cache batch。
+3. 最后只做 E-003 config preview / dry-run，不直接启动正式训练。
+
 ## 必读文档
 
 1. `docs_zh/mowa/AGENTS.md`
@@ -36,11 +42,12 @@ M3：P1-b0 Latent-Only future prior。
 
 ## 具体任务
 
-1. 设计 current/future/history RGB 的 latent cache smoke。
-2. 设计 `MoWAP1B0FutureLatentPrior` 输入输出。
+1. 先实现或完善真实 latent cache artifact schema、writer、validator、loader；第一版允许使用 fake encoder。
+2. 设计 `MoWAP1B0FutureLatentPrior` 输入输出，并保留 `history_latent` reject invariant。
 3. future latent 只能作为 target/cache，不得进入 WAM input 泄漏未来。
-4. 输出可供 action bridge 使用的 latent future features。
-5. 更新实现日志。
+4. 输出可供 action bridge 使用的 latent future features，但不在本阶段实现 HLC-GCI。
+5. 增加 E-003 config preview / train dry-run 所需的 batch contract 与配置检查。
+6. 更新实现日志。
 
 ## 测试命令
 
@@ -54,6 +61,7 @@ pytest tests/mowa -q
 2. VAE/text encoder 默认冻结。
 3. E-003 编号含义不变。
 4. P1-b0 失败时能回退 P0。
+5. 第一版必须能用 fake encoder 跑通 writer/validator/loader 闭环，即使真实 Wan adapter 仍未接入。
 
 ## 输出格式
 
@@ -62,3 +70,4 @@ pytest tests/mowa -q
 ## 阶段边界
 
 不得实现 HLC-GCI、Rec-HLC、P2 decoder 或 LayerwiseFM 内部改写。
+不得把 E-003 dry-run 直接放大成正式训练启动。

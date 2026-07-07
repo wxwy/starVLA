@@ -35,3 +35,28 @@ MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION = "reward_done_vector_v1"
 MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE = (
     "action_outcome_class uses [next_reward, next_done_flag] in this order."
 )
+
+# Atomic tasks with local target/human LeRobot data in the RoboCasa365 registry.
+# These names match the directory names under
+# ``v1.0/target/atomic/<Task>/<date>/lerobot`` and the keys used by
+# ``AtomicTaskLabelBuilder`` subclasses.
+MOWA_ATOMIC_TASK_NAMES = (
+    "CloseBlenderLid",
+    "CloseFridge",
+    "CloseToasterOvenDoor",
+    "CoffeeSetupMug",
+    "NavigateKitchen",
+    "OpenCabinet",
+    "OpenDrawer",
+    "OpenStandMixerHead",
+    "PickPlaceCounterToCabinet",
+    "PickPlaceCounterToStove",
+    "PickPlaceDrawerToCounter",
+    "PickPlaceSinkToCounter",
+    "PickPlaceToasterToCounter",
+    "SlideDishwasherRack",
+    "TurnOffStove",
+    "TurnOnElectricKettle",
+    "TurnOnMicrowave",
+    "TurnOnSinkFaucet",
+)

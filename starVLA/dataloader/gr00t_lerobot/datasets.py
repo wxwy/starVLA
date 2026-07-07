@@ -58,6 +58,18 @@ from starVLA.mowa_constants import (
     MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
     MOWA_FUTURE_FULL_HEADS,
 )
+from starVLA.dataloader.mowa.atomic_task_label_builder import (
+    get_builder_for_dataset_path,
+    get_builder_for_task,
+)
+from starVLA.dataloader.mowa.label_cache import (
+    label_cache_available,
+    load_label_cache_for_episode,
+)
+from starVLA.dataloader.mowa.opendrawer_label_cache import (
+    load_opendrawer_label_cache_for_episode,
+    opendrawer_label_cache_available,
+)
 
 from functools import partial
 from typing import Tuple, List
@@ -125,7 +137,139 @@ def _attach_mowa_future_labels(sample: dict, dataset, trajectory_id: int, base_i
         "class_mapping_version": MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
         "class_mapping_note": MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
     }
+
+    # State-derived labels: if a pre-computed sidecar exists for this task,
+    # merge subgoal_feasibility / manipulation_readiness / failure_risk into
+    # the sample.  This avoids online MuJoCo XML parsing during training.
+    dataset_path = getattr(dataset, "dataset_path", None)
+    if dataset_path is not None:
+        # Generic task dispatch.
+        builder = get_builder_for_dataset_path(dataset_path)
+        if builder is not None and label_cache_available(builder, dataset_path):
+            cache = load_label_cache_for_episode(builder, dataset_path, int(trajectory_id))
+            if cache is not None:
+                _merge_task_label_cache(sample, cache, row_index)
+        # Backward compatibility: legacy OpenDrawer sidecars under
+        # ``mowa_future_labels/opendrawer/``.
+        elif opendrawer_label_cache_available(dataset_path):
+            cache = load_opendrawer_label_cache_for_episode(dataset_path, int(trajectory_id))
+            if cache is not None:
+                _merge_opendrawer_label_cache(sample, cache, row_index)
+
     return sample
+
+
+def _merge_opendrawer_label_cache(
+    sample: dict,
+    cache: dict,
+    row_index: int,
+) -> None:
+    """Merge a pre-computed OpenDrawer label sidecar into a training sample.
+
+    The sidecar provides subgoal_feasibility / manipulation_readiness /
+    failure_risk labels and masks.  failure_risk is kept masked if the cached
+    labels are single-class (all zeros), because a head with no positive
+    examples has no training signal.
+    """
+    if row_index >= len(cache["frame_index"]):
+        return
+
+    cache_labels = cache["labels"]
+    cache_masks = cache["masks"]
+
+    sample["mowa_future_targets"]["subgoal_feasibility"] = float(
+        cache_labels["subgoal_feasibility"][row_index]
+    )
+    sample["mowa_future_targets"]["manipulation_readiness"] = float(
+        cache_labels["manipulation_readiness"][row_index]
+    )
+    sample["mowa_future_targets"]["failure_risk"] = float(
+        cache_labels["failure_risk"][row_index]
+    )
+
+    sample["mowa_future_masks"]["subgoal_feasibility"] = bool(
+        cache_masks["subgoal_feasibility"][row_index]
+    )
+    sample["mowa_future_masks"]["manipulation_readiness"] = bool(
+        cache_masks["manipulation_readiness"][row_index]
+    )
+
+    failure_risk_mask = bool(cache_masks["failure_risk"][row_index])
+    failure_risk_values = cache_labels["failure_risk"]
+    failure_risk_array = (
+        failure_risk_values
+        if isinstance(failure_risk_values, np.ndarray)
+        else np.asarray([failure_risk_values])
+    )
+    # Keep failure_risk masked in production if the cached distribution is
+    # single-class (no positive examples); otherwise respect the cache mask.
+    if failure_risk_mask and int(failure_risk_array.sum()) == 0:
+        sample["mowa_future_masks"]["failure_risk"] = False
+        sample["mowa_future_metadata"]["failure_risk_single_class_override"] = True
+    else:
+        sample["mowa_future_masks"]["failure_risk"] = failure_risk_mask
+
+    sample["mowa_future_metadata"]["label_status"] = "merged_opendrawer_label_cache"
+    sample["mowa_future_metadata"]["constructible_heads"] = [
+        head for head in MOWA_FUTURE_FULL_HEADS if sample["mowa_future_masks"][head]
+    ]
+    sample["mowa_future_metadata"]["masked_heads"] = [
+        head for head in MOWA_FUTURE_FULL_HEADS if not sample["mowa_future_masks"][head]
+    ]
+
+
+def _merge_task_label_cache(
+    sample: dict,
+    cache: dict,
+    row_index: int,
+) -> None:
+    """Merge a generic task label sidecar into a training sample.
+
+    Mirrors ``_merge_opendrawer_label_cache`` but uses a generic label status.
+    """
+    if row_index >= len(cache["frame_index"]):
+        return
+
+    cache_labels = cache["labels"]
+    cache_masks = cache["masks"]
+
+    sample["mowa_future_targets"]["subgoal_feasibility"] = float(
+        cache_labels["subgoal_feasibility"][row_index]
+    )
+    sample["mowa_future_targets"]["manipulation_readiness"] = float(
+        cache_labels["manipulation_readiness"][row_index]
+    )
+    sample["mowa_future_targets"]["failure_risk"] = float(
+        cache_labels["failure_risk"][row_index]
+    )
+
+    sample["mowa_future_masks"]["subgoal_feasibility"] = bool(
+        cache_masks["subgoal_feasibility"][row_index]
+    )
+    sample["mowa_future_masks"]["manipulation_readiness"] = bool(
+        cache_masks["manipulation_readiness"][row_index]
+    )
+
+    failure_risk_mask = bool(cache_masks["failure_risk"][row_index])
+    failure_risk_values = cache_labels["failure_risk"]
+    failure_risk_array = (
+        failure_risk_values
+        if isinstance(failure_risk_values, np.ndarray)
+        else np.asarray([failure_risk_values])
+    )
+    if failure_risk_mask and int(failure_risk_array.sum()) == 0:
+        sample["mowa_future_masks"]["failure_risk"] = False
+        sample["mowa_future_metadata"]["failure_risk_single_class_override"] = True
+    else:
+        sample["mowa_future_masks"]["failure_risk"] = failure_risk_mask
+
+    sample["mowa_future_metadata"]["label_status"] = "merged_task_label_cache"
+    sample["mowa_future_metadata"]["constructible_heads"] = [
+        head for head in MOWA_FUTURE_FULL_HEADS if sample["mowa_future_masks"][head]
+    ]
+    sample["mowa_future_metadata"]["masked_heads"] = [
+        head for head in MOWA_FUTURE_FULL_HEADS if not sample["mowa_future_masks"][head]
+    ]
 
 
 def calculate_dataset_statistics(parquet_paths: list[Path]) -> dict:

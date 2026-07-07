@@ -1,0 +1,223 @@
+{
+  "recipe_name": "mowa_robocasa365_target_human_atomic_core_v1",
+  "data_root": "playground/Datasets/robocasa365",
+  "horizon": 10,
+  "task_count": 10,
+  "available_task_count": 10,
+  "tasks": [
+    {
+      "task": "OpenDrawer",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+      "path_exists": true,
+      "episode_count": 514,
+      "row_count": 137431,
+      "labeled_count": 5140,
+      "positive_count": 0,
+      "negative_count": 5140,
+      "coverage": 0.037400586476122565,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    },
+    {
+      "task": "OpenCabinet",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenCabinet/20250813/lerobot",
+      "path_exists": true,
+      "episode_count": 500,
+      "row_count": 184024,
+      "labeled_count": 5000,
+      "positive_count": 0,
+      "negative_count": 5000,
+      "coverage": 0.027170369082293613,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    },
+    {
+      "task": "CloseFridge",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot",
+      "path_exists": true,
+      "episode_count": 513,
+      "row_count": 155443,
+      "labeled_count": 5130,
+      "positive_count": 0,
+      "negative_count": 5130,
+      "coverage": 0.03300245105923071,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    },
+    {
+      "task": "CloseToasterOvenDoor",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseToasterOvenDoor/20250818/lerobot",
+      "path_exists": true,
+      "episode_count": 505,
+      "row_count": 86401,
+      "labeled_count": 5050,
+      "positive_count": 0,
+      "negative_count": 5050,
+      "coverage": 0.05844839758799088,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    },
+    {
+      "task": "CoffeeSetupMug",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CoffeeSetupMug/20250813/lerobot",
+      "path_exists": true,
+      "episode_count": 502,
+      "row_count": 117168,
+      "labeled_count": 5020,
+      "positive_count": 0,
+      "negative_count": 5020,
+      "coverage": 0.04284446265191861,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    },
+    {
+      "task": "NavigateKitchen",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/NavigateKitchen/20250821/lerobot",
+      "path_exists": true,
+      "episode_count": 500,
+      "row_count": 72786,
+      "labeled_count": 5000,
+      "positive_count": 0,
+      "negative_count": 5000,
+      "coverage": 0.06869452916769708,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    },
+    {
+      "task": "PickPlaceCounterToCabinet",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot",
+      "path_exists": true,
+      "episode_count": 502,
+      "row_count": 131904,
+      "labeled_count": 5020,
+      "positive_count": 0,
+      "negative_count": 5020,
+      "coverage": 0.038057981562348374,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    },
+    {
+      "task": "PickPlaceToasterToCounter",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceToasterToCounter/20250817/lerobot",
+      "path_exists": true,
+      "episode_count": 512,
+      "row_count": 148353,
+      "labeled_count": 5120,
+      "positive_count": 0,
+      "negative_count": 5120,
+      "coverage": 0.034512278147391696,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    },
+    {
+      "task": "PickPlaceSinkToCounter",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceSinkToCounter/20250813/lerobot",
+      "path_exists": true,
+      "episode_count": 501,
+      "row_count": 194952,
+      "labeled_count": 5010,
+      "positive_count": 0,
+      "negative_count": 5010,
+      "coverage": 0.025698633509787024,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    },
+    {
+      "task": "TurnOnSinkFaucet",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot",
+      "path_exists": true,
+      "episode_count": 506,
+      "row_count": 113688,
+      "labeled_count": 5060,
+      "positive_count": 0,
+      "negative_count": 5060,
+      "coverage": 0.04450777566673703,
+      "positive_rate": 0.0,
+      "next_done_positive_rate": 0.0,
+      "next_done_phi_correlation": null,
+      "reward_unique_values_preview": [
+        0.0,
+        1.0
+      ],
+      "reward_is_sparse_0_1": true,
+      "gate_status": "blocked_by_single_class_distribution"
+    }
+  ],
+  "summary": {
+    "sparse_reward_task_count": 10,
+    "both_classes_task_count": 0,
+    "low_coverage_task_count": 8,
+    "high_next_done_correlation_task_count": 0,
+    "candidate_for_mask_lift_review_task_count": 0
+  },
+  "go_no_go": "No-Go: failure_risk proxy remains gated by single-class or unusable distribution",
+  "notes": [
+    "failure_risk uses the H-step done/reward proxy from 09_future_label_builder_design.md.",
+    "Coverage below 5% is not an automatic block, but must be recorded as training-value risk.",
+    "next_done correlation uses phi coefficient on labeled anchors only.",
+    "No production masks are changed by this Data Gate smoke."
+  ]
+}

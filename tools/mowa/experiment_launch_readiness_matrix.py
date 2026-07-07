@@ -188,6 +188,14 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
     prior = _load_json(root, "docs_zh/mowa/mowa_future_latent_prior_interface_smoke.json")
     builder = _load_json(root, "docs_zh/mowa/mowa_latent_cache_builder_design_smoke.json")
     consistency = _load_json(root, "docs_zh/mowa/mowa_e003_history_sampling_consistency_smoke.json")
+    blockers = _merged_unresolved(prior, builder, consistency)
+    blockers.extend(
+        [
+            "Next required step is a fake-encoder latent cache writer/validator/loader loop; "
+            "plan-only manifest and contract smoke are not sufficient for E-003 dry-run.",
+            "E-003 must add config preview and train dry-run on real cache batches before any formal training launch.",
+        ]
+    )
     return {
         "experiment_id": "E-003",
         "stage": "future_latent_prior",
@@ -203,7 +211,7 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
                 "history_sampling_consistency": consistency,
             }
         ),
-        "blocking_items": _merged_unresolved(prior, builder, consistency),
+        "blocking_items": blockers,
         "checks": {
             "future_latent_prior_interface_passed": _report_not_nogo(prior),
             "latent_cache_builder_design_passed": _report_not_nogo(builder),
@@ -215,6 +223,13 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
 def _build_e004_entry(root: Path) -> dict[str, Any]:
     hlcgci = _load_json(root, "docs_zh/mowa/mowa_hlc_gci_interface_smoke.json")
     consistency = _load_json(root, "docs_zh/mowa/mowa_e003_history_sampling_consistency_smoke.json")
+    blockers = _merged_unresolved(hlcgci, consistency)
+    blockers.extend(
+        [
+            "E-004 is blocked on E-003 fake-encoder cache loop and E-003 config preview/dry-run evidence.",
+            "HLC-GCI interface alone is insufficient; history latent cache and framework integration remain missing.",
+        ]
+    )
     return {
         "experiment_id": "E-004",
         "stage": "hlc_gci",
@@ -229,7 +244,7 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
                 "history_sampling_consistency": consistency,
             }
         ),
-        "blocking_items": _merged_unresolved(hlcgci, consistency),
+        "blocking_items": blockers,
         "checks": {
             "hlcgci_interface_passed": _report_not_nogo(hlcgci),
             "history_sampling_consistency_passed": _report_not_nogo(consistency),
@@ -239,6 +254,13 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
 
 def _build_e005_entry(root: Path) -> dict[str, Any]:
     shuffled = _load_json(root, "docs_zh/mowa/mowa_shuffled_robot_sanity_plan_smoke.json")
+    blockers = list(shuffled.get("unresolved_items") or [])
+    blockers.extend(
+        [
+            "E-005 requires a meaningful E-004 checkpoint; shuffled-robot plan/smoke alone is not execution evidence.",
+            "Metric-drop expectation must be validated after P1-b1 training and cannot be claimed from pair construction.",
+        ]
+    )
     return {
         "experiment_id": "E-005",
         "stage": "hlc_gci",
@@ -246,7 +268,7 @@ def _build_e005_entry(root: Path) -> dict[str, Any]:
         "can_start_now": False,
         "status": "plan_ready_only" if _report_not_nogo(shuffled) else "sanity_plan_missing",
         "evidence_reports": _present_reports({"shuffled_robot_sanity_plan": shuffled}),
-        "blocking_items": list(shuffled.get("unresolved_items") or []),
+        "blocking_items": blockers,
         "checks": {
             "sanity_plan_present": _report_not_nogo(shuffled),
         },

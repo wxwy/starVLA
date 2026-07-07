@@ -103,7 +103,9 @@
         "Latency, latent shape and cache hash remain Data Gate until real builder approval.",
         "Future RGB may exist as cache target only; it is not valid WAM input evidence.",
         "This smoke only validates temporal-policy consistency; it does not build latent caches.",
-        "Real Wan encoder/VAE and latent cache writer remain separately gated."
+        "Real Wan encoder/VAE and latent cache writer remain separately gated.",
+        "Next required step is a fake-encoder latent cache writer/validator/loader loop; plan-only manifest and contract smoke are not sufficient for E-003 dry-run.",
+        "E-003 must add config preview and train dry-run on real cache batches before any formal training launch."
       ],
       "checks": {
         "future_latent_prior_interface_passed": true,
@@ -126,7 +128,9 @@
         "History sampling policy and actual training gain remain separately gated.",
         "No StarVLA framework integration is enabled by this interface smoke.",
         "This smoke only validates temporal-policy consistency; it does not build latent caches.",
-        "Real Wan encoder/VAE and latent cache writer remain separately gated."
+        "Real Wan encoder/VAE and latent cache writer remain separately gated.",
+        "E-004 is blocked on E-003 fake-encoder cache loop and E-003 config preview/dry-run evidence.",
+        "HLC-GCI interface alone is insufficient; history latent cache and framework integration remain missing."
       ],
       "checks": {
         "hlcgci_interface_passed": true,
@@ -145,7 +149,9 @@
       "blocking_items": [
         "This smoke validates pair construction only and does not execute rollout.",
         "Real shuffled-robot evidence still depends on trained checkpoints.",
-        "Metric drop is an expectation to test later, not a measured result here."
+        "Metric drop is an expectation to test later, not a measured result here.",
+        "E-005 requires a meaningful E-004 checkpoint; shuffled-robot plan/smoke alone is not execution evidence.",
+        "Metric-drop expectation must be validated after P1-b1 training and cannot be claimed from pair construction."
       ],
       "checks": {
         "sanity_plan_present": true

@@ -188,14 +188,14 @@ P0 label coverage 初判：
 | P0 head | 当前结论 |
 |---|---|
 | task_progress | candidate_from_frame_index_and_episode_length; Data Gate |
-| manipulation_readiness | candidate_from_state_action_reward; Data Gate |
-| failure_risk | insufficient_without_failure_annotation; Data Gate |
+| manipulation_readiness | **OpenDrawer: precomputable_from_states_npz via MuJoCo FK (eef-to-handle distance + contact); 其它 task: Data Gate** |
+| failure_risk | **blocked_by_single_class_distribution on robocasa365 target/human human demo** |
 | next_best_view_score | requires_view_label_or_proxy_definition; Data Gate |
-| subgoal_feasibility | candidate_from_reward_done_and_task_progress; Data Gate |
+| subgoal_feasibility | **OpenDrawer: precomputable_from_states_npz with drawer_progress predicate; 其它 task: Data Gate** |
 | object_visibility_future | requires_video_decode_or_visibility_proxy; Data Gate |
 | action_outcome_class | candidate_from_next.reward_next.done; Data Gate |
 
-当前结论：M1-004 sampled boundary / leakage smoke 已通过，但它不是完整门禁。P0 label 只是可构造性初判，尚未实现或验证 label builder；G0 仍未放行 P0/P1。
+当前结论：M1-004 sampled boundary / leakage smoke 已通过，但它不是完整门禁。P0 label 只是可构造性初判。OpenDrawer 已通过 `tools/mowa/precompute_opendrawer_future_labels.py` 支持 `subgoal_feasibility` 和 `manipulation_readiness`（progress_imminence proxy）的离线预计算与 dataloader 合并；`failure_risk` 在 human demo 上全负类，保持 mask。其它 task 仍需各自的 state mapping 和 predicate 校准。G0 仍未放行 P0/P1。
 
 ## 13. 固定主对比 Recipe 可用性
 
@@ -513,3 +513,125 @@ P0 label coverage 初判：
 - resource budget 仍为 TBD。
 
 当前结论：E-001 的数据、最小 P0 smoke、P0 FullHeads interface、launch draft 与 runtime policy draft 前置条件基本成立，但 launch draft 明确不可执行，runtime policy 仍未确认，不能自动进入主训练。下一步必须先明确资源预算和保存/恢复策略，并将 `policy_confirmed` 与 `launch_ready` 从 false 显式改为 true；任何修改训练主干、checkpoint/resume/save 逻辑或正式启动训练都需要单独确认。
+
+## 25. Future Label Source Audit
+
+本节记录三项非视觉 future label proxy 的只读 source audit。该检查读取 10 个 atomic core 任务的 parquet schema、`meta/modality.json`、少量 `extras/states.npz`、`ep_meta.json`、`model.xml.gz` 和本地 RoboCasa task 源码线索；不生成训练标签，不解码视频，不 replay MuJoCo，不修改 production dataloader mask。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_future_label_source_audit.json` |
+| cli | `tools/mowa/future_label_source_audit.py` |
+| module | `starVLA/dataloader/mowa/future_label_audit.py` |
+| task_count | 10 |
+| available_task_count | 10 |
+| sampled_episode_indices | `[0, 1, 4]` |
+| failure_risk_candidate_task_count | 10 |
+| subgoal_feasibility_blocked_task_count | 10 |
+| manipulation_readiness_blocked_task_count | 10 |
+| reward_unique_values | sampled tasks all observed `[0.0, 1.0]` |
+| state_schema | `base_position`、`base_rotation`、`end_effector_position_relative`、`end_effector_rotation_relative`、`gripper_qpos` |
+| extras_available | sampled tasks have `states.npz`、`ep_meta.json`、`model.xml.gz` |
+| go_no_go | `TBD: source audit complete; label builders remain gated` |
+
+当前结论：`failure_risk` 的必要字段在 10 个 atomic core 任务上均存在，sampled `next.reward` / `next.done` 呈稀疏 0/1 结构，可进入下一步 data gate smoke。`subgoal_feasibility` 和 `manipulation_readiness` 仍不能直接构造：当前 parquet state 只有 base / EEF / gripper，不含 object pose、fixture joint 或 contact；虽然 `extras` 提供 simulator state 和 model XML，仍需先完成 task schema、MuJoCo qpos / joint / contact 映射和阈值校准。三项 head 当前都不得直接加入 production loss 或 `MOWA_FUTURE_CONSTRUCTIBLE_HEADS`。
+
+## 26. Failure Risk Data Gate Smoke
+
+本节记录 `failure_risk` 的下一层 data gate smoke。该检查固定 `H=10`，对 10 个 atomic core 任务的全量 parquet 扫描 `next.reward` / `next.done` 窗口 proxy，统计标签覆盖率、正负类分布，以及与 `action_outcome_class.next_done` 的二元相关性；不修改 production dataloader，不解 mask。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_failure_risk_data_gate_smoke.json` |
+| cli | `tools/mowa/failure_risk_data_gate_smoke.py` |
+| module | `starVLA/dataloader/mowa/future_label_audit.py` |
+| horizon | 10 |
+| task_count | 10 |
+| available_task_count | 10 |
+| sparse_reward_task_count | 10 |
+| both_classes_task_count | 0 |
+| candidate_for_mask_lift_review_task_count | 0 |
+| low_coverage_task_count | 8 |
+| high_next_done_correlation_task_count | 0 |
+| per_task_label_count | 5000-5140 |
+| per_task_positive_count | all 0 |
+| per_task_negative_count | 5000-5140 |
+| go_no_go | `No-Go: failure_risk proxy remains gated by single-class or unusable distribution` |
+
+当前结论：`failure_risk` 这版 `H=10` 的 `done/reward` proxy 在当前 10 个 atomic target 任务上虽然“能算”，但统计上不可用。10/10 任务都只有单类标签：窗口内出现 `done` 的 anchor 全部落在成功终止附近，得到的都是 `failure_risk=0`，没有任何 `failure_risk=1` 正类；同时 8/10 任务覆盖率低于 5%。这说明当前 blocker 已经不是字段缺失，而是数据分布本身缺少非成功终止样本，因此该 head 仍必须保持 mask，不能进入 production loss，也不值得只靠调阈值继续硬推。
+
+## 27. OpenDrawer State Mapping Audit
+
+本节记录 `OpenDrawer` 的 simulator-state 映射审计。该检查只读取 `extras/states.npz`、`ep_meta.json`、`model.xml.gz` 与本地 RoboCasa 源码，目标是确认是否能把 episode 级 `fixture_refs.drawer` 稳定映射到 flattened simulator state 中的 drawer joint 位置；不改 dataloader，不回放 MuJoCo，不接入训练。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_opendrawer_state_mapping_audit.json` |
+| cli | `tools/mowa/opendrawer_state_mapping_audit.py` |
+| module | `starVLA/dataloader/mowa/future_label_audit.py` |
+| fixture_ref | `drawer -> stack_1_left_group_4` |
+| drawer_joint_name | `stack_1_left_group_4_slidejoint` |
+| drawer_joint_range | `[-0.6, 0.0]` |
+| state_vector_width | 210 |
+| inferred_nq | 106 |
+| inferred_nv | 103 |
+| state_layout | `1 + nq + nv = 210` |
+| drawer_qpos_state_index | 25 |
+| drawer_qvel_state_index | 131 |
+| sampled_episode_count | 4 |
+| sampled_success_threshold_hits | 2 |
+| sampled_drawer_qpos_state_indices | `(25, 37, 22, 25)` |
+| episode_specific_joint_index_variation_observed | true |
+| subgoal_open_drawer_predicate_ready | true |
+| manipulation_readiness_predicate_ready | false |
+| go_no_go | `TBD: OpenDrawer drawer-progress predicate is source-ready for subgoal schema drafting` |
+
+当前结论：`OpenDrawer` 已经补出一条可复查的真实 predicate 链路：`ep_meta.fixture_refs.drawer` 指向的 fixture 名可以在 XML 中唯一映射到 `*_slidejoint`，但这个 joint 的 qpos index 不是全局固定值，而是会随 episode 的 `ep_meta.json` / `model.xml.gz` 变化。把这一点修正后，`open_drawer` 的 completion predicate 变成可用的单 subgoal 审计口径。与此同时，`manipulation_readiness` 仍不能解锁，因为当前映射只补到了 drawer joint / drawer progress，没有补到 handle 接近、接触或更细粒度的 pre-manipulation 物理量。另一个需要显式记录的现象是 sampled 4 个 episode 里只有 2 个在 `states` 中达到 success 阈值，这说明 `states` 适合做 progress / predicate 审计，但不应直接把“episode 末帧 state”当作成功真值。
+
+## 28. OpenDrawer Single-Subgoal Data Gate Smoke
+
+本节记录 `OpenDrawer/open_drawer` 单 subgoal 的 data gate smoke。该检查固定 `H_subgoal=20`，对全量 514 个 episode 的 anchor 扫描 “未来窗口内 drawer progress 是否达到 success 阈值”，并与 parquet 的 `terminal reward/done` 成功 proxy 做 episode 级对齐检查；不改 builder，不改 dataloader。这个检查现在按每个 episode 自己的 `ep_meta.json` / `model.xml.gz` 解析 drawer joint，不再把 episode 0 的 joint index 固定套到全量数据上。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_opendrawer_subgoal_data_gate_smoke.json` |
+| cli | `tools/mowa/opendrawer_subgoal_data_gate_smoke.py` |
+| module | `starVLA/dataloader/mowa/future_label_audit.py` |
+| horizon | 20 |
+| episode_count | 514 |
+| anchor_positive_count | 27745 |
+| anchor_negative_count | 109686 |
+| anchor_positive_rate | `0.201883` |
+| state_success_episode_count | 514 |
+| terminal_success_episode_count | 514 |
+| aligned_success_episode_count | 514 |
+| mismatched_episode_count | 0 |
+| go_no_go | `TBD: OpenDrawer open_drawer subgoal labels look usable; builder remains gated` |
+
+当前结论：之前的 `OpenDrawer/open_drawer` 对齐失配不是任务定义问题，而是 root-cause 在于我们把 episode 0 的 drawer joint 位置固定套到了全量数据。修正为按 episode 的 `ep_meta.json` / `model.xml.gz` 解析后，514/514 个 episode 都与 terminal success 对齐，anchor 正类比例回到约 20.2%。这说明 `open_drawer` 这一条单 subgoal 的 state predicate 是可用的，但它仍然只是单任务、单 subgoal 的 audit 结果，离 production builder 还差 dataloader 接入、mask 迁移和更完整的 schema review；在这些步骤完成前，仍保持 gated。
+
+## 29. OpenDrawer Future-Label Sidecar Smoke
+
+本节记录 `OpenDrawer` 审计型 future-label sidecar smoke。该检查在不接训练主链、不改 production mask 的前提下，直接复用现有 source/state 审计结果，把三个 P0 head 统一写成 per-step sidecar 结构：`failure_risk` 继续使用 `done/reward` proxy，`subgoal_feasibility` 固定为 `open_drawer` 单 subgoal，`manipulation_readiness` 则先使用 “未来 `K` 步 drawer progress 增量超过阈值” 的弱 proxy。这个 sidecar 的目标只是把 label 形状、mask 分支、debug 字段和无 future-action 泄漏约束串起来，不代表标签已经 training-ready。
+
+| 字段 | 当前值 |
+|---|---|
+| report_json | `docs_zh/mowa/g0_atomic_core_smoke/mowa_opendrawer_future_label_sidecar_smoke.json` |
+| cli | `tools/mowa/opendrawer_future_label_sidecar_smoke.py` |
+| module | `starVLA/dataloader/mowa/future_label_audit.py` |
+| scanned_episode_count | 1 |
+| step_count | 334 |
+| failure_risk_horizon | 10 |
+| subgoal_horizon | 20 |
+| readiness_horizon | 5 |
+| readiness_progress_delta | 0.10 |
+| failure_risk_labeled_count | 10 |
+| failure_risk_positive_count | 0 |
+| subgoal_labeled_count | 318 |
+| subgoal_positive_count | 20 |
+| manipulation_readiness_labeled_count | 318 |
+| manipulation_readiness_positive_count | 30 |
+| alignment_mismatch_episode_count | 0 |
+| go_no_go | `TBD: OpenDrawer sidecar smoke built; labels remain audit-only until mask-lift review` |
+
+当前结论：sidecar 这条最小闭环已经打通，且能在真实 `OpenDrawer` episode 上同时产出三类标签、mask 和 debug 字段。这里最重要的事实有两个。第一，`failure_risk` 在 sidecar 里依然只有负类，这和前面的全量 data gate 结论一致，说明问题确实是数据分布，而不是 builder 没接出来。第二，`subgoal_feasibility` 与 `manipulation_readiness` 已经可以在单 task / 单 predicate 上产出有正负样本的 audit-side 标签，这意味着 “event detector / predicate timeline / sidecar schema” 这一层工程已经闭环，但仍不能直接推到训练：`manipulation_readiness` 目前只是 drawer-progress-delta proxy，`subgoal_feasibility` 也只覆盖 `open_drawer` 一个 subgoal，且全量数据上还存在 state-vs-terminal 对齐风险。因此这条 sidecar 当前应被视为 audit-only label harness，而不是 production builder。

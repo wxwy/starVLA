@@ -6,7 +6,7 @@ launch_guard:
   human_confirmed: true
   reason: formal long-training baseline launch for 4090 profile; confirmed for execution
 
-run_id: MoWA-E-001_starflow_ft0_baseline_4090_long_260706_1650
+run_id: MoWA-E-001_starflow_ft0_baseline_4090_long_260706_1730
 run_root_dir: playground/mowa_ckpt
 experiment_id: E-001
 experiment_role: mowa_baseline

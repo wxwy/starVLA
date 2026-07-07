@@ -1,0 +1,3422 @@
+{
+  "recipe_name": "mowa_robocasa365_target_human_atomic_core_v1",
+  "data_root": "playground/Datasets/robocasa365",
+  "task_count": 10,
+  "available_task_count": 10,
+  "sampled_episode_indices": [
+    0,
+    1,
+    4
+  ],
+  "tasks": [
+    {
+      "task": "OpenDrawer",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 777,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.03861003861003861
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              334,
+              210
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeBottomFreezer",
+              "HingeCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove",
+              "Toaster"
+            ],
+            "object_name_preview": [
+              "drawer_obj",
+              "distr_counter_1"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              235,
+              243
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink"
+            ],
+            "object_name_preview": [
+              "drawer_obj",
+              "distr_counter_1",
+              "distr_counter_2"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              208,
+              230
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove"
+            ],
+            "object_name_preview": [
+              "drawer_obj",
+              "distr_counter_1"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            334,
+            210
+          ],
+          [
+            235,
+            243
+          ],
+          [
+            208,
+            230
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_drawer.py",
+            "has_check_success": false,
+            "mentions_reward_success": false,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    },
+    {
+      "task": "OpenCabinet",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenCabinet/20250813/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenCabinet/20250813/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 1030,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.02912621359223301
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              156,
+              320
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "SingleCabinet",
+              "Sink"
+            ],
+            "object_name_preview": [
+              "door_obj",
+              "distr_counter_1",
+              "distr_counter_2",
+              "distr_counter_3"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              302,
+              197
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeBottomFreezer",
+              "HingeCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove",
+              "Toaster"
+            ],
+            "object_name_preview": [
+              "door_obj",
+              "distr_counter_1",
+              "distr_counter_2"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              572,
+              223
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeBottomFreezer",
+              "HingeCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove",
+              "Toaster"
+            ],
+            "object_name_preview": [
+              "door_obj",
+              "distr_counter_1",
+              "distr_counter_2"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            156,
+            320
+          ],
+          [
+            302,
+            197
+          ],
+          [
+            572,
+            223
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_doors.py",
+            "has_check_success": false,
+            "mentions_reward_success": false,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    },
+    {
+      "task": "CloseFridge",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 1110,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.02702702702702703
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              429,
+              211
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "PanelCabinet",
+              "SingleCabinet"
+            ],
+            "object_name_preview": [
+              "door_obj",
+              "distr_counter_1",
+              "distr_counter_2"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              258,
+              294
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "SingleCabinet",
+              "Sink"
+            ],
+            "object_name_preview": [
+              "door_obj",
+              "distr_counter_1"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              423,
+              278
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stool"
+            ],
+            "object_name_preview": [
+              "door_obj",
+              "distr_counter_1",
+              "distr_counter_2",
+              "distr_counter_3"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            429,
+            211
+          ],
+          [
+            258,
+            294
+          ],
+          [
+            423,
+            278
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_doors.py",
+            "has_check_success": false,
+            "mentions_reward_success": false,
+            "predicate_keywords": []
+          },
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_drawer.py",
+            "has_check_success": true,
+            "mentions_reward_success": true,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    },
+    {
+      "task": "CloseToasterOvenDoor",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseToasterOvenDoor/20250818/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseToasterOvenDoor/20250818/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 421,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.07125890736342043
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              117,
+              184
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeBottomFreezer",
+              "HingeCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove",
+              "Toaster"
+            ],
+            "object_name_preview": [],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              164,
+              268
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "SingleCabinet",
+              "Sink"
+            ],
+            "object_name_preview": [],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              140,
+              196
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeBottomFreezer",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove",
+              "Toaster"
+            ],
+            "object_name_preview": [],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            117,
+            184
+          ],
+          [
+            164,
+            268
+          ],
+          [
+            140,
+            196
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_doors.py",
+            "has_check_success": true,
+            "mentions_reward_success": true,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    },
+    {
+      "task": "CoffeeSetupMug",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/CoffeeSetupMug/20250813/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/CoffeeSetupMug/20250813/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 589,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.050933786078098474
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              202,
+              281
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "SingleCabinet",
+              "Sink"
+            ],
+            "object_name_preview": [
+              "obj"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "mug",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              188,
+              217
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove"
+            ],
+            "object_name_preview": [
+              "obj"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "mug",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              199,
+              225
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "PanelCabinet",
+              "Sink"
+            ],
+            "object_name_preview": [
+              "obj"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "mug",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            202,
+            281
+          ],
+          [
+            188,
+            217
+          ],
+          [
+            199,
+            225
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "mug",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_coffee.py",
+            "has_check_success": false,
+            "mentions_reward_success": false,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    },
+    {
+      "task": "NavigateKitchen",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/NavigateKitchen/20250821/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/NavigateKitchen/20250821/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 425,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.07058823529411765
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              177,
+              290
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "ElectricKettle",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "PanelCabinet"
+            ],
+            "object_name_preview": [],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              130,
+              198
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "ElectricKettle",
+              "Floor",
+              "FridgeBottomFreezer",
+              "HingeCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "StandMixer"
+            ],
+            "object_name_preview": [],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              118,
+              290
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "ElectricKettle",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "PanelCabinet"
+            ],
+            "object_name_preview": [],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            177,
+            290
+          ],
+          [
+            130,
+            198
+          ],
+          [
+            118,
+            290
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_navigate.py",
+            "has_check_success": true,
+            "mentions_reward_success": true,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    },
+    {
+      "task": "PickPlaceCounterToCabinet",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 678,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.04424778761061947
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              246,
+              243
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove"
+            ],
+            "object_name_preview": [
+              "obj",
+              "distr_counter",
+              "distr_cab"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              220,
+              265
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stool"
+            ],
+            "object_name_preview": [
+              "obj",
+              "distr_counter",
+              "distr_cab"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              212,
+              223
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeBottomFreezer",
+              "HingeCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove",
+              "Toaster"
+            ],
+            "object_name_preview": [
+              "obj",
+              "distr_counter",
+              "distr_cab"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            246,
+            243
+          ],
+          [
+            220,
+            265
+          ],
+          [
+            212,
+            223
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_pick_place.py",
+            "has_check_success": true,
+            "mentions_reward_success": true,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    },
+    {
+      "task": "PickPlaceToasterToCounter",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceToasterToCounter/20250817/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceToasterToCounter/20250817/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 837,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.035842293906810034
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              266,
+              294
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "SingleCabinet",
+              "Sink"
+            ],
+            "object_name_preview": [
+              "obj",
+              "plate"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              295,
+              252
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stool"
+            ],
+            "object_name_preview": [
+              "obj",
+              "plate"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              276,
+              198
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "PanelCabinet",
+              "SingleCabinet"
+            ],
+            "object_name_preview": [
+              "obj",
+              "plate"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            266,
+            294
+          ],
+          [
+            295,
+            252
+          ],
+          [
+            276,
+            198
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_pick_place.py",
+            "has_check_success": true,
+            "mentions_reward_success": true,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    },
+    {
+      "task": "PickPlaceSinkToCounter",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceSinkToCounter/20250813/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceSinkToCounter/20250813/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 1120,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.026785714285714284
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              404,
+              235
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeBottomFreezer",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove",
+              "Toaster"
+            ],
+            "object_name_preview": [
+              "obj",
+              "container",
+              "distr_counter"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              365,
+              243
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stove"
+            ],
+            "object_name_preview": [
+              "obj",
+              "container",
+              "distr_counter"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              351,
+              265
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "PanelCabinet",
+              "SingleCabinet",
+              "Sink",
+              "Stool"
+            ],
+            "object_name_preview": [
+              "obj",
+              "container",
+              "distr_counter"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            404,
+            235
+          ],
+          [
+            365,
+            243
+          ],
+          [
+            351,
+            265
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_pick_place.py",
+            "has_check_success": true,
+            "mentions_reward_success": true,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    },
+    {
+      "task": "TurnOnSinkFaucet",
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot",
+      "path_exists": true,
+      "sampled_episode_indices": [
+        0,
+        1,
+        4
+      ],
+      "parquet_columns": [
+        "action",
+        "annotation.human.task_description",
+        "annotation.human.task_name",
+        "episode_index",
+        "frame_index",
+        "index",
+        "next.done",
+        "next.reward",
+        "observation.state",
+        "task_index",
+        "timestamp"
+      ],
+      "state_schema": {
+        "source": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/meta/modality.json",
+        "fields": {
+          "base_position": {
+            "original_key": "observation.state",
+            "start": 0,
+            "end": 3
+          },
+          "base_rotation": {
+            "original_key": "observation.state",
+            "start": 3,
+            "end": 7
+          },
+          "end_effector_position_relative": {
+            "original_key": "observation.state",
+            "start": 7,
+            "end": 10
+          },
+          "end_effector_rotation_relative": {
+            "original_key": "observation.state",
+            "start": 10,
+            "end": 14
+          },
+          "gripper_qpos": {
+            "original_key": "observation.state",
+            "start": 14,
+            "end": 16
+          }
+        },
+        "has_base_pose": true,
+        "has_eef_pose": true,
+        "has_gripper": true,
+        "has_object_pose": false,
+        "has_fixture_joint_or_contact": false
+      },
+      "reward_done_audit": {
+        "sampled_row_count": 686,
+        "reward_unique_values_preview": [
+          0.0,
+          1.0
+        ],
+        "reward_is_sparse_0_1_on_sample": true,
+        "done_true_count": 3,
+        "success_done_count": 3,
+        "non_success_done_count": 0,
+        "failure_risk_h10_labeled_count": 30,
+        "failure_risk_h10_positive_count": 0,
+        "failure_risk_h10_negative_count": 30,
+        "failure_risk_h10_coverage": 0.043731778425655975
+      },
+      "extras_audit": {
+        "extras_dir_exists": true,
+        "sampled_extras": [
+          {
+            "episode_index": 0,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              277,
+              198
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeFrenchDoor",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "PanelCabinet",
+              "SingleCabinet"
+            ],
+            "object_name_preview": [
+              "distr_counter_0",
+              "distr_sink"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 1,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              262,
+              251
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "PanelCabinet",
+              "Sink"
+            ],
+            "object_name_preview": [
+              "distr_counter_0",
+              "distr_counter_1",
+              "distr_sink"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          },
+          {
+            "episode_index": 4,
+            "episode_dir_exists": true,
+            "states_npz_exists": true,
+            "ep_meta_exists": true,
+            "model_xml_gz_exists": true,
+            "states_keys": [
+              "states"
+            ],
+            "states_shape": [
+              147,
+              307
+            ],
+            "fixture_class_preview": [
+              "Accessory",
+              "Box",
+              "CoffeeMachine",
+              "Counter",
+              "Dishwasher",
+              "Drawer",
+              "Floor",
+              "FridgeSideBySide",
+              "HingeCabinet",
+              "Hood",
+              "HousingCabinet",
+              "Microwave",
+              "OpenCabinet",
+              "Oven",
+              "SingleCabinet",
+              "Sink"
+            ],
+            "object_name_preview": [
+              "distr_counter_0",
+              "distr_counter_1",
+              "distr_sink"
+            ],
+            "model_joint_name_preview": [
+              "mobilebase0_joint_torso_height",
+              "robot0_joint1",
+              "robot0_joint2",
+              "robot0_joint3",
+              "robot0_joint4",
+              "robot0_joint5",
+              "robot0_joint6",
+              "robot0_joint7",
+              "gripper0_right_finger_joint1",
+              "gripper0_right_finger_joint2",
+              "mobilebase0_joint_mobile_forward",
+              "mobilebase0_joint_mobile_side",
+              "mobilebase0_joint_mobile_yaw"
+            ],
+            "model_keyword_hits": [
+              "drawer",
+              "cabinet",
+              "fridge",
+              "toaster",
+              "coffee",
+              "sink",
+              "handle",
+              "contact"
+            ]
+          }
+        ],
+        "states_shape_preview": [
+          [
+            277,
+            198
+          ],
+          [
+            262,
+            251
+          ],
+          [
+            147,
+            307
+          ]
+        ],
+        "model_joint_name_preview": [
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5",
+          "robot0_joint6",
+          "robot0_joint7",
+          "gripper0_right_finger_joint1",
+          "gripper0_right_finger_joint2",
+          "mobilebase0_joint_mobile_forward",
+          "mobilebase0_joint_mobile_side",
+          "mobilebase0_joint_mobile_yaw",
+          "mobilebase0_joint_torso_height",
+          "robot0_joint1",
+          "robot0_joint2",
+          "robot0_joint3",
+          "robot0_joint4",
+          "robot0_joint5"
+        ],
+        "model_keyword_hits": [
+          "cabinet",
+          "coffee",
+          "contact",
+          "drawer",
+          "fridge",
+          "handle",
+          "sink",
+          "toaster"
+        ],
+        "has_simulator_state_sequence": true,
+        "has_ep_meta": true,
+        "has_model_xml": true,
+        "has_task_fixture_or_object_in_model_xml": true
+      },
+      "task_source_audit": {
+        "task_class_found": true,
+        "matches": [
+          {
+            "source_path": "playground/Code/robocasa365/robocasa/environments/kitchen/atomic/kitchen_sink.py",
+            "has_check_success": false,
+            "mentions_reward_success": false,
+            "predicate_keywords": []
+          }
+        ]
+      },
+      "label_readiness": {
+        "failure_risk": "candidate_for_data_gate",
+        "subgoal_feasibility": "blocked_pending_task_subgoal_schema_and_predicate_mapping",
+        "manipulation_readiness": "blocked_pending_readiness_predicate_and_threshold_calibration"
+      }
+    }
+  ],
+  "summary": {
+    "failure_risk_candidate_task_count": 10,
+    "subgoal_feasibility_blocked_task_count": 10,
+    "manipulation_readiness_blocked_task_count": 10,
+    "state_schema_source": "PandaOmron_modality.json or dataset meta/modality.json",
+    "extras_required_for_subgoal_or_readiness": true
+  },
+  "go_no_go": "TBD: source audit complete; label builders remain gated",
+  "notes": [
+    "failure_risk can only move to data-gate if reward/done distribution is usable.",
+    "subgoal_feasibility requires task schema plus simulator/object predicate fields.",
+    "manipulation_readiness requires state semantics plus readiness/onset predicates.",
+    "No production masks are changed by this Data Gate audit."
+  ]
+}

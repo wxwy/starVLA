@@ -6,6 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
+from starVLA.dataloader.mowa.atomic_task_label_builder import (
+    get_builder_for_dataset_path,
+    get_builder_for_task,
+)
+from starVLA.dataloader.mowa.label_cache import (
+    label_cache_available,
+    load_label_cache_for_episode,
+)
+from starVLA.dataloader.mowa.opendrawer_label_cache import (
+    load_opendrawer_label_cache_for_episode,
+    opendrawer_label_cache_available,
+)
 from starVLA.dataloader.mowa.schema import DATA_GATE
 from starVLA.mowa_constants import (
     MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
@@ -13,7 +27,6 @@ from starVLA.mowa_constants import (
     MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
     MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
     MOWA_FUTURE_FULL_HEADS,
-    MOWA_FUTURE_MASKED_HEADS,
 )
 
 
@@ -77,18 +90,36 @@ def build_mowa_future_constructible_label_smoke(
         parquet_path = root / "data" / "chunk-000" / f"episode_{episode_index:06d}.parquet"
         samples.extend(_build_episode_samples(parquet_path, episode_index, preview_rows))
 
+    # If a state-derived cache (e.g. OpenDrawer) unmasks extra heads, reflect
+    # that in the report-level constructible/masked head lists while preserving
+    # the canonical order from MOWA_FUTURE_FULL_HEADS.
+    constructible_from_samples = set(MOWA_FUTURE_CONSTRUCTIBLE_HEADS)
+    for sample in samples:
+        constructible_from_samples.update(
+            head for head, unmasked in sample.masks.items() if unmasked
+        )
+    constructible_ordered = tuple(
+        head for head in MOWA_FUTURE_FULL_HEADS if head in constructible_from_samples
+    )
+    masked_from_samples = tuple(
+        head for head in MOWA_FUTURE_FULL_HEADS if head not in constructible_from_samples
+    )
+
     return MoWAFutureConstructibleLabelSmoke(
         dataset_path=str(root),
         sampled_episode_indices=episode_indices,
-        constructible_heads=MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
-        masked_heads=MOWA_FUTURE_MASKED_HEADS,
+        constructible_heads=constructible_ordered,
+        masked_heads=masked_from_samples,
         sample_count=len(samples),
         samples=tuple(samples),
         notes=(
             "Smoke-only labels are targets, not WAM inputs.",
             "task_progress is normalized by episode row count for dry-run only.",
             "action_outcome_class uses the frozen E-001 mapping [next_reward, next_done_flag].",
-            "Non-constructible future heads stay masked.",
+            (
+                "Non-constructible future heads stay masked; "
+                "OpenDrawer cache may unmask subgoal_feasibility/manipulation_readiness."
+            ),
         ),
     )
 
@@ -140,28 +171,67 @@ def _build_episode_samples(
     dones = table["next.done"]
     denominator = max(row_count - 1, 1)
 
+    # If a task label cache exists, use it for state-derived heads.
+    dataset_path = parquet_path.parents[2]  # data/chunk-000/episode_*.parquet -> dataset root
+    cache = None
+    cache_source = None
+    builder = get_builder_for_dataset_path(dataset_path)
+    if builder is not None and label_cache_available(builder, dataset_path):
+        cache = load_label_cache_for_episode(builder, dataset_path, episode_index)
+        cache_source = builder.task_name
+    # Backward compatibility: legacy OpenDrawer sidecars.
+    if cache is None and opendrawer_label_cache_available(dataset_path):
+        cache = load_opendrawer_label_cache_for_episode(dataset_path, episode_index)
+        cache_source = "OpenDrawer(legacy)"
+
     samples = []
     for row_index, (frame_index, reward, done) in enumerate(zip(frame_indices, rewards, dones)):
         masks = {head: head in MOWA_FUTURE_CONSTRUCTIBLE_HEADS for head in MOWA_FUTURE_FULL_HEADS}
+        labels: dict[str, Any] = {
+            "task_progress": float(frame_index) / denominator,
+            "action_outcome_class": {
+                "next_reward": float(reward),
+                "next_done": bool(done),
+                "class_mapping_status": MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+                "class_mapping_version": MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
+                "class_mapping_note": MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
+            },
+        }
+        sources = {
+            "task_progress": ("frame_index", "episode_row_count"),
+            "action_outcome_class": ("next.reward", "next.done"),
+        }
+
+        if cache is not None and row_index < len(cache["frame_index"]):
+            cache_labels = cache["labels"]
+            cache_masks = cache["masks"]
+            labels["subgoal_feasibility"] = float(cache_labels["subgoal_feasibility"][row_index])
+            labels["manipulation_readiness"] = float(
+                cache_labels["manipulation_readiness"][row_index]
+            )
+            labels["failure_risk"] = float(cache_labels["failure_risk"][row_index])
+            masks["subgoal_feasibility"] = bool(cache_masks["subgoal_feasibility"][row_index])
+            masks["manipulation_readiness"] = bool(cache_masks["manipulation_readiness"][row_index])
+            # failure_risk stays masked if the cached distribution is single-class.
+            failure_risk_values = cache_labels["failure_risk"]
+            failure_risk_array = (
+                failure_risk_values
+                if isinstance(failure_risk_values, np.ndarray)
+                else np.asarray([failure_risk_values])
+            )
+            if int(failure_risk_array.sum()) > 0:
+                masks["failure_risk"] = bool(cache_masks["failure_risk"][row_index])
+            sources["subgoal_feasibility"] = ("task_state_progress", "extras/states.npz")
+            sources["manipulation_readiness"] = ("task_state_progress", "extras/states.npz")
+            sources["failure_risk"] = ("next.reward", "next.done")
+
         samples.append(
             MoWAFutureLabelSmokeSample(
                 episode_index=episode_index,
                 row_index=row_index,
-                labels={
-                    "task_progress": float(frame_index) / denominator,
-                    "action_outcome_class": {
-                        "next_reward": float(reward),
-                        "next_done": bool(done),
-                        "class_mapping_status": MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
-                        "class_mapping_version": MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
-                        "class_mapping_note": MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
-                    },
-                },
+                labels=labels,
                 masks=masks,
-                sources={
-                    "task_progress": ("frame_index", "episode_row_count"),
-                    "action_outcome_class": ("next.reward", "next.done"),
-                },
+                sources=sources,
                 data_gate={
                     "thresholds": DATA_GATE,
                     "class_mapping": MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,

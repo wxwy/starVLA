@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练运行中  
 > **run_id**: `MoWA-E-001_starflow_ft0_baseline_4090_long_260706_1650`  
 > **启动时间**: 2026-07-06 16:57 CST  
-> **当前更新**: 2026-07-06 17:02 CST  
+> **当前更新**: 2026-07-06 17:22 CST
 > **进程**: 训练进程于 `pts/4` 直接运行（无 tmux 会话）  
 > **配置来源**: `configs/mowa/mowa_e001_starflow_ft0_baseline_long_training_candidate.yaml`
 
@@ -87,38 +87,54 @@ MoWA E-001 **StarFlowVLA ft0 baseline（robocasa365）**：在 StarFlowVLA 框�
 
 ## 训练进度
 
-> 最后更新：2026-07-06 17:02 CST
+> 最后更新：2026-07-06 17:22 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | 刚启动（约 0 / 80000） |
-| **完成比例** | 0% |
-| **单步耗时** | 待采集 |
-| **已运行时间** | ~5 分钟 |
-| **预计剩余时间** | 待估算 |
-| **最新 checkpoint** | 尚未保存 |
-| **最新 eval mse_score** | 尚未评估 |
+| **当前 Step** | **~350 / 80000**（0.4%） |
+| **完成比例** | 0.4% |
+| **单步耗时** | ~3.87 s/it |
+| **模型前向/反向耗时** | ~0.22–0.42 s |
+| **数据加载耗时** | ~0.0002–0.0004 s（几乎忽略） |
+| **已运行时间** | ~25 分钟 |
+| **预计剩余时间** | ~85.7 小时（约 3.6 天） |
+| **最新 checkpoint** | 尚未保存（save_interval=2000） |
+| **最新 eval mse_score** | 尚未评估（eval_interval=2000） |
 
 ### Loss 记录
 
-| Step | action_dit_loss | 备注 |
-|------|----------------|------|
-| — | — | 训练刚启动，暂无数据 |
+| Step | action_dit_loss | last_micro_loss | LR (action_model) | LR (base) | 备注 |
+|------|----------------|-----------------|-------------------|-----------|------|
+| 50 | 0.9404 | 0.8234 | 1.0e-5 | 2.5e-6 | 初始（warmup 阶段）|
+| 100 | 0.7244 | 0.6159 | 2.0e-5 | 5.0e-6 | |
+| 150 | 0.5015 | 0.6381 | 3.0e-5 | 7.5e-6 | |
+| 200 | 0.4051 | 0.3220 | 4.0e-5 | 1.0e-5 | |
+| 250 | 0.4242 | 0.7024 | 5.0e-5 | 1.25e-5 | |
+| 300 | 0.5311 | 0.5555 | 6.0e-5 | 1.5e-5 | |
+| 350 | 0.3948 | 0.2541 | 7.0e-5 | 1.75e-5 | |
+
+### Loss 趋势
+
+- **Phase 1（0–350 steps）**: 快速下降阶段，action_dit_loss 从 0.94 降至 ~0.39–0.53，呈现暖机（warmup）中的震荡下降。
+- 当前处于 **warmup 阶段（0–500 steps）**，LR 从 0 线性增长至目标值。action_model LR 已升至 7e-5（目标 1e-4），base LR 升至 1.75e-5（目标 2.5e-5）。
+- `mowa_future_supervision_loss` 恒为 0.0（该 loss 未启用）。
+- `last_micro_loss` 在 0.25–0.82 之间震荡，因 grad_accum=16 且每个 micro 样本差异大。
+- 单步耗时 ~3.87 s/it，但模型前向/反向仅 ~0.22–0.42 s，数据加载几乎为 0（~0.0003 s），剩余时间为 DeepSpeed 4 卡的同步/通信开销。
 
 ---
 
 ## 系统资源占用
 
-> 最后更新：2026-07-06 17:02 CST
+> 最后更新：2026-07-06 17:22 CST
 
 ### GPU（NVIDIA GeForce RTX 4090）
 
 | 指标 | 值 |
 |------|-----|
-| **GPU 利用率** | 14% |
+| **GPU 利用率** | 28% |
 | **显存使用** | 20,312 MiB / 24,564 MiB（82.7%） |
 | **显存空闲** | ~4,252 MiB |
-| **功耗** | 228.95 W / 450.00 W |
+| **功耗** | 209.77 W / 450.00 W |
 | **温度** | 58°C |
 
 ### 存储
@@ -127,7 +143,7 @@ MoWA E-001 **StarFlowVLA ft0 baseline（robocasa365）**：在 StarFlowVLA 框�
 |--------|------|------|------|--------|
 | `/` (overlay) | 30G | 21G | 9.2G | 70% |
 | `/localdisk-tmp` | 3.5T | 1.2T | 2.4T | 33% |
-| `/disk/rl` | 700T | 553T | 148T | 79% |
+| `/disk/rl` | 700T | 554T | 147T | 80% |
 
 ---
 
@@ -135,11 +151,11 @@ MoWA E-001 **StarFlowVLA ft0 baseline（robocasa365）**：在 StarFlowVLA 框�
 
 ```
 /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-001_starflow_ft0_baseline_4090_long_260706_1650/
-├── checkpoints/                 （暂无 checkpoint）
+├── checkpoints/                 （暂无 checkpoint，save_interval=2000）
 ├── config.full.yaml             ✅
 ├── config.yaml                  ✅
 ├── dataset_statistics.json      ✅
-└── wandb/                       ✅
+└── wandb/                       ✅（运行中）
 ```
 
 ---
@@ -169,8 +185,10 @@ python starVLA/training/train_starvla.py \
   - Action dim 12（含 gripper），State dim 16（含 instruction embedding）
   - per_device_batch_size=2，grad_accum=16，4 卡 DeepSpeed 分布式
 - `enable_future_supervision_loss: false`，即不做 future token 的额外监督。
-- 训练刚启动，尚未有 checkpoint save 和 eval。
-- 每小时由 cron 自动更新本 tracker。
+- 🟢 **训练正常运行中** — step ~350（warmup 阶段），loss 从 0.94 降至 ~0.39，仍在 warmup（500 steps）。
+- 🔴 **注意**：GPU 利用率仅 28%（偏低），显存占 82.7%~20.3GiB/24.6GiB。data loading 几乎为 0（~0.0003s），但 model time 仅 ~0.22–0.42s，大量时间可能花在 DeepSpeed 4 卡的梯度同步或 grad_accum 的 16 micro-step 之间。
+- 预计完成时间：~85.7h（约 3.6 天），即 7 月 10 日凌晨左右。
+- 每小时由 cron 自动更新本 tracker（定时任务 `82345eee`，每小时 :07 触发）。
 
 ---
 

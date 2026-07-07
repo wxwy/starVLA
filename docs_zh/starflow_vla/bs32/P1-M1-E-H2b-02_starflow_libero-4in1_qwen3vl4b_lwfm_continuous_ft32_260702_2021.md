@@ -94,6 +94,10 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 | 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 04:47 | 66040, | — | — | 18% | 23160/24564 MiB | 66°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-07-08 02:48 | 65020, | — | — | 31% | 23160/24564 MiB | 64°C | —/56 GiB |
 
 > 最后更新：2026-07-08 00:40:00 CST

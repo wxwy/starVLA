@@ -304,6 +304,28 @@ class MoWAFakeLatentEncoderAdapter:
         source_identity: str,
     ) -> torch.Tensor:
         del dataset_path, source_path, row_count
+        if window_role == _WINDOW_ROLE_HISTORY:
+            # Generate one independent latent per history frame and stack into a sequence.
+            latents = []
+            for frame_index in frame_indices:
+                payload = "|".join(
+                    (
+                        self.seed_salt,
+                        self.encoder_name,
+                        self.encoder_version,
+                        str(episode_index),
+                        str(anchor_index),
+                        video_key,
+                        window_role,
+                        str(frame_index),
+                        source_identity,
+                    )
+                ).encode("utf-8")
+                seed = int.from_bytes(hashlib.sha256(payload).digest()[:8], "big", signed=False)
+                rng = np.random.default_rng(seed)
+                latents.append(rng.standard_normal(self.latent_dim, dtype=np.float32))
+            return torch.from_numpy(np.stack(latents, axis=0))
+
         payload = "|".join(
             (
                 self.seed_salt,
@@ -436,6 +458,12 @@ class MoWAWanVaeLatentEncoderAdapter:
 
         frames = self._load_frames(source_path, frame_indices)
         pil_frames = [Image.fromarray(frame) for frame in frames]
+
+        if window_role == _WINDOW_ROLE_HISTORY:
+            # Encode each history frame independently and stack per-frame latents.
+            frame_latents = [self._encode_single_frame(frame) for frame in pil_frames]
+            return torch.stack(frame_latents, dim=0).to(dtype=torch.float32, device="cpu")
+
         video_tensor = self._video_processor.preprocess_video(
             pil_frames,
             height=480,
@@ -455,6 +483,28 @@ class MoWAWanVaeLatentEncoderAdapter:
         pooled = latents.float().mean(dim=(2, 3, 4))  # [B, vae_channels]
         latent = self._projection(pooled.to(dtype=self._projection.weight.dtype)).reshape(-1)
         return latent.to(dtype=torch.float32, device="cpu")
+
+    def _encode_single_frame(self, pil_frame: Any) -> torch.Tensor:
+        """Encode a single frame and return a 1D latent vector of length latent_dim."""
+        assert self._vae is not None and self._video_processor is not None and self._torch_dtype is not None
+        video_tensor = self._video_processor.preprocess_video(
+            [pil_frame],
+            height=480,
+            width=832,
+        )
+        device = next(self._vae.parameters()).device
+        video_tensor = video_tensor.to(device=device, dtype=self._torch_dtype)
+        with torch.inference_mode():
+            latents = self._vae.encode(video_tensor).latent_dist.sample()
+        if self._projection is None:
+            vae_channels = latents.shape[1]
+            with torch.random.fork_rng():
+                torch.manual_seed(self._projection_seed)
+                self._projection = nn.Linear(vae_channels, self.latent_dim).to(
+                    device=latents.device, dtype=latents.dtype
+                ).eval()
+        pooled = latents.float().mean(dim=(2, 3, 4)).reshape(-1)
+        return self._projection(pooled.to(dtype=self._projection.weight.dtype)).reshape(-1)
 
 
 def build_mowa_latent_cache(
@@ -536,14 +586,22 @@ def build_mowa_latent_cache(
                         source_path=source_path,
                         source_identity=source_identity,
                     ).detach().cpu()
-                    if latent.ndim != 1:
-                        raise ValueError(
-                            f"Latent encoder must return a 1D tensor, got shape {tuple(latent.shape)}."
-                        )
-                    if latent.shape[0] != encoder.latent_dim:
-                        raise ValueError(
-                            f"Latent dim mismatch: expected {encoder.latent_dim}, got {latent.shape[0]}."
-                        )
+                    expected_history_shape = (len(frame_indices), encoder.latent_dim)
+                    if window_spec.role == _WINDOW_ROLE_HISTORY:
+                        if latent.ndim != 2 or tuple(latent.shape) != expected_history_shape:
+                            raise ValueError(
+                                "History latent encoder must return a 2D tensor of shape "
+                                f"{expected_history_shape}, got {tuple(latent.shape)}."
+                            )
+                    else:
+                        if latent.ndim != 1:
+                            raise ValueError(
+                                f"Latent encoder must return a 1D tensor, got shape {tuple(latent.shape)}."
+                            )
+                        if latent.shape[0] != encoder.latent_dim:
+                            raise ValueError(
+                                f"Latent dim mismatch: expected {encoder.latent_dim}, got {latent.shape[0]}."
+                            )
 
                     latent_sha256 = _sha256_for_tensor(latent)
                     artifact = MoWALatentCacheArtifact(

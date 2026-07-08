@@ -41,6 +41,12 @@ IGNORE_INDEX = -100
 from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.framework.share_tools import merge_framework_config
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import LayerwiseFlowmatchingActionHead, get_action_model
+from starVLA.model.modules.mowa import (
+    MoWAFutureLatentPrior,
+    MoWAFutureLatentPriorConfig,
+    MoWAHLCGCI,
+    MoWAHLCGCIConfig,
+)
 from starVLA.model.modules.world_model import get_world_model
 from starVLA.model.tools import FRAMEWORK_REGISTRY
 from starVLA.training.trainer_utils.trainer_tools import resize_images
@@ -92,6 +98,10 @@ class WanPIDefaultConfig:
         }
     )
 
+    # === MoWA interface (optional) ===
+    interface: dict = field(default_factory=dict)
+    mowa: dict = field(default_factory=dict)
+
 
 @FRAMEWORK_REGISTRY.register("WanPI")
 class Wan_PI(baseframework):
@@ -138,6 +148,10 @@ class Wan_PI(baseframework):
         self._all_hooks = []
         self._register_all_hooks()
 
+        # MoWA modules (future latent prior + HLC-GCI)
+        self._setup_mowa_future_latent_prior_loss()
+        self._setup_mowa_hlc_gci_conditioning()
+
     def _register_all_hooks(self):
         """Register forward hooks on ALL transformer blocks for layerwise features."""
         for hook in self._all_hooks:
@@ -158,6 +172,187 @@ class Wan_PI(baseframework):
         else:
             self._all_hidden_states.append(output)
 
+    def _setup_mowa_future_latent_prior_loss(self) -> None:
+        interface_cfg = getattr(self.config, "interface", None)
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        role_enabled = getattr(self.config, "experiment_role", None) == "mowa_future_latent_prior"
+        self.mowa_future_latent_prior_loss_enabled = bool(
+            getattr(mowa_cfg, "enable_future_latent_prior_loss", role_enabled)
+        )
+        self.mowa_future_latent_prior = None
+        if not self.mowa_future_latent_prior_loss_enabled or interface_cfg is None:
+            return
+        self.mowa_future_latent_prior = MoWAFutureLatentPrior(
+            MoWAFutureLatentPriorConfig(
+                current_latent_dim=int(getattr(interface_cfg, "current_latent_dim", 1024)),
+                text_hidden_dim=int(getattr(interface_cfg, "text_hidden_dim", 4096)),
+                hidden_dim=int(getattr(interface_cfg, "hidden_dim", 2048)),
+                future_latent_dim=int(getattr(interface_cfg, "future_latent_dim", 1024)),
+            )
+        )
+
+    def _setup_mowa_hlc_gci_conditioning(self) -> None:
+        interface_cfg = getattr(self.config, "interface", None)
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        role_enabled = getattr(self.config, "experiment_role", None) == "mowa_hlc_gci"
+        self.mowa_hlc_gci_conditioning_enabled = bool(
+            getattr(mowa_cfg, "enable_hlc_gci_conditioning", role_enabled)
+        )
+        self.mowa_hlc_gci = None
+        self.mowa_hlc_gci_condition_token_count = 0
+        if not self.mowa_hlc_gci_conditioning_enabled or interface_cfg is None:
+            return
+        cross_attn_dim = self.config.framework.action_model.diffusion_model_cfg.cross_attention_dim
+        self.mowa_hlc_gci_condition_token_count = int(getattr(interface_cfg, "condition_token_count", 4))
+        self.mowa_hlc_gci = MoWAHLCGCI(
+            MoWAHLCGCIConfig(
+                history_latent_dim=int(getattr(interface_cfg, "history_latent_dim", 1024)),
+                condition_hidden_dim=int(getattr(interface_cfg, "condition_hidden_dim", cross_attn_dim)),
+                history_steps=int(getattr(interface_cfg, "history_steps", 10)),
+                compressed_history_dim=int(getattr(interface_cfg, "compressed_history_dim", 512)),
+                gate_hidden_dim=int(getattr(interface_cfg, "gate_hidden_dim", 256)),
+            )
+        )
+
+    @staticmethod
+    def _build_mowa_latent_batch(
+        examples: List[dict],
+        key: str,
+        *,
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> torch.Tensor | None:
+        if not examples or not all(example.get(key) is not None for example in examples):
+            return None
+        return torch.stack(
+            [
+                torch.as_tensor(example[key], device=device, dtype=dtype)
+                for example in examples
+            ],
+            dim=0,
+        )
+
+    def _pool_text_hidden(
+        self,
+        text_embeds: torch.Tensor,
+        attention_mask: torch.Tensor,
+    ) -> torch.Tensor:
+        """Mean-pool UMT5 text embeddings using the attention mask."""
+        mask = attention_mask.unsqueeze(-1).to(dtype=text_embeds.dtype)
+        pooled = (text_embeds * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)
+        return pooled
+
+    def _maybe_run_mowa_future_latent_prior_loss(
+        self,
+        pooled_text_hidden: torch.Tensor,
+        examples: List[dict],
+    ) -> dict | None:
+        if not getattr(self, "mowa_future_latent_prior_loss_enabled", False):
+            return None
+        if self.mowa_future_latent_prior is None:
+            raise RuntimeError("MoWA future latent prior loss is enabled but not initialized.")
+
+        current_latent = self._build_mowa_latent_batch(
+            examples,
+            "mowa_current_latent",
+            device=pooled_text_hidden.device,
+            dtype=pooled_text_hidden.dtype,
+        )
+        future_latent_target = self._build_mowa_latent_batch(
+            examples,
+            "mowa_future_latent_target",
+            device=pooled_text_hidden.device,
+            dtype=pooled_text_hidden.dtype,
+        )
+        if current_latent is None or future_latent_target is None:
+            return {
+                "supervision_available": False,
+                "loss": None,
+                "losses": {},
+            }
+
+        latent_prior_dtype = next(self.mowa_future_latent_prior.parameters()).dtype
+        loss, losses, output = self.mowa_future_latent_prior.compute_loss(
+            current_latent.to(dtype=latent_prior_dtype),
+            pooled_text_hidden.to(dtype=latent_prior_dtype),
+            future_latent_target.to(dtype=latent_prior_dtype),
+        )
+        return {
+            "supervision_available": True,
+            "loss": loss,
+            "losses": losses,
+            "future_latent_mse": losses.get("future_latent_mse"),
+            "predicted_future_latent_shape": tuple(output.predicted_future_latent.shape),
+        }
+
+    def _maybe_apply_mowa_hlc_gci_conditioning(
+        self,
+        vl_embs_list: List[torch.Tensor],
+        examples: List[dict],
+    ) -> tuple[List[torch.Tensor], dict | None]:
+        if not getattr(self, "mowa_hlc_gci_conditioning_enabled", False):
+            return vl_embs_list, None
+        if self.mowa_hlc_gci is None:
+            raise RuntimeError("MoWA HLC-GCI conditioning is enabled but not initialized.")
+
+        history_latent = self._build_mowa_latent_batch(
+            examples,
+            "mowa_history_latent",
+            device=vl_embs_list[-1].device,
+            dtype=vl_embs_list[-1].dtype,
+        )
+        if history_latent is None:
+            return vl_embs_list, {
+                "conditioned": False,
+                "reason": "history_latent_missing",
+            }
+
+        history_steps = int(self.mowa_hlc_gci.config.history_steps)
+        if history_latent.dim() != 3:
+            raise ValueError(
+                f"mowa_history_latent must be 3D [B, history_steps, D], got {tuple(history_latent.shape)}."
+            )
+        if history_latent.shape[1] != history_steps:
+            raise ValueError(
+                f"history_latent time steps mismatch: expected {history_steps}, "
+                f"got {history_latent.shape[1]}."
+            )
+        if history_latent.shape[2] != self.mowa_hlc_gci.config.history_latent_dim:
+            raise ValueError(
+                "history_latent dim mismatch: expected "
+                f"{self.mowa_hlc_gci.config.history_latent_dim}, got {history_latent.shape[2]}."
+            )
+
+        conditioned_layers = list(vl_embs_list)
+        last_hidden = conditioned_layers[-1]
+        token_count = min(self.mowa_hlc_gci_condition_token_count, int(last_hidden.shape[1]))
+        if token_count <= 0:
+            return vl_embs_list, {
+                "conditioned": False,
+                "reason": "no_condition_tokens_available",
+            }
+        condition_tokens = last_hidden[:, :token_count, :]
+        hlc_dtype = next(self.mowa_hlc_gci.parameters()).dtype
+        output = self.mowa_hlc_gci(
+            history_latent.to(dtype=hlc_dtype),
+            condition_tokens.to(dtype=hlc_dtype),
+        )
+        conditioned_layers[-1] = torch.cat(
+            (
+                output.gated_condition_tokens.to(dtype=last_hidden.dtype),
+                last_hidden[:, token_count:, :],
+            ),
+            dim=1,
+        )
+        return conditioned_layers, {
+            "conditioned": True,
+            "history_latent_sequence_shape": tuple(history_latent.shape),
+            "compressed_history_shape": tuple(output.compressed_history.shape),
+            "gate_values_shape": tuple(output.gate_values.shape),
+            "gated_condition_tokens_shape": tuple(output.gated_condition_tokens.shape),
+            "history_sequence_policy": "per_step_history_sequence_from_cache",
+        }
+
     def forward(self, examples: List[dict] = None, **kwargs) -> Tuple:
         batch_images = [example["image"] for example in examples]
         instructions = [example["lang"] for example in examples]
@@ -166,6 +361,13 @@ class Wan_PI(baseframework):
         state = [example["state"] for example in examples] if "state" in examples[0] else None
 
         wm_inputs = self.backbone.build_inputs(images=batch_images, instructions=instructions)
+        encoder_hidden_states = wm_inputs["encoder_hidden_states"]
+        encoder_attention_mask = wm_inputs.get("encoder_attention_mask")
+        pooled_text_hidden = (
+            self._pool_text_hidden(encoder_hidden_states, encoder_attention_mask)
+            if encoder_attention_mask is not None
+            else encoder_hidden_states.mean(dim=1)
+        )
 
         with torch.autocast("cuda", dtype=torch.bfloat16):
             self._all_hidden_states.clear()
@@ -182,6 +384,13 @@ class Wan_PI(baseframework):
             actions = torch.tensor(np.array(actions), device=base_hidden.device, dtype=base_hidden.dtype)
             actions_target = actions[:, -self.action_horizon :, :]
 
+            vl_embs_list, mowa_hlc_gci = self._maybe_apply_mowa_hlc_gci_conditioning(vl_embs_list, examples)
+            base_hidden = vl_embs_list[-1]
+            mowa_future_latent_prior = self._maybe_run_mowa_future_latent_prior_loss(
+                pooled_text_hidden,
+                examples,
+            )
+
             repeated_diffusion_steps = (
                 self.config.framework.action_model.get("repeated_diffusion_steps", 2)
                 if self.config and hasattr(self.config, "framework")
@@ -197,7 +406,23 @@ class Wan_PI(baseframework):
 
             action_loss = self.action_model(vl_embs_list_repeated, actions_target_repeated, state_repeated)
 
-        return {"action_loss": action_loss}
+        output = {"action_loss": action_loss}
+        if mowa_future_latent_prior is not None:
+            output["mowa_future_latent_prior_available"] = mowa_future_latent_prior["supervision_available"]
+            if mowa_future_latent_prior["loss"] is not None:
+                output["mowa_future_latent_prior_loss"] = mowa_future_latent_prior["loss"]
+                output["mowa_future_latent_prior_losses"] = mowa_future_latent_prior["losses"]
+                output["future_latent_mse"] = mowa_future_latent_prior["future_latent_mse"]
+        if mowa_hlc_gci is not None:
+            output["mowa_hlc_gci_conditioned"] = mowa_hlc_gci["conditioned"]
+            output["mowa_hlc_gci_reason"] = mowa_hlc_gci.get("reason")
+            if mowa_hlc_gci.get("compressed_history_shape") is not None:
+                output["mowa_hlc_gci_compressed_history_shape"] = mowa_hlc_gci["compressed_history_shape"]
+                output["mowa_hlc_gci_gate_values_shape"] = mowa_hlc_gci["gate_values_shape"]
+                output["mowa_hlc_gci_gated_condition_tokens_shape"] = mowa_hlc_gci["gated_condition_tokens_shape"]
+                output["mowa_hlc_gci_history_latent_sequence_shape"] = mowa_hlc_gci["history_latent_sequence_shape"]
+                output["mowa_hlc_gci_history_sequence_policy"] = mowa_hlc_gci["history_sequence_policy"]
+        return output
 
     @torch.inference_mode()
     def predict_action(self, examples: List[dict], **kwargs) -> np.ndarray:
@@ -229,10 +454,15 @@ class Wan_PI(baseframework):
         )
 
         with torch.autocast("cuda", dtype=torch.float32):
+            vl_embs_list, mowa_hlc_gci = self._maybe_apply_mowa_hlc_gci_conditioning(vl_embs_list, examples)
             pred_actions = self.action_model.predict_action(vl_embs_list, state)
 
         normalized_actions = pred_actions.detach().cpu().numpy()
-        return {"normalized_actions": normalized_actions}
+        output = {"normalized_actions": normalized_actions}
+        if mowa_hlc_gci is not None:
+            output["mowa_hlc_gci_conditioned"] = mowa_hlc_gci["conditioned"]
+            output["mowa_hlc_gci_reason"] = mowa_hlc_gci.get("reason")
+        return output
 
 
 if __name__ == "__main__":

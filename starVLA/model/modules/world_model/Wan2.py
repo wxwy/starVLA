@@ -159,7 +159,11 @@ class _Wan2_Interface(nn.Module):
             self._intermediate_features.append(output)
 
     def _encode_text(self, instructions, max_length=512):
-        """Encode text instructions using UMT5."""
+        """Encode text instructions using UMT5.
+
+        Returns:
+            Tuple of (text_embeds [B, L, 4096], attention_mask [B, L]).
+        """
         device = next(self.text_encoder.parameters()).device
 
         text_inputs = self.tokenizer(
@@ -178,7 +182,7 @@ class _Wan2_Interface(nn.Module):
                 attention_mask=text_inputs.attention_mask,
             ).last_hidden_state  # [B, L, 4096]
 
-        return text_embeds.to(dtype=torch.bfloat16)  # [B, max_length, 4096]
+        return text_embeds.to(dtype=torch.bfloat16), text_inputs.attention_mask.to(dtype=torch.bfloat16)
 
     def _encode_images_vae(self, images, num_frames=None):
         """Encode observation images through VAE to get latent tokens.
@@ -270,7 +274,7 @@ class _Wan2_Interface(nn.Module):
 
         device = next(self.transformer.parameters()).device
 
-        text_embeds = self._encode_text(instructions)
+        text_embeds, text_attention_mask = self._encode_text(instructions)
         latents = self._encode_images_vae(images)
 
         batch_size = latents.shape[0]
@@ -293,6 +297,7 @@ class _Wan2_Interface(nn.Module):
             "hidden_states": latents,
             "timestep": timestep,
             "encoder_hidden_states": text_embeds,
+            "encoder_attention_mask": text_attention_mask,
             "_is_wm_input": True,
         }
 
@@ -306,6 +311,7 @@ class _Wan2_Interface(nn.Module):
         kwargs.pop("output_hidden_states", False)
         kwargs.pop("return_dict", True)
         kwargs.pop("output_attentions", None)
+        kwargs.pop("encoder_attention_mask", None)  # not consumed by WanTransformer3DModel forward
 
         self._intermediate_features.clear()
 

@@ -62,13 +62,15 @@ from starVLA.dataloader.mowa.latent_cache_builder import (
     MoWALatentCacheArtifact,
     MoWALatentCacheBuildConfig,
     MoWALatentCacheBuildReport,
-    MoWALatentCacheDataset,
     MoWALatentCacheValidationReport,
     MoWALatentWindowSpec,
     build_mowa_future_latent_cache,
     build_mowa_latent_cache,
     validate_mowa_future_latent_cache,
     validate_mowa_latent_cache,
+)
+from starVLA.dataloader.mowa.latent_cache_dataset import (
+    MoWALatentCacheDataset,
 )
 from starVLA.dataloader.mowa.leakage_gate import (
     MoWALeakageGateSmoke,

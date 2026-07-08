@@ -130,6 +130,8 @@ def _touch_training_audit_config(cfg) -> None:
         "trainer.gradient_accumulation_steps",
         "trainer.enable_mowa_future_supervision_loss",
         "trainer.loss_scale.mowa_future_supervision",
+        "trainer.enable_mowa_future_latent_prior_loss",
+        "trainer.loss_scale.mowa_future_latent_prior",
         "datasets.vla_data.data_mix",
         "framework.name",
         "framework.action_model.action_model_type",
@@ -1908,6 +1910,7 @@ class VLATrainer(TrainerUtils):
                 mowa_future_supervision_loss = output_dict.get("mowa_future_supervision_loss")
                 if mowa_future_supervision_loss is None:
                     mowa_future_supervision_loss = output_dict.get("mowa_p0_supervision_loss")
+                mowa_future_latent_prior_loss = output_dict.get("mowa_future_latent_prior_loss")
                 if (
                     bool(getattr(self.config.trainer, "enable_mowa_future_supervision_loss", False))
                     and mowa_future_supervision_loss is not None
@@ -1916,13 +1919,28 @@ class VLATrainer(TrainerUtils):
                         mowa_future_supervision_loss
                         * float(getattr(self.config.trainer.loss_scale, "mowa_future_supervision", 1.0))
                     )
+                if (
+                    bool(getattr(self.config.trainer, "enable_mowa_future_latent_prior_loss", False))
+                    and mowa_future_latent_prior_loss is not None
+                ):
+                    total_loss = total_loss + (
+                        mowa_future_latent_prior_loss
+                        * float(getattr(self.config.trainer.loss_scale, "mowa_future_latent_prior", 1.0))
+                    )
 
             action_loss_item = action_loss.item()
             if not hasattr(self, "_loss_accum"):
-                self._loss_accum = {"action_dit_loss": 0.0, "mowa_future_supervision_loss": 0.0, "count": 0}
+                self._loss_accum = {
+                    "action_dit_loss": 0.0,
+                    "mowa_future_supervision_loss": 0.0,
+                    "mowa_future_latent_prior_loss": 0.0,
+                    "count": 0,
+                }
             self._loss_accum["action_dit_loss"] += action_loss_item
             if mowa_future_supervision_loss is not None:
                 self._loss_accum["mowa_future_supervision_loss"] += mowa_future_supervision_loss.item()
+            if mowa_future_latent_prior_loss is not None:
+                self._loss_accum["mowa_future_latent_prior_loss"] += mowa_future_latent_prior_loss.item()
             self._loss_accum["count"] += 1
 
             self.accelerator.backward(total_loss)
@@ -1945,10 +1963,17 @@ class VLATrainer(TrainerUtils):
                     "action_dit_loss": self._loss_accum["action_dit_loss"] / max(self._loss_accum["count"], 1),
                     "mowa_future_supervision_loss": self._loss_accum["mowa_future_supervision_loss"]
                     / max(self._loss_accum["count"], 1),
+                    "mowa_future_latent_prior_loss": self._loss_accum["mowa_future_latent_prior_loss"]
+                    / max(self._loss_accum["count"], 1),
                     "action_dit_loss_last_micro": action_loss_item,
                     "train_accumulation_micro_steps": self._loss_accum["count"],
                 }
-                self._loss_accum = {"action_dit_loss": 0.0, "mowa_future_supervision_loss": 0.0, "count": 0}
+                self._loss_accum = {
+                    "action_dit_loss": 0.0,
+                    "mowa_future_supervision_loss": 0.0,
+                    "mowa_future_latent_prior_loss": 0.0,
+                    "count": 0,
+                }
                 return metrics
 
         return {

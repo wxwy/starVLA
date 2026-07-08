@@ -6,7 +6,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -18,6 +18,7 @@ from starVLA.dataloader.mowa import (
     opendrawer_label_cache_available,
     write_opendrawer_label_cache,
 )
+from starVLA.dataloader.mowa.tasks._single_dof import SingleDofTaskBuilder, SingleDofTaskSchema
 
 
 class MoWAOpenDrawerLabelCacheTest(unittest.TestCase):
@@ -332,7 +333,7 @@ class MoWAOpenDrawerLabelCacheTest(unittest.TestCase):
                     [0.0, 0.0, 0.08, 0.0, 0.0],  # dist=0.02 -> ready
                     [0.0, 0.0, 0.12, 0.0, 0.0],  # dist=0.02 -> ready
                     [0.0, 0.0, 0.20, 0.0, 0.0],  # dist=0.10 -> not ready
-                    [0.0, 0.0, 0.20, 0.0, 0.0],  # completed -> masked
+                    [0.0, 0.0, -0.20, 0.0, 0.0],  # open -> completed -> masked
                 ],
                 dtype=float,
             )
@@ -357,6 +358,150 @@ class MoWAOpenDrawerLabelCacheTest(unittest.TestCase):
         self.assertEqual(cache["manipulation_readiness"][3], 0.0)
         # Last row is completed -> masked.
         self.assertTrue(cache["manipulation_readiness_mask"][-1])
+
+    def test_single_dof_schema_threshold_is_used_when_override_is_missing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dataset_path = Path(tmpdir)
+            self._write_minimal_robocasa_parquet_dataset(dataset_path, length=5)
+            states = np.array(
+                [
+                    [0.0, 0.0, 0.00, 0.0, 0.0],
+                    [0.0, 0.0, 0.08, 0.0, 0.0],
+                    [0.0, 0.0, 0.12, 0.0, 0.0],
+                    [0.0, 0.0, 0.20, 0.0, 0.0],
+                    [0.0, 0.0, 0.20, 0.0, 0.0],
+                ],
+                dtype=float,
+            )
+            self._write_opendrawer_extras_with_kinematics(dataset_path, states)
+
+            builder = SingleDofTaskBuilder(
+                SingleDofTaskSchema(
+                    task_name="OpenDrawer",
+                    fixture_ref_key="drawer",
+                    joint_name_template="{fixture_ref}_slidejoint",
+                    handle_site_template="{fixture_ref}_door_handle_default_site",
+                    manipulated_body_template="{fixture_ref}_door_main",
+                    completion_threshold=0.95,
+                    readiness_distance_threshold=0.2,
+                    readiness_progress_delta=0.1,
+                    schema_version="opendrawer_schema_threshold_test_v1",
+                    subgoal_id="open_drawer",
+                )
+            )
+            with patch(
+                "starVLA.dataloader.mowa.tasks._single_dof._maybe_extract_kinematics",
+                return_value={
+                    "available": True,
+                    "message": "ok",
+                    "eef_to_handle_distance": np.array(
+                        [0.10, 0.02, 0.02, 0.10, 0.10], dtype=np.float64
+                    ),
+                },
+            ):
+                schema_cache = builder.build_cache_for_episode(
+                    dataset_path / "data" / "chunk-000" / "episode_000000.parquet",
+                    dataset_path / "extras" / "episode_000000" / "states.npz",
+                    readiness_horizon=2,
+                    readiness_progress_delta=0.05,
+                    readiness_distance_threshold=None,
+                    enable_kinematics=True,
+                )
+                override_cache = builder.build_cache_for_episode(
+                    dataset_path / "data" / "chunk-000" / "episode_000000.parquet",
+                    dataset_path / "extras" / "episode_000000" / "states.npz",
+                    readiness_horizon=2,
+                    readiness_progress_delta=0.05,
+                    readiness_distance_threshold=0.05,
+                    enable_kinematics=True,
+                )
+
+        self.assertEqual(schema_cache["manipulation_readiness"][0], 1.0)
+        self.assertEqual(override_cache["manipulation_readiness"][0], 0.0)
+
+    def test_single_dof_schema_progress_delta_is_used_when_override_is_missing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dataset_path = Path(tmpdir)
+            self._write_minimal_robocasa_parquet_dataset(dataset_path, length=5)
+            states = np.array(
+                [
+                    [0.0, 0.0, -0.00, 0.0, 0.0],
+                    [0.0, 0.0, -0.01, 0.0, -0.01],
+                    [0.0, 0.0, -0.015, 0.0, -0.01],
+                    [0.0, 0.0, -0.019, 0.0, -0.01],
+                    [0.0, 0.0, -0.019, 0.0, 0.00],
+                ],
+                dtype=float,
+            )
+            self._write_minimal_opendrawer_extras(dataset_path, states)
+
+            builder = SingleDofTaskBuilder(
+                SingleDofTaskSchema(
+                    task_name="OpenDrawer",
+                    fixture_ref_key="drawer",
+                    joint_name_template="{fixture_ref}_slidejoint",
+                    handle_site_template=None,
+                    manipulated_body_template=None,
+                    progress_normalizer=lambda raw_qpos, joint_range: (-raw_qpos) / 0.1,
+                    completion_threshold=0.95,
+                    readiness_distance_threshold=0.05,
+                    readiness_progress_delta=0.2,
+                    schema_version="opendrawer_schema_progress_delta_test_v1",
+                    subgoal_id="open_drawer",
+                )
+            )
+            schema_cache = builder.build_cache_for_episode(
+                dataset_path / "data" / "chunk-000" / "episode_000000.parquet",
+                dataset_path / "extras" / "episode_000000" / "states.npz",
+                readiness_horizon=2,
+                readiness_progress_delta=None,
+                enable_kinematics=False,
+            )
+            override_cache = builder.build_cache_for_episode(
+                dataset_path / "data" / "chunk-000" / "episode_000000.parquet",
+                dataset_path / "extras" / "episode_000000" / "states.npz",
+                readiness_horizon=2,
+                readiness_progress_delta=0.05,
+                enable_kinematics=False,
+            )
+
+        self.assertEqual(schema_cache["manipulation_readiness"][0], 0.0)
+        self.assertEqual(override_cache["manipulation_readiness"][0], 1.0)
+
+    def test_label_cache_includes_visual_head_columns(self):
+        """The generic sidecar must always include the two visual future heads."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dataset_path = Path(tmpdir)
+            self._write_minimal_robocasa_parquet_dataset(dataset_path, length=5)
+            states = np.array(
+                [
+                    [0.0, 0.0, -0.00, 0.0, 0.0],
+                    [0.0, 0.0, -0.05, 0.0, -0.05],
+                    [0.0, 0.0, -0.10, 0.0, -0.05],
+                    [0.0, 0.0, -0.20, 0.0, -0.10],
+                    [0.0, 0.0, -0.20, 0.0, 0.00],
+                ],
+                dtype=float,
+            )
+            self._write_opendrawer_extras_with_kinematics(dataset_path, states)
+
+            manifest = write_opendrawer_label_cache(
+                dataset_path,
+                failure_risk_horizon=2,
+                subgoal_horizon=2,
+                readiness_horizon=2,
+                readiness_progress_delta=0.05,
+            )
+            self.assertEqual(manifest["processed_episode_count"], 1)
+
+            cache = load_opendrawer_label_cache_for_episode(dataset_path, 0)
+            self.assertIsNotNone(cache)
+            self.assertIn("object_visibility_future", cache["labels"])
+            self.assertIn("next_best_view_score", cache["labels"])
+            self.assertIn("object_visibility_future", cache["masks"])
+            self.assertIn("next_best_view_score", cache["masks"])
+            self.assertEqual(len(cache["labels"]["object_visibility_future"]), 5)
+            self.assertEqual(len(cache["labels"]["next_best_view_score"]), 5)
 
 
 if __name__ == "__main__":

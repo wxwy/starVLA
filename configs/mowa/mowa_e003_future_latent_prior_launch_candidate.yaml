@@ -19,7 +19,7 @@ references:
 
 latent_cache:
   dataset_path: playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot
-  cache_root: playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache
+  cache_root: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot
   encoder_name: Wan-AI/Wan2.2-TI2V-5B-Diffusers
   encoder_version: wan2.2-vae-v1
   encoder_kind: wan2.2-vae

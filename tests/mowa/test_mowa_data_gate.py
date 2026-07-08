@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 import json
+import gzip
 from pathlib import Path
 
 from starVLA.dataloader.mowa import (
@@ -38,6 +39,9 @@ from starVLA.dataloader.mowa import (
     select_mowa_leakage_anchor_indices,
     select_mowa_smoke_anchor_index,
 )
+from starVLA.dataloader.mowa.tasks._object_pose import ObjectPoseTaskBuilder, ObjectPoseTaskSchema
+from starVLA.dataloader.mowa.tasks._reward_based import RewardBasedTaskBuilder, RewardBasedTaskSchema
+from starVLA.dataloader.mowa.tasks.close_fridge import CloseFridgeLabelBuilder
 from starVLA.mowa_constants import MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS
 
 
@@ -191,7 +195,10 @@ class MoWADataGateTest(unittest.TestCase):
             current_index=1,
             future_indices=(2,),
             action_target_indices=(1, 2),
-            inputs={"future_action_label": "must not enter WAM"},
+            inputs={
+                "future_action_label": "must not enter WAM",
+                "mowa_future_latent": "must not enter WAM",
+            },
             targets={},
         )
 
@@ -925,6 +932,176 @@ class MoWADataGateTest(unittest.TestCase):
             build_mowa_latent_cache_contract_smoke,
         )
 
+    def test_reward_based_builder_uses_schema_progress_delta_when_override_missing(self):
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / "dataset"
+            data_dir = dataset_path / "data" / "chunk-000"
+            data_dir.mkdir(parents=True)
+            table = pa.table(
+                {
+                    "next.reward": pa.array([0.0, 0.0, 1.0], type=pa.float32()),
+                    "next.done": pa.array([False, False, True]),
+                    "frame_index": pa.array([0, 1, 2], type=pa.int64()),
+                }
+            )
+            pq.write_table(table, data_dir / "episode_000000.parquet")
+
+            builder = RewardBasedTaskBuilder(
+                RewardBasedTaskSchema(
+                    task_name="NavigateKitchen",
+                    completion_threshold=0.95,
+                    schema_version="reward_based_schema_fallback_test_v1",
+                )
+            )
+            schema_cache = builder.build_cache_for_episode(
+                data_dir / "episode_000000.parquet",
+                root / "states.npz",
+                readiness_horizon=2,
+                readiness_progress_delta=None,
+                readiness_distance_threshold=None,
+            )
+            override_cache = builder.build_cache_for_episode(
+                data_dir / "episode_000000.parquet",
+                root / "states.npz",
+                readiness_horizon=2,
+                readiness_progress_delta=1.1,
+                readiness_distance_threshold=None,
+            )
+
+        self.assertEqual(schema_cache["manipulation_readiness"][0], 1.0)
+        self.assertEqual(override_cache["manipulation_readiness"][0], 0.0)
+        self.assertEqual(schema_cache["readiness_schema_version"], "navigatekitchen_reward_imminence_v1")
+
+    def test_object_pose_builder_uses_schema_progress_delta_when_override_missing(self):
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / "dataset"
+            data_dir = dataset_path / "data" / "chunk-000"
+            extras_dir = dataset_path / "extras" / "episode_000000"
+            data_dir.mkdir(parents=True)
+            extras_dir.mkdir(parents=True)
+            table = pa.table(
+                {
+                    "next.reward": pa.array([0.0, 0.0, 1.0], type=pa.float32()),
+                    "next.done": pa.array([False, False, True]),
+                    "frame_index": pa.array([0, 1, 2], type=pa.int64()),
+                }
+            )
+            pq.write_table(table, data_dir / "episode_000000.parquet")
+            xml = (
+                "<mujoco><worldbody><body name='object_body'>"
+                "<joint name='object_freejoint' type='free' />"
+                "</body></worldbody></mujoco>"
+            )
+            (extras_dir / "model.xml.gz").write_bytes(gzip.compress(xml.encode("utf-8")))
+            (extras_dir / "ep_meta.json").write_text("{}", encoding="utf-8")
+            import numpy as np
+
+            states = np.array(
+                [
+                    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                ],
+                dtype=float,
+            )
+            np.savez_compressed(extras_dir / "states.npz", states=states)
+
+            builder = ObjectPoseTaskBuilder(
+                ObjectPoseTaskSchema(
+                    task_name="PickPlaceTest",
+                    object_joint_selector=lambda xml_root, states: "object_freejoint",
+                    completion_threshold=0.95,
+                    schema_version="object_pose_schema_fallback_test_v1",
+                )
+            )
+            schema_cache = builder.build_cache_for_episode(
+                data_dir / "episode_000000.parquet",
+                extras_dir / "states.npz",
+                readiness_horizon=2,
+                readiness_progress_delta=None,
+                readiness_distance_threshold=None,
+            )
+            override_cache = builder.build_cache_for_episode(
+                data_dir / "episode_000000.parquet",
+                extras_dir / "states.npz",
+                readiness_horizon=2,
+                readiness_progress_delta=1.1,
+                readiness_distance_threshold=None,
+            )
+
+        self.assertEqual(schema_cache["manipulation_readiness"][0], 1.0)
+        self.assertEqual(override_cache["manipulation_readiness"][0], 0.0)
+        self.assertEqual(schema_cache["readiness_schema_version"], "pickplacetest_object_displacement_imminence_v1")
+
+    def test_close_fridge_builder_uses_class_defaults_when_override_missing(self):
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / "dataset"
+            data_dir = dataset_path / "data" / "chunk-000"
+            extras_dir = dataset_path / "extras" / "episode_000000"
+            data_dir.mkdir(parents=True)
+            extras_dir.mkdir(parents=True)
+            table = pa.table(
+                {
+                    "next.reward": pa.array([0.0, 0.0, 1.0], type=pa.float32()),
+                    "next.done": pa.array([False, False, True]),
+                    "frame_index": pa.array([0, 1, 2], type=pa.int64()),
+                }
+            )
+            pq.write_table(table, data_dir / "episode_000000.parquet")
+            xml = (
+                "<mujoco><worldbody>"
+                "<body>"
+                "<inertial mass='1.0' diaginertia='0.1 0.1 0.1' pos='0 0 0' />"
+                "<joint name='fridge_left_door_joint' type='hinge' range='0 1' />"
+                "</body>"
+                "</worldbody></mujoco>"
+            )
+            (extras_dir / "model.xml.gz").write_bytes(gzip.compress(xml.encode("utf-8")))
+            (extras_dir / "ep_meta.json").write_text("{}", encoding="utf-8")
+            import numpy as np
+
+            states = np.array(
+                [
+                    [0.0, 0.90, 0.0],
+                    [0.0, 0.70, 0.0],
+                    [0.0, 0.70, 0.0],
+                ],
+                dtype=float,
+            )
+            np.savez_compressed(extras_dir / "states.npz", states=states)
+
+            builder = CloseFridgeLabelBuilder()
+            schema_cache = builder.build_cache_for_episode(
+                data_dir / "episode_000000.parquet",
+                extras_dir / "states.npz",
+                readiness_horizon=None,
+                readiness_progress_delta=None,
+                readiness_distance_threshold=None,
+            )
+            override_cache = builder.build_cache_for_episode(
+                data_dir / "episode_000000.parquet",
+                extras_dir / "states.npz",
+                readiness_horizon=2,
+                readiness_progress_delta=0.5,
+                readiness_distance_threshold=None,
+            )
+
+        self.assertEqual(schema_cache["readiness_schema_version"], "close_fridge_progress_imminence_v1")
+        self.assertEqual(schema_cache["manipulation_readiness"][0], 1.0)
+        self.assertEqual(override_cache["manipulation_readiness"][0], 0.0)
+
     def test_latent_cache_builder_design_smoke_passes(self):
         from tools.mowa.latent_cache_builder_design_smoke import (
             build_latent_cache_builder_design_smoke,
@@ -970,6 +1147,21 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertEqual(
             report["go_no_go"],
             "TBD: shuffled-robot sanity plan smoke passed; rollout remains gated",
+        )
+
+    def test_e005_shuffled_robot_checkpoint_preflight_detects_missing_checkpoint(self):
+        from tools.mowa.e005_shuffled_robot_checkpoint_preflight_smoke import (
+            build_e005_shuffled_robot_checkpoint_preflight_smoke,
+        )
+
+        report = build_e005_shuffled_robot_checkpoint_preflight_smoke(Path("."))
+
+        self.assertEqual(report["experiment_id"], "E-005")
+        self.assertFalse(report["launch_ready"])
+        self.assertFalse(report["checks"]["checkpoint_preflight_passed"])
+        self.assertEqual(
+            report["go_no_go"],
+            "No-Go: E-005 shuffled-robot checkpoint preflight incomplete",
         )
 
     def test_final_report_template_smoke_passes(self):

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Launch E-001 2-head vs 4-head ablation.
+# Launch E-001 ablations: 2-head, 4-head, 5-head (+NBV), 6-head (+NBV+OVF).
 # Run from the repo root inside the `starVLA` conda/venv env.
 set -euo pipefail
 
-# Select which variant to run via VARIANT=2head or VARIANT=4head.
+# Select which variant to run via VARIANT=<name>.
 VARIANT=${VARIANT:-4head}
 
 if [[ "${VARIANT}" == "2head" ]]; then
@@ -12,8 +12,14 @@ if [[ "${VARIANT}" == "2head" ]]; then
 elif [[ "${VARIANT}" == "4head" ]]; then
   CONFIG="configs/mowa/mowa_e001_starflow_ft0_4head_ablation.yaml"
   RUN_ID="MoWA-E-001_starflow_ft0_4head_ablation_260707"
+elif [[ "${VARIANT}" == "5head_nbv" ]]; then
+  CONFIG="configs/mowa/mowa_e001_starflow_ft0_5head_nbv_ablation.yaml"
+  RUN_ID="MoWA-E-001_starflow_ft0_5head_nbv_ablation_260708"
+elif [[ "${VARIANT}" == "6head" ]]; then
+  CONFIG="configs/mowa/mowa_e001_starflow_ft0_6head_ablation.yaml"
+  RUN_ID="MoWA-E-001_starflow_ft0_6head_ablation_260708"
 else
-  echo "Usage: VARIANT=2head|4head $0"
+  echo "Usage: VARIANT=2head|4head|5head_nbv|6head $0"
   exit 1
 fi
 

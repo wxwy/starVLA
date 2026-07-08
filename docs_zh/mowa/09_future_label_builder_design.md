@@ -8,7 +8,7 @@
 - 生产默认可构造 heads 保持 `task_progress` 和 `action_outcome_class`。
 - `subgoal_feasibility` 与 `manipulation_readiness` 已通过 18 个 atomic task 的 sidecar 预计算和分布审查，进入 **ablation-ready** 状态；它们将在 E-001 4-head ablation 中显式解 mask，但尚未升级为全局默认 constructible heads。
 - `failure_risk` 继续保持 masked：在纯 human demo 数据上为正样本空类。
-- `next_best_view_score` 与 `object_visibility_future` 已通过 MuJoCo forward kinematics + 相机投影实现视觉 proxy，sidecar 已写入，待全量分布报告审查后决定是否解 mask。
+- `next_best_view_score` 与 `object_visibility_future` 已通过 MuJoCo forward kinematics + 相机投影 + ray-cast 遮挡检查实现视觉 proxy。`object_visibility_future` 默认主摄像头改为 `robot0_eye_in_hand` 以获得更有区分度的标签分布。sidecar 已写入，待全量分布报告审查后决定是否解 mask。
 - future action 不得作为 WAM 输入，只能作为 action target 或 leakage invariant 检查对象。
 
 ## 当前实现入口
@@ -31,7 +31,7 @@
 
 - `action_outcome_class` 是否切换为 CE/Focal，需要先冻结类别映射；当前仍为 MSE 回归 `[next_reward, next_done_flag]`。
 - `failure_risk` 在纯 human demo 数据上无正样本，保持 masked；若后续引入失败/截断数据，需重新评估。
-- `next_best_view_score`、`object_visibility_future` 视觉 proxy 已实现，待 `mowa_all_atomic_task_future_label_distribution.json` 全量审查后决定是否进入 ablation。
+- `next_best_view_score`、`object_visibility_future` 视觉 proxy 已实现（含 eye-in-hand 主摄像头与 ray-cast 遮挡），待 `mowa_all_atomic_task_future_label_distribution.json` 全量审查后决定是否进入 ablation。
 - 若将 `subgoal_feasibility` / `manipulation_readiness` 从 ablation-ready 升级为全局默认 constructible heads，需要：
   - 4-head vs 2-head ablation 结果证明收益或至少无回归；
   - 决定是否把 `OpenCabinet` 的 `subgoal_feasibility` 纳入训练（其正样本率 4.18%，低于 5% data gate 门槛）；
@@ -240,12 +240,14 @@ python tools/mowa/report_future_label_distribution.py \
 
 ### E-001 4-head ablation 解 mask 决策
 
-基于以上数据 gate，决定在当前阶段进行 **2-head baseline** vs **4-head** 的成对消融，而不是直接修改全局 `MOWA_FUTURE_CONSTRUCTIBLE_HEADS`：
+基于以上数据 gate，在当前阶段保留 **2-head baseline** vs **4-head** 主消融，并新增两个扩展消融配置，待全量分布报告审查后决定是否启用：
 
 - **2-head baseline**：`task_progress` + `action_outcome_class`，对应 `configs/mowa/mowa_e001_starflow_ft0_2head_baseline_ablation.yaml`。
 - **4-head**：`task_progress` + `subgoal_feasibility` + `manipulation_readiness` + `action_outcome_class`，对应 `configs/mowa/mowa_e001_starflow_ft0_4head_ablation.yaml`。
+- **5-head (+NBV)**：4-head + `next_best_view_score`，对应 `configs/mowa/mowa_e001_starflow_ft0_5head_nbv_ablation.yaml`。
+- **6-head (+NBV +OVF)**：5-head + `object_visibility_future`，对应 `configs/mowa/mowa_e001_starflow_ft0_6head_ablation.yaml`。
 
-两个配置都显式通过 `layerwise_bridge_active_heads` / `future_supervision_active_heads` 控制激活 head，不依赖全局常量。`failure_risk`、`object_visibility_future`、`next_best_view_score` 不参与 E-001；视觉 heads 待全量分布报告审查后再决定是否进入后续 ablation。
+所有配置都显式通过 `layerwise_bridge_active_heads` / `future_supervision_active_heads` 控制激活 head，不依赖全局常量。`failure_risk` 不参与任何消融；5-head / 6-head 是否真正启动，需以重算后的 `mowa_all_atomic_task_future_label_distribution.json` 为准。
 
 **已知风险与处理**：
 
@@ -256,8 +258,10 @@ python tools/mowa/report_future_label_distribution.py \
 启动命令（需人工确认 `launch_guard`）：
 
 ```bash
-VARIANT=4head ./tools/mowa/launch_e001_ablation.sh
 VARIANT=2head ./tools/mowa/launch_e001_ablation.sh
+VARIANT=4head ./tools/mowa/launch_e001_ablation.sh
+VARIANT=5head_nbv ./tools/mowa/launch_e001_ablation.sh
+VARIANT=6head ./tools/mowa/launch_e001_ablation.sh
 ```
 
 ### Coverage 口径说明

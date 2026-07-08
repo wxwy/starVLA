@@ -178,8 +178,9 @@ class MoWAVisualHeadUtilsTest(unittest.TestCase):
         camera = self._make_mock_camera("robot0_agentview_left")
 
         def fake_iter_positions(model, states, ep_meta, cameras, target_resolver, target_body_id_resolver):
+            del target_body_id_resolver
             for t in range(5):
-                yield t, target_resolver(None, t), None if target_body_id_resolver is None else target_body_id_resolver(None, t), {
+                yield t, target_resolver(None, t), None, {
                     camera.name: (np.array([0.0, 0.0, 0.0]), np.eye(3))
                     for camera in cameras
                 }, None
@@ -244,11 +245,12 @@ class MoWAVisualHeadUtilsTest(unittest.TestCase):
             return (np.array([0.0, 0.0, -1.0]), np.eye(3))
 
         def fake_iter_positions(model, states, ep_meta, cameras, target_resolver, target_body_id_resolver):
+            del target_body_id_resolver
             for t in range(3):
                 poses = {}
                 for camera in cameras:
                     poses[camera.name] = resolve_pose(None, camera, ep_meta, model)
-                yield t, target_resolver(None, t), None if target_body_id_resolver is None else target_body_id_resolver(None, t), poses, None
+                yield t, target_resolver(None, t), None, poses, None
 
         with patch(
             "starVLA.dataloader.mowa.visual_head_utils.build_camera_configs",
@@ -286,8 +288,9 @@ class MoWAVisualHeadUtilsTest(unittest.TestCase):
         camera = self._make_mock_camera("robot0_agentview_left")
 
         def fake_iter_positions(model, states, ep_meta, cameras, target_resolver, target_body_id_resolver):
+            del target_body_id_resolver
             for t in range(3):
-                yield t, target_resolver(None, t), None if target_body_id_resolver is None else target_body_id_resolver(None, t), {
+                yield t, target_resolver(None, t), None, {
                     camera.name: (np.array([0.0, 0.0, 0.0]), np.eye(3))
                     for camera in cameras
                 }, None

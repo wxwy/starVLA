@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from starVLA.mowa_constants import MOWA_FUTURE_FULL_HEADS
 from starVLA.dataloader.mowa.schema import DATA_GATE, TBD
+from starVLA.mowa_constants import MOWA_FUTURE_FULL_HEADS
 
 
 @dataclass(frozen=True)
@@ -129,7 +129,10 @@ def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAF
             status="candidate_constructible_from_sidecar",
             source_fields=("next_best_view_score", "next_best_view_score_mask"),
             mask_rule="mask if sidecar missing",
-            notes="MuJoCo FK + camera projection proxy; sidecar pre-computed; final unmask decision depends on distribution review.",
+            notes=(
+                "MuJoCo FK + camera projection proxy; sidecar pre-computed; "
+                "final unmask decision depends on distribution review."
+            ),
         )
     if head == "subgoal_feasibility":
         required = ("next.reward", "next.done", "frame_index")
@@ -147,7 +150,10 @@ def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAF
             status="candidate_constructible_from_sidecar",
             source_fields=("object_visibility_future", "object_visibility_future_mask"),
             mask_rule="mask if sidecar missing or distribution is single-class",
-            notes="MuJoCo FK + camera projection + ray-cast occlusion proxy; sidecar pre-computed; final unmask decision depends on distribution review.",
+            notes=(
+                "MuJoCo FK + camera projection + ray-cast occlusion proxy; "
+                "sidecar pre-computed; final unmask decision depends on distribution review."
+            ),
         )
     if head == "action_outcome_class":
         required = ("next.reward", "next.done")

@@ -85,7 +85,7 @@ class MoWAFakeLatentEncoderAdapter:
         return np.stack(latents, axis=0)
 
 
-@dataclass(frozen=True)
+@dataclass
 class MoWAWanVaeEpisodeEncoderAdapter:
     """Encode a full episode with Wan2.2 VAE and store per-frame visual latents.
 
@@ -537,6 +537,11 @@ def build_mowa_episode_latent_store(
                         video_key=video_key,
                     )
                     _write_video_latent(file, video_key, latents)
+
+                # Record the actual per-frame latent shape from encoded output rather
+                # than relying on the config placeholder (e.g. ["D"]).
+                if "latents" in locals():
+                    file.attrs["latent_shape_per_frame"] = json.dumps(list(latents.shape[1:]))
 
             written_count += 1
             detail["status"] = "written"

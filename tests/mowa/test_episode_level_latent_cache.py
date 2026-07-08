@@ -351,7 +351,7 @@ class EpisodeLevelLatentCacheTest(unittest.TestCase):
             )
 
             store = MoWAEpisodeLatentStore(cache_root / "ep_000000.h5")
-            self.assertEqual(store.attrs["latent_shape_per_frame"], '["D"]')
+            self.assertEqual(store.attrs["latent_shape_per_frame"], "[32]")
             self.assertEqual(store.attrs["latent_type"], "pooled_vector")
             latents = store.get_latents("observation.images.robot0_agentview_left")
             self.assertEqual(tuple(latents.shape), (8, 32))

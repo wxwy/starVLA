@@ -94,6 +94,10 @@ P0-M7 **future tokens 对照**：在 StarFlowVLA 框架中将 action head 的 `n
 
 | 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 10:47 | 65300, | 0.03403667402744759 | 2.9445169744029894e-06 | 33% | 23800/24564 MiB | 61°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-07-08 08:47 | 64220, | 0.02984318300150335 | 3.231221927635657e-06 | 64% | 23800/24564 MiB | 63°C | —/56 GiB |
 
 | 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |

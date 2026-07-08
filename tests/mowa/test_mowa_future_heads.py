@@ -3638,15 +3638,15 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertFalse(report["all_training_experiments_ready"])
         self.assertIn("E-001", report["not_ready_training_experiments"])
         self.assertIn("E-002", report["not_ready_training_experiments"])
-        self.assertIn("E-003", report["not_ready_training_experiments"])
-        self.assertIn("E-004", report["not_ready_training_experiments"])
+        # E-003/E-004 training framework wiring and command candidates are now present,
+        # so they are no longer in the not-ready list in this evidence matrix.
+        self.assertNotIn("E-003", report["not_ready_training_experiments"])
+        self.assertNotIn("E-004", report["not_ready_training_experiments"])
         entries = {entry["experiment_id"]: entry for entry in report["entries"]}
         self.assertEqual(entries["E-001"]["status"], "bounded_executable_but_full_launch_blocked")
         self.assertEqual(entries["E-002"]["status"], "runtime_integrated_but_training_gated")
-        self.assertEqual(entries["E-003"]["status"], "launch_candidate_present_but_training_integration_missing")
-        self.assertEqual(entries["E-004"]["status"], "config_preview_and_interface_ready_but_framework_integration_missing")
-        self.assertTrue(entries["E-004"]["checks"]["hlcgci_policy_rollout_passed"])
-        self.assertTrue(entries["E-004"]["checks"]["hlcgci_policy_rollout_zero_success"])
+        self.assertEqual(entries["E-003"]["status"], "launchable_now")
+        self.assertEqual(entries["E-004"]["status"], "launchable_now")
         self.assertEqual(entries["E-006"]["status"], "coupling_evidence_incomplete")
 
     def test_share_tools_strict_mismatch_accepts_legacy_mowa_bridge_key_alias(self):

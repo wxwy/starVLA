@@ -35,9 +35,21 @@ def parse_args() -> argparse.Namespace:
         help="Video key to encode. Can be repeated.",
     )
     parser.add_argument(
+        "--encoder-kind",
+        choices=("fake", "wan2.2-vae"),
+        default="fake",
+        help="Encoder implementation. Default: fake",
+    )
+    parser.add_argument(
         "--encoder-name",
         default="mowa-fake-encoder",
         help="Encoder name recorded in store attrs.",
+    )
+    parser.add_argument(
+        "--encoder-model-path",
+        type=Path,
+        default=None,
+        help="Local Wan2.2 model directory for wan2.2-vae encoder kind.",
     )
     parser.add_argument(
         "--latent-model",
@@ -52,8 +64,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--latent-type",
         default="pooled_vector",
-        choices=("pooled_vector", "vae_spatial", "patch_token"),
-        help="Latent type recorded in store attrs.",
+        choices=("pooled_vector", "vae_spatial"),
+        help="Latent type recorded in store attrs. Wan VAE supports pooled_vector/vae_spatial.",
     )
     parser.add_argument(
         "--latent-shape-per-frame",
@@ -77,6 +89,18 @@ def parse_args() -> argparse.Namespace:
         default="float32",
         choices=("float16", "float32", "bfloat16"),
         help="Latent dtype.",
+    )
+    parser.add_argument(
+        "--video-backend",
+        default="opencv",
+        choices=("opencv", "decord"),
+        help="Video decoding backend for Wan VAE encoder.",
+    )
+    parser.add_argument(
+        "--vae-batch-size",
+        type=int,
+        default=1,
+        help="Frames per VAE forward pass. Currently only 1 is supported.",
     )
     parser.add_argument(
         "--episode-index",
@@ -125,7 +149,9 @@ def main() -> None:
         dataset_path=args.dataset_path,
         cache_root=args.cache_root,
         video_keys=video_keys,
+        encoder_kind=args.encoder_kind,
         encoder_name=args.encoder_name,
+        encoder_model_path=args.encoder_model_path,
         latent_model=args.latent_model,
         latent_model_version=args.latent_model_version,
         latent_type=args.latent_type,
@@ -133,6 +159,8 @@ def main() -> None:
         latent_dim=args.latent_dim,
         flatten_policy=args.flatten_policy,
         dtype=args.dtype,
+        video_backend=args.video_backend,
+        vae_batch_size=args.vae_batch_size,
         obs_fps=DATA_GATE,
         action_hz=DATA_GATE,
         wam_hz=DATA_GATE,

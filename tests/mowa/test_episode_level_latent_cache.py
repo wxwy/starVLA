@@ -16,6 +16,7 @@ from starVLA.dataloader.mowa.episode_latent_store import (
     MoWAEpisodeLatentStore,
     MoWAEpisodeLatentStoreConfig,
     MoWAFakeLatentEncoderAdapter,
+    MoWAWanVaeEpisodeEncoderAdapter,
     build_mowa_episode_latent_store,
     validate_mowa_episode_latent_store,
 )
@@ -448,6 +449,31 @@ class EpisodeLevelLatentCacheTest(unittest.TestCase):
             split=data["split"],
             status=data["status"],
         )
+
+    def test_wan_config_requires_model_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            cfg = MoWAEpisodeLatentStoreConfig(
+                dataset_path=root / "dataset",
+                cache_root=root / "cache",
+                encoder_kind="wan2.2-vae",
+            )
+            with self.assertRaisesRegex(ValueError, "encoder_model_path"):
+                cfg.validate()
+
+    def test_wan_adapter_rejects_missing_model_path(self):
+        with self.assertRaisesRegex(FileNotFoundError, "Wan2.2 model path not found"):
+            MoWAWanVaeEpisodeEncoderAdapter(
+                model_path=Path("/tmp/nonexistent-wan-model"),
+                latent_type="vae_spatial",
+            )
+
+    def test_wan_adapter_rejects_unsupported_latent_type(self):
+        with self.assertRaisesRegex(ValueError, "Unsupported latent_type"):
+            MoWAWanVaeEpisodeEncoderAdapter(
+                model_path=Path("/tmp/nonexistent-wan-model"),
+                latent_type="patch_token",
+            )
 
 
 if __name__ == "__main__":

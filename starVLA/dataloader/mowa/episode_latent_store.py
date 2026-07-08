@@ -20,6 +20,7 @@ from typing import Any, Mapping, Protocol
 import h5py
 import numpy as np
 import torch
+import torch.nn as nn
 
 
 _DATA_GATE = "Data Gate"
@@ -85,6 +86,187 @@ class MoWAFakeLatentEncoderAdapter:
 
 
 @dataclass(frozen=True)
+class MoWAWanVaeEpisodeEncoderAdapter:
+    """Encode a full episode with Wan2.2 VAE and store per-frame visual latents.
+
+    The encoder processes frames in small batches to keep GPU memory bounded.
+    Output shape depends on ``latent_type``:
+
+    - ``vae_spatial``: ``[T, C, h, w]`` — raw VAE spatial latent per frame.
+    - ``pooled_vector``: ``[T, D]`` — mean-pooled per-frame vector, optionally
+      projected to ``latent_dim``.
+    """
+
+    model_path: Path | str
+    encoder_name: str = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
+    encoder_version: str = "wan2.2-vae-v1"
+    latent_type: str = "vae_spatial"
+    latent_dim: int = 1024
+    flatten_policy: str = "none"
+    video_backend: str = "opencv"
+    vae_batch_size: int = 1
+    height: int = 480
+    width: int = 832
+    _projection_seed: int = 42
+
+    def __post_init__(self) -> None:
+        if self.latent_type not in {"vae_spatial", "pooled_vector"}:
+            raise ValueError(f"Unsupported latent_type: {self.latent_type!r}.")
+        if self.vae_batch_size <= 0:
+            raise ValueError(f"vae_batch_size must be positive, got {self.vae_batch_size}.")
+        model_path = Path(self.model_path)
+        if not model_path.exists():
+            raise FileNotFoundError(f"Wan2.2 model path not found: {model_path}")
+
+    def encode_video_clip(
+        self,
+        *,
+        video_path: Path,
+        frame_indices: tuple[int, ...],
+        video_key: str,
+    ) -> np.ndarray:
+        del video_key
+        if self.video_backend not in {"opencv", "decord"}:
+            raise NotImplementedError(
+                f"Unsupported video_backend={self.video_backend!r}; only 'opencv' and 'decord' are available."
+            )
+        if not video_path.is_file():
+            raise FileNotFoundError(f"Missing source video for Wan latent encoding: {video_path}")
+
+        self._ensure_loaded()
+        assert self._vae is not None and self._video_processor is not None and self._torch_dtype is not None
+
+        from PIL import Image
+
+        frames = self._load_frames(video_path, frame_indices)
+        pil_frames = [Image.fromarray(frame) for frame in frames]
+
+        per_frame_latents: list[torch.Tensor] = []
+        for start in range(0, len(pil_frames), self.vae_batch_size):
+            batch = pil_frames[start : start + self.vae_batch_size]
+            latent = self._encode_frame_batch(batch)
+            # latent: [B, C, 1, h, w] for per-frame encoding or [1, C, B, h, w] for clip encoding.
+            per_frame_latents.extend(self._split_batch(latent))
+
+        full_latent = torch.stack(per_frame_latents, dim=0)  # [T, C, h, w]
+
+        if self.latent_type == "pooled_vector":
+            full_latent = self._to_pooled_vector(full_latent)
+
+        return full_latent.detach().cpu().numpy().astype(np.float32)
+
+    def _ensure_loaded(self) -> None:
+        if self._vae is not None and self._video_processor is not None:
+            return
+        try:
+            from diffusers import AutoencoderKLWan
+            from diffusers.video_processor import VideoProcessor
+        except ImportError as exc:
+            raise RuntimeError("MoWA Wan episode encoder requires diffusers.") from exc
+
+        model_path = Path(self.model_path)
+        if not model_path.exists():
+            raise FileNotFoundError(f"Wan2.2 model path not found: {model_path}")
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        dtype = torch.bfloat16 if device.type == "cuda" else torch.float32
+        self._vae = AutoencoderKLWan.from_pretrained(
+            str(model_path),
+            subfolder="vae",
+            torch_dtype=dtype,
+        ).to(device)
+        self._video_processor = VideoProcessor(vae_scale_factor=2 ** len(self._vae.temperal_downsample))
+        self._torch_dtype = dtype
+
+    def _load_frames(self, source_path: Path, frame_indices: tuple[int, ...]) -> list[Any]:
+        if self.video_backend == "decord":
+            try:
+                from starVLA.dataloader.gr00t_lerobot.video import get_frames_by_indices
+            except ImportError as exc:
+                raise RuntimeError("MoWA Wan encoder requires gr00t_lerobot video helpers.") from exc
+            try:
+                frames = get_frames_by_indices(
+                    str(source_path),
+                    list(frame_indices),
+                    video_backend="decord",
+                )
+            except ImportError as exc:
+                raise RuntimeError("MoWA Wan encoder requires decord for video_backend='decord'.") from exc
+            return [frame for frame in frames]
+        if self.video_backend != "opencv":
+            raise NotImplementedError(
+                f"Unsupported video_backend={self.video_backend!r}; only 'opencv' and 'decord' are available."
+            )
+        try:
+            import cv2
+        except ImportError as exc:
+            raise RuntimeError("MoWA Wan encoder requires opencv-python.") from exc
+
+        cap = cv2.VideoCapture(str(source_path))
+        if not cap.isOpened():
+            raise RuntimeError(f"Failed to open video: {source_path}")
+        frames: list[Any] = []
+        try:
+            for frame_index in frame_indices:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+                ok, frame = cap.read()
+                if not ok:
+                    raise ValueError(f"Unable to read frame at index {frame_index} from {source_path}")
+                frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        finally:
+            cap.release()
+        return frames
+
+    def _encode_frame_batch(self, pil_frames: list[Any]) -> torch.Tensor:
+        assert self._vae is not None and self._video_processor is not None and self._torch_dtype is not None
+        video_tensor = self._video_processor.preprocess_video(
+            pil_frames,
+            height=self.height,
+            width=self.width,
+        )
+        device = next(self._vae.parameters()).device
+        video_tensor = video_tensor.to(device=device, dtype=self._torch_dtype)
+        with torch.inference_mode():
+            latents = self._vae.encode(video_tensor).latent_dist.sample()
+        return latents.to(dtype=torch.float32)
+
+    def _split_batch(self, latent: torch.Tensor) -> list[torch.Tensor]:
+        """Split a VAE batch into per-frame latents.
+
+        This first version supports only per-frame encoding (vae_batch_size=1),
+        which avoids temporal downsampling ambiguities across frame batches.
+        Expected shape: ``[1, C, 1, h, w]``.
+        """
+        if latent.dim() != 5:
+            raise ValueError(f"Expected 5D VAE latent, got {latent.dim()}D with shape {tuple(latent.shape)}.")
+        if latent.shape[0] != 1 or latent.shape[2] != 1:
+            raise NotImplementedError(
+                "Only vae_batch_size=1 per-frame encoding is supported in this version. "
+                f"Got latent shape {tuple(latent.shape)}. Set vae_batch_size=1."
+            )
+        return [latent.squeeze(0).squeeze(1)]  # [C, h, w]
+
+    def _to_pooled_vector(self, spatial_latent: torch.Tensor) -> torch.Tensor:
+        """Convert [T, C, h, w] spatial latent to [T, D] pooled vector."""
+        pooled = spatial_latent.float().mean(dim=(2, 3))  # [T, C]
+        if self.flatten_policy == "mean_pool" and self.latent_dim != pooled.shape[-1]:
+            if self._projection is None:
+                with torch.random.fork_rng():
+                    torch.manual_seed(self._projection_seed)
+                    self._projection = nn.Linear(
+                        pooled.shape[-1],
+                        self.latent_dim,
+                    ).to(device=pooled.device, dtype=pooled.dtype).eval()
+            pooled = self._projection(pooled)
+        return pooled
+
+    _vae: Any = field(default=None, init=False, repr=False)
+    _video_processor: Any = field(default=None, init=False, repr=False)
+    _torch_dtype: Any = field(default=None, init=False, repr=False)
+    _projection: nn.Linear | None = field(default=None, init=False, repr=False)
+
+
+@dataclass(frozen=True)
 class MoWAEpisodeLatentStoreConfig:
     """Configuration for building an episode-level latent store."""
 
@@ -95,8 +277,10 @@ class MoWAEpisodeLatentStoreConfig:
         "observation.images.robot0_agentview_left",
         "observation.images.robot0_agentview_right",
     )
+    encoder_kind: str = "fake"
     encoder_name: str = "mowa-fake-encoder"
     encoder_version: str = "fake-v1"
+    encoder_model_path: Path | None = None
     latent_model: str = "Wan2.2-VAE"
     latent_model_version: str = "TBD"
     latent_type: str = "pooled_vector"
@@ -104,6 +288,8 @@ class MoWAEpisodeLatentStoreConfig:
     latent_dim: int = 1024
     flatten_policy: str = "none"
     dtype: str = "float32"
+    video_backend: str = "opencv"
+    vae_batch_size: int = 1
     obs_fps: float | str = _DATA_GATE
     action_hz: float | str = _DATA_GATE
     wam_hz: float | str = _DATA_GATE
@@ -121,14 +307,26 @@ class MoWAEpisodeLatentStoreConfig:
             raise ValueError(f"time_order must be {_TIME_ORDER!r}, got {self.time_order!r}.")
         if self.dtype not in {"float16", "float32", "bfloat16"}:
             raise ValueError(f"Unsupported dtype: {self.dtype!r}.")
+        if self.encoder_kind not in {"fake", "wan2.2-vae"}:
+            raise ValueError(f"encoder_kind must be fake/wan2.2-vae, got {self.encoder_kind!r}.")
+        if self.encoder_kind == "wan2.2-vae" and self.encoder_model_path is None:
+            raise ValueError("encoder_model_path must be provided when encoder_kind='wan2.2-vae'.")
+        if self.encoder_kind == "wan2.2-vae" and self.latent_type not in {"vae_spatial", "pooled_vector"}:
+            raise ValueError(
+                f"Wan VAE encoder supports latent_type=vae_spatial/pooled_vector, got {self.latent_type!r}."
+            )
+        if self.vae_batch_size <= 0:
+            raise ValueError(f"vae_batch_size must be positive, got {self.vae_batch_size}.")
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "dataset_path": str(self.dataset_path),
             "cache_root": str(self.cache_root),
             "video_keys": self.video_keys,
+            "encoder_kind": self.encoder_kind,
             "encoder_name": self.encoder_name,
             "encoder_version": self.encoder_version,
+            "encoder_model_path": str(self.encoder_model_path) if self.encoder_model_path is not None else None,
             "latent_model": self.latent_model,
             "latent_model_version": self.latent_model_version,
             "latent_type": self.latent_type,
@@ -136,6 +334,8 @@ class MoWAEpisodeLatentStoreConfig:
             "latent_dim": self.latent_dim,
             "flatten_policy": self.flatten_policy,
             "dtype": self.dtype,
+            "video_backend": self.video_backend,
+            "vae_batch_size": self.vae_batch_size,
             "obs_fps": self.obs_fps,
             "action_hz": self.action_hz,
             "wam_hz": self.wam_hz,
@@ -441,14 +641,26 @@ def validate_mowa_episode_latent_store(
 
 
 def _build_encoder_adapter(config: MoWAEpisodeLatentStoreConfig) -> MoWALatentEncoderAdapter:
-    # Placeholder: real Wan2.2 VAE adapter will be added under a separate flag.
-    if config.encoder_name == "mowa-fake-encoder":
+    if config.encoder_kind == "wan2.2-vae":
+        if config.encoder_model_path is None:
+            raise ValueError("encoder_model_path is required for Wan2.2 VAE encoder.")
+        return MoWAWanVaeEpisodeEncoderAdapter(
+            model_path=config.encoder_model_path,
+            encoder_name=config.encoder_name,
+            encoder_version=config.encoder_version,
+            latent_type=config.latent_type,
+            latent_dim=config.latent_dim,
+            flatten_policy=config.flatten_policy,
+            video_backend=config.video_backend,
+            vae_batch_size=config.vae_batch_size,
+        )
+    if config.encoder_kind == "fake":
         return MoWAFakeLatentEncoderAdapter(
             encoder_name=config.encoder_name,
             encoder_version=config.encoder_version,
             latent_dim=config.latent_dim,
         )
-    raise NotImplementedError(f"Encoder {config.encoder_name!r} not yet supported.")
+    raise NotImplementedError(f"Encoder kind {config.encoder_kind!r} not yet supported.")
 
 
 def _write_metadata(
@@ -472,8 +684,12 @@ def _write_metadata(
     file.attrs["wam_hz"] = config.wam_hz if isinstance(config.wam_hz, (int, float)) else _DATA_GATE
     file.attrs["time_order"] = config.time_order
     file.attrs["downsample_policy"] = config.downsample_policy
+    file.attrs["encoder_kind"] = config.encoder_kind
     file.attrs["encoder_name"] = config.encoder_name
     file.attrs["encoder_version"] = config.encoder_version
+    file.attrs["encoder_model_path"] = str(config.encoder_model_path) if config.encoder_model_path is not None else ""
+    file.attrs["video_backend"] = config.video_backend
+    file.attrs["vae_batch_size"] = config.vae_batch_size
 
 
 def _write_indices(file: h5py.File, row_count: int) -> None:

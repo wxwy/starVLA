@@ -37,6 +37,18 @@ def parse_args() -> argparse.Namespace:
         help="Encoder version recorded in the manifest.",
     )
     parser.add_argument(
+        "--encoder-kind",
+        choices=("fake", "wan2.2-vae"),
+        default="fake",
+        help="Encoder implementation to use. Default: fake",
+    )
+    parser.add_argument(
+        "--encoder-model-path",
+        type=Path,
+        default=None,
+        help="Local Wan2.2 model directory for wan2.2-vae encoder kind.",
+    )
+    parser.add_argument(
         "--latent-dim",
         type=int,
         default=1024,
@@ -121,6 +133,8 @@ def main() -> None:
             cache_root=args.cache_root,
             encoder_name=args.encoder_name,
             encoder_version=args.encoder_version,
+            encoder_kind=args.encoder_kind,
+            encoder_model_path=args.encoder_model_path,
             latent_dim=args.latent_dim,
             video_keys=tuple(args.video_keys) if args.video_keys is not None else (
                 "observation.images.robot0_eye_in_hand",
@@ -149,4 +163,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

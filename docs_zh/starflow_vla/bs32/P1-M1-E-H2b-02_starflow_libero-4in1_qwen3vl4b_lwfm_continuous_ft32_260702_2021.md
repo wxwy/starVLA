@@ -4,7 +4,7 @@
 > **状态**: 🟢 训练中
 > **run_id**: `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021`
 > **启动时间**: 2026-07-02 20:24:19 CST
-> **当前更新**: 2026-07-07 12:40 CST
+> **当前更新**: 2026-07-08 00:40 CST
 > **tmux 会话**: `train`（attached）
 > **配置来源**: `configs/starflow_vla/state/continuous_head.yaml`
 
@@ -92,17 +92,37 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 
 ## 训练进度
 
-> 最后更新：2026-07-07 12:40:00 CST
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 10:47 | 69160, | — | — | 93% | 23160/24564 MiB | 66°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 08:47 | 68120, | — | — | 41% | 23160/24564 MiB | 62°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 06:47 | 67080, | — | — | 78% | 23160/24564 MiB | 59°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 04:47 | 66040, | — | — | 18% | 23160/24564 MiB | 66°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 02:48 | 65020, | — | — | 31% | 23160/24564 MiB | 64°C | —/56 GiB |
+
+> 最后更新：2026-07-08 00:40:00 CST
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | **~57735 / 80000**（72.17%）🟢 训练中 |
-| **完成比例** | 72.17% |
-| **单步耗时** | ~6.83 s/it |
+| **当前 Step** | **~63935 / 80000**（79.92%）🟢 训练中 |
+| **完成比例** | 79.92% |
+| **单步耗时** | ~7.12 s/it |
 | **数据加载耗时** | ~0.000 s |
-| **模型前向/反向耗时** | ~0.22 s |
-| **已运行时间** | 约 112 小时 |
-| **最新 checkpoint** | `steps_57500`（已持久化） |
+| **模型前向/反向耗时** | ~0.35 s |
+| **已运行时间** | 约 124 小时 |
+| **最新 checkpoint** | `steps_63750`（已持久化） |
 
 ### Loss 记录（部分）
 
@@ -193,6 +213,10 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 | 57680 | 0.0345 | — | |
 | 57700 | 0.0271 | 0.0137 | |
 | 57720 | 0.0342 | 0.0267 | |
+| 63750 | — | — | checkpoint saved |
+| 63880 | 0.0180 | 0.0391 | |
+| 63900 | 0.0261 | 0.0053 | |
+| 63920 | 0.0244 | 0.0100 | |
 
 ### Loss 趋势
 
@@ -200,22 +224,23 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 - step 11000+ loss 在 0.09–0.13 震荡，整体缓慢下降
 - `last_micro_loss` 与 `action_dit_loss`（32 micro-step mean）差异显著，说明单 micro-batch 方差大
 - 学习率缓慢下降（cosine schedule）
-- 🟢 训练持续运行中（up > 109h），loss 稳定在 0.026-0.035 低位
+- 🟢 训练持续运行中（up > 124h），loss 稳定在 0.018-0.035 低位
+- 🎯🎯 step 63880 loss 降至 0.0180，再创训练新低！接近 80% 里程碑
 
 ---
 
 ## 系统资源占用
 
-> 最后更新：2026-07-07 12:40:00 CST
+> 最后更新：2026-07-08 00:40:00 CST
 
 ### GPU（NVIDIA GeForce RTX 4090）
 
 | 指标 | 值 |
 |------|-----|
 | **状态** | 🟢 训练中 |
-| **GPU 利用率** | 88% |
+| **GPU 利用率** | 31% |
 | **显存使用** | 23160 / 24564 MiB（94.3%） |
-| **GPU 温度** | 67°C |
+| **GPU 温度** | 62°C |
 
 ### Docker 内存（cgroup v2）
 
@@ -232,7 +257,7 @@ P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mod
 |--------|------|------|------|--------|
 | `/` (overlay) | 30G | 1.4G | 29G | 5% |
 | `/localdisk-tmp` | 100G | 16G | 85G | 16% |
-| `/disk/rl` | 700T | 554T | 147T | 80% |
+| `/disk/rl` | 700T | 541T | 160T | 78% |
 
 ---
 
@@ -298,3 +323,11 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 ---
 
 *本 tracker 仅由本机（RTX 4090）维护；如发现状态被外部机器覆盖，会恢复为运行中状态。*
+
+---
+
+## LIBERO 评估
+
+> 评估结果已移至统一汇总报告：[`LIBERO_EVAL_SUMMARY.md`](./LIBERO_EVAL_SUMMARY.md)
+>
+> 包含各实验在 libero_goal / libero_10 / libero_object / libero_spatial 四个子集上的完整对比结果与详细任务级数据。

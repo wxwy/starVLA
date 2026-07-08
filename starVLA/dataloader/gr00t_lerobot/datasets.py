@@ -70,6 +70,7 @@ from starVLA.dataloader.mowa.opendrawer_label_cache import (
     load_opendrawer_label_cache_for_episode,
     opendrawer_label_cache_available,
 )
+from starVLA.dataloader.mowa.latent_cache_dataset import MoWALatentCacheDataset
 
 from functools import partial
 from typing import Tuple, List
@@ -96,6 +97,77 @@ def _mowa_future_labels_enabled(data_cfg) -> bool:
     if data_cfg is None:
         return False
     return bool(data_cfg.get("enable_mowa_future_labels", False))
+
+
+def _mowa_latent_cache_cfg(data_cfg):
+    if data_cfg is None:
+        return None
+    return data_cfg.get("mowa_latent_cache", None)
+
+
+def _mowa_latent_cache_enabled(data_cfg) -> bool:
+    return _mowa_latent_cache_cfg(data_cfg) is not None
+
+
+def _get_mowa_latent_cache_dataset(dataset) -> MoWALatentCacheDataset:
+    cache_dataset = getattr(dataset, "_mowa_latent_cache_dataset", None)
+    if cache_dataset is not None:
+        return cache_dataset
+
+    cache_cfg = _mowa_latent_cache_cfg(getattr(dataset, "data_cfg", None))
+    if cache_cfg is None:
+        raise RuntimeError("MoWA latent cache is not configured for this dataset.")
+
+    cache_root = cache_cfg.get("cache_root", None)
+    if cache_root is None:
+        raise ValueError("mowa_latent_cache.cache_root is required when latent cache is enabled.")
+    manifest_path = cache_cfg.get("manifest_path", None)
+    cache_dataset = MoWALatentCacheDataset(cache_root=cache_root, manifest_path=manifest_path)
+    dataset._mowa_latent_cache_dataset = cache_dataset
+    return cache_dataset
+
+
+def _filter_steps_to_mowa_latent_cache(dataset) -> None:
+    if not _mowa_latent_cache_enabled(getattr(dataset, "data_cfg", None)):
+        return
+    cache_dataset = _get_mowa_latent_cache_dataset(dataset)
+    allowed = {
+        (int(artifact[0]), int(artifact[1]))
+        for artifact in cache_dataset.sample_keys
+    }
+    dataset._all_steps = [step for step in dataset._all_steps if (int(step[0]), int(step[1])) in allowed]
+    if not dataset._all_steps:
+        raise RuntimeError(
+            f"MoWA latent cache filter removed every step for dataset {dataset.dataset_path}; "
+            f"available cache keys={cache_dataset.sample_keys}"
+        )
+
+
+def _attach_mowa_latent_cache(sample: dict, dataset, trajectory_id: int, base_index: int) -> dict:
+    if not _mowa_latent_cache_enabled(getattr(dataset, "data_cfg", None)):
+        return sample
+
+    cache_cfg = _mowa_latent_cache_cfg(dataset.data_cfg)
+    cache_dataset = _get_mowa_latent_cache_dataset(dataset)
+    configured_video_keys = tuple(cache_cfg.get("video_keys", ()))
+    video_key = configured_video_keys[0] if configured_video_keys else "observation.images.robot0_agentview_left"
+    cache_sample = cache_dataset.get_sample(
+        episode_index=int(trajectory_id),
+        anchor_index=int(base_index),
+        video_key=str(video_key),
+    )
+
+    sample["mowa_current_latent"] = cache_sample["current_latent"]
+    sample["mowa_future_latent_target"] = cache_sample["future_latent"]
+    sample["mowa_history_latent"] = cache_sample["history_latent"]
+    sample["mowa_latent_cache_metadata"] = {
+        "episode_index": int(trajectory_id),
+        "anchor_index": int(base_index),
+        "video_key": str(video_key),
+        "cache_root": str(cache_dataset.cache_root),
+        "history_latent_sequence_status": "per_step_history_sequence_from_cache",
+    }
+    return sample
 
 
 def _attach_mowa_future_labels(sample: dict, dataset, trajectory_id: int, base_index: int) -> dict:
@@ -186,12 +258,32 @@ def _merge_opendrawer_label_cache(
     sample["mowa_future_targets"]["failure_risk"] = float(
         cache_labels["failure_risk"][row_index]
     )
+    sample["mowa_future_targets"]["object_visibility_future"] = float(
+        cache_labels.get("object_visibility_future", [0.0])[row_index]
+        if "object_visibility_future" in cache_labels
+        else 0.0
+    )
+    sample["mowa_future_targets"]["next_best_view_score"] = float(
+        cache_labels.get("next_best_view_score", [0.0])[row_index]
+        if "next_best_view_score" in cache_labels
+        else 0.0
+    )
 
     sample["mowa_future_masks"]["subgoal_feasibility"] = bool(
         cache_masks["subgoal_feasibility"][row_index]
     )
     sample["mowa_future_masks"]["manipulation_readiness"] = bool(
         cache_masks["manipulation_readiness"][row_index]
+    )
+    sample["mowa_future_masks"]["object_visibility_future"] = bool(
+        cache_masks.get("object_visibility_future", [False])[row_index]
+        if "object_visibility_future" in cache_masks
+        else False
+    )
+    sample["mowa_future_masks"]["next_best_view_score"] = bool(
+        cache_masks.get("next_best_view_score", [False])[row_index]
+        if "next_best_view_score" in cache_masks
+        else False
     )
 
     failure_risk_mask = bool(cache_masks["failure_risk"][row_index])
@@ -242,12 +334,32 @@ def _merge_task_label_cache(
     sample["mowa_future_targets"]["failure_risk"] = float(
         cache_labels["failure_risk"][row_index]
     )
+    sample["mowa_future_targets"]["object_visibility_future"] = float(
+        cache_labels.get("object_visibility_future", [0.0])[row_index]
+        if "object_visibility_future" in cache_labels
+        else 0.0
+    )
+    sample["mowa_future_targets"]["next_best_view_score"] = float(
+        cache_labels.get("next_best_view_score", [0.0])[row_index]
+        if "next_best_view_score" in cache_labels
+        else 0.0
+    )
 
     sample["mowa_future_masks"]["subgoal_feasibility"] = bool(
         cache_masks["subgoal_feasibility"][row_index]
     )
     sample["mowa_future_masks"]["manipulation_readiness"] = bool(
         cache_masks["manipulation_readiness"][row_index]
+    )
+    sample["mowa_future_masks"]["object_visibility_future"] = bool(
+        cache_masks.get("object_visibility_future", [False])[row_index]
+        if "object_visibility_future" in cache_masks
+        else False
+    )
+    sample["mowa_future_masks"]["next_best_view_score"] = bool(
+        cache_masks.get("next_best_view_score", [False])[row_index]
+        if "next_best_view_score" in cache_masks
+        else False
     )
 
     failure_risk_mask = bool(cache_masks["failure_risk"][row_index])
@@ -835,6 +947,7 @@ class LeRobotSingleDataset(Dataset):
         self._modality_keys = self._get_modality_keys()
         self._delta_indices = self._get_delta_indices()
         self._all_steps = self._get_all_steps()
+        _filter_steps_to_mowa_latent_cache(self)
         self.set_transforms_metadata(self.metadata)
         self.set_epoch(0)
 
@@ -1574,7 +1687,8 @@ class LeRobotSingleDataset(Dataset):
         raw_data = self.get_step_data(trajectory_id, base_index)
         data = self.transforms(raw_data)
         sample = self._pack_sample(data)
-        return _attach_mowa_future_labels(sample, self, trajectory_id, base_index)
+        sample = _attach_mowa_future_labels(sample, self, trajectory_id, base_index)
+        return _attach_mowa_latent_cache(sample, self, trajectory_id, base_index)
 
     def _pack_sample(self, data: dict) -> dict:
         """Pack transformed modality data into training sample format."""
@@ -2528,6 +2642,11 @@ class LeRobotMixtureDataset(Dataset):
         dataset_index = rng.choice(len(self.datasets), p=self.dataset_sampling_weights)
         dataset = self.datasets[dataset_index]
 
+        if _mowa_latent_cache_enabled(getattr(dataset, "data_cfg", None)):
+            step_index = int(rng.integers(len(dataset.all_steps)))
+            trajectory_id, base_index = dataset.all_steps[step_index]
+            return dataset, trajectory_id, base_index
+
         # Sample trajectory
         trajectory_index = rng.choice(
             len(dataset.trajectory_ids), p=self.trajectory_sampling_weights[dataset_index]
@@ -2585,6 +2704,7 @@ class LeRobotMixtureDataset(Dataset):
                 data = dataset.transforms(raw_data)
                 sample = dataset._pack_sample(data)
                 sample = _attach_mowa_future_labels(sample, dataset, trajectory_id, step)
+                sample = _attach_mowa_latent_cache(sample, dataset, trajectory_id, step)
                 
                 return sample
                 

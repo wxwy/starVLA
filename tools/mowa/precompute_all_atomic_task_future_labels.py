@@ -114,6 +114,11 @@ def parse_args() -> argparse.Namespace:
         default=Path("docs_zh/mowa/mowa_all_atomic_task_future_label_cache_manifest.json"),
         help="JSON output path for the summary manifest.",
     )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip episodes whose sidecar parquet already exists and read back their statistics.",
+    )
     return parser.parse_args()
 
 
@@ -163,6 +168,7 @@ def _process_one_task(
     readiness_progress_delta: float,
     enable_kinematics: bool,
     max_episodes: int | None,
+    skip_existing: bool,
 ) -> dict[str, Any]:
     """Process a single task in a worker process."""
     # Import inside worker to avoid pickling the builder and to ensure MuJoCo is
@@ -182,6 +188,7 @@ def _process_one_task(
             readiness_progress_delta=readiness_progress_delta,
             enable_kinematics=enable_kinematics,
             max_episodes=max_episodes,
+            skip_existing=skip_existing,
         )
     except Exception as exc:  # pragma: no cover - runtime resilience
         return {
@@ -249,6 +256,7 @@ def main() -> None:
                 readiness_progress_delta=args.readiness_progress_delta,
                 enable_kinematics=not args.disable_kinematics,
                 max_episodes=args.max_episodes,
+                skip_existing=args.skip_existing,
             ): task_name
             for task_name, dataset_path in work_items
         }

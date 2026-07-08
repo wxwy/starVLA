@@ -441,7 +441,7 @@ def _compute_visual_labels_for_single_dof(
 
             def target_resolver(data: Any, timestep: int) -> np.ndarray | None:
                 del timestep
-                return data.xpos[body_id].copy()
+                return data.xpos[target_body_id].copy()
 
             def target_body_id_resolver(data: Any, timestep: int) -> int | None:
                 del data, timestep

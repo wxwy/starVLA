@@ -272,9 +272,9 @@ P0 label coverage 初判：
 | task_progress | candidate_constructible | `frame_index`、`timestamp`、`episode_index` | mask if frame_index/timestamp/episode length unavailable |
 | manipulation_readiness | Data Gate | `observation.state`、`action` | mask until readiness proxy is validated |
 | failure_risk | masked | `failure_annotation` | mask by default |
-| next_best_view_score | candidate_constructible_from_sidecar | `next_best_view_score`、`next_best_view_score_mask` | mask if sidecar missing |
+| next_best_view_score | candidate_constructible_from_sidecar | `next_best_view_score`、`next_best_view_score_mask` | mask if sidecar missing; enabled in 5-head ablation |
 | subgoal_feasibility | Data Gate | `next.reward`、`next.done`、`frame_index` | mask until feasibility proxy is validated |
-| object_visibility_future | candidate_constructible_from_sidecar | `object_visibility_future`、`object_visibility_future_mask` | mask if sidecar missing or distribution is single-class |
+| object_visibility_future | candidate_constructible_from_sidecar (distribution gated) | `object_visibility_future`、`object_visibility_future_mask` | mask if sidecar missing or distribution is single-class / high-majority; 6-head ablation deferred |
 | action_outcome_class | candidate_constructible | `next.reward`、`next.done` | mask if reward/done unavailable |
 
 当前结论：P0 FullHeads 字段级可构造 heads 已扩展为 `task_progress`、`action_outcome_class`、`next_best_view_score`、`object_visibility_future`。`next_best_view_score` 与 `object_visibility_future` 依赖 sidecar（MuJoCo FK + 相机投影 + eye-in-hand 主摄像头 + ray-cast 遮挡），其是否真正解 mask 仍需 `report_future_label_distribution.py` 的分布审查。

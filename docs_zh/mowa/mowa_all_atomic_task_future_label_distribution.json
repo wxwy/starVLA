@@ -47,10 +47,10 @@
           "active_samples": 124543,
           "masked_samples": 58556,
           "mask_rate": 0.319805,
-          "positive_count": 124394,
-          "negative_count": 149,
-          "positive_rate": 0.998804,
-          "status": "review_low_minority_rate"
+          "positive_count": 111155,
+          "negative_count": 13388,
+          "positive_rate": 0.892503,
+          "status": "candidate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -58,8 +58,8 @@
           "active_samples": 124543,
           "masked_samples": 58556,
           "mask_rate": 0.319805,
-          "mean": 0.868849,
-          "std": 0.127974,
+          "mean": 0.86705,
+          "std": 0.131173,
           "min": 0.0,
           "max": 0.964132,
           "status": "candidate"
@@ -111,10 +111,10 @@
           "active_samples": 143964,
           "masked_samples": 11479,
           "mask_rate": 0.073847,
-          "positive_count": 143964,
-          "negative_count": 0,
-          "positive_rate": 1.0,
-          "status": "blocked_single_class"
+          "positive_count": 103449,
+          "negative_count": 40515,
+          "positive_rate": 0.718575,
+          "status": "candidate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -175,10 +175,10 @@
           "active_samples": 76502,
           "masked_samples": 9899,
           "mask_rate": 0.11457,
-          "positive_count": 76502,
-          "negative_count": 0,
-          "positive_rate": 1.0,
-          "status": "blocked_single_class"
+          "positive_count": 48012,
+          "negative_count": 28490,
+          "positive_rate": 0.627591,
+          "status": "candidate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -186,9 +186,9 @@
           "active_samples": 76502,
           "masked_samples": 9899,
           "mask_rate": 0.11457,
-          "mean": 0.738948,
-          "std": 0.161196,
-          "min": 0.369286,
+          "mean": 0.71939,
+          "std": 0.170274,
+          "min": 0.356931,
           "max": 0.956423,
           "status": "candidate"
         }
@@ -239,10 +239,10 @@
           "active_samples": 84736,
           "masked_samples": 32432,
           "mask_rate": 0.276799,
-          "positive_count": 84736,
-          "negative_count": 0,
-          "positive_rate": 1.0,
-          "status": "blocked_single_class"
+          "positive_count": 83822,
+          "negative_count": 914,
+          "positive_rate": 0.989214,
+          "status": "review_high_majority_rate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -250,8 +250,8 @@
           "active_samples": 84736,
           "masked_samples": 32432,
           "mask_rate": 0.276799,
-          "mean": 0.897113,
-          "std": 0.054052,
+          "mean": 0.89499,
+          "std": 0.06228,
           "min": 0.429608,
           "max": 0.955313,
           "status": "candidate"
@@ -367,9 +367,9 @@
           "active_samples": 147557,
           "masked_samples": 36467,
           "mask_rate": 0.198164,
-          "positive_count": 35113,
-          "negative_count": 112444,
-          "positive_rate": 0.237962,
+          "positive_count": 34297,
+          "negative_count": 113260,
+          "positive_rate": 0.232432,
           "status": "candidate"
         },
         "next_best_view_score": {
@@ -378,8 +378,8 @@
           "active_samples": 147557,
           "masked_samples": 36467,
           "mask_rate": 0.198164,
-          "mean": 0.275378,
-          "std": 0.401066,
+          "mean": 0.247481,
+          "std": 0.393015,
           "min": 0.0,
           "max": 0.967769,
           "status": "candidate"
@@ -431,10 +431,10 @@
           "active_samples": 119459,
           "masked_samples": 17972,
           "mask_rate": 0.130771,
-          "positive_count": 119452,
-          "negative_count": 7,
-          "positive_rate": 0.999941,
-          "status": "review_low_minority_rate"
+          "positive_count": 109304,
+          "negative_count": 10155,
+          "positive_rate": 0.914992,
+          "status": "candidate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -442,8 +442,8 @@
           "active_samples": 119459,
           "masked_samples": 17972,
           "mask_rate": 0.130771,
-          "mean": 0.789106,
-          "std": 0.180605,
+          "mean": 0.787367,
+          "std": 0.182848,
           "min": 0.0,
           "max": 0.975491,
           "status": "candidate"
@@ -495,10 +495,10 @@
           "active_samples": 49285,
           "masked_samples": 8815,
           "mask_rate": 0.151721,
-          "positive_count": 49285,
-          "negative_count": 0,
-          "positive_rate": 1.0,
-          "status": "blocked_single_class"
+          "positive_count": 44734,
+          "negative_count": 4551,
+          "positive_rate": 0.90766,
+          "status": "candidate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -506,10 +506,10 @@
           "active_samples": 49285,
           "masked_samples": 8815,
           "mask_rate": 0.151721,
-          "mean": 0.837313,
-          "std": 0.091237,
-          "min": 0.459567,
-          "max": 0.934214,
+          "mean": 0.824977,
+          "std": 0.107461,
+          "min": 0.458396,
+          "max": 0.93405,
           "status": "candidate"
         }
       }
@@ -559,10 +559,10 @@
           "active_samples": 76769,
           "masked_samples": 55135,
           "mask_rate": 0.417993,
-          "positive_count": 75734,
-          "negative_count": 1035,
-          "positive_rate": 0.986518,
-          "status": "review_low_minority_rate"
+          "positive_count": 74060,
+          "negative_count": 2709,
+          "positive_rate": 0.964712,
+          "status": "review_high_majority_rate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -570,8 +570,8 @@
           "active_samples": 76769,
           "masked_samples": 55135,
           "mask_rate": 0.417993,
-          "mean": 0.869288,
-          "std": 0.143787,
+          "mean": 0.869189,
+          "std": 0.143992,
           "min": 0.0,
           "max": 0.96204,
           "status": "candidate"
@@ -623,10 +623,10 @@
           "active_samples": 90035,
           "masked_samples": 39525,
           "mask_rate": 0.305071,
-          "positive_count": 88716,
-          "negative_count": 1319,
-          "positive_rate": 0.98535,
-          "status": "review_low_minority_rate"
+          "positive_count": 88711,
+          "negative_count": 1324,
+          "positive_rate": 0.985295,
+          "status": "review_high_majority_rate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -687,9 +687,9 @@
           "active_samples": 107285,
           "masked_samples": 48464,
           "mask_rate": 0.311167,
-          "positive_count": 101603,
-          "negative_count": 5682,
-          "positive_rate": 0.947038,
+          "positive_count": 101264,
+          "negative_count": 6021,
+          "positive_rate": 0.943878,
           "status": "candidate"
         },
         "next_best_view_score": {
@@ -698,8 +698,8 @@
           "active_samples": 107285,
           "masked_samples": 48464,
           "mask_rate": 0.311167,
-          "mean": 0.738271,
-          "std": 0.214389,
+          "mean": 0.738257,
+          "std": 0.2144,
           "min": 0.0,
           "max": 0.971321,
           "status": "candidate"
@@ -815,10 +815,10 @@
           "active_samples": 96413,
           "masked_samples": 51940,
           "mask_rate": 0.350111,
-          "positive_count": 96413,
-          "negative_count": 0,
-          "positive_rate": 1.0,
-          "status": "blocked_single_class"
+          "positive_count": 96408,
+          "negative_count": 5,
+          "positive_rate": 0.999948,
+          "status": "review_high_majority_rate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -876,22 +876,22 @@
         "object_visibility_future": {
           "head": "object_visibility_future",
           "total_samples": 83544,
-          "active_samples": 80260,
-          "masked_samples": 3284,
-          "mask_rate": 0.039309,
-          "positive_count": 79942,
-          "negative_count": 318,
+          "active_samples": 80001,
+          "masked_samples": 3543,
+          "mask_rate": 0.042409,
+          "positive_count": 79684,
+          "negative_count": 317,
           "positive_rate": 0.996038,
-          "status": "review_low_minority_rate"
+          "status": "review_high_majority_rate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
           "total_samples": 83544,
-          "active_samples": 80260,
-          "masked_samples": 3284,
-          "mask_rate": 0.039309,
-          "mean": 0.667361,
-          "std": 0.181988,
+          "active_samples": 80001,
+          "masked_samples": 3543,
+          "mask_rate": 0.042409,
+          "mean": 0.667151,
+          "std": 0.182134,
           "min": 0.0,
           "max": 0.899832,
           "status": "candidate"
@@ -943,10 +943,10 @@
           "active_samples": 108310,
           "masked_samples": 5717,
           "mask_rate": 0.050137,
-          "positive_count": 104242,
-          "negative_count": 4068,
-          "positive_rate": 0.962441,
-          "status": "review_low_minority_rate"
+          "positive_count": 103402,
+          "negative_count": 4908,
+          "positive_rate": 0.954686,
+          "status": "review_high_majority_rate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -954,8 +954,8 @@
           "active_samples": 108310,
           "masked_samples": 5717,
           "mask_rate": 0.050137,
-          "mean": 0.500833,
-          "std": 0.192588,
+          "mean": 0.500315,
+          "std": 0.192639,
           "min": 0.0,
           "max": 0.893331,
           "status": "candidate"
@@ -1004,10 +1004,10 @@
         "object_visibility_future": {
           "head": "object_visibility_future",
           "total_samples": 84679,
-          "active_samples": 76359,
-          "masked_samples": 8320,
-          "mask_rate": 0.098253,
-          "positive_count": 76359,
+          "active_samples": 76025,
+          "masked_samples": 8654,
+          "mask_rate": 0.102198,
+          "positive_count": 76025,
           "negative_count": 0,
           "positive_rate": 1.0,
           "status": "blocked_single_class"
@@ -1015,11 +1015,11 @@
         "next_best_view_score": {
           "head": "next_best_view_score",
           "total_samples": 84679,
-          "active_samples": 76359,
-          "masked_samples": 8320,
-          "mask_rate": 0.098253,
-          "mean": 0.857994,
-          "std": 0.089464,
+          "active_samples": 76025,
+          "masked_samples": 8654,
+          "mask_rate": 0.102198,
+          "mean": 0.857922,
+          "std": 0.089559,
           "min": 0.422899,
           "max": 0.949974,
           "status": "candidate"
@@ -1071,10 +1071,10 @@
           "active_samples": 66201,
           "masked_samples": 14238,
           "mask_rate": 0.177004,
-          "positive_count": 66201,
-          "negative_count": 0,
-          "positive_rate": 1.0,
-          "status": "blocked_single_class"
+          "positive_count": 66102,
+          "negative_count": 99,
+          "positive_rate": 0.998505,
+          "status": "review_high_majority_rate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
@@ -1082,8 +1082,8 @@
           "active_samples": 66201,
           "masked_samples": 14238,
           "mask_rate": 0.177004,
-          "mean": 0.67879,
-          "std": 0.120475,
+          "mean": 0.678663,
+          "std": 0.120591,
           "min": 0.410212,
           "max": 0.823118,
           "status": "candidate"
@@ -1132,22 +1132,22 @@
         "object_visibility_future": {
           "head": "object_visibility_future",
           "total_samples": 113688,
-          "active_samples": 107241,
-          "masked_samples": 6447,
-          "mask_rate": 0.056708,
-          "positive_count": 107224,
-          "negative_count": 17,
-          "positive_rate": 0.999841,
-          "status": "review_low_minority_rate"
+          "active_samples": 106007,
+          "masked_samples": 7681,
+          "mask_rate": 0.067562,
+          "positive_count": 105247,
+          "negative_count": 760,
+          "positive_rate": 0.992831,
+          "status": "review_high_majority_rate"
         },
         "next_best_view_score": {
           "head": "next_best_view_score",
           "total_samples": 113688,
-          "active_samples": 107241,
-          "masked_samples": 6447,
-          "mask_rate": 0.056708,
-          "mean": 0.539616,
-          "std": 0.193787,
+          "active_samples": 106007,
+          "masked_samples": 7681,
+          "mask_rate": 0.067562,
+          "mean": 0.539202,
+          "std": 0.193667,
           "min": 0.0,
           "max": 0.906481,
           "status": "candidate"
@@ -1156,37 +1156,39 @@
     }
   ],
   "candidate_tasks": [
+    "CloseBlenderLid",
+    "CloseFridge",
+    "CloseToasterOvenDoor",
+    "OpenDrawer",
+    "OpenStandMixerHead",
     "PickPlaceDrawerToCounter"
   ],
   "review_tasks": [
-    "CloseBlenderLid",
+    "CoffeeSetupMug",
     "OpenCabinet",
-    "OpenDrawer",
     "PickPlaceCounterToCabinet",
     "PickPlaceCounterToStove",
+    "PickPlaceToasterToCounter",
     "SlideDishwasherRack",
     "TurnOffStove",
+    "TurnOnMicrowave",
     "TurnOnSinkFaucet"
   ],
   "blocked_tasks": [
-    "CloseFridge",
-    "CloseToasterOvenDoor",
-    "CoffeeSetupMug",
     "NavigateKitchen",
-    "OpenStandMixerHead",
     "PickPlaceSinkToCounter",
-    "PickPlaceToasterToCounter",
-    "TurnOnElectricKettle",
-    "TurnOnMicrowave"
+    "TurnOnElectricKettle"
   ],
   "go_no_go": "TBD: review per-task distributions before unmasking",
   "notes": [
     "Status 'candidate' means active samples have both classes and minority class >= 5% (binary) or non-trivial variance (continuous).",
     "Status 'blocked_single_class' means all active labels are the same value.",
     "Status 'review_low_minority_rate' means minority class < 5% of active samples.",
+    "Status 'review_high_majority_rate' means majority class > 95% of active samples.",
     "Status 'review_high_mask_rate' means > 95% of samples are masked.",
     "Status 'review_low_variance' means continuous head has near-zero variance.",
     "failure_risk is expected to be blocked_single_class on pure human demo data.",
-    "object_visibility_future / next_best_view_score are MuJoCo projection proxies and ignore occlusion."
+    "object_visibility_future / next_best_view_score are MuJoCo projection proxies.",
+    "object_visibility_future checks occlusion via mj_ray for main cameras; next_best_view_score does not check occlusion to preserve a continuous signal."
   ]
 }

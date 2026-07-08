@@ -289,7 +289,9 @@ def main() -> None:
             "Status 'review_high_mask_rate' means > 95% of samples are masked.",
             "Status 'review_low_variance' means continuous head has near-zero variance.",
             "failure_risk is expected to be blocked_single_class on pure human demo data.",
-            "object_visibility_future / next_best_view_score are MuJoCo projection proxies and ignore occlusion.",
+            "object_visibility_future / next_best_view_score are MuJoCo projection proxies.",
+            "object_visibility_future checks occlusion via mj_ray for main cameras; "
+            "next_best_view_score does not check occlusion to preserve a continuous signal.",
         ],
     }
 

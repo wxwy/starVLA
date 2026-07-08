@@ -99,6 +99,8 @@ def _write_cache_parquet(
             columns[key] = value
 
     table = pa.table(columns)
+    schema_version = str(cache.get("schema_version", "unknown"))
+    table = table.replace_schema_metadata({"schema_version": schema_version})
     output_path = output_dir / f"episode_{episode_index:06d}.parquet"
     pq.write_table(table, output_path)
 
@@ -116,11 +118,16 @@ def write_label_cache(
     enable_kinematics: bool = True,
     max_episodes: int | None = None,
     repo_root: Path | None = None,
+    skip_existing: bool = False,
 ) -> dict[str, Any]:
     """Pre-compute future labels for all episodes of a task and write sidecars.
 
     Sidecars are written to ``<dataset_path>/mowa_future_labels/<task_name>/``
     unless ``output_dir`` is provided.
+
+    If ``skip_existing`` is True, episodes whose sidecar parquet already exists
+    are read back and aggregated instead of recomputed.  This is useful for
+    regenerating a manifest after a worker pool is interrupted.
     """
     dataset_path = Path(dataset_path)
     if output_dir is None:
@@ -149,6 +156,7 @@ def write_label_cache(
     failure_risk_labeled = 0
     object_visibility_positive = 0
     next_best_view_sum = 0.0
+    schema_version = "unknown"
 
     for parquet_path in parquet_paths:
         episode_index = int(parquet_path.stem.split("_")[-1])
@@ -157,6 +165,29 @@ def write_label_cache(
         if not states_path.is_file():
             skipped_no_extras += 1
             continue
+
+        output_path = output_dir / f"episode_{episode_index:06d}.parquet"
+        if skip_existing and output_path.is_file():
+            table = pq.read_table(output_path)
+            data = table.to_pydict()
+            row_count = len(data["frame_index"])
+            if row_count == 0:
+                skipped_empty += 1
+                continue
+            processed += 1
+            total_rows += row_count
+            subgoal_positive += int(np.asarray(data["subgoal_feasibility"], dtype=np.float64).sum())
+            readiness_positive += int(np.asarray(data["manipulation_readiness"], dtype=np.float64).sum())
+            failure_risk_labeled += int((~np.asarray(data["failure_risk_mask"], dtype=bool)).sum())
+            object_visibility_positive += int(np.asarray(data["object_visibility_future"], dtype=np.float64).sum())
+            ovf_mask = ~np.asarray(data["object_visibility_future_mask"], dtype=bool)
+            if ovf_mask.any():
+                nbv_active = np.asarray(data["next_best_view_score"], dtype=np.float64)[ovf_mask]
+                next_best_view_sum += float(nbv_active.sum())
+            schema_version = (table.schema.metadata or {}).get(b"schema_version", b"unknown").decode()
+            continue
+
+
 
         cache = build_label_cache_for_episode(
             builder=builder,
@@ -177,6 +208,7 @@ def write_label_cache(
             continue
 
         _write_cache_parquet(cache, output_dir, episode_index, pa, pq)
+        schema_version = str(cache.get("schema_version", "unknown"))
 
         processed += 1
         total_rows += int(cache["row_count"])
@@ -209,7 +241,7 @@ def write_label_cache(
         "failure_risk_labeled_count": failure_risk_labeled,
         "object_visibility_positive_count": object_visibility_positive,
         "next_best_view_score_sum": next_best_view_sum,
-        "schema_version": cache.get("schema_version", "unknown"),
+        "schema_version": schema_version,
         "go_no_go": (
             f"TBD: {builder.task_name} label cache built; review distribution before unmasking"
             if processed > 0

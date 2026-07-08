@@ -8,7 +8,9 @@
 - 生产默认可构造 heads 保持 `task_progress` 和 `action_outcome_class`。
 - `subgoal_feasibility` 与 `manipulation_readiness` 已通过 18 个 atomic task 的 sidecar 预计算和分布审查，进入 **ablation-ready** 状态；它们将在 E-001 4-head ablation 中显式解 mask，但尚未升级为全局默认 constructible heads。
 - `failure_risk` 继续保持 masked：在纯 human demo 数据上为正样本空类。
-- `next_best_view_score` 与 `object_visibility_future` 已通过 MuJoCo forward kinematics + 相机投影 + ray-cast 遮挡检查实现视觉 proxy。`object_visibility_future` 默认主摄像头改为 `robot0_eye_in_hand` 以获得更有区分度的标签分布。sidecar 已写入，待全量分布报告审查后决定是否解 mask。
+- `next_best_view_score` 与 `object_visibility_future` 已通过 MuJoCo forward kinematics + 相机投影 + ray-cast 遮挡检查实现视觉 proxy。`object_visibility_future` 默认主摄像头改为 `robot0_eye_in_hand` 以获得更有区分度的标签分布。sidecar 已写入并审查：
+  - `next_best_view_score` 在 18/18 任务上为 `candidate`，可进入 **5-head ablation**。
+  - `object_visibility_future` 仅 5/18 任务为 `candidate`，10/18 为 `review_high_majority_rate`，3/18 为 `blocked`；6-head ablation **暂缓**，OVF 保持 masked 直至 proxy 进一步改进或支持 per-task mask。
 - future action 不得作为 WAM 输入，只能作为 action target 或 leakage invariant 检查对象。
 
 ## 当前实现入口
@@ -31,7 +33,7 @@
 
 - `action_outcome_class` 是否切换为 CE/Focal，需要先冻结类别映射；当前仍为 MSE 回归 `[next_reward, next_done_flag]`。
 - `failure_risk` 在纯 human demo 数据上无正样本，保持 masked；若后续引入失败/截断数据，需重新评估。
-- `next_best_view_score`、`object_visibility_future` 视觉 proxy 已实现（含 eye-in-hand 主摄像头与 ray-cast 遮挡），待 `mowa_all_atomic_task_future_label_distribution.json` 全量审查后决定是否进入 ablation。
+- `next_best_view_score` 视觉 proxy 已审查通过，进入 5-head ablation；`object_visibility_future` 因全量分布中仅 5/18 任务为 `candidate`，3/18 任务 `blocked`，暂缓解 mask。后续可改进方向：增加主摄像头候选、调整 occlusion 容差或 max_distance、或改为 per-task mask 后再评估 6-head。
 - 若将 `subgoal_feasibility` / `manipulation_readiness` 从 ablation-ready 升级为全局默认 constructible heads，需要：
   - 4-head vs 2-head ablation 结果证明收益或至少无回归；
   - 决定是否把 `OpenCabinet` 的 `subgoal_feasibility` 纳入训练（其正样本率 4.18%，低于 5% data gate 门槛）；
@@ -238,22 +240,25 @@ python tools/mowa/report_future_label_distribution.py \
 
 `full_head_label_builder.py` 的 smoke 也会优先读取 sidecar，方便在不上训练的情况下验证标签分布。
 
-### E-001 4-head ablation 解 mask 决策
+### E-001 ablation 解 mask 决策
 
-基于以上数据 gate，在当前阶段保留 **2-head baseline** vs **4-head** 主消融，并新增两个扩展消融配置，待全量分布报告审查后决定是否启用：
+基于 `mowa_all_atomic_task_future_label_distribution.json`（2026-07-08，eye-in-hand 主摄 + ray-cast 遮挡版本）的分布结果，当前解 mask 决策如下：
 
 - **2-head baseline**：`task_progress` + `action_outcome_class`，对应 `configs/mowa/mowa_e001_starflow_ft0_2head_baseline_ablation.yaml`。
 - **4-head**：`task_progress` + `subgoal_feasibility` + `manipulation_readiness` + `action_outcome_class`，对应 `configs/mowa/mowa_e001_starflow_ft0_4head_ablation.yaml`。
-- **5-head (+NBV)**：4-head + `next_best_view_score`，对应 `configs/mowa/mowa_e001_starflow_ft0_5head_nbv_ablation.yaml`。
-- **6-head (+NBV +OVF)**：5-head + `object_visibility_future`，对应 `configs/mowa/mowa_e001_starflow_ft0_6head_ablation.yaml`。
+- **5-head (+NBV)**：4-head + `next_best_view_score`，对应 `configs/mowa/mowa_e001_starflow_ft0_5head_nbv_ablation.yaml`。**可启用**：NBV 在 18/18 任务上为 `candidate`，std 在 0.06–0.40 之间，有足够区分度。
+- **6-head (+NBV +OVF)**：5-head + `object_visibility_future`，对应 `configs/mowa/mowa_e001_starflow_ft0_6head_ablation.yaml`。**暂缓**：OVF 仅 5/18 任务为 `candidate`（CloseBlenderLid、CloseFridge、CloseToasterOvenDoor、OpenCabinet、PickPlaceDrawerToCounter），10/18 为 `review_high_majority_rate`，3/18 为 `blocked`（NavigateKitchen `blocked_all_masked`、PickPlaceSinkToCounter / TurnOnElectricKettle `blocked_single_class`）。全局启用 OVF 会让 blocked/review 任务贡献无效或极偏信号。
 
-所有配置都显式通过 `layerwise_bridge_active_heads` / `future_supervision_active_heads` 控制激活 head，不依赖全局常量。`failure_risk` 不参与任何消融；5-head / 6-head 是否真正启动，需以重算后的 `mowa_all_atomic_task_future_label_distribution.json` 为准。
+所有配置都显式通过 `layerwise_bridge_active_heads` / `future_supervision_active_heads` 控制激活 head，不依赖全局常量。`failure_risk` 不参与任何消融（18/18 `blocked_single_class`）。
 
 **已知风险与处理**：
 
 - `OpenCabinet` 的 `subgoal_feasibility` 正样本率为 4.18%，低于 5% 门槛，标记为 `review_low_minority_rate`。ablation 先保留该任务，观察其对 loss 和 eval 的影响；若出现明显不稳定，再在后续迭代中把 OpenCabinet 从 4-head 的 subgoal_feasibility loss 中排除。
 - `manipulation_readiness` 在多数任务上仍是 `progress-imminence` proxy，不是完整的 proximity/contact readiness。ablation 结果将决定是否需要投入 MuJoCo FK 把其余任务也升级到 proximity predicate。
 - `failure_risk` 全任务单类，维持屏蔽；若未来引入非成功终止数据，再按本文档 proxy 规则重启评估。
+- `object_visibility_future` 分布不够健康（仅 5/18 `candidate`），6-head 配置已创建但暂不推荐启动。若后续要启用，必须先满足以下任一条件：
+  1. OVF proxy 改进后重新审查，使 candidate 任务比例显著提高；
+  2. 或 dataloader/trainer 支持 per-task head mask，让 blocked/review 任务不贡献 OVF loss。
 
 启动命令（需人工确认 `launch_guard`）：
 
@@ -319,7 +324,7 @@ next_best_view_score_mask[t] = (progress[t] >= completion_threshold)
 #### 已知限制
 
 - **遮挡近似**：ray-cast 忽略透明/微小几何，且把目标 body 自身 5cm 内的命中视为可见；对 body-center fallback 目标可能过宽。
-- **正样本率仍可能偏高**：`object_visibility_future` 在部分任务上仍可能正样本率很高（eye-in-hand 常对准操作目标），需以 `report_future_label_distribution.py` 输出为准。
+- **正样本率仍偏高**：全量审查显示 `object_visibility_future` 在 10/18 任务上 `positive_rate > 0.95`（review_high_majority_rate），3/18 任务 blocked。eye-in-hand 主摄虽比固定视角有区分度，但操作过程中目标仍长时间位于手爪视野内。这是 6-head 暂缓的主要原因。
 - **摄像头可变性**：部分 episode 的 fixture / object 命名不一致，builder 已加入候选 site fallback（如微波炉多候选 site），若报告里某任务 ovf/nbv 异常低，优先检查 target site/body 解析。
 
 #### 暂不构造

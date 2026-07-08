@@ -38,7 +38,7 @@ latent_cache:
 
 interface:
   current_latent_dim: 1024
-  text_hidden_dim: 2048
+  text_hidden_dim: 2560
   hidden_dim: 2048
   future_latent_dim: 1024
   batch_size_smoke: 2

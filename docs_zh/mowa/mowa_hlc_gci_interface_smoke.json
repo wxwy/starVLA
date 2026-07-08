@@ -29,8 +29,8 @@
       4,
       1024
     ],
-    "gate_min": 0.4622219502925873,
-    "gate_max": 0.5393584370613098
+    "gate_min": 0.4599853754043579,
+    "gate_max": 0.542267918586731
   },
   "unresolved_items": [
     "This smoke validates interface shape and gate range only.",

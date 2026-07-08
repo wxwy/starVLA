@@ -3,12 +3,13 @@
   "generated_from": "existing smoke/readiness reports only",
   "training_started": false,
   "all_training_experiments_ready": false,
-  "ready_training_experiments": [],
+  "ready_training_experiments": [
+    "E-003",
+    "E-004"
+  ],
   "not_ready_training_experiments": [
     "E-001",
     "E-002",
-    "E-003",
-    "E-004",
     "E-005",
     "E-006",
     "E-007",
@@ -88,12 +89,16 @@
       "experiment_id": "E-003",
       "stage": "future_latent_prior",
       "counts_as_training_experiment": true,
-      "can_start_now": false,
-      "status": "interface_ready_but_latent_cache_builder_missing",
+      "can_start_now": true,
+      "status": "launchable_now",
       "evidence_reports": [
         "future_latent_prior_interface",
         "latent_cache_builder_design",
-        "history_sampling_consistency"
+        "history_sampling_consistency",
+        "future_latent_prior_config_preview",
+        "future_latent_prior_train_dry_run",
+        "future_latent_prior_launch_smoke",
+        "future_latent_prior_long_training_launch"
       ],
       "blocking_items": [
         "This smoke validates the future latent prior interface only; no latent cache builder is executed.",
@@ -104,37 +109,68 @@
         "Future RGB may exist as cache target only; it is not valid WAM input evidence.",
         "This smoke only validates temporal-policy consistency; it does not build latent caches.",
         "Real Wan encoder/VAE and latent cache writer remain separately gated.",
-        "Next required step is a fake-encoder latent cache writer/validator/loader loop; plan-only manifest and contract smoke are not sufficient for E-003 dry-run.",
-        "E-003 must add config preview and train dry-run on real cache batches before any formal training launch."
+        "This preview validates E-003 config shape and input policy only.",
+        "Real Wan latent cache builder, cache parity and training launch are still gated.",
+        "This dry-run uses the fake latent cache builder, not the real Wan encoder/VAE stack.",
+        "No formal training loop, checkpoint save, or resume logic is executed here.",
+        "Future latent remains target-only and is not valid as WAM input evidence.",
+        "Latent-cache batches and MoWAFutureLatentPrior are now wired into train_starvla; next required step is materializing the production cache root and an E-003 full-path dry-run."
       ],
       "checks": {
         "future_latent_prior_interface_passed": true,
         "latent_cache_builder_design_passed": true,
-        "history_sampling_consistency_passed": true
+        "history_sampling_consistency_passed": true,
+        "future_latent_prior_config_preview_passed": true,
+        "future_latent_prior_train_dry_run_passed": true,
+        "future_latent_prior_launch_smoke_passed": true,
+        "future_latent_prior_long_training_launch_passed": true
       }
     },
     {
       "experiment_id": "E-004",
       "stage": "hlc_gci",
       "counts_as_training_experiment": true,
-      "can_start_now": false,
-      "status": "module_interface_ready_but_framework_integration_missing",
+      "can_start_now": true,
+      "status": "launchable_now",
       "evidence_reports": [
+        "hlcgci_config_preview",
         "hlcgci_interface",
-        "history_sampling_consistency"
+        "history_sampling_consistency",
+        "hlcgci_launch_smoke",
+        "hlcgci_long_training_launch",
+        "hlcgci_checkpoint_preflight",
+        "hlcgci_policy_rollout"
       ],
       "blocking_items": [
+        "This preview validates E-004 interface shape and history contract only.",
+        "Shuffled-robot metrics and framework injection still require a meaningful checkpoint.",
         "This smoke validates interface shape and gate range only.",
         "History sampling policy and actual training gain remain separately gated.",
         "No StarVLA framework integration is enabled by this interface smoke.",
         "This smoke only validates temporal-policy consistency; it does not build latent caches.",
         "Real Wan encoder/VAE and latent cache writer remain separately gated.",
-        "E-004 is blocked on E-003 fake-encoder cache loop and E-003 config preview/dry-run evidence.",
-        "HLC-GCI interface alone is insufficient; history latent cache and framework integration remain missing."
+        "This launch smoke validates the interface, preview, and a synthetic optimization loop.",
+        "Real shuffled-robot rollout still requires a meaningful checkpoint and checkpoint-backed policy path.",
+        "Training framework wiring is present; the shared real Wan2.2 cache root is configured and must stay consistent with the dataset scope.",
+        "No E-004-specific train_starvla full-path dry-run has been executed end-to-end.",
+        "Resume/save policy smoke for the E-004 HLC-GCI conditioning path has not been run.",
+        "This preflight validates checkpoint-backed wiring and HLC-GCI smoke only; it does not run shuffled-robot rollout.",
+        "The checkpoint used here is an upstream complete checkpoint reference, not an E-004-owned rollout checkpoint.",
+        "This is a tiny RoboCasa365 rollout smoke, not a statistically powered benchmark.",
+        "If the client or simulator fails, inspect per-intervention server/client logs under artifact_dir.",
+        "Formal E-004 evidence requires more episodes/seeds after this smoke path is stable.",
+        "history_latent batches and MoWAHLCGCI are now wired into train_starvla as conditioning; next required step is materializing the production cache root and an E-004 full-path dry-run.",
+        "E-004 rollout remains gated on a trained E-003/E-004 checkpoint and success metrics."
       ],
       "checks": {
+        "hlcgci_config_preview_passed": true,
         "hlcgci_interface_passed": true,
-        "history_sampling_consistency_passed": true
+        "history_sampling_consistency_passed": true,
+        "hlcgci_launch_smoke_passed": true,
+        "hlcgci_long_training_launch_passed": true,
+        "hlcgci_checkpoint_preflight_passed": true,
+        "hlcgci_policy_rollout_passed": true,
+        "hlcgci_policy_rollout_zero_success": true
       }
     },
     {
@@ -144,17 +180,21 @@
       "can_start_now": false,
       "status": "plan_ready_only",
       "evidence_reports": [
-        "shuffled_robot_sanity_plan"
+        "shuffled_robot_sanity_plan",
+        "shuffled_robot_checkpoint_preflight"
       ],
       "blocking_items": [
         "This smoke validates pair construction only and does not execute rollout.",
         "Real shuffled-robot evidence still depends on trained checkpoints.",
         "Metric drop is an expectation to test later, not a measured result here.",
+        "This preflight validates shuffled-robot checkpoint wiring only; it does not launch rollout.",
+        "Real shuffled-robot evidence still depends on a meaningful E-004 checkpoint and downstream rollout report.",
         "E-005 requires a meaningful E-004 checkpoint; shuffled-robot plan/smoke alone is not execution evidence.",
         "Metric-drop expectation must be validated after P1-b1 training and cannot be claimed from pair construction."
       ],
       "checks": {
-        "sanity_plan_present": true
+        "sanity_plan_present": true,
+        "checkpoint_preflight_passed": false
       }
     },
     {
@@ -236,12 +276,10 @@
   "global_blockers": [
     "E-001: E-001 launch draft records bounded approved state only, not full-scale launch approval",
     "E-002: This is the single static E-002 comparison entry only; runtime integration exists but training remains gated.",
-    "E-003: This smoke validates the future latent prior interface only; no latent cache builder is executed.",
-    "E-004: This smoke validates interface shape and gate range only.",
     "E-005: This smoke validates pair construction only and does not execute rollout.",
     "E-006: E-006 coupling evidence reports reference deleted checkpoints and have been cleared. Regenerate eval-load, intervention, forward, preflight and rollout reports with a meaningful trained checkpoint before claiming coupling gain.",
     "E-007: No proxy-learned alpha readiness report exists yet.",
     "E-009: Conditional experiment has not been triggered and has no readiness artifacts."
   ],
-  "go_no_go": "No-Go: full experiment suite is not launch-ready"
+  "go_no_go": "TBD: launch readiness matrix generated; full experiment suite is not launch-ready"
 }

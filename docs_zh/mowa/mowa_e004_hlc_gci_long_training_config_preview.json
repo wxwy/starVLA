@@ -1,0 +1,47 @@
+{
+  "stage": "hlc_gci",
+  "experiment_id": "E-004",
+  "config_role": "hlcgci_long_training_candidate",
+  "launch_ready": true,
+  "config_path": "configs/mowa/mowa_e004_hlc_gci_long_training_candidate.yaml",
+  "resolved_final_values": {
+    "run_root_dir": "playground/mowa_ckpt",
+    "run_id": "MoWA-E-004_hlc_gci_4090_long_draft",
+    "experiment_role": "mowa_hlc_gci",
+    "wandb_project": "MoWA",
+    "wandb_entity": "silencewx-harbin-institute-of-technology",
+    "wandb_mode": "online",
+    "history_latent_dim": 1024,
+    "condition_hidden_dim": 1024,
+    "history_steps": 10,
+    "compressed_history_dim": 512,
+    "gate_hidden_dim": 256,
+    "history_source": "robot_history_latent_only",
+    "future_action_policy": "target_only",
+    "per_device_batch_size": 2,
+    "gradient_accumulation_steps": 16,
+    "effective_batch_size": 32,
+    "max_train_steps": 80000,
+    "num_warmup_steps": 500,
+    "save_interval": 2000,
+    "eval_interval": 2000,
+    "checkpoint_format": "lightweight"
+  },
+  "checks": {
+    "config_created": true,
+    "launch_guard_open": true,
+    "launch_guard_human_confirmed": true,
+    "launch_guard_policy_confirmed": true,
+    "uses_4090_batch_profile": true,
+    "history_source_robot_only": true,
+    "future_action_policy_target_only": true,
+    "checkpoint_format_lightweight": true,
+    "resume_policy_latest_complete_only": true
+  },
+  "unresolved_items": [
+    "This preview only records the formal long-training draft.",
+    "The actual long-running E-004 training entrypoint is still not wired.",
+    "Real shuffled-robot rollout still needs a checkpoint-backed policy path and metrics."
+  ],
+  "go_no_go": "TBD: long-training config preview passed; launch wiring remains pending"
+}

@@ -33,6 +33,8 @@
 - `mowa_e002_future_gated_heads_comparison_smoke.json`
 - `mowa_future_latent_prior_interface_smoke.json`
 - `mowa_hlc_gci_interface_smoke.json`
+- `mowa_e004_hlc_gci_checkpoint_preflight_smoke.json`
+- `mowa_e004_hlc_gci_policy_rollout_smoke.json`
 - `mowa_e006_policy_rollout_smoke.json`
 
 等文件里的状态，统一整理成“是否可启动”的单一视图，避免后续反复人工翻 report。

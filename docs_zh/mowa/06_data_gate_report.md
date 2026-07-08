@@ -264,20 +264,20 @@ P0 label coverage 初判：
 | cli | `tools/mowa/g0_p0_label_coverage_smoke.py` |
 | sampled_episode_indices | `0, 1, 4` |
 | available_columns | `action`、`annotation.human.task_description`、`annotation.human.task_name`、`episode_index`、`frame_index`、`index`、`next.done`、`next.reward`、`observation.state`、`task_index`、`timestamp` |
-| constructible_heads | `task_progress`、`action_outcome_class` |
-| masked_or_data_gate_heads | `manipulation_readiness`、`failure_risk`、`next_best_view_score`、`subgoal_feasibility`、`object_visibility_future` |
+| constructible_heads | `task_progress`、`action_outcome_class`、`next_best_view_score`、`object_visibility_future` |
+| masked_or_data_gate_heads | `manipulation_readiness`、`failure_risk`、`subgoal_feasibility` |
 
 | P0 head | status | source_fields | mask_rule |
 |---|---|---|---|
 | task_progress | candidate_constructible | `frame_index`、`timestamp`、`episode_index` | mask if frame_index/timestamp/episode length unavailable |
 | manipulation_readiness | Data Gate | `observation.state`、`action` | mask until readiness proxy is validated |
 | failure_risk | masked | `failure_annotation` | mask by default |
-| next_best_view_score | masked | `view_score`、`visibility_label` | mask by default |
+| next_best_view_score | candidate_constructible_from_sidecar | `next_best_view_score`、`next_best_view_score_mask` | mask if sidecar missing |
 | subgoal_feasibility | Data Gate | `next.reward`、`next.done`、`frame_index` | mask until feasibility proxy is validated |
-| object_visibility_future | masked | `future_video`、`object_visibility_proxy` | mask by default |
+| object_visibility_future | candidate_constructible_from_sidecar | `object_visibility_future`、`object_visibility_future_mask` | mask if sidecar missing or distribution is single-class |
 | action_outcome_class | candidate_constructible | `next.reward`、`next.done` | mask if reward/done unavailable |
 
-当前结论：P0 FullHeads 首轮只能以 mask 方式处理不可构造 heads；若要先做训练 smoke，候选可构造 head 仅为 `task_progress` 和 `action_outcome_class`。所有阈值、class mapping 和 proxy 定义仍为 Data Gate。
+当前结论：P0 FullHeads 字段级可构造 heads 已扩展为 `task_progress`、`action_outcome_class`、`next_best_view_score`、`object_visibility_future`。`next_best_view_score` 与 `object_visibility_future` 依赖 sidecar（MuJoCo FK + 相机投影 + eye-in-hand 主摄像头 + ray-cast 遮挡），其是否真正解 mask 仍需 `report_future_label_distribution.py` 的分布审查。
 
 ## 16. 当前 Latent Cache Manifest Smoke
 

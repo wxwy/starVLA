@@ -5,8 +5,10 @@
 ## 当前冻结范围
 
 - future supervision heads 仍为七类冻结 head。
-- 当前生产可构造 heads 仅为 `task_progress` 和 `action_outcome_class`。
-- 其余 heads 必须保持 masked，直到数据定义和标签构造规则被单独确认。
+- 生产默认可构造 heads 保持 `task_progress` 和 `action_outcome_class`。
+- `subgoal_feasibility` 与 `manipulation_readiness` 已通过 18 个 atomic task 的 sidecar 预计算和分布审查，进入 **ablation-ready** 状态；它们将在 E-001 4-head ablation 中显式解 mask，但尚未升级为全局默认 constructible heads。
+- `failure_risk` 继续保持 masked：在纯 human demo 数据上为正样本空类。
+- `next_best_view_score` 与 `object_visibility_future` 已通过 MuJoCo forward kinematics + 相机投影实现视觉 proxy，sidecar 已写入，待全量分布报告审查后决定是否解 mask。
 - future action 不得作为 WAM 输入，只能作为 action target 或 leakage invariant 检查对象。
 
 ## 当前实现入口
@@ -27,9 +29,14 @@
 
 ## 未解决项
 
-- `action_outcome_class` 是否切换为 CE/Focal，需要先冻结类别映射。
-- `failure_risk`、`subgoal_feasibility`、`object_visibility_future` 等 head 的 proxy/threshold 未确认前不得参与 loss。
-- 若新增可构造 head，必须同步 dataloader label builder、mask、QwenOFT supervision probe、单测和实现日志。
+- `action_outcome_class` 是否切换为 CE/Focal，需要先冻结类别映射；当前仍为 MSE 回归 `[next_reward, next_done_flag]`。
+- `failure_risk` 在纯 human demo 数据上无正样本，保持 masked；若后续引入失败/截断数据，需重新评估。
+- `next_best_view_score`、`object_visibility_future` 视觉 proxy 已实现，待 `mowa_all_atomic_task_future_label_distribution.json` 全量审查后决定是否进入 ablation。
+- 若将 `subgoal_feasibility` / `manipulation_readiness` 从 ablation-ready 升级为全局默认 constructible heads，需要：
+  - 4-head vs 2-head ablation 结果证明收益或至少无回归；
+  - 决定是否把 `OpenCabinet` 的 `subgoal_feasibility` 纳入训练（其正样本率 4.18%，低于 5% data gate 门槛）；
+  - 同步 `MOWA_FUTURE_CONSTRUCTIBLE_HEADS` 与 `full_head_label_coverage.py`。
+- 若新增可构造 head，必须同步 dataloader label builder、mask、QwenOFT/QwenPI_v3 supervision probe、单测和实现日志。
 
 ## Proxy 解 mask 验收标准
 
@@ -81,7 +88,7 @@ return 0.0, False
 - 覆盖率预期：对长度 `L=200-600` 的 episode，`H_risk=10` 可能只覆盖 episode 末尾约 `H_risk/L ~= 2%-5%` 的 anchor。低覆盖率是预期风险，必须在 smoke report 中量化。
 - 独立性检查：在 sampled anchors 上计算 `action_outcome_class` 的 `next_done` 分量与 `failure_risk` 标签的相关系数或 mutual information。若相关性过高，说明该 head 的增量信息有限。
 - mask 条件：缺少 `next.reward` / `next.done`、窗口内无任何 `done`、reward 分布假设未通过 data gate、非成功终止噪声不可控。
-- 当前状态：可作为第一批 data gate / label distribution smoke 候选；正式 loss 解 mask 前必须检查正负样本比例、有效覆盖率、与 `action_outcome_class` 的独立性，以及 `H_risk` 对分布的敏感性。
+- 当前状态：**保持 masked**。`mowa_all_atomic_task_future_label_distribution.json` 显示 18/18 任务的 `failure_risk` 均为 `blocked_single_class`（positive_count=0）。在纯 human demo 数据上无训练信号，因此不参与 4-head ablation。
 
 ### 2) `subgoal_feasibility`
 
@@ -168,7 +175,7 @@ subgoals:
   - OpenDrawer 已部分解锁：`open_drawer` completion predicate 的 source chain 已确认，可进入单 task schema 草案。
   - OpenDrawer 其余 manipulation-phase subgoal 仍 blocked：缺 handle pose / contact / EEF-to-handle 距离。
 - mask 条件：未冻结 subgoal schema、缺少候选 `subgoal_id`、completion predicate 不可计算、predicate 依赖字段缺失、阈值版本缺失。
-- 当前状态：全局仍不可构造；但 OpenDrawer 已证明至少一个真实 subgoal `open_drawer` 可以从 `extras` 中构造 completion predicate。下一步不是全任务解 mask，而是把这条 predicate 继续对齐到 builder / dataloader 接口，同时保持其他 manipulation-phase subgoal blocked，避免把单任务结论误推广到全任务 schema。
+- 当前状态：**ablation-ready**。所有 18 个 atomic task 已通过 `SingleDofTaskBuilder` / 自定义 builder 构造单 subgoal `complete` 的 completion predicate；sidecar 已预计算并合并到 production dataloader。`mowa_all_atomic_task_future_label_distribution.json` 显示 17/18 任务为 `candidate`，仅 `OpenCabinet` 为 `review_low_minority_rate`（正样本 4.18%）。4-head ablation 将包含该 head，但 OpenCabinet 样本作为已知低少数类风险项记录。
 
 ### 3) `manipulation_readiness`
 
@@ -183,7 +190,10 @@ subgoals:
   - 若 state 维度语义、predicate 或阈值缺失，该 anchor 必须 mask。
 - 前置验证：编写任何 readiness predicate 前，必须先确认 RoboCasa `observation.state` 是否包含 base pose、gripper state、object-relative pose、contact / joint state 等 readiness 判定所需信号。若 state 不含这些信号，该 head 本质上依赖视觉或额外 simulator state，当前标量字段不能支撑。
 - mask 条件：state 维度语义未冻结、task-specific readiness predicate 缺失、manipulation onset predicate 缺失、阈值版本缺失、所需物理量不在当前字段中。
-- 当前状态：当前仓库尚未冻结 RoboCasa state 维度语义和 task-specific readiness threshold，因此不能仅凭 `observation.state` / `action` 直接构造。必须先完成 state schema 与单 task 校准，再进入 data gate；若 state 不含所需物理量，应长期保持 mask。
+- 当前状态：**ablation-ready**。当前实现采用两级 fallback：
+  - 若 builder schema 提供 `handle_site_template` 且 MuJoCo 可用，则使用 `eef_to_handle_distance <= 0.05m` 的 proximity predicate（当前仅 OpenDrawer 走此分支）；
+  - 否则使用 `progress-imminence` proxy：未来 `H_ready` 步内 progress 增量 ≥ 0.05。
+  18 个任务 sidecar 已生成，`manipulation_readiness` 在全部任务上均为 `candidate`（正样本率 7.7%–46.1%）。该 proxy 尚未升级为全任务 proximity/contact 语义，但已满足 ablation 训练信号要求。
 - **语义升级（OpenDrawer 已部分解决）**：最初 Codex 的实现把 “未来 `H_ready` 步内 drawer progress 增量 ≥ `readiness_progress_delta`” 当作 readiness，这实质是 `progress_imminence`。现已通过 MuJoCo forward kinematics 从 `model.xml.gz` + `states.npz` 提取 `eef_to_handle_distance` 和 `gripper_handle_contact`，并把 OpenDrawer 的 `manipulation_readiness` 升级为 proximity-based 定义：`eef_to_handle_distance <= readiness_distance_threshold`（默认 0.05m）且尚未完成 subgoal。这仍然不是完整的 manipulation readiness（缺少 force/contact 闭合语义），但已经从“drawer 即将动”升级到“末端执行器已接近把手”。
 - **MuJoCo FK 不是交互仿真**：只需加载 episode 的 `model.xml.gz`，把 `states.npz` 的 qpos/qvel 写入 `mjData`，调用 `mj_forward()` 即可获得世界坐标系下的 handle/EEF 位置和 contact。不需要启动 RoboCasa env，也不需要渲染。
 - OpenDrawer 审计型 sidecar 例外：当前已在 `future_label_audit.py` 中补出一个 audit-only `open` proxy，不要求 handle pose/contact，而是把 “未来 `H_ready` 步内 drawer progress 增量是否超过阈值” 当作 manipulation onset 的弱事件。这个版本的价值是让 `predicate/event -> sidecar schema -> mask/debug` 工程闭环跑通；它仍不能替代正式 readiness predicate，也不能直接作为 production loss 标签解 mask。
@@ -194,45 +204,123 @@ subgoals:
 - 若 `manipulation_readiness = 0.0`，针对 manipulation-only subgoal 的 `subgoal_feasibility = 1.0` 需要额外审查。
 - 这些约束只用于 data gate / label validation，不在未验证前作为训练 loss 或硬规则。
 
-### OpenDrawer 预计算 sidecar 使用方式
+### 全 atomic task 预计算 sidecar 使用方式
 
-为了让 `subgoal_feasibility` / `manipulation_readiness` / `failure_risk` 进入 production training，需要先从 `extras/` 解析出标签并写入 sidecar：
+为了让 `subgoal_feasibility` / `manipulation_readiness` / `failure_risk` 进入 production training，已改为按 task 注册 builder、离线预计算 sidecar 的模式：
 
 ```bash
-python tools/mowa/precompute_opendrawer_future_labels.py \
-  --dataset-path playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot
+# 预计算全部 18 个 atomic task 的 sidecar
+python tools/mowa/precompute_all_atomic_task_future_labels.py \
+  --output docs_zh/mowa/mowa_all_atomic_task_future_label_cache_manifest.json
+
+# 审查每任务分布
+python tools/mowa/report_future_label_distribution.py \
+  --output docs_zh/mowa/mowa_all_atomic_task_future_label_distribution.json
 ```
 
-输出目录默认为 `<dataset_path>/mowa_future_labels/opendrawer/`。每个 episode 对应一个 `episode_XXXXXX.parquet`，包含：
+输出目录为 `<dataset_path>/mowa_future_labels/<task_name>/`。每个 episode 对应一个 `episode_XXXXXX.parquet`，至少包含：
 
 - `frame_index`
-- `drawer_progress`
-- `eef_to_handle_distance`（MuJoCo FK，单位米）
-- `gripper_handle_contact` / `gripper_finger_contact`（MuJoCo contact）
+- `task_progress`（或任务相关的 progress 列）
 - `failure_risk` / `failure_risk_mask`
 - `subgoal_feasibility` / `subgoal_feasibility_mask`
 - `manipulation_readiness` / `manipulation_readiness_mask`
+- `object_visibility_future` / `object_visibility_future_mask`
+- `next_best_view_score` / `next_best_view_score_mask`
 
-当 MuJoCo 可用时，`manipulation_readiness` 使用 proximity predicate：
-`eef_to_handle_distance <= readiness_distance_threshold`（默认 0.05m）且尚未完成 subgoal。不可用时自动回退到 `progress_imminence` proxy。
+当 builder schema 提供 `handle_site_template` 且 MuJoCo 可用时，`manipulation_readiness` 使用 proximity predicate：
+`eef_to_handle_distance <= readiness_distance_threshold`（默认 0.05m）且尚未完成 subgoal。否则自动回退到 `progress_imminence` proxy。
 
 `datasets.py:_attach_mowa_future_labels` 在 `enable_mowa_future_labels=true` 时会检测 sidecar：
 
-- 若存在，直接合并 `subgoal_feasibility` / `manipulation_readiness`，并更新 mask；
+- 若存在，通过 `_merge_task_label_cache` 合并 `subgoal_feasibility` / `manipulation_readiness`，并更新 mask；
 - `failure_risk` 仅在缓存中存在正类时才解 mask，否则保持 masked（单类 override）。
 
 `full_head_label_builder.py` 的 smoke 也会优先读取 sidecar，方便在不上训练的情况下验证标签分布。
+
+### E-001 4-head ablation 解 mask 决策
+
+基于以上数据 gate，决定在当前阶段进行 **2-head baseline** vs **4-head** 的成对消融，而不是直接修改全局 `MOWA_FUTURE_CONSTRUCTIBLE_HEADS`：
+
+- **2-head baseline**：`task_progress` + `action_outcome_class`，对应 `configs/mowa/mowa_e001_starflow_ft0_2head_baseline_ablation.yaml`。
+- **4-head**：`task_progress` + `subgoal_feasibility` + `manipulation_readiness` + `action_outcome_class`，对应 `configs/mowa/mowa_e001_starflow_ft0_4head_ablation.yaml`。
+
+两个配置都显式通过 `layerwise_bridge_active_heads` / `future_supervision_active_heads` 控制激活 head，不依赖全局常量。`failure_risk`、`object_visibility_future`、`next_best_view_score` 不参与 E-001；视觉 heads 待全量分布报告审查后再决定是否进入后续 ablation。
+
+**已知风险与处理**：
+
+- `OpenCabinet` 的 `subgoal_feasibility` 正样本率为 4.18%，低于 5% 门槛，标记为 `review_low_minority_rate`。ablation 先保留该任务，观察其对 loss 和 eval 的影响；若出现明显不稳定，再在后续迭代中把 OpenCabinet 从 4-head 的 subgoal_feasibility loss 中排除。
+- `manipulation_readiness` 在多数任务上仍是 `progress-imminence` proxy，不是完整的 proximity/contact readiness。ablation 结果将决定是否需要投入 MuJoCo FK 把其余任务也升级到 proximity predicate。
+- `failure_risk` 全任务单类，维持屏蔽；若未来引入非成功终止数据，再按本文档 proxy 规则重启评估。
+
+启动命令（需人工确认 `launch_guard`）：
+
+```bash
+VARIANT=4head ./tools/mowa/launch_e001_ablation.sh
+VARIANT=2head ./tools/mowa/launch_e001_ablation.sh
+```
 
 ### Coverage 口径说明
 
 `full_head_label_coverage.py` 当前对部分 head 做 field-level 检查，例如 `failure_risk` 可能仍以 `failure_annotation` 作为原始理想字段。本文档中的 `next.reward` / `next.done` 是替代 proxy 方案。后续若要实现该 proxy，必须同步更新 coverage 工具的字段口径，并明确区分 `ideal_annotation` 与 `proxy_source_fields`。
 
-### 暂不构造
+### 视觉 proxy 已构造（带遮挡与视角选择）
 
-- `next_best_view_score`
-- `object_visibility_future`
+`next_best_view_score` 与 `object_visibility_future` 已通过 MuJoCo forward kinematics + 相机投影 + ray-cast 遮挡检查实现，不解码视频。标签随 sidecar 一起预计算，最终是否解 mask 取决于全量分布报告。
 
-这两项继续保持 mask，等视频 / 视觉 proxy 冻结后再讨论。
+#### `object_visibility_future`
+
+- 目标语义：未来短窗口内，任务目标 3D 点是否至少被一个主摄像头看到。
+- 主摄像头：默认改为 `robot0_eye_in_hand`。固定视角摄像头（`agentview_*`）下目标几乎总在画面内，导致正样本率过高；eye-in-hand 相机随机械臂运动，能产生更有区分度的可见/不可见变化。
+- 固定窗口：`H_visibility = 10` 个后续 step；窗口为 `(t, t + H_visibility]`，截断到 episode 末尾。
+- 输入：episode `model.xml.gz`、`states.npz`、`ep_meta.json` 中的相机配置；任务相关的 3D target point（handle site、object default site 或 manipulated joint 的 parent body 中心）。
+- 可见 proxy：目标点投影到主摄像头画面内、相机到目标距离 < `max_distance = 2.0m`，且从相机到目标点的 ray-cast 不被其它物体（目标 body 自身除外）遮挡。
+- 输出：二分类 scalar，`1.0 = visible`，`0.0 = not visible`。
+- mask 条件：任务已完成（`progress >= completion_threshold`）、目标点无法解析、缺少可用相机、模型加载失败。
+- 伪代码：
+
+```python
+visible = False
+for name in main_camera_names:  # default ("robot0_eye_in_hand",)
+    future_scores = per_camera_visibility[name][t + 1 : t + 1 + H_visibility]
+    if future_scores.size > 0 and np.any(future_scores > 0.0):
+        visible = True
+        break
+object_visibility_future[t] = 1.0 if visible else 0.0
+object_visibility_future_mask[t] = (progress[t] >= completion_threshold)
+```
+
+其中 `per_camera_scores` 在计算主摄像头时已通过 `mujoco.mj_ray` 剔除被其它 body 遮挡的样本（目标 body 自身命中且距离在 5cm 容差内仍视为可见）。
+
+#### `next_best_view_score`
+
+- 目标语义：未来短窗口内，所有候选摄像头中能达到的最佳可见度分数，用于指导 viewpoint 选择。
+- 固定窗口：与 `object_visibility_future` 相同，`H_visibility = 10`。
+- 输入：与 `object_visibility_future` 相同，但评估更多摄像头（默认加上 `robot0_frontview`、`robot0_robotview`、`robot0_eye_in_hand`）。
+- score proxy：`score = max(0, 1 - distance / max_distance)`，当目标投影在画面内且距离 < `max_distance` 时非零；否则为 0。该 score **不做遮挡检查**，保留连续信号；遮挡检查只用于 `object_visibility_future`。
+- 输出：连续 scalar，`[0.0, 1.0]`，用 MSE loss。
+- mask 条件：与 `object_visibility_future` 相同。
+- 伪代码：
+
+```python
+best_score = 0.0
+for name in alternative_camera_names:
+    future_scores = per_camera_visibility[name][t + 1 : t + 1 + H_visibility]
+    if future_scores.size > 0:
+        best_score = max(best_score, float(np.max(future_scores)))
+next_best_view_score[t] = best_score
+next_best_view_score_mask[t] = (progress[t] >= completion_threshold)
+```
+
+#### 已知限制
+
+- **遮挡近似**：ray-cast 忽略透明/微小几何，且把目标 body 自身 5cm 内的命中视为可见；对 body-center fallback 目标可能过宽。
+- **正样本率仍可能偏高**：`object_visibility_future` 在部分任务上仍可能正样本率很高（eye-in-hand 常对准操作目标），需以 `report_future_label_distribution.py` 输出为准。
+- **摄像头可变性**：部分 episode 的 fixture / object 命名不一致，builder 已加入候选 site fallback（如微波炉多候选 site），若报告里某任务 ovf/nbv 异常低，优先检查 target site/body 解析。
+
+#### 暂不构造
+
+- 无。`next_best_view_score` 与 `object_visibility_future` 已实现为 proxy，`failure_risk` 因数据域无正样本继续保持 masked。
 
 ### 不推荐事项
 

@@ -1,0 +1,122 @@
+{
+  "recipe_name": "mowa_robocasa365_target_human_atomic_core_v1",
+  "data_root": "playground/Datasets/robocasa365",
+  "target_task_count": 18,
+  "processed_task_count": 0,
+  "skipped_task_count": 18,
+  "skipped_tasks": [
+    {
+      "task": "CloseBlenderLid",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "CloseFridge",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "CloseToasterOvenDoor",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "CoffeeSetupMug",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "NavigateKitchen",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "OpenCabinet",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "OpenDrawer",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "OpenStandMixerHead",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "PickPlaceCounterToCabinet",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "PickPlaceCounterToStove",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "PickPlaceDrawerToCounter",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "PickPlaceSinkToCounter",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "PickPlaceToasterToCounter",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "SlideDishwasherRack",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "TurnOffStove",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "TurnOnElectricKettle",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "TurnOnMicrowave",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    },
+    {
+      "task": "TurnOnSinkFaucet",
+      "reason": "worker_error",
+      "error": "BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending."
+    }
+  ],
+  "total_subgoal_positive_count": 0,
+  "total_readiness_positive_count": 0,
+  "total_failure_risk_labeled_count": 0,
+  "total_object_visibility_positive_count": 0,
+  "total_next_best_view_score_sum": 0.0,
+  "tasks": [],
+  "parameters": {
+    "failure_risk_horizon": 10,
+    "subgoal_horizon": 20,
+    "readiness_horizon": 10,
+    "readiness_distance_threshold": 0.05,
+    "readiness_progress_delta": 0.05,
+    "visibility_horizon": 10,
+    "enable_kinematics": true,
+    "max_episodes": null
+  },
+  "go_no_go": "No-Go: no task sidecars built",
+  "notes": [
+    "Sidecars are written under <dataset>/mowa_future_labels/<task_name>/.",
+    "failure_risk remains masked in production if the cached distribution is single-class.",
+    "subgoal_feasibility / manipulation_readiness masks respect the per-episode builder logic.",
+    "Run tools/mowa/report_future_label_distribution.py next to review per-task label distributions."
+  ]
+}

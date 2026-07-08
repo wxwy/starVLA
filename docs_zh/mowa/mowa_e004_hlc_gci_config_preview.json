@@ -1,0 +1,51 @@
+{
+  "stage": "hlc_gci",
+  "task_id": "M4-001",
+  "experiment_id": "E-004",
+  "config_role": "hlcgci_candidate",
+  "launch_ready": false,
+  "config_path": "configs/mowa/mowa_e004_hlc_gci_candidate.yaml",
+  "resolved_final_values": {
+    "project_short_name": "MoWA",
+    "stage": "hlc_gci",
+    "experiment_id": "E-004",
+    "config_role": "hlcgci_candidate",
+    "launch_ready": false,
+    "requires_human_confirmation": true,
+    "human_confirmed": false,
+    "policy_confirmed": false,
+    "history_latent_dim": 1024,
+    "condition_hidden_dim": 1024,
+    "history_steps": 10,
+    "compressed_history_dim": 512,
+    "gate_hidden_dim": 256,
+    "batch_size_smoke": 2,
+    "condition_token_count": 4,
+    "injection_policy": "condition_path_only",
+    "sampling_policy": "train_inference_consistent_window_sampling",
+    "history_source": "robot_history_latent_only",
+    "future_action_policy": "target_only",
+    "leakage_guard": "future_action_not_input",
+    "history_sampling_status": "Data Gate",
+    "gate_init_status": "Data Gate",
+    "shape_status": "Data Gate",
+    "reference_count": 4
+  },
+  "checks": {
+    "config_created": true,
+    "launch_guard_closed": true,
+    "injection_policy_condition_path_only": true,
+    "history_source_robot_only": true,
+    "future_action_policy_target_only": true,
+    "leakage_guard_future_action_not_input": true,
+    "history_sampling_status_data_gate": true,
+    "gate_init_status_data_gate": true,
+    "shape_status_data_gate": true,
+    "references_present": true
+  },
+  "unresolved_items": [
+    "This preview validates E-004 interface shape and history contract only.",
+    "Shuffled-robot metrics and framework injection still require a meaningful checkpoint."
+  ],
+  "go_no_go": "TBD: E-004 config preview passed; rollout remains gated"
+}

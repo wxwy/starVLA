@@ -32,10 +32,10 @@ latent_cache:
   anchor_mode: production
   current_window_steps: 1
   future_window_steps: 8
-  history_window_steps: 8
+  history_window_steps: 10
   allow_partial_windows: false
   overwrite: false
-  manifest_path: playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/window_manifest.parquet
+  manifest_path: playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/window_manifest_h10.parquet
   video_keys:
     - observation.images.robot0_agentview_left
 

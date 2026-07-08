@@ -542,12 +542,16 @@ class MoWADataGateTest(unittest.TestCase):
         self.assertIn("action", report["available_columns"])
         self.assertIn("task_progress", report["constructible_heads"])
         self.assertIn("action_outcome_class", report["constructible_heads"])
+        self.assertIn("next_best_view_score", report["constructible_heads"])
+        self.assertIn("object_visibility_future", report["constructible_heads"])
         self.assertIn("failure_risk", report["masked_heads"])
-        self.assertIn("next_best_view_score", report["masked_heads"])
-        self.assertIn("object_visibility_future", report["masked_heads"])
+        self.assertIn("manipulation_readiness", report["masked_heads"])
+        self.assertIn("subgoal_feasibility", report["masked_heads"])
         by_head = {item["head"]: item for item in report["head_coverage"]}
         self.assertEqual(by_head["manipulation_readiness"]["status"], DATA_GATE)
         self.assertEqual(by_head["subgoal_feasibility"]["status"], DATA_GATE)
+        self.assertTrue(by_head["next_best_view_score"]["status"].startswith("candidate"))
+        self.assertTrue(by_head["object_visibility_future"]["status"].startswith("candidate"))
 
     def test_future_constructible_label_builder_keeps_unvalidated_heads_masked(self):
         try:

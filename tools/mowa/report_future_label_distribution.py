@@ -108,11 +108,10 @@ def _head_status(active: int, positive: int, negative: int, mask_rate: float) ->
         return "blocked_single_class"
     if mask_rate > 0.95:
         return "review_high_mask_rate"
-    majority_rate = max(positive, negative) / active
-    if majority_rate > 0.95:
+    positive_rate = positive / active
+    if positive_rate > 0.95:
         return "review_high_majority_rate"
-    effective_rate = min(positive, negative) / active
-    if effective_rate < 0.05:
+    if positive_rate < 0.05:
         return "review_low_minority_rate"
     return "candidate"
 
@@ -286,6 +285,7 @@ def main() -> None:
             "or non-trivial variance (continuous).",
             "Status 'blocked_single_class' means all active labels are the same value.",
             "Status 'review_low_minority_rate' means minority class < 5% of active samples.",
+            "Status 'review_high_majority_rate' means majority class > 95% of active samples.",
             "Status 'review_high_mask_rate' means > 95% of samples are masked.",
             "Status 'review_low_variance' means continuous head has near-zero variance.",
             "failure_risk is expected to be blocked_single_class on pure human demo data.",

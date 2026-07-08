@@ -9,6 +9,29 @@ from starVLA.dataloader.mowa.data_gate import (
     build_mowa_g0_report_skeleton,
     build_mowa_robocasa365_local_smoke_report,
 )
+from starVLA.dataloader.mowa.episode_latent_store import (
+    MoWAEpisodeLatentStore,
+    MoWAEpisodeLatentStoreBuildReport,
+    MoWAEpisodeLatentStoreConfig,
+    MoWAEpisodeLatentStoreValidationReport,
+    MoWAFakeLatentEncoderAdapter,
+    MoWALatentEncoderAdapter,
+    build_mowa_episode_latent_store,
+    validate_mowa_episode_latent_store,
+)
+from starVLA.dataloader.mowa.window_manifest import (
+    MoWAWindowManifestBuildReport,
+    MoWAWindowManifestConfig,
+    MoWAWindowManifestEntry,
+    build_mowa_window_manifest,
+    load_mowa_window_manifest,
+)
+from starVLA.dataloader.mowa.window_latent_sample import (
+    MoWAWindowLatentSampleDataset,
+    WindowLatentSample,
+    assert_no_future_leakage,
+    validate_window_indices,
+)
 from starVLA.dataloader.mowa.batch_smoke import (
     MoWABatchDataloaderSmoke,
     MoWABatchSmokeSample,
@@ -137,6 +160,23 @@ from starVLA.dataloader.mowa.temporal_profile import (
 __all__ = [
     "DATA_GATE",
     "TBD",
+    "MoWAEpisodeLatentStore",
+    "MoWAEpisodeLatentStoreBuildReport",
+    "MoWAEpisodeLatentStoreConfig",
+    "MoWAEpisodeLatentStoreValidationReport",
+    "MoWAFakeLatentEncoderAdapter",
+    "MoWALatentEncoderAdapter",
+    "MoWAWindowManifestBuildReport",
+    "MoWAWindowManifestConfig",
+    "MoWAWindowManifestEntry",
+    "MoWAWindowLatentSampleDataset",
+    "WindowLatentSample",
+    "assert_no_future_leakage",
+    "build_mowa_episode_latent_store",
+    "build_mowa_window_manifest",
+    "load_mowa_window_manifest",
+    "validate_mowa_episode_latent_store",
+    "validate_window_indices",
     "MOWA_PRIMARY_CANDIDATE",
     "MOWA_FUTURE_CONSTRUCTIBLE_HEADS",
     "MOWA_ROBOCASA365_TARGET_HUMAN_ATOMIC_CORE_RECIPE",

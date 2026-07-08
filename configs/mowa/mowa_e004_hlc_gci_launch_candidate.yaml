@@ -1,0 +1,34 @@
+project_short_name: MoWA
+stage: hlc_gci
+task_id: M4-001
+experiment_id: E-004
+config_role: hlcgci_launch_candidate
+
+launch_guard:
+  launch_ready: true
+  requires_human_confirmation: true
+  human_confirmed: true
+  policy_confirmed: true
+  reason: HLC-GCI interface preview and synthetic smoke passed; launch smoke approved
+
+references:
+  e003_launch_smoke: docs_zh/mowa/mowa_e003_future_latent_prior_launch_smoke.json
+  e003_real_wan_smoke: docs_zh/mowa/mowa_e003_wan2_2_latent_cache_smoke.json
+  e004_config_preview: docs_zh/mowa/mowa_e004_hlc_gci_config_preview.json
+  e004_interface_smoke: docs_zh/mowa/mowa_hlc_gci_interface_smoke.json
+
+interface:
+  history_latent_dim: 1024
+  condition_hidden_dim: 1024
+  history_steps: 10
+  compressed_history_dim: 512
+  gate_hidden_dim: 256
+  batch_size_smoke: 2
+  condition_token_count: 4
+  injection_policy: condition_path_only
+
+smoke:
+  train_steps: 2
+  learning_rate: 1.0e-04
+  checkpoint_root: playground/mowa_ckpt
+

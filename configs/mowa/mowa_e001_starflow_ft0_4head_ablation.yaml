@@ -2,39 +2,20 @@ launch_guard:
   launch_ready: true
   training_started: false
   requires_human_confirmation: true
-  policy_confirmed: true
-  human_confirmed: true
-  reason: formal long-training launch for E-004 HLC-GCI; confirmed for execution
+  policy_confirmed: false
+  human_confirmed: false
+  reason: 4-head ablation (task_progress, action_outcome_class, subgoal_feasibility, manipulation_readiness) for E-001; requires human confirmation
 
-run_id: MoWA-E-004_hlc_gci_4090_long
+run_id: MoWA-E-001_starflow_ft0_4head_ablation_260707
 run_root_dir: playground/mowa_ckpt
-experiment_id: E-004
-experiment_role: mowa_hlc_gci
+experiment_id: E-001
+experiment_role: mowa_main
 seed: 42
 wandb_entity: silencewx-harbin-institute-of-technology
 wandb_project: MoWA
 wandb_mode: online
 is_debug: false
 version_id: "0.21"
-
-latent_cache:
-  dataset_path: playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot
-  cache_root: playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache
-  encoder_name: Wan-AI/Wan2.2-TI2V-5B-Diffusers
-  encoder_version: wan2.2-vae-v1
-  encoder_kind: wan2.2-vae
-  encoder_model_path: playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
-  latent_dim: 1024
-  episode_indices: null  # use all episodes; set to a small list for smoke runs
-  anchor_mode: production
-  current_window_steps: 1
-  future_window_steps: 8
-  history_window_steps: 8
-  allow_partial_windows: false
-  overwrite: true
-  materialize_cache_for_dry_run: true
-  video_keys:
-    - observation.images.robot0_agentview_left
 
 framework:
   name: StarFlowVLA
@@ -72,41 +53,28 @@ framework:
   mowa:
     enable_qwenpi_projector_dtype_alignment: true
     enable_layerwise_bridge_token_coupling: true
-    enable_hlc_gci_conditioning: true
     enable_future_supervision_loss: true
     layerwise_bridge_feature_source: mowa_future_feature_heads
     layerwise_bridge_active_heads:
       - task_progress
+      - subgoal_feasibility
+      - manipulation_readiness
       - action_outcome_class
     future_supervision_active_heads:
       - task_progress
+      - subgoal_feasibility
+      - manipulation_readiness
       - action_outcome_class
     wam_feature_dim: 1024
     action_hidden_dim: 1024
     num_bridge_tokens: 2
-
-interface:
-  history_latent_dim: 1024
-  condition_hidden_dim: 1024
-  history_steps: 10
-  compressed_history_dim: 512
-  gate_hidden_dim: 256
-  batch_size_smoke: 2
-  condition_token_count: 4
-  injection_policy: condition_path_only
-
-history_contract:
-  sampling_policy: train_inference_consistent_window_sampling
-  history_source: robot_history_latent_only
-  future_action_policy: target_only
-  leakage_guard: future_action_not_input
 
 datasets:
   vla_data:
     dataset_py: lerobot_datasets
     include_state: true
     data_root_dir: playground/Datasets/robocasa365
-    data_mix: robocasa365_open_drawer_target_human
+    data_mix: robocasa365_atomic_target_human_all
     action_type: delta_ee
     sequential_step_sampling: false
     per_device_batch_size: 2
@@ -117,23 +85,12 @@ datasets:
     video_backend: torchvision_av
     enable_mowa_future_labels: true
 
-training:
-  per_device_batch_size: 2
-  gradient_accumulation_steps: 16
-  effective_batch_size: 32
-  max_train_steps: 80000
-  num_warmup_steps: 500
-  save_interval: 2000
-  eval_interval: 2000
-  checkpoint_format: lightweight
-  resume_policy: resume_latest_complete_only
-
 trainer:
   enable_mowa_future_supervision_loss: true
-  max_train_steps: 80000
+  max_train_steps: 20000
   num_warmup_steps: 500
-  save_interval: 2000
-  eval_interval: 2000
+  save_interval: 1000
+  eval_interval: 1000
   repeated_diffusion_steps: 1
   learning_rate:
     base: 2.5e-05
@@ -154,7 +111,6 @@ trainer:
   gradient_accumulation_steps: 16
   gradient_checkpointing: true
   checkpoint_format: lightweight
-  resume_policy: resume_latest_complete_only
   is_resume: false
   enable_local_checkpoint_staging: false
   save_format: safetensors

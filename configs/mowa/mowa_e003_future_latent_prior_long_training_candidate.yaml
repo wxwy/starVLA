@@ -23,7 +23,7 @@ version_id: "0.21"
 
 latent_cache:
   dataset_path: playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot
-  cache_root: playground/mowa_latent_cache/e003_wan2_2_latent_cache_smoke
+  cache_root: playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache
   encoder_name: Wan-AI/Wan2.2-TI2V-5B-Diffusers
   encoder_version: wan2.2-ti2v-5b-diffusers
   encoder_kind: wan2.2-vae
@@ -69,4 +69,4 @@ training:
 notes:
   - This is a formal long-training draft for future_latent_prior wired to starVLA/training/train_starvla.py.
   - Training framework integration, latent-cache batch loading, and future-latent loss are present.
-  - Remaining gap: the cache root still reuses the validated Wan2.2 smoke path; replace with a production cache.
+  - The cache root now points at the shared real Wan2.2 latent cache for OpenDrawer target/human and can be reused across E-003/E-004.

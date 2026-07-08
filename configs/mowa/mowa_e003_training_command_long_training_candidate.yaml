@@ -46,4 +46,4 @@ logging:
 notes:
   - This command candidate records the train_starvla entrypoint for E-003 long training.
   - The future_latent_prior module, latent-cache batch contract, and future-latent loss are wired into train_starvla.
-  - The production cache root must be materialized with build_future_latent_cache.py before launching.
+  - The shared real Wan2.2 latent cache root must exist and stay consistent with the configured OpenDrawer target/human dataset before launching.

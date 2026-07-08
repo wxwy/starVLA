@@ -110,7 +110,7 @@ def build_e004_hlc_gci_long_training_launch_smoke(
             else "No-Go: E-004 long-training launch candidate is not training-integrated"
         ),
         "unresolved_items": [
-            "Training framework wiring is present; the production cache root is configured but must be materialized.",
+            "Training framework wiring is present; the shared real Wan2.2 cache root is configured and must stay consistent with the dataset scope.",
             "No E-004-specific train_starvla full-path dry-run has been executed end-to-end.",
             "Resume/save policy smoke for the E-004 HLC-GCI conditioning path has not been run.",
         ],

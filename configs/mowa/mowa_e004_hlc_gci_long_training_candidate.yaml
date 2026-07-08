@@ -59,4 +59,4 @@ training:
 notes:
   - This is a formal long-training draft for HLC-GCI wired to starVLA/training/train_starvla.py.
   - HLC-GCI and history-latent batch loading are present as conditioning in the training framework.
-  - Remaining gap: the cache root still reuses the smoke path; replace with a production cache before training.
+  - The cache root now points at the shared real Wan2.2 latent cache for OpenDrawer target/human and can be reused across E-003/E-004.

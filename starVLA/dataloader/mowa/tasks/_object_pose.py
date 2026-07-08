@@ -10,6 +10,7 @@ pose toward the final pose.
 from __future__ import annotations
 
 import gzip
+import json
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,6 +23,8 @@ from starVLA.dataloader.mowa.atomic_task_label_builder import (
     compute_subgoal_feasibility,
     failure_risk_label_from_window,
 )
+from starVLA.dataloader.mowa.mujoco_state_utils import build_mujoco_model_from_episode
+from starVLA.dataloader.mowa.visual_head_utils import compute_visual_head_labels
 
 
 @dataclass(frozen=True)
@@ -33,6 +36,9 @@ class ObjectPoseTaskSchema:
     object_joint_selector: Callable[[ET.Element, np.ndarray], str | None]
     subgoal_id: str = "complete"
     completion_threshold: float = 0.95
+    # Site template for the manipulated object.  ``{object_name}`` is derived from
+    # the selected freejoint name (e.g. ``obj_joint0`` -> ``obj``).
+    visual_target_site_template: str = "{object_name}_default_site"
     schema_version: str = "object_pose_v1"
 
 
@@ -138,6 +144,10 @@ class ObjectPoseTaskBuilder(AtomicTaskLabelBuilder):
         if not found:
             raise ValueError(f"Joint {joint_name} not found in XML")
 
+        object_name = joint_name
+        if object_name.endswith("_joint0"):
+            object_name = object_name[: -len("_joint0")]
+
         positions = states[:, qpos_index:qpos_index + 3].astype(np.float64)
         start_pos = positions[0]
         end_pos = positions[-1]
@@ -203,7 +213,18 @@ class ObjectPoseTaskBuilder(AtomicTaskLabelBuilder):
                 elif np.any(future - current_progress >= readiness_progress_delta):
                     manipulation_readiness_values[timestep] = 1.0
 
-        return {
+        visual_labels = _compute_visual_labels_for_object_pose(
+            model_path=model_path,
+            states=states,
+            ep_meta=json.loads(ep_meta_path.read_text()),
+            object_name=object_name,
+            progress=progress,
+            completion_threshold=self.schema.completion_threshold,
+            visual_target_site_template=self.schema.visual_target_site_template,
+            repo_root=repo_root,
+        )
+
+        result = {
             "frame_index": frame_indices,
             "task_progress": progress.astype(np.float64),
             "object_position": positions.astype(np.float64),
@@ -221,3 +242,73 @@ class ObjectPoseTaskBuilder(AtomicTaskLabelBuilder):
             "kinematics_available": False,
             "kinematics_message": "object-pose builder uses freejoint qpos only",
         }
+
+        if visual_labels is not None:
+            result["object_visibility_future"] = visual_labels["object_visibility_future"]
+            result["object_visibility_future_mask"] = visual_labels["object_visibility_future_mask"]
+            result["next_best_view_score"] = visual_labels["next_best_view_score"]
+            result["next_best_view_score_mask"] = visual_labels["next_best_view_score_mask"]
+            result["visual_head_schema_version"] = visual_labels.get("schema_version", "mowa_visual_proxy_v1")
+
+        return result
+
+
+def _compute_visual_labels_for_object_pose(
+    model_path: Path,
+    states: np.ndarray,
+    ep_meta: dict[str, Any],
+    object_name: str,
+    progress: np.ndarray,
+    completion_threshold: float,
+    visual_target_site_template: str = "{object_name}_default_site",
+    *,
+    repo_root: Path | None = None,
+    visibility_horizon: int = 10,
+) -> dict[str, Any] | None:
+    """Compute visual heads for an object-pose task."""
+    from starVLA.dataloader.mowa.mujoco_state_utils import find_site_id
+
+    try:
+        model = build_mujoco_model_from_episode(model_path, repo_root=repo_root)
+        target_site_name = visual_target_site_template.format(object_name=object_name)
+        target_body_id: int | None = None
+        try:
+            site_id = find_site_id(model, target_site_name)
+            target_body_id = int(model.site_bodyid[site_id])
+
+            def target_resolver(data: Any, timestep: int) -> np.ndarray | None:
+                del timestep
+                return data.site_xpos[site_id].copy()
+
+            def target_body_id_resolver(data: Any, timestep: int) -> int | None:
+                del data, timestep
+                return target_body_id
+        except ValueError:
+            # Fall back to the freejoint's parent body center.
+            import mujoco
+
+            joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"{object_name}_joint0")
+            if joint_id < 0:
+                return None
+            target_body_id = int(model.jnt_bodyid[joint_id])
+
+            def target_resolver(data: Any, timestep: int) -> np.ndarray | None:
+                del timestep
+                return data.xpos[target_body_id].copy()
+
+            def target_body_id_resolver(data: Any, timestep: int) -> int | None:
+                del data, timestep
+                return target_body_id
+
+        return compute_visual_head_labels(
+            model=model,
+            states=states,
+            ep_meta=ep_meta,
+            target_point_resolver=target_resolver,
+            target_body_id_resolver=target_body_id_resolver,
+            progress=progress,
+            completion_threshold=completion_threshold,
+            visibility_horizon=visibility_horizon,
+        )
+    except Exception:  # pragma: no cover - runtime fallback
+        return None

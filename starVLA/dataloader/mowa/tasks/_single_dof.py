@@ -9,7 +9,6 @@ knob, etc.) and readiness is defined by EEF proximity to a handle/site.
 from __future__ import annotations
 
 import gzip
-import json
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,14 +24,13 @@ from starVLA.dataloader.mowa.atomic_task_label_builder import (
 from starVLA.dataloader.mowa.mujoco_state_utils import (
     build_mujoco_model_from_episode,
     compute_site_distances,
-    find_body_id,
     find_site_id,
-    import_mujoco,
     load_ep_meta,
     load_states,
     ordered_joint_state_layout,
     resolve_joint_state_indices,
 )
+from starVLA.dataloader.mowa.visual_head_utils import compute_visual_head_labels
 
 
 @dataclass(frozen=True)
@@ -67,6 +65,12 @@ class SingleDofTaskSchema:
     readiness_distance_threshold: float = 0.05
     # Fallback progress-imminence delta when kinematics unavailable.
     readiness_progress_delta: float = 0.05
+    # Site template used as the 3D visual target for object_visibility_future /
+    # next_best_view_score.  If None, falls back to handle_site_template, then to
+    # the manipulated joint's parent body center.
+    visual_target_site_template: str | None = None
+    # Explicit body template to use as visual target (overrides joint fallback).
+    visual_target_body_template: str | None = None
     # Schema version string for audit metadata.
     schema_version: str = "single_dof_v1"
     # Subgoal id.
@@ -191,16 +195,38 @@ class SingleDofTaskBuilder(AtomicTaskLabelBuilder):
         progress = progress[:row_count]
         raw_qpos = raw_qpos[:row_count]
 
+        model = None
+        model_load_error: str | None = None
+        if model_path.is_file():
+            try:
+                model = build_mujoco_model_from_episode(model_path, repo_root=repo_root)
+            except Exception as exc:  # pragma: no cover - runtime fallback
+                model_load_error = str(exc)
+
         kinematics = _maybe_extract_kinematics(
             model_path=model_path,
             states_path=states_path,
             fixture_ref=fixture_ref,
             handle_site_template=self.schema.handle_site_template,
             manipulated_body_template=self.schema.manipulated_body_template,
-            enable=enable_kinematics,
+            enable=enable_kinematics and model is not None,
             row_count=row_count,
             repo_root=repo_root,
+            model=model,
         )
+
+        visual_labels = _compute_visual_labels_for_single_dof(
+            model=model,
+            states=states,
+            ep_meta=ep_meta,
+            schema=self.schema,
+            fixture_ref=fixture_ref,
+            joint_name=joint_name,
+            progress=progress,
+            completion_threshold=self.schema.completion_threshold,
+        )
+        if model_load_error is not None and visual_labels is not None:
+            visual_labels["visual_head_error"] = model_load_error
 
         failure_risk_values = np.zeros(row_count, dtype=np.float64)
         failure_risk_masks = np.ones(row_count, dtype=bool)
@@ -273,6 +299,14 @@ class SingleDofTaskBuilder(AtomicTaskLabelBuilder):
         }
         if kinematics["available"]:
             result["eef_to_handle_distance"] = kinematics["eef_to_handle_distance"].astype(np.float64)
+
+        if visual_labels is not None:
+            result["object_visibility_future"] = visual_labels["object_visibility_future"]
+            result["object_visibility_future_mask"] = visual_labels["object_visibility_future_mask"]
+            result["next_best_view_score"] = visual_labels["next_best_view_score"]
+            result["next_best_view_score_mask"] = visual_labels["next_best_view_score_mask"]
+            result["visual_head_schema_version"] = visual_labels.get("schema_version", "mowa_visual_proxy_v1")
+
         return result
 
     def _resolve_fixture_ref(self, ep_meta: dict[str, Any]) -> str | None:
@@ -331,6 +365,109 @@ def select_most_displaced_joint_matching_all(
     return _selector
 
 
+def _compute_visual_labels_for_single_dof(
+    model: Any,
+    states: np.ndarray,
+    ep_meta: dict[str, Any],
+    schema: SingleDofTaskSchema,
+    fixture_ref: str | None,
+    joint_name: str,
+    progress: np.ndarray,
+    completion_threshold: float,
+    *,
+    visibility_horizon: int = 10,
+) -> dict[str, Any] | None:
+    """Compute object_visibility_future / next_best_view_score for a single-DOF task."""
+    import mujoco
+
+    if model is None:
+        return {
+            "object_visibility_future": np.zeros(len(progress), dtype=np.float64),
+            "object_visibility_future_mask": np.ones(len(progress), dtype=bool),
+            "next_best_view_score": np.zeros(len(progress), dtype=np.float64),
+            "next_best_view_score_mask": np.ones(len(progress), dtype=bool),
+            "schema_version": "mowa_visual_proxy_model_unavailable_v1",
+        }
+
+    try:
+        target_site_name = None
+        if schema.visual_target_site_template is not None and fixture_ref is not None:
+            target_site_name = schema.visual_target_site_template.format(fixture_ref=fixture_ref)
+        elif schema.handle_site_template is not None and fixture_ref is not None:
+            target_site_name = schema.handle_site_template.format(fixture_ref=fixture_ref)
+
+        target_body_name = None
+        if schema.visual_target_body_template is not None and fixture_ref is not None:
+            target_body_name = schema.visual_target_body_template.format(fixture_ref=fixture_ref)
+
+        target_body_id: int | None = None
+
+        if target_site_name is not None:
+            try:
+                site_id = find_site_id(model, target_site_name)
+                target_body_id = int(model.site_bodyid[site_id])
+
+                def target_resolver(data: Any, timestep: int) -> np.ndarray | None:
+                    del timestep
+                    return data.site_xpos[site_id].copy()
+
+                def target_body_id_resolver(data: Any, timestep: int) -> int | None:
+                    del data, timestep
+                    return target_body_id
+            except ValueError:
+                target_site_name = None
+
+        if target_site_name is None and target_body_name is not None:
+            body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, target_body_name)
+            if body_id < 0:
+                target_body_name = None
+            else:
+                target_body_id = int(body_id)
+
+                def target_resolver(data: Any, timestep: int) -> np.ndarray | None:
+                    del timestep
+                    return data.xpos[body_id].copy()
+
+                def target_body_id_resolver(data: Any, timestep: int) -> int | None:
+                    del data, timestep
+                    return target_body_id
+
+        if target_site_name is None and target_body_name is None:
+            # Fall back to the parent body of the manipulated joint.
+            joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
+            if joint_id < 0:
+                return None
+            target_body_id = int(model.jnt_bodyid[joint_id])
+
+            def target_resolver(data: Any, timestep: int) -> np.ndarray | None:
+                del timestep
+                return data.xpos[body_id].copy()
+
+            def target_body_id_resolver(data: Any, timestep: int) -> int | None:
+                del data, timestep
+                return target_body_id
+
+        return compute_visual_head_labels(
+            model=model,
+            states=states,
+            ep_meta=ep_meta,
+            target_point_resolver=target_resolver,
+            target_body_id_resolver=target_body_id_resolver,
+            progress=progress,
+            completion_threshold=completion_threshold,
+            visibility_horizon=visibility_horizon,
+        )
+    except Exception as exc:  # pragma: no cover - runtime fallback
+        return {
+            "object_visibility_future": np.zeros(len(progress), dtype=np.float64),
+            "object_visibility_future_mask": np.ones(len(progress), dtype=bool),
+            "next_best_view_score": np.zeros(len(progress), dtype=np.float64),
+            "next_best_view_score_mask": np.ones(len(progress), dtype=bool),
+            "schema_version": "mowa_visual_proxy_fallback_v1",
+            "visual_head_error": str(exc),
+        }
+
+
 def _maybe_extract_kinematics(
     model_path: Path,
     states_path: Path,
@@ -340,8 +477,10 @@ def _maybe_extract_kinematics(
     enable: bool,
     row_count: int,
     repo_root: Path | None,
+    model: Any | None = None,
 ) -> dict[str, Any]:
     """Return EEF-to-handle distance if MuJoCo and site names are available."""
+    del manipulated_body_template  # reserved for future contact-based readiness
     if not enable or handle_site_template is None or fixture_ref is None:
         return {
             "available": False,
@@ -357,7 +496,8 @@ def _maybe_extract_kinematics(
         }
 
     try:
-        model = build_mujoco_model_from_episode(model_path, repo_root=repo_root)
+        if model is None:
+            model = build_mujoco_model_from_episode(model_path, repo_root=repo_root)
         states = load_states(states_path)
         handle_site_name = handle_site_template.format(fixture_ref=fixture_ref)
         distances = compute_site_distances(

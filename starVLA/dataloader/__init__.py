@@ -3,6 +3,7 @@ import os
 import logging
 import numpy as np
 from pathlib import Path
+from omegaconf import OmegaConf
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,8 @@ def build_dataloader(cfg, dataset_py="lerobot_datasets_oxe"): # TODO now here on
         import torch.distributed as dist
         from starVLA.dataloader.lerobot_datasets import get_vla_dataset, collate_fn
         vla_dataset_cfg = cfg.datasets.vla_data
+        if hasattr(cfg, "latent_cache") and not vla_dataset_cfg.get("mowa_latent_cache", None):
+            vla_dataset_cfg.mowa_latent_cache = OmegaConf.to_container(cfg.latent_cache, resolve=True)
 
         vla_dataset = get_vla_dataset(
             data_cfg=vla_dataset_cfg,

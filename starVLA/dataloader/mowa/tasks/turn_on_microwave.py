@@ -20,6 +20,12 @@ class TurnOnMicrowaveLabelBuilder(RewardBasedTaskBuilder):
                 task_name="TurnOnMicrowave",
                 subgoal_id="turn_on_microwave",
                 completion_threshold=0.95,
+                visual_target_site_name="microwave_main_group_default_site",
+                visual_target_site_candidates=(
+                    "microwave_main_group_default_site",
+                    "microwave_left_group_default_site",
+                    "microwave_right_group_default_site",
+                ),
                 schema_version="turn_on_microwave_v1",
             )
         )

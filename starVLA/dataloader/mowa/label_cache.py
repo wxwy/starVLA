@@ -14,7 +14,6 @@ import numpy as np
 
 from starVLA.dataloader.mowa.atomic_task_label_builder import AtomicTaskLabelBuilder
 
-
 # Standard sidecar columns.  Task-specific builders may append extra debug
 # columns, but these must always be present.
 LABEL_CACHE_STANDARD_COLUMNS = (
@@ -25,6 +24,10 @@ LABEL_CACHE_STANDARD_COLUMNS = (
     "subgoal_feasibility_mask",
     "manipulation_readiness",
     "manipulation_readiness_mask",
+    "object_visibility_future",
+    "object_visibility_future_mask",
+    "next_best_view_score",
+    "next_best_view_score_mask",
 )
 
 
@@ -67,6 +70,37 @@ def build_label_cache_for_episode(
             f"Task {builder.task_name} builder missing standard sidecar columns: {missing}"
         )
     return cache
+
+
+def _write_cache_parquet(
+    cache: dict[str, Any],
+    output_dir: Path,
+    episode_index: int,
+    pa: Any,
+    pq: Any,
+) -> None:
+    """Write a single episode sidecar parquet from a builder cache dict."""
+    columns: dict[str, Any] = {
+        "frame_index": cache["frame_index"],
+        "failure_risk": cache["failure_risk"],
+        "failure_risk_mask": cache["failure_risk_mask"],
+        "subgoal_feasibility": cache["subgoal_feasibility"],
+        "subgoal_feasibility_mask": cache["subgoal_feasibility_mask"],
+        "manipulation_readiness": cache["manipulation_readiness"],
+        "manipulation_readiness_mask": cache["manipulation_readiness_mask"],
+        "object_visibility_future": cache["object_visibility_future"],
+        "object_visibility_future_mask": cache["object_visibility_future_mask"],
+        "next_best_view_score": cache["next_best_view_score"],
+        "next_best_view_score_mask": cache["next_best_view_score_mask"],
+    }
+    # Append optional task-specific debug columns (1-D arrays only).
+    for key, value in cache.items():
+        if key not in columns and isinstance(value, np.ndarray) and value.ndim == 1:
+            columns[key] = value
+
+    table = pa.table(columns)
+    output_path = output_dir / f"episode_{episode_index:06d}.parquet"
+    pq.write_table(table, output_path)
 
 
 def write_label_cache(
@@ -113,6 +147,8 @@ def write_label_cache(
     subgoal_positive = 0
     readiness_positive = 0
     failure_risk_labeled = 0
+    object_visibility_positive = 0
+    next_best_view_sum = 0.0
 
     for parquet_path in parquet_paths:
         episode_index = int(parquet_path.stem.split("_")[-1])
@@ -140,29 +176,18 @@ def write_label_cache(
             skipped_empty += 1
             continue
 
-        columns: dict[str, Any] = {
-            "frame_index": cache["frame_index"],
-            "failure_risk": cache["failure_risk"],
-            "failure_risk_mask": cache["failure_risk_mask"],
-            "subgoal_feasibility": cache["subgoal_feasibility"],
-            "subgoal_feasibility_mask": cache["subgoal_feasibility_mask"],
-            "manipulation_readiness": cache["manipulation_readiness"],
-            "manipulation_readiness_mask": cache["manipulation_readiness_mask"],
-        }
-        # Append optional task-specific debug columns.
-        for key, value in cache.items():
-            if key not in columns and isinstance(value, np.ndarray):
-                columns[key] = value
-
-        table = pa.table(columns)
-        output_path = output_dir / f"episode_{episode_index:06d}.parquet"
-        pq.write_table(table, output_path)
+        _write_cache_parquet(cache, output_dir, episode_index, pa, pq)
 
         processed += 1
         total_rows += int(cache["row_count"])
         subgoal_positive += int(np.asarray(cache["subgoal_feasibility"]).sum())
         readiness_positive += int(np.asarray(cache["manipulation_readiness"]).sum())
         failure_risk_labeled += int((~np.asarray(cache["failure_risk_mask"], dtype=bool)).sum())
+        object_visibility_positive += int(np.asarray(cache["object_visibility_future"]).sum())
+        ovf_mask = ~np.asarray(cache["object_visibility_future_mask"], dtype=bool)
+        if ovf_mask.any():
+            nbv_active = np.asarray(cache["next_best_view_score"])[ovf_mask]
+            next_best_view_sum += float(nbv_active.sum())
 
     return {
         "dataset_path": str(dataset_path),
@@ -182,6 +207,8 @@ def write_label_cache(
         "subgoal_positive_count": subgoal_positive,
         "readiness_positive_count": readiness_positive,
         "failure_risk_labeled_count": failure_risk_labeled,
+        "object_visibility_positive_count": object_visibility_positive,
+        "next_best_view_score_sum": next_best_view_sum,
         "schema_version": cache.get("schema_version", "unknown"),
         "go_no_go": (
             f"TBD: {builder.task_name} label cache built; review distribution before unmasking"
@@ -229,11 +256,15 @@ def load_label_cache_for_episode(
             "failure_risk": _to_array(failure_risk_values, np.float64),
             "subgoal_feasibility": np.asarray(data["subgoal_feasibility"], dtype=np.float64),
             "manipulation_readiness": np.asarray(data["manipulation_readiness"], dtype=np.float64),
+            "object_visibility_future": np.asarray(data["object_visibility_future"], dtype=np.float64),
+            "next_best_view_score": np.asarray(data["next_best_view_score"], dtype=np.float64),
         },
         "masks": {
             "failure_risk": ~np.asarray(data["failure_risk_mask"], dtype=bool),
             "subgoal_feasibility": ~np.asarray(data["subgoal_feasibility_mask"], dtype=bool),
             "manipulation_readiness": ~np.asarray(data["manipulation_readiness_mask"], dtype=bool),
+            "object_visibility_future": ~np.asarray(data["object_visibility_future_mask"], dtype=bool),
+            "next_best_view_score": ~np.asarray(data["next_best_view_score_mask"], dtype=bool),
         },
     }
 

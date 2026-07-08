@@ -21,6 +21,9 @@ _FORBIDDEN_WAM_INPUT_KEYS = {
     "future_rgb_window",
     "future_wan_latent",
     "target_future_latent",
+    "mowa_future_latent",
+    "mowa_future_latent_target",
+    "mowa_predicted_future_latent",
 }
 
 

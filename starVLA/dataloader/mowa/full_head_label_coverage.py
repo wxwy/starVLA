@@ -66,8 +66,8 @@ def inspect_mowa_future_label_coverage(
     )
     available_columns = tuple(sorted(set().union(*columns_by_episode))) if columns_by_episode else ()
     coverage = tuple(_build_head_coverage(head, available_columns) for head in MOWA_FUTURE_FULL_HEADS)
-    constructible_heads = tuple(item.head for item in coverage if item.status == "candidate_constructible")
-    masked_heads = tuple(item.head for item in coverage if item.status != "candidate_constructible")
+    constructible_heads = tuple(item.head for item in coverage if str(item.status).startswith("candidate"))
+    masked_heads = tuple(item.head for item in coverage if not str(item.status).startswith("candidate"))
 
     return MoWAFutureLabelCoverageReport(
         dataset_path=str(root),
@@ -126,10 +126,10 @@ def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAF
     if head == "next_best_view_score":
         return MoWAFutureHeadCoverage(
             head=head,
-            status="masked",
-            source_fields=("view_score", "visibility_label"),
-            mask_rule="mask by default",
-            notes="Requires a view/visibility proxy definition; not available from scalar parquet fields.",
+            status="candidate_constructible_from_sidecar",
+            source_fields=("next_best_view_score", "next_best_view_score_mask"),
+            mask_rule="mask if sidecar missing",
+            notes="MuJoCo FK + camera projection proxy; sidecar pre-computed; final unmask decision depends on distribution review.",
         )
     if head == "subgoal_feasibility":
         required = ("next.reward", "next.done", "frame_index")
@@ -144,10 +144,10 @@ def _build_head_coverage(head: str, available_columns: tuple[str, ...]) -> MoWAF
     if head == "object_visibility_future":
         return MoWAFutureHeadCoverage(
             head=head,
-            status="masked",
-            source_fields=("future_video", "object_visibility_proxy"),
-            mask_rule="mask by default",
-            notes="Requires video decode or a validated visibility proxy.",
+            status="candidate_constructible_from_sidecar",
+            source_fields=("object_visibility_future", "object_visibility_future_mask"),
+            mask_rule="mask if sidecar missing or distribution is single-class",
+            notes="MuJoCo FK + camera projection + ray-cast occlusion proxy; sidecar pre-computed; final unmask decision depends on distribution review.",
         )
     if head == "action_outcome_class":
         required = ("next.reward", "next.done")

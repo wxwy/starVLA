@@ -8,10 +8,12 @@ the minimum progress across all detected fridge door joints.
 from __future__ import annotations
 
 import gzip
+import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+import mujoco
 import numpy as np
 
 from starVLA.dataloader.mowa.atomic_task_label_builder import (
@@ -20,7 +22,8 @@ from starVLA.dataloader.mowa.atomic_task_label_builder import (
     failure_risk_label_from_window,
     register_atomic_task_label_builder,
 )
-from starVLA.dataloader.mowa.mujoco_state_utils import load_states
+from starVLA.dataloader.mowa.mujoco_state_utils import build_mujoco_model_from_episode, load_states
+from starVLA.dataloader.mowa.visual_head_utils import compute_visual_head_labels
 
 
 def _hinge_progress(raw_qpos: np.ndarray, joint_range: tuple[float, ...]) -> np.ndarray:
@@ -108,9 +111,16 @@ class CloseFridgeLabelBuilder(AtomicTaskLabelBuilder):
 
         xml_root = ET.fromstring(gzip.decompress(model_path.read_bytes()))
         states = load_states(states_path)
+        model = build_mujoco_model_from_episode(model_path, repo_root=repo_root)
         door_joints = self._find_fridge_door_joints(xml_root)
         if not door_joints:
             raise ValueError(f"No fridge door joints found for {self.task_name}")
+
+        door_body_ids: list[int] = []
+        for joint in door_joints:
+            joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint["name"])
+            if joint_id >= 0:
+                door_body_ids.append(int(model.jnt_bodyid[joint_id]))
 
         # Compute per-door progress and aggregate by mean (total closing effort).
         per_door_progress: list[np.ndarray] = []
@@ -173,6 +183,25 @@ class CloseFridgeLabelBuilder(AtomicTaskLabelBuilder):
                 elif np.any(future - current_progress >= readiness_progress_delta):
                     manipulation_readiness_values[timestep] = 1.0
 
+        ep_meta = json.loads(ep_meta_path.read_text())
+
+        def _target_resolver(data: Any, timestep: int) -> np.ndarray | None:
+            del timestep
+            if not door_body_ids:
+                return None
+            positions = np.stack([data.xpos[bid].copy() for bid in door_body_ids], axis=0)
+            return np.mean(positions, axis=0)
+
+        visual_labels = compute_visual_head_labels(
+            model=model,
+            states=states,
+            ep_meta=ep_meta,
+            target_point_resolver=_target_resolver,
+            progress=overall_progress,
+            completion_threshold=completion_threshold,
+            visibility_horizon=10,
+        )
+
         return {
             "frame_index": frame_indices,
             "task_progress": overall_progress.astype(np.float64),
@@ -190,4 +219,9 @@ class CloseFridgeLabelBuilder(AtomicTaskLabelBuilder):
             "readiness_predicate": f"future progress gain >= {readiness_progress_delta}",
             "kinematics_available": False,
             "kinematics_message": "progress-imminence proxy for multi-door fridge",
+            "object_visibility_future": visual_labels["object_visibility_future"],
+            "object_visibility_future_mask": visual_labels["object_visibility_future_mask"],
+            "next_best_view_score": visual_labels["next_best_view_score"],
+            "next_best_view_score_mask": visual_labels["next_best_view_score_mask"],
+            "visual_head_schema_version": visual_labels.get("schema_version", "mowa_visual_proxy_v1"),
         }

@@ -46,6 +46,11 @@ def parse_args() -> argparse.Namespace:
         help="Encoder name recorded in store attrs.",
     )
     parser.add_argument(
+        "--encoder-version",
+        default="fake-v1",
+        help="Encoder version recorded in store attrs.",
+    )
+    parser.add_argument(
         "--encoder-model-path",
         type=Path,
         default=None,
@@ -151,6 +156,7 @@ def main() -> None:
         video_keys=video_keys,
         encoder_kind=args.encoder_kind,
         encoder_name=args.encoder_name,
+        encoder_version=args.encoder_version,
         encoder_model_path=args.encoder_model_path,
         latent_model=args.latent_model,
         latent_model_version=args.latent_model_version,

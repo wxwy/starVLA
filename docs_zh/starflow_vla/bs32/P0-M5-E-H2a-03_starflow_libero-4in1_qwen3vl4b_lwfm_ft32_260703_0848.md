@@ -185,3 +185,11 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 ---
 
 *本文档将持续更新。*
+
+---
+
+## LIBERO 评估
+
+> 评估结果已移至统一汇总报告：[`LIBERO_EVAL_SUMMARY.md`](./LIBERO_EVAL_SUMMARY.md)
+>
+> 包含各实验在 libero_goal / libero_10 / libero_object / libero_spatial 四个子集上的完整对比结果与详细任务级数据。

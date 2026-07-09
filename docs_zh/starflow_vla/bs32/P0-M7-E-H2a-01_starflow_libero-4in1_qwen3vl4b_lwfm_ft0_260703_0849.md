@@ -357,59 +357,8 @@ bash examples/LIBERO/train_files/run_starflow_train_ready.sh
 
 ---
 
-## LIBERO Goal 评估结果
+## LIBERO 评估
 
-> 评估时间：2026-07-07 15:46 CST
-> Task Suite: **libero_goal** (10 tasks × 50 trials)
-> 评估设备: NVIDIA RTX 4090
-
-### steps_50000
-
-| 指标 | 值 |
-|------|-----|
-| **Success Rate** | **80.94%** |
-| 成功/总数 | 395 / 488 |
-
-| 任务 | 成功率 | 成功/总数 |
-|------|--------|-----------|
-| put the bowl on the plate | 100.00% | 50/50 |
-| turn on the stove | 100.00% | 50/50 |
-| put the bowl on the stove | 94.00% | 47/50 |
-| put the wine bottle on top of the cabinet | 92.00% | 46/50 |
-| open the middle drawer of the cabinet | 90.00% | 45/50 |
-| push the plate to the front of the stove | 90.00% | 45/50 |
-| put the bowl on top of the cabinet | 74.00% | 37/50 |
-| put the cream cheese in the bowl | 72.00% | 36/50 |
-| open the top drawer and put the bowl inside | 68.00% | 34/50 |
-| put the wine bottle on the rack | 13.16% | 5/38 |
-
----
-
-## LIBERO Goal 评估结果
-
-> 评估时间：2026-07-07 15:47:31 CST
-> Task Suite: **libero_goal**
-> Trials per Task: **50**
-> 评估设备: NVIDIA RTX 4090
-
-| Step | Success Rate | 成功数/总数 |
-|------|-------------|-------------|
-| 50000 | **0.7900** (0.7900%) | 395/500 |
-
-### 各任务成功率
-
-```
-open the middle drawer of the cabinet: 45/50=90.00%
-open the top drawer and put the bowl inside: 34/50=68.00%
-push the plate to the front of the stove: 45/50=90.00%
-put the bowl on the plate: 50/50=100.00%
-put the bowl on the stove: 47/50=94.00%
-put the bowl on top of the cabinet: 37/50=74.00%
-put the cream cheese in the bowl: 36/50=72.00%
-put the wine bottle on the rack: 5/50=10.00%
-put the wine bottle on top of the cabinet: 46/50=92.00%
-turn on the stove: 50/50=100.00%
-```
-
-*评估报告路径：/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/steps_50000/eval_report.json*
-
+> 评估结果已移至统一汇总报告：[`LIBERO_EVAL_SUMMARY.md`](./LIBERO_EVAL_SUMMARY.md)
+>
+> 包含各实验在 libero_goal / libero_10 / libero_object / libero_spatial 四个子集上的完整对比结果与详细任务级数据。

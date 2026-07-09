@@ -32,18 +32,18 @@
     "starvla_commit": null,
     "config_schema": "0.21"
   },
-  "total_episodes": 37,
-  "total_successes": 33,
-  "success_rate": 0.8918918918918919,
+  "total_episodes": 39,
+  "total_successes": 35,
+  "success_rate": 0.8974358974358975,
   "failure_category": {
     "timeout_no_success": 4
   },
   "tasks": [
     {
       "task_description": "pick up the alphabet soup and place it in the basket",
-      "episodes": 37,
-      "successes": 33,
-      "success_rate": 0.8918918918918919,
+      "episodes": 39,
+      "successes": 35,
+      "success_rate": 0.8974358974358975,
       "failure_category": {
         "timeout_no_success": 4
       }
@@ -1151,6 +1151,66 @@
         "server_total_sec": 0.19814160815440118,
         "server_framework_sec": 0.19780050311237574,
         "server_unnorm_sec": 0.0003386440221220255,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 37,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 217,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/steps_70000/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode37_success.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 216,
+        "replan_interval": 8,
+        "resize_sec": 0.0015958070289343596,
+        "client_pack_and_queue_sec": 7.589207962155342e-05,
+        "client_server_roundtrip_sec": 1.6987551029305905,
+        "client_unpack_sec": 7.842597551643848e-05,
+        "client_total_call_sec": 1.6989136720076203,
+        "server_total_sec": 0.19920936110429466,
+        "server_framework_sec": 0.1987900659441948,
+        "server_unnorm_sec": 0.0004160350654274225,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 38,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 136,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/steps_70000/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode38_success.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 136,
+        "replan_interval": 8,
+        "resize_sec": 0.00164341414347291,
+        "client_pack_and_queue_sec": 0.0002021330874413252,
+        "client_server_roundtrip_sec": 1.760903123067692,
+        "client_unpack_sec": 5.792919546365738e-05,
+        "client_total_call_sec": 1.761165777221322,
+        "server_total_sec": 0.1962729140650481,
+        "server_framework_sec": 0.195925337029621,
+        "server_unnorm_sec": 0.0003450841177254915,
         "framework_prepare_inputs_sec": null,
         "framework_build_qwen_inputs_sec": null,
         "framework_qwen_forward_sec": null,

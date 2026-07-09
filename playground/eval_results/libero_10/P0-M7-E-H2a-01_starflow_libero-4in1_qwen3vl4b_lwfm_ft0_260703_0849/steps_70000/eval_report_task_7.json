@@ -32,18 +32,18 @@
     "starvla_commit": null,
     "config_schema": "0.21"
   },
-  "total_episodes": 41,
-  "total_successes": 26,
-  "success_rate": 0.6341463414634146,
+  "total_episodes": 42,
+  "total_successes": 27,
+  "success_rate": 0.6428571428571429,
   "failure_category": {
     "timeout_no_success": 15
   },
   "tasks": [
     {
       "task_description": "put both the alphabet soup and the cream cheese box in the basket",
-      "episodes": 41,
-      "successes": 26,
-      "success_rate": 0.6341463414634146,
+      "episodes": 42,
+      "successes": 27,
+      "success_rate": 0.6428571428571429,
       "failure_category": {
         "timeout_no_success": 15
       }
@@ -1271,6 +1271,36 @@
         "server_total_sec": 0.1574596099089831,
         "server_framework_sec": 0.15709705092012882,
         "server_unnorm_sec": 0.00035973102785646915,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 7,
+      "task_description": "put both the alphabet soup and the cream cheese box in the basket",
+      "episode_idx": 41,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 229,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_10/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/steps_70000/rollout_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket_episode41_success.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 224,
+        "replan_interval": 8,
+        "resize_sec": 0.001643738942220807,
+        "client_pack_and_queue_sec": 0.00010695192031562328,
+        "client_server_roundtrip_sec": 1.4688007200602442,
+        "client_unpack_sec": 0.0001111410092562437,
+        "client_total_call_sec": 1.469021736877039,
+        "server_total_sec": 0.14308723411522806,
+        "server_framework_sec": 0.14269189885817468,
+        "server_unnorm_sec": 0.00039240019395947456,
         "framework_prepare_inputs_sec": null,
         "framework_build_qwen_inputs_sec": null,
         "framework_qwen_forward_sec": null,

@@ -178,7 +178,8 @@
       "status": "launchable_now",
       "evidence_reports": [
         "shuffled_robot_sanity_plan",
-        "shuffled_robot_checkpoint_preflight"
+        "shuffled_robot_checkpoint_preflight",
+        "shuffled_robot_rollout"
       ],
       "blocking_items": [
         "This smoke validates pair construction only and does not execute rollout.",
@@ -186,12 +187,16 @@
         "Metric drop is an expectation to test later, not a measured result here.",
         "This preflight validates shuffled-robot checkpoint wiring only; it does not launch rollout.",
         "Real shuffled-robot evidence still depends on a meaningful E-004 checkpoint and downstream rollout report.",
+        "This is a tiny shuffled-robot rollout smoke, not a statistically powered benchmark.",
+        "If the client or simulator fails, inspect per-intervention server/client logs under artifact_dir.",
+        "Formal E-005 evidence requires more episodes/seeds after this smoke path is stable.",
         "E-005 requires a meaningful E-004 checkpoint; shuffled-robot plan/smoke alone is not execution evidence.",
         "Metric-drop expectation must be validated after P1-b1 training and cannot be claimed from pair construction."
       ],
       "checks": {
         "sanity_plan_present": true,
-        "checkpoint_preflight_passed": true
+        "checkpoint_preflight_passed": true,
+        "shuffled_robot_rollout_passed": true
       }
     },
     {

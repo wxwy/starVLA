@@ -356,8 +356,11 @@ def _build_e005_entry(root: Path) -> dict[str, Any]:
         root,
         "docs_zh/mowa/mowa_e005_shuffled_robot_checkpoint_preflight_smoke.json",
     )
+    rollout = _load_json(root, "docs_zh/mowa/mowa_e005_shuffled_robot_rollout_smoke.json")
     blockers = list(shuffled.get("unresolved_items") or [])
     blockers.extend(list(checkpoint_preflight.get("unresolved_items") or []))
+    if rollout:
+        blockers.extend(list(rollout.get("unresolved_items") or []))
     blockers.extend(
         [
             "E-005 requires a meaningful E-004 checkpoint; shuffled-robot plan/smoke alone is not execution evidence.",
@@ -381,12 +384,14 @@ def _build_e005_entry(root: Path) -> dict[str, Any]:
             {
                 "shuffled_robot_sanity_plan": shuffled,
                 "shuffled_robot_checkpoint_preflight": checkpoint_preflight,
+                "shuffled_robot_rollout": rollout,
             }
         ),
         "blocking_items": blockers,
         "checks": {
             "sanity_plan_present": _report_not_nogo(shuffled),
             "checkpoint_preflight_passed": _report_not_nogo(checkpoint_preflight),
+            "shuffled_robot_rollout_passed": _report_not_nogo(rollout),
         },
     }
 

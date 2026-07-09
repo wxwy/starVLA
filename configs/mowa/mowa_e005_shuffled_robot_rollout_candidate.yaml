@@ -1,0 +1,47 @@
+project_short_name: MoWA
+stage: hlc_gci
+task_id: M4-003
+experiment_id: E-005
+experiment_name: shuffled-robot checkpoint-backed policy rollout smoke
+config_role: shuffled_robot_rollout_candidate_not_launch
+launch_ready: false
+eval_started: false
+requires_human_confirmation: true
+
+checkpoint: latest_complete
+checkpoint_root_policy: playground/mowa_ckpt
+
+references:
+  plan_config: configs/mowa/mowa_shuffled_robot_sanity_plan.yaml
+  plan_smoke: docs_zh/mowa/mowa_shuffled_robot_sanity_plan_smoke.json
+  checkpoint_preflight: docs_zh/mowa/mowa_e005_shuffled_robot_checkpoint_preflight_smoke.json
+
+server:
+  python: .venv/bin/python
+  entrypoint: deployment/model_server/server_policy.py
+  port_base: 5706
+  use_bf16: true
+  idle_timeout: 1800
+
+client:
+  python: .robocase/bin/python
+  module: examples.Robocasa_365.eval_files.simulation_env
+  env_name: robocasa/OpenDrawer
+  n_episodes: 2
+  n_envs: 2
+  max_episode_steps: 100
+  n_action_steps: 8
+  video_out_path: playground/eval_results/mowa_e005_robocasa365_open_drawer_smoke/videos
+
+interventions:
+  - baseline
+  - zero
+  - batch_shuffle
+  - head_mask_control
+
+guardrails:
+  start_server_in_preflight: false
+  start_client_in_preflight: false
+  claim_action_gain_without_rollout_report: false
+  config_override_required_for_non_baseline: true
+  starflow_project_experiments_unchanged: true

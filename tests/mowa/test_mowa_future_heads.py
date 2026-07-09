@@ -2576,6 +2576,93 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertTrue(all(run["executed"] is False for run in report["runs"]))
         self.assertTrue(str(report["go_no_go"]).startswith("TBD: E-004"))
 
+    def test_e005_shuffled_robot_rollout_smoke_plan_does_not_execute(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_shuffled_robot_rollout_smoke_test"
+                / "checkpoints"
+                / "steps_2"
+            )
+            checkpoint.mkdir(parents=True)
+            (checkpoint / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 2}),
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa" / "mowa_e005_shuffled_robot_checkpoint_preflight_smoke.json").write_text(
+                json.dumps({"checks": {"ok": True}}),
+                encoding="utf-8",
+            )
+            config = root / "configs" / "mowa" / "mowa_e005_shuffled_robot_rollout_candidate.yaml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "project_short_name: MoWA",
+                        "stage: hlc_gci",
+                        "task_id: M4-003",
+                        "experiment_id: E-005",
+                        "experiment_name: shuffled-robot checkpoint-backed policy rollout smoke",
+                        "config_role: shuffled_robot_rollout_candidate_not_launch",
+                        "launch_ready: false",
+                        "eval_started: false",
+                        "requires_human_confirmation: true",
+                        "checkpoint: "
+                        "playground/mowa_ckpt/MoWA-E-001_shuffled_robot_rollout_smoke_test/"
+                        "checkpoints/steps_2",
+                        "checkpoint_root_policy: playground/mowa_ckpt",
+                        "server:",
+                        "  python: .venv/bin/python",
+                        "  entrypoint: deployment/model_server/server_policy.py",
+                        "  port_base: 5706",
+                        "  use_bf16: true",
+                        "  idle_timeout: 1800",
+                        "client:",
+                        "  python: .robocase/bin/python",
+                        "  module: examples.Robocasa_365.eval_files.simulation_env",
+                        "  env_name: robocasa/OpenDrawer",
+                        "  n_episodes: 2",
+                        "  n_envs: 2",
+                        "  max_episode_steps: 100",
+                        "  n_action_steps: 8",
+                        "  video_out_path: playground/eval_results/mowa_e005_robocasa365_open_drawer_smoke/videos",
+                        "interventions:",
+                        "  - baseline",
+                        "  - zero",
+                        "  - batch_shuffle",
+                        "  - head_mask_control",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e005_shuffled_robot_rollout_smoke import (
+                run_or_plan_e005_shuffled_robot_rollout_smoke,
+            )
+
+            report = run_or_plan_e005_shuffled_robot_rollout_smoke(
+                root,
+                config_path=Path("configs/mowa/mowa_e005_shuffled_robot_rollout_candidate.yaml"),
+                execute=False,
+                server_ready_timeout=1,
+            )
+
+        self.assertFalse(report["eval_started"])
+        self.assertTrue(report["checks"]["preflight_report_exists"])
+        self.assertTrue(report["checks"]["checkpoint_exists"])
+        self.assertTrue(report["checks"]["batch_shuffle_batch_size_gt_1"])
+        self.assertEqual(
+            {run["intervention"] for run in report["runs"]},
+            {"baseline", "zero", "batch_shuffle", "head_mask_control"},
+        )
+        self.assertTrue(all(run["executed"] is False for run in report["runs"]))
+        self.assertTrue(str(report["go_no_go"]).startswith("TBD: E-005"))
+
     def test_e006_rollout_assets_blocker_is_detected_from_failed_runs(self):
         from tools.mowa.e006_policy_rollout_smoke import _extract_rollout_blocker
 

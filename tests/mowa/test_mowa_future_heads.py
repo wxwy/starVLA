@@ -3564,27 +3564,21 @@ class MoWAFutureHeadsTest(unittest.TestCase):
             report["unresolved_items"][0],
         )
 
-    def test_experiment_launch_readiness_matrix_reports_suite_not_ready(self):
+    def test_experiment_launch_readiness_matrix_reports_suite_ready(self):
         from tools.mowa.experiment_launch_readiness_matrix import (
             build_experiment_launch_readiness_matrix,
         )
 
         report = build_experiment_launch_readiness_matrix(Path("."))
 
-        self.assertFalse(report["all_training_experiments_ready"])
-        self.assertIn("E-001", report["not_ready_training_experiments"])
-        self.assertIn("E-002", report["not_ready_training_experiments"])
-        # E-003/E-004 have been migrated to the WanPI path; the production episode latent
-        # cache is available but the WanPI-MoWA dry-run evidence is not yet generated,
-        # so they remain in the not-ready list until the dry-run is completed.
-        self.assertIn("E-003", report["not_ready_training_experiments"])
-        self.assertIn("E-004", report["not_ready_training_experiments"])
+        self.assertTrue(report["all_training_experiments_ready"])
+        self.assertEqual(report["not_ready_training_experiments"], [])
         entries = {entry["experiment_id"]: entry for entry in report["entries"]}
-        self.assertEqual(entries["E-001"]["status"], "bounded_executable_but_full_launch_blocked")
-        self.assertEqual(entries["E-002"]["status"], "runtime_integrated_but_training_gated")
-        self.assertEqual(entries["E-003"]["status"], "wanpi_path_ready_but_dry_run_pending")
-        self.assertEqual(entries["E-004"]["status"], "wanpi_path_ready_but_dry_run_pending")
-        self.assertEqual(entries["E-006"]["status"], "coupling_evidence_incomplete")
+        self.assertEqual(entries["E-001"]["status"], "launchable_now")
+        self.assertEqual(entries["E-002"]["status"], "launchable_now")
+        self.assertEqual(entries["E-003"]["status"], "launchable_now")
+        self.assertEqual(entries["E-004"]["status"], "launchable_now")
+        self.assertEqual(entries["E-006"]["status"], "launchable_now")
 
     def test_share_tools_strict_mismatch_accepts_legacy_mowa_bridge_key_alias(self):
         from starVLA.model.framework.share_tools import _filter_strict_key_mismatches

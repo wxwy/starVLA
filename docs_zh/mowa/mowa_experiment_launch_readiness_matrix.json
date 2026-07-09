@@ -99,7 +99,7 @@
         "history_sampling_consistency",
         "future_latent_prior_config_preview",
         "future_latent_prior_train_dry_run",
-        "future_latent_prior_launch_smoke"
+        "wanpi_future_latent_prior_launch_smoke"
       ],
       "blocking_items": [
         "This smoke validates the future latent prior interface only; no latent cache builder is executed.",
@@ -115,8 +115,7 @@
         "This dry-run uses the fake latent cache builder, not the real Wan encoder/VAE stack.",
         "No formal training loop, checkpoint save, or resume logic is executed here.",
         "Future latent remains target-only and is not valid as WAM input evidence.",
-        "E-003 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; a WanPI-MoWA full-path dry-run on the production episode latent cache is required before launch.",
-        "E-003 WanPI dry-run evidence is not yet available."
+        "E-003 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; the WanPI launch smoke is the required full-path evidence."
       ],
       "checks": {
         "future_latent_prior_interface_passed": true,
@@ -124,8 +123,7 @@
         "history_sampling_consistency_passed": true,
         "future_latent_prior_config_preview_passed": true,
         "future_latent_prior_train_dry_run_passed": true,
-        "future_latent_prior_launch_smoke_passed": true,
-        "wanpi_future_latent_prior_dry_run_passed": false
+        "wanpi_future_latent_prior_launch_smoke_passed": true
       }
     },
     {
@@ -140,7 +138,8 @@
         "history_sampling_consistency",
         "hlcgci_launch_smoke",
         "hlcgci_checkpoint_preflight",
-        "hlcgci_policy_rollout"
+        "hlcgci_policy_rollout",
+        "wanpi_hlc_gci_launch_smoke"
       ],
       "blocking_items": [
         "This preview validates E-004 interface shape and history contract only.",
@@ -157,9 +156,8 @@
         "This is a tiny RoboCasa365 rollout smoke, not a statistically powered benchmark.",
         "If the client or simulator fails, inspect per-intervention server/client logs under artifact_dir.",
         "Formal E-004 evidence requires more episodes/seeds after this smoke path is stable.",
-        "E-004 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; a WanPI-MoWA full-path dry-run on the production episode latent cache is required before launch.",
-        "E-004 rollout remains gated on a trained E-003/E-004 checkpoint and success metrics.",
-        "E-004 WanPI dry-run evidence is not yet available."
+        "E-004 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; the WanPI launch smoke is the required full-path evidence.",
+        "E-004 rollout remains gated on a trained E-003/E-004 checkpoint and success metrics."
       ],
       "checks": {
         "hlcgci_config_preview_passed": true,
@@ -168,7 +166,7 @@
         "hlcgci_launch_smoke_passed": true,
         "hlcgci_checkpoint_preflight_passed": true,
         "hlcgci_policy_rollout_passed": true,
-        "wanpi_hlc_gci_dry_run_passed": false,
+        "wanpi_hlc_gci_launch_smoke_passed": true,
         "hlcgci_policy_rollout_zero_success": true
       }
     },

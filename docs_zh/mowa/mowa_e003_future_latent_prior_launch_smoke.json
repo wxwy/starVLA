@@ -31,12 +31,12 @@
       "observed": {
         "repo_root": ".",
         "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
-        "cache_root": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache",
+        "cache_root": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
         "model_path": "playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers",
         "cache_build_report": {
           "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
-          "cache_root": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache",
-          "manifest_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/manifest.json",
+          "cache_root": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "manifest_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/manifest.json",
           "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
           "encoder_version": "wan2.2-vae-v1",
           "latent_dim": 1024,
@@ -51,7 +51,7 @@
           "preview_artifacts": [
             {
               "cache_key": "c12ebad4827a94e8b0a1757b",
-              "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/c12ebad4827a94e8b0a1757b.pt",
+              "cache_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/c12ebad4827a94e8b0a1757b.pt",
               "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
               "episode_index": 0,
               "anchor_index": 7,
@@ -68,14 +68,14 @@
               "encoder_version": "wan2.2-vae-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|0|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
               "source_sha256": "37473e84964da8c9b666c628e4adc72bd2239d7e47adf09760795ad084cb9fce",
-              "latent_sha256": "eac58327af9e63b9d4d46da13fe35aad2ee83ff47dfa223dd364151df9464499",
+              "latent_sha256": "3a3190d50b0816bee058a1d427ea8869f7de39881186c6a79fda638823b32ba1",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 334
             },
             {
               "cache_key": "5ba68b5cbfcc4f99c9a06559",
-              "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/5ba68b5cbfcc4f99c9a06559.pt",
+              "cache_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/5ba68b5cbfcc4f99c9a06559.pt",
               "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
               "episode_index": 0,
               "anchor_index": 7,
@@ -99,14 +99,14 @@
               "encoder_version": "wan2.2-vae-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|0|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
               "source_sha256": "37473e84964da8c9b666c628e4adc72bd2239d7e47adf09760795ad084cb9fce",
-              "latent_sha256": "66875def06a266682d80afc1332e30a82790f730fbe607315691d0dff3581708",
+              "latent_sha256": "bab00838a0bfa1d720f80071a29caef1d7c4f3c1c57c7395c939e544c7eed0ad",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 334
             },
             {
               "cache_key": "cba09a692d3e827ab4a1757d",
-              "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/cba09a692d3e827ab4a1757d.pt",
+              "cache_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/cba09a692d3e827ab4a1757d.pt",
               "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
               "episode_index": 0,
               "anchor_index": 7,
@@ -123,6 +123,7 @@
                 7
               ],
               "latent_shape": [
+                8,
                 1024
               ],
               "dtype": "float32",
@@ -130,14 +131,14 @@
               "encoder_version": "wan2.2-vae-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|0|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
               "source_sha256": "37473e84964da8c9b666c628e4adc72bd2239d7e47adf09760795ad084cb9fce",
-              "latent_sha256": "f0c318ad936128f282fec38e31dffe991429e99d741e37edc3872a85067497a9",
+              "latent_sha256": "a3a702780f982677f6a28bfa85a68cf748bc9ea449512d925d4186c2f3557dbf",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 334
             },
             {
               "cache_key": "909712b3ec9bc7efd36d1cd7",
-              "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/909712b3ec9bc7efd36d1cd7.pt",
+              "cache_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/909712b3ec9bc7efd36d1cd7.pt",
               "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
               "episode_index": 1,
               "anchor_index": 7,
@@ -154,14 +155,14 @@
               "encoder_version": "wan2.2-vae-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|1|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000001.mp4",
               "source_sha256": "bc5deadbe7ed2a2d7618745d99ef92169505d740347e32f78fe50c6c8803f991",
-              "latent_sha256": "a3affab563c701531a1006db54eb27ccc813a7677bd6bb4498ce75ff5a59a100",
+              "latent_sha256": "cd0d50b93602b8e74200d33a2aa1e4a63537919d043a943b9a66bc1fe2417952",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 235
             },
             {
               "cache_key": "c86aa02857834064134bd0a7",
-              "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/c86aa02857834064134bd0a7.pt",
+              "cache_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/c86aa02857834064134bd0a7.pt",
               "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
               "episode_index": 1,
               "anchor_index": 7,
@@ -185,14 +186,14 @@
               "encoder_version": "wan2.2-vae-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|1|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000001.mp4",
               "source_sha256": "bc5deadbe7ed2a2d7618745d99ef92169505d740347e32f78fe50c6c8803f991",
-              "latent_sha256": "78163b7b97b1079b7eecf5af444e36dd348fe5c4fab7cedd0e316c2c1cd808aa",
+              "latent_sha256": "dd6bf9cb21e7243be488b05a1fd3fdf6a500f25262604e62cd9a3e3ac13b65d6",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 235
             },
             {
               "cache_key": "b2ca4c88b3b04783bd8fb88f",
-              "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/b2ca4c88b3b04783bd8fb88f.pt",
+              "cache_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/b2ca4c88b3b04783bd8fb88f.pt",
               "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
               "episode_index": 1,
               "anchor_index": 7,
@@ -209,6 +210,7 @@
                 7
               ],
               "latent_shape": [
+                8,
                 1024
               ],
               "dtype": "float32",
@@ -216,14 +218,14 @@
               "encoder_version": "wan2.2-vae-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|1|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000001.mp4",
               "source_sha256": "bc5deadbe7ed2a2d7618745d99ef92169505d740347e32f78fe50c6c8803f991",
-              "latent_sha256": "820f33cab31067b9f3b1545411aa9ff3179d7a711108bb77af5e558cdf2534d4",
+              "latent_sha256": "51500464f4142117af28601e15c37d506ef5d693d373ceed6e4a7ff4757541a6",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 235
             },
             {
               "cache_key": "6f47e313206329b002151804",
-              "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/6f47e313206329b002151804.pt",
+              "cache_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/6f47e313206329b002151804.pt",
               "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
               "episode_index": 4,
               "anchor_index": 7,
@@ -240,14 +242,14 @@
               "encoder_version": "wan2.2-vae-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|4|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000004.mp4",
               "source_sha256": "5b83d5911d1d28b5643e3584e4809c9dfbb6050ad4610e0ff9d0bdf126a676c3",
-              "latent_sha256": "3c72761592c57a9a039d79a995db98e684d249b1c06cc1539d34f7ff54f4a18e",
+              "latent_sha256": "584f4bd08f0f6d07e20899c90020dcfa58e830ab56b44e720c10c9d9b87160c5",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 208
             },
             {
               "cache_key": "0381205c984402535f992e2d",
-              "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/0381205c984402535f992e2d.pt",
+              "cache_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/0381205c984402535f992e2d.pt",
               "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
               "episode_index": 4,
               "anchor_index": 7,
@@ -271,7 +273,7 @@
               "encoder_version": "wan2.2-vae-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|4|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000004.mp4",
               "source_sha256": "5b83d5911d1d28b5643e3584e4809c9dfbb6050ad4610e0ff9d0bdf126a676c3",
-              "latent_sha256": "e365b2da794f49037198452bc9baf0c163c9090b866cf728c02185bd57ba4b4f",
+              "latent_sha256": "04d9f6eb69df19c071f066974b735ae2739e5db071385814de7a14722bdb3ab0",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 208
@@ -294,8 +296,8 @@
           ]
         },
         "cache_validation_report": {
-          "cache_root": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache",
-          "manifest_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/manifest.json",
+          "cache_root": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "manifest_path": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/manifest.json",
           "manifest_exists": true,
           "artifact_count": 9,
           "readable_artifact_count": 9,
@@ -305,7 +307,7 @@
           "duplicate_cache_key_count": 0,
           "all_ok": true,
           "summary": {
-            "cache_root": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache",
+            "cache_root": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
             "manifest_entries": 9,
             "manifest_exists": true
           },
@@ -342,7 +344,7 @@
         "latent_shape_status_data_gate": true
       },
       "reports": {
-        "config": "/tmp/mowa_e003_launch_smoke_zeeti4pt/mowa_e003_future_latent_prior_candidate.yaml",
+        "config": "/tmp/mowa_e003_launch_smoke_wr1o5cmm/mowa_e003_future_latent_prior_candidate.yaml",
         "cache_build_report": {
           "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
           "cache_root": "playground/mowa_latent_cache/e003_future_latent_prior_candidate",
@@ -433,6 +435,7 @@
                 7
               ],
               "latent_shape": [
+                8,
                 1024
               ],
               "dtype": "float32",
@@ -440,7 +443,7 @@
               "encoder_version": "fake-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|0|observation.images.robot0_eye_in_hand|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_eye_in_hand/episode_000000.mp4",
               "source_sha256": "924adb8aaad57bcf073d83318ee8cba5fba5a5807c6a68c78b6ff56e334557ba",
-              "latent_sha256": "2742b349fb940853d2a1f0605a5e787822b79d8f42c235e6f73d071041980c93",
+              "latent_sha256": "ce320ce2a153704b4e1a0574df46104da3b427951f0084bb0b9e01172a9a9bab",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 334
@@ -519,6 +522,7 @@
                 7
               ],
               "latent_shape": [
+                8,
                 1024
               ],
               "dtype": "float32",
@@ -526,7 +530,7 @@
               "encoder_version": "fake-v1",
               "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|0|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
               "source_sha256": "37473e84964da8c9b666c628e4adc72bd2239d7e47adf09760795ad084cb9fce",
-              "latent_sha256": "270292129c1e788cb36adada6da9cb8ddb862ae5193f303f663de509dc9d7361",
+              "latent_sha256": "da6381696764691414cddb6a20330d3e377ab4219dedadf7e980f22cf48afcc4",
               "video_exists": true,
               "cache_status": "written",
               "row_count": 334
@@ -633,7 +637,7 @@
         ],
         "text_hidden_shape": [
           2,
-          2048
+          2560
         ],
         "future_latent_target_shape": [
           2,
@@ -643,7 +647,7 @@
           2,
           1024
         ],
-        "loss": 1.092144250869751,
+        "loss": 1.0664432048797607,
         "loss_keys": [
           "future_latent_mse"
         ],
@@ -659,7 +663,7 @@
     }
   },
   "observed": {
-    "real_wan_cache_root": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache",
+    "real_wan_cache_root": "playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
     "real_wan_encoder_kind": "wan2.2-vae",
     "dry_run_config": "configs/mowa/mowa_e003_future_latent_prior_candidate.yaml"
   },

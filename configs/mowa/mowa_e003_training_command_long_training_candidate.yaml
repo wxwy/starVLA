@@ -23,8 +23,8 @@ command_candidate:
 runtime_targets:
   gpu_type: A4090
   num_gpus: 1
-  per_device_batch_size: 2
-  gradient_accumulation_steps: 16
+  per_device_batch_size: 1
+  gradient_accumulation_steps: 32
   effective_batch_size: 32
   max_train_steps: 80000
   save_interval: 2000
@@ -32,7 +32,7 @@ runtime_targets:
   runtime_evidence: docs_zh/mowa/mowa_e003_future_latent_prior_long_training_launch_smoke.json
 
 checkpoint_policy:
-  run_root_dir: playground/mowa_ckpt
+  run_root_dir: playground/mowa_ckpt/p1_long_training
   checkpoint_format: lightweight
   save_interval: 2000
   save_checkpoint_as_directory: true

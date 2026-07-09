@@ -10,17 +10,17 @@
     "plan_smoke_report_exists": true,
     "pair_count_expected": true,
     "pairs_are_non_self": true,
-    "checkpoint_exists": false,
+    "checkpoint_exists": true,
     "checkpoint_under_mowa_ckpt": true,
     "plan_shuffle_policy_cyclic_non_self": true,
     "plan_future_action_target_only": true,
     "n_envs_gt_1": true,
     "n_episodes_covers_vector_envs": true,
-    "checkpoint_preflight_passed": false
+    "checkpoint_preflight_passed": true
   },
   "config_path": "configs/mowa/mowa_e005_shuffled_robot_checkpoint_candidate.yaml",
   "observed": {
-    "checkpoint": "playground/mowa_ckpt/__missing_latest_complete__/checkpoints/steps_2",
+    "checkpoint": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_baseline_4090_long_260706_1730/checkpoints/steps_66000",
     "episode_indices": [
       0,
       1,
@@ -45,5 +45,5 @@
     "This preflight validates shuffled-robot checkpoint wiring only; it does not launch rollout.",
     "Real shuffled-robot evidence still depends on a meaningful E-004 checkpoint and downstream rollout report."
   ],
-  "go_no_go": "No-Go: E-005 shuffled-robot checkpoint preflight incomplete"
+  "go_no_go": "TBD: E-005 shuffled-robot checkpoint preflight passed; rollout remains gated"
 }

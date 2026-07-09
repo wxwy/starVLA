@@ -138,7 +138,11 @@ class MoWAWindowLatentSampleDataset:
         if self.label_sidecar_root is not None and not sidecar_path.is_absolute():
             sidecar_path = self.label_sidecar_root / sidecar_path
         if not sidecar_path.is_file():
-            return {}
+            sidecar_path = self._legacy_jsonl_sidecar_path(sidecar_path)
+            if not sidecar_path.is_file():
+                return {}
+        if sidecar_path.suffix == ".parquet":
+            return self._load_label_parquet(sidecar_path, entry.label_index)
         try:
             import json
 
@@ -149,6 +153,30 @@ class MoWAWindowLatentSampleDataset:
         except Exception:  # noqa: BLE001
             pass
         return {}
+
+    def _legacy_jsonl_sidecar_path(self, sidecar_path: Path) -> Path:
+        if sidecar_path.suffix != ".parquet":
+            return sidecar_path
+        stem = sidecar_path.stem
+        if stem.startswith("episode_"):
+            return sidecar_path.with_name(f"ep_{stem.split('_')[-1]}.jsonl")
+        return sidecar_path.with_suffix(".jsonl")
+
+    def _load_label_parquet(self, sidecar_path: Path, label_index: int) -> dict[str, Any]:
+        try:
+            import pyarrow.parquet as pq
+
+            table = pq.read_table(sidecar_path)
+            if label_index >= table.num_rows:
+                return {}
+            row = table.slice(label_index, 1).to_pydict()
+            return {
+                key: values[0]
+                for key, values in row.items()
+                if values and values[0] is not None
+            }
+        except Exception:  # noqa: BLE001
+            return {}
 
     def _assemble_sample(self, entry: MoWAWindowManifestEntry) -> WindowLatentSample:
         validate_window_indices(entry)

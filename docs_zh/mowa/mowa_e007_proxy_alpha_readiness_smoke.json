@@ -1,0 +1,25 @@
+{
+  "stage": "data_mix",
+  "experiment_id": "E-007",
+  "training_started": false,
+  "launch_ready": true,
+  "checks": {
+    "config_exists": true,
+    "launch_guard_open": true,
+    "label_distribution_report_exists": true,
+    "label_cache_manifest_exists": true,
+    "alpha_report_path_declared": true,
+    "frozen_alpha_config_path_declared": true,
+    "no_p0_p1_model_weight_update": true,
+    "alpha_frozen_before_downstream_training": true,
+    "uniform_alpha_baseline_required": true
+  },
+  "configs": {
+    "proxy_alpha_candidate": "configs/mowa/mowa_e007_proxy_alpha_candidate.yaml"
+  },
+  "unresolved_items": [
+    "This smoke validates the E-007 proxy-alpha candidate; it does not run proxy optimization.",
+    "Downstream P0/P1 configs may consume alpha only after the alpha report is reviewed and frozen."
+  ],
+  "go_no_go": "TBD: E-007 proxy-alpha candidate is wired and launch-approved"
+}

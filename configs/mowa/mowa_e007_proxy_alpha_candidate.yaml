@@ -1,0 +1,36 @@
+project_short_name: MoWA
+stage: data_mix
+experiment_id: E-007
+experiment_name: proxy learned alpha vs uniform alpha
+config_role: proxy_alpha_long_training_candidate
+
+launch_guard:
+  launch_ready: true
+  requires_human_confirmation: true
+  human_confirmed: true
+  policy_confirmed: true
+  reason: E-007 proxy alpha candidate is approved for bounded proxy training; downstream P0/P1 consume frozen alpha only after report review
+
+inputs:
+  label_distribution_report: docs_zh/mowa/mowa_all_atomic_task_future_label_distribution.json
+  label_cache_manifest: docs_zh/mowa/mowa_all_atomic_task_future_label_cache_manifest.json
+  data_mix_baseline: robocasa365_atomic_target_human_all
+
+output:
+  alpha_report: docs_zh/mowa/mowa_e007_proxy_alpha_report.json
+  frozen_alpha_config: configs/mowa/mowa_e007_frozen_alpha_candidate.yaml
+
+training:
+  entrypoint: tools/mowa/e007_proxy_alpha_readiness_smoke.py
+  max_proxy_steps: 2000
+  optimizer: AdamW
+  learning_rate: 1.0e-3
+  seed: 42
+  counted_in_experiment_budget: true
+  full_vla_training_started: false
+
+constraints:
+  no_p0_p1_model_weight_update: true
+  no_online_data_download: true
+  alpha_frozen_before_downstream_training: true
+  uniform_alpha_baseline_required: true

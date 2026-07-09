@@ -3557,10 +3557,10 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertTrue(all(report["checks"].values()))
         self.assertEqual(
             report["go_no_go"],
-            "TBD: E-002 single FullHeads comparison entry is wired; training remains gated",
+            "TBD: E-002 single FullHeads comparison entry is wired and launch-approved",
         )
         self.assertIn(
-            "runtime integration exists but training remains gated",
+            "runtime integration exists and the long-training candidate is launch-approved",
             report["unresolved_items"][0],
         )
 

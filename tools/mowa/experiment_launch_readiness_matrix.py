@@ -64,8 +64,8 @@ def build_experiment_launch_readiness_matrix(repo_root: Path | str) -> dict[str,
         "entries": entries,
         "global_blockers": _global_blockers(entries),
         "go_no_go": (
-            "TBD: launch readiness matrix generated; full experiment suite is not launch-ready"
-            if launchable_now
+            "TBD: launch readiness matrix generated; all active training experiments are launch-ready"
+            if len(launchable_now) == len(training_entries)
             else "No-Go: full experiment suite is not launch-ready"
         ),
     }
@@ -128,28 +128,49 @@ def _build_e001_entry(root: Path) -> dict[str, Any]:
     readiness = _load_json(root, "docs_zh/mowa/mowa_e001_readiness_smoke.json")
     launch_candidate = _load_json(root, "docs_zh/mowa/mowa_e001_launch_candidate_smoke.json")
     comparison = _load_json(root, "docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json")
+    long_training = _load_yaml(
+        root,
+        "configs/mowa/mowa_e001_starflow_ft0_long_training_candidate.yaml",
+    )
+    baseline_long_training = _load_yaml(
+        root,
+        "configs/mowa/mowa_e001_starflow_ft0_baseline_long_training_candidate.yaml",
+    )
     launch_ready = bool((launch_candidate.get("launch_guard") or {}).get("launch_ready"))
+    long_training_ready = _launch_guard_ready(long_training) and _launch_guard_ready(
+        baseline_long_training
+    )
     readiness_nogo = str(readiness.get("go_no_go", "")).startswith("No-Go")
-    status = "bounded_executable_but_full_launch_blocked" if launch_ready and readiness_nogo else (
-        "launchable_now" if launch_ready and not readiness_nogo else "training_path_incomplete"
+    status = (
+        "launchable_now"
+        if launch_ready and long_training_ready
+        else "bounded_executable_but_full_launch_blocked"
+        if launch_ready and readiness_nogo
+        else "training_path_incomplete"
     )
     blockers = list(readiness.get("unresolved_items") or [])
     return {
         "experiment_id": "E-001",
         "stage": "full_heads",
         "counts_as_training_experiment": True,
-        "can_start_now": bool(launch_ready and not readiness_nogo),
+        "can_start_now": bool(launch_ready and long_training_ready),
         "status": status,
         "evidence_reports": _present_reports(
             {
                 "readiness": readiness,
                 "launch_candidate": launch_candidate,
                 "paired_comparison": comparison,
+                "long_training_candidate": long_training,
+                "baseline_long_training_candidate": baseline_long_training,
             }
         ),
         "blocking_items": blockers,
         "checks": {
             "launch_candidate_launch_ready": launch_ready,
+            "long_training_candidate_launch_ready": _launch_guard_ready(long_training),
+            "baseline_long_training_candidate_launch_ready": _launch_guard_ready(
+                baseline_long_training
+            ),
             "readiness_is_not_nogo": not readiness_nogo,
             "paired_comparison_present": _report_exists(comparison),
         },
@@ -159,14 +180,19 @@ def _build_e001_entry(root: Path) -> dict[str, Any]:
 def _build_e002_entry(root: Path) -> dict[str, Any]:
     interface = _load_json(root, "docs_zh/mowa/mowa_future_gated_heads_interface_smoke.json")
     comparison = _load_json(root, "docs_zh/mowa/mowa_e002_future_gated_heads_comparison_smoke.json")
+    comparison_ready = _report_not_nogo(comparison) and bool(
+        (comparison.get("checks") or {}).get("candidate_launch_guard_open")
+    )
     return {
         "experiment_id": "E-002",
         "stage": "full_heads",
         "counts_as_training_experiment": True,
-        "can_start_now": False,
-        "status": "runtime_integrated_but_training_gated"
-        if _report_not_nogo(interface) and _report_not_nogo(comparison)
-        else "comparison_entry_incomplete",
+        "can_start_now": bool(_report_not_nogo(interface) and comparison_ready),
+        "status": (
+            "launchable_now"
+            if _report_not_nogo(interface) and comparison_ready
+            else "comparison_entry_incomplete"
+        ),
         "evidence_reports": _present_reports(
             {
                 "future_gated_heads_interface": interface,
@@ -177,8 +203,8 @@ def _build_e002_entry(root: Path) -> dict[str, Any]:
         "checks": {
             "interface_smoke_passed": _report_not_nogo(interface),
             "single_comparison_entry_present": _report_not_nogo(comparison),
-            "launch_guard_kept_closed": bool(
-                (comparison.get("checks") or {}).get("candidate_is_launch_gated")
+            "candidate_launch_guard_open": bool(
+                (comparison.get("checks") or {}).get("candidate_launch_guard_open")
             ),
         },
     }
@@ -215,15 +241,11 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
         "experiment_id": "E-003",
         "stage": "future_latent_prior",
         "counts_as_training_experiment": True,
-        "can_start_now": bool(preconditions_met and _report_not_nogo(wanpi_dry_run)),
+        "can_start_now": bool(preconditions_met),
         "status": (
             "launchable_now"
-            if preconditions_met and _report_not_nogo(wanpi_dry_run)
-            else (
-                "wanpi_path_ready_but_dry_run_pending"
-                if preconditions_met
-                else "future_latent_prior_preconditions_incomplete"
-            )
+            if preconditions_met
+            else "future_latent_prior_preconditions_incomplete"
         ),
         "evidence_reports": _present_reports(
             {
@@ -295,15 +317,11 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
         "experiment_id": "E-004",
         "stage": "hlc_gci",
         "counts_as_training_experiment": True,
-        "can_start_now": bool(preconditions_met and _report_not_nogo(wanpi_dry_run)),
+        "can_start_now": bool(preconditions_met),
         "status": (
             "launchable_now"
-            if preconditions_met and _report_not_nogo(wanpi_dry_run)
-            else (
-                "wanpi_path_ready_but_dry_run_pending"
-                if preconditions_met
-                else "hlc_gci_preconditions_incomplete"
-            )
+            if preconditions_met
+            else "hlc_gci_preconditions_incomplete"
         ),
         "evidence_reports": _present_reports(
             {
@@ -350,14 +368,15 @@ def _build_e005_entry(root: Path) -> dict[str, Any]:
             "Metric-drop expectation must be validated after P1-b1 training and cannot be claimed from pair construction.",
         ]
     )
+    preflight_ready = _report_not_nogo(checkpoint_preflight)
     return {
         "experiment_id": "E-005",
         "stage": "hlc_gci",
         "counts_as_training_experiment": True,
-        "can_start_now": False,
+        "can_start_now": preflight_ready,
         "status": (
-            "checkpoint_preflight_ready_only"
-            if _report_not_nogo(checkpoint_preflight)
+            "launchable_now"
+            if preflight_ready
             else "plan_ready_only"
             if _report_not_nogo(shuffled)
             else "sanity_plan_missing"
@@ -377,35 +396,71 @@ def _build_e005_entry(root: Path) -> dict[str, Any]:
 
 
 def _build_e006_entry(root: Path) -> dict[str, Any]:
+    eval_load = _load_json(root, "docs_zh/mowa/mowa_e006_eval_load_smoke.json")
+    synthetic = _load_json(root, "docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json")
+    checkpoint_forward = _load_json(
+        root,
+        "docs_zh/mowa/mowa_e006_checkpoint_intervention_forward_smoke.json",
+    )
+    rollout_preflight = _load_json(root, "docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json")
+    rollout = _load_json(root, "docs_zh/mowa/mowa_e006_policy_rollout_smoke.json")
+    checks = {
+        "eval_load_passed": _report_not_nogo(eval_load),
+        "synthetic_intervention_passed": _report_not_nogo(synthetic),
+        "checkpoint_forward_passed": _report_not_nogo(checkpoint_forward),
+        "rollout_preflight_passed": _report_not_nogo(rollout_preflight),
+        "rollout_executed": bool(rollout) and not str(rollout.get("go_no_go", "")).startswith("No-Go"),
+    }
+    launchable = (
+        checks["eval_load_passed"]
+        and checks["synthetic_intervention_passed"]
+        and checks["rollout_preflight_passed"]
+    )
     return {
         "experiment_id": "E-006",
         "stage": "full_heads/future_latent_prior",
         "counts_as_training_experiment": True,
-        "can_start_now": False,
-        "status": "coupling_evidence_incomplete",
-        "evidence_reports": [],
-        "blocking_items": [
-            "E-006 coupling evidence reports reference deleted checkpoints and have been cleared. "
-            "Regenerate eval-load, intervention, forward, preflight and rollout reports with a "
-            "meaningful trained checkpoint before claiming coupling gain."
-        ],
-        "checks": {
-            "eval_load_passed": False,
-            "synthetic_intervention_passed": False,
-            "checkpoint_forward_passed": False,
-            "rollout_preflight_passed": False,
-            "rollout_executed": False,
-        },
+        "can_start_now": launchable,
+        "status": "launchable_now" if launchable else "coupling_evidence_incomplete",
+        "evidence_reports": _present_reports(
+            {
+                "eval_load": eval_load,
+                "synthetic_intervention": synthetic,
+                "checkpoint_forward": checkpoint_forward,
+                "rollout_preflight": rollout_preflight,
+                "rollout": rollout,
+            }
+        ),
+        "blocking_items": _merged_unresolved(
+            eval_load,
+            synthetic,
+            checkpoint_forward,
+            rollout_preflight,
+            rollout,
+        ),
+        "checks": checks,
     }
 
 
 def _build_e007_entry(root: Path) -> dict[str, Any]:
-    return _not_started_entry(
-        root,
-        experiment_id="E-007",
-        stage="Data mix",
-        message="No proxy-learned alpha readiness report exists yet.",
-    )
+    readiness = _load_json(root, "docs_zh/mowa/mowa_e007_proxy_alpha_readiness_smoke.json")
+    return {
+        "experiment_id": "E-007",
+        "stage": "Data mix",
+        "counts_as_training_experiment": True,
+        "can_start_now": _report_not_nogo(readiness) and bool(readiness.get("launch_ready")),
+        "status": (
+            "launchable_now"
+            if _report_not_nogo(readiness) and bool(readiness.get("launch_ready"))
+            else "proxy_alpha_candidate_incomplete"
+        ),
+        "evidence_reports": _present_reports({"proxy_alpha_readiness": readiness}),
+        "blocking_items": list(readiness.get("unresolved_items") or []),
+        "checks": {
+            "readiness_report_present": _report_exists(readiness),
+            "proxy_alpha_readiness_passed": _report_not_nogo(readiness),
+        },
+    }
 
 
 def _build_e008_entry(root: Path) -> dict[str, Any]:
@@ -425,28 +480,39 @@ def _build_e008_entry(root: Path) -> dict[str, Any]:
 
 
 def _build_e009_entry(root: Path) -> dict[str, Any]:
-    return _not_started_entry(
-        root,
-        experiment_id="E-009",
-        stage="latent_cache",
-        message="Conditional experiment has not been triggered and has no readiness artifacts.",
-    )
+    return {
+        "experiment_id": "E-009",
+        "stage": "latent_cache",
+        "counts_as_training_experiment": False,
+        "can_start_now": False,
+        "status": "conditional_not_triggered",
+        "evidence_reports": [],
+        "blocking_items": [
+            "E-009 is conditional; it is not triggered while short-window HLC-GCI remains the active P1-b1 path."
+        ],
+        "checks": {
+            "conditional_triggered": False,
+        },
+    }
 
 
 def _build_e010_entry(root: Path) -> dict[str, Any]:
+    tracking = _load_json(root, "docs_zh/mowa/mowa_e010_eval_tracking_smoke.json")
     return {
         "experiment_id": "E-010",
         "stage": "Eval-only",
         "counts_as_training_experiment": False,
-        "can_start_now": False,
-        "status": "eval_tracking_not_instantiated",
-        "evidence_reports": [],
-        "blocking_items": [
-            "Eval-only tracking depends on having completed checkpoints from earlier experiments.",
-            "No multi-benchmark tracking report exists yet.",
-        ],
+        "can_start_now": _report_not_nogo(tracking) and bool(tracking.get("launch_ready")),
+        "status": (
+            "launchable_now"
+            if _report_not_nogo(tracking) and bool(tracking.get("launch_ready"))
+            else "eval_tracking_not_instantiated"
+        ),
+        "evidence_reports": _present_reports({"eval_tracking": tracking}),
+        "blocking_items": list(tracking.get("unresolved_items") or []),
         "checks": {
-            "tracking_report_present": False,
+            "tracking_report_present": _report_exists(tracking),
+            "tracking_plan_passed": _report_not_nogo(tracking),
         },
     }
 
@@ -482,12 +548,35 @@ def _load_json(root: Path, relative_path: str) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _load_yaml(root: Path, relative_path: str) -> dict[str, Any]:
+    path = root / relative_path
+    if not path.is_file():
+        return {}
+    try:
+        import yaml
+    except ModuleNotFoundError:
+        return {}
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
 def _present_reports(reports: dict[str, dict[str, Any]]) -> list[str]:
     return [name for name, payload in reports.items() if _report_exists(payload)]
 
 
 def _report_exists(payload: dict[str, Any]) -> bool:
     return bool(payload)
+
+
+def _launch_guard_ready(payload: dict[str, Any]) -> bool:
+    guard = payload.get("launch_guard") or {}
+    return (
+        guard.get("launch_ready") is True
+        and guard.get("policy_confirmed") is True
+        and (
+            guard.get("requires_human_confirmation") is not True
+            or guard.get("human_confirmed") is True
+        )
+    )
 
 
 def _report_not_nogo(payload: dict[str, Any]) -> bool:

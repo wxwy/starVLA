@@ -342,7 +342,11 @@ def _seconds(steps: int, wam_hz: float) -> float:
 def _label_sidecar_path(label_sidecar_root: Path | None, episode_id: str) -> str | None:
     if label_sidecar_root is None:
         return None
-    return str(label_sidecar_root / f"{episode_id}.jsonl")
+    try:
+        episode_index = int(episode_id.split("_")[-1])
+    except ValueError:
+        return str(label_sidecar_root / f"{episode_id}.parquet")
+    return str(label_sidecar_root / f"episode_{episode_index:06d}.parquet")
 
 
 def _write_manifest_parquet(

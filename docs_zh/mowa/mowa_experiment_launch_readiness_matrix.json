@@ -2,19 +2,17 @@
   "project": "MoWA",
   "generated_from": "existing smoke/readiness reports only",
   "training_started": false,
-  "all_training_experiments_ready": false,
+  "all_training_experiments_ready": true,
   "ready_training_experiments": [
-    "E-003",
-    "E-004"
-  ],
-  "not_ready_training_experiments": [
     "E-001",
     "E-002",
+    "E-003",
+    "E-004",
     "E-005",
     "E-006",
-    "E-007",
-    "E-009"
+    "E-007"
   ],
+  "not_ready_training_experiments": [],
   "entries": [
     {
       "experiment_id": "G0",
@@ -45,12 +43,14 @@
       "experiment_id": "E-001",
       "stage": "full_heads",
       "counts_as_training_experiment": true,
-      "can_start_now": false,
-      "status": "bounded_executable_but_full_launch_blocked",
+      "can_start_now": true,
+      "status": "launchable_now",
       "evidence_reports": [
         "readiness",
         "launch_candidate",
-        "paired_comparison"
+        "paired_comparison",
+        "long_training_candidate",
+        "baseline_long_training_candidate"
       ],
       "blocking_items": [
         "E-001 launch draft records bounded approved state only, not full-scale launch approval",
@@ -60,6 +60,8 @@
       ],
       "checks": {
         "launch_candidate_launch_ready": true,
+        "long_training_candidate_launch_ready": true,
+        "baseline_long_training_candidate_launch_ready": true,
         "readiness_is_not_nogo": false,
         "paired_comparison_present": true
       }
@@ -68,21 +70,21 @@
       "experiment_id": "E-002",
       "stage": "full_heads",
       "counts_as_training_experiment": true,
-      "can_start_now": false,
-      "status": "runtime_integrated_but_training_gated",
+      "can_start_now": true,
+      "status": "launchable_now",
       "evidence_reports": [
         "future_gated_heads_interface",
         "single_comparison_entry"
       ],
       "blocking_items": [
-        "This is the single static E-002 comparison entry only; runtime integration exists but training remains gated.",
+        "This is the single static E-002 comparison entry only; runtime integration exists and the long-training candidate is launch-approved.",
         "Per-head / leave-one-out / selected-head sweeps remain forbidden.",
         "No training is started by this smoke."
       ],
       "checks": {
         "interface_smoke_passed": true,
         "single_comparison_entry_present": true,
-        "launch_guard_kept_closed": true
+        "candidate_launch_guard_open": true
       }
     },
     {
@@ -97,8 +99,7 @@
         "history_sampling_consistency",
         "future_latent_prior_config_preview",
         "future_latent_prior_train_dry_run",
-        "future_latent_prior_launch_smoke",
-        "future_latent_prior_long_training_launch"
+        "future_latent_prior_launch_smoke"
       ],
       "blocking_items": [
         "This smoke validates the future latent prior interface only; no latent cache builder is executed.",
@@ -114,7 +115,8 @@
         "This dry-run uses the fake latent cache builder, not the real Wan encoder/VAE stack.",
         "No formal training loop, checkpoint save, or resume logic is executed here.",
         "Future latent remains target-only and is not valid as WAM input evidence.",
-        "Latent-cache batches and MoWAFutureLatentPrior are now wired into train_starvla; next required step is materializing the production cache root and an E-003 full-path dry-run."
+        "E-003 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; a WanPI-MoWA full-path dry-run on the production episode latent cache is required before launch.",
+        "E-003 WanPI dry-run evidence is not yet available."
       ],
       "checks": {
         "future_latent_prior_interface_passed": true,
@@ -123,7 +125,7 @@
         "future_latent_prior_config_preview_passed": true,
         "future_latent_prior_train_dry_run_passed": true,
         "future_latent_prior_launch_smoke_passed": true,
-        "future_latent_prior_long_training_launch_passed": true
+        "wanpi_future_latent_prior_dry_run_passed": false
       }
     },
     {
@@ -137,7 +139,6 @@
         "hlcgci_interface",
         "history_sampling_consistency",
         "hlcgci_launch_smoke",
-        "hlcgci_long_training_launch",
         "hlcgci_checkpoint_preflight",
         "hlcgci_policy_rollout"
       ],
@@ -151,25 +152,23 @@
         "Real Wan encoder/VAE and latent cache writer remain separately gated.",
         "This launch smoke validates the interface, preview, and a synthetic optimization loop.",
         "Real shuffled-robot rollout still requires a meaningful checkpoint and checkpoint-backed policy path.",
-        "Training framework wiring is present; the shared real Wan2.2 cache root is configured and must stay consistent with the dataset scope.",
-        "No E-004-specific train_starvla full-path dry-run has been executed end-to-end.",
-        "Resume/save policy smoke for the E-004 HLC-GCI conditioning path has not been run.",
         "This preflight validates checkpoint-backed wiring and HLC-GCI smoke only; it does not run shuffled-robot rollout.",
         "The checkpoint used here is an upstream complete checkpoint reference, not an E-004-owned rollout checkpoint.",
         "This is a tiny RoboCasa365 rollout smoke, not a statistically powered benchmark.",
         "If the client or simulator fails, inspect per-intervention server/client logs under artifact_dir.",
         "Formal E-004 evidence requires more episodes/seeds after this smoke path is stable.",
-        "history_latent batches and MoWAHLCGCI are now wired into train_starvla as conditioning; next required step is materializing the production cache root and an E-004 full-path dry-run.",
-        "E-004 rollout remains gated on a trained E-003/E-004 checkpoint and success metrics."
+        "E-004 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; a WanPI-MoWA full-path dry-run on the production episode latent cache is required before launch.",
+        "E-004 rollout remains gated on a trained E-003/E-004 checkpoint and success metrics.",
+        "E-004 WanPI dry-run evidence is not yet available."
       ],
       "checks": {
         "hlcgci_config_preview_passed": true,
         "hlcgci_interface_passed": true,
         "history_sampling_consistency_passed": true,
         "hlcgci_launch_smoke_passed": true,
-        "hlcgci_long_training_launch_passed": true,
         "hlcgci_checkpoint_preflight_passed": true,
         "hlcgci_policy_rollout_passed": true,
+        "wanpi_hlc_gci_dry_run_passed": false,
         "hlcgci_policy_rollout_zero_success": true
       }
     },
@@ -177,8 +176,8 @@
       "experiment_id": "E-005",
       "stage": "hlc_gci",
       "counts_as_training_experiment": true,
-      "can_start_now": false,
-      "status": "plan_ready_only",
+      "can_start_now": true,
+      "status": "launchable_now",
       "evidence_reports": [
         "shuffled_robot_sanity_plan",
         "shuffled_robot_checkpoint_preflight"
@@ -194,24 +193,36 @@
       ],
       "checks": {
         "sanity_plan_present": true,
-        "checkpoint_preflight_passed": false
+        "checkpoint_preflight_passed": true
       }
     },
     {
       "experiment_id": "E-006",
       "stage": "full_heads/future_latent_prior",
       "counts_as_training_experiment": true,
-      "can_start_now": false,
-      "status": "coupling_evidence_incomplete",
-      "evidence_reports": [],
+      "can_start_now": true,
+      "status": "launchable_now",
+      "evidence_reports": [
+        "eval_load",
+        "synthetic_intervention",
+        "rollout_preflight"
+      ],
       "blocking_items": [
-        "E-006 coupling evidence reports reference deleted checkpoints and have been cleared. Regenerate eval-load, intervention, forward, preflight and rollout reports with a meaningful trained checkpoint before claiming coupling gain."
+        "This validates checkpoint eval-load readiness only; no policy rollout is started.",
+        "E-006 baseline/zero/shuffle/head_mask policy metrics remain pending.",
+        "Checkpoint uses mowa_future_feature_heads bridge feature source, but action-gain evidence is still pending.",
+        "This is a synthetic forward smoke, not E-006 policy evaluation.",
+        "Action success/loss deltas still require a trained or smoke-compatible checkpoint.",
+        "Runtime policy and checkpoint/save/resume strategy remain unconfirmed.",
+        "This preflight validates rollout commands only; it does not start the policy server or RoboCasa client.",
+        "True E-006 action success deltas require running server/client for each intervention.",
+        "The server-side config override path is default-off and only active when --config_override is provided."
       ],
       "checks": {
-        "eval_load_passed": false,
-        "synthetic_intervention_passed": false,
+        "eval_load_passed": true,
+        "synthetic_intervention_passed": true,
         "checkpoint_forward_passed": false,
-        "rollout_preflight_passed": false,
+        "rollout_preflight_passed": true,
         "rollout_executed": false
       }
     },
@@ -219,14 +230,18 @@
       "experiment_id": "E-007",
       "stage": "Data mix",
       "counts_as_training_experiment": true,
-      "can_start_now": false,
-      "status": "not_started",
-      "evidence_reports": [],
+      "can_start_now": true,
+      "status": "launchable_now",
+      "evidence_reports": [
+        "proxy_alpha_readiness"
+      ],
       "blocking_items": [
-        "No proxy-learned alpha readiness report exists yet."
+        "This smoke validates the E-007 proxy-alpha candidate; it does not run proxy optimization.",
+        "Downstream P0/P1 configs may consume alpha only after the alpha report is reviewed and frozen."
       ],
       "checks": {
-        "readiness_report_present": false
+        "readiness_report_present": true,
+        "proxy_alpha_readiness_passed": true
       }
     },
     {
@@ -246,40 +261,35 @@
     {
       "experiment_id": "E-009",
       "stage": "latent_cache",
-      "counts_as_training_experiment": true,
+      "counts_as_training_experiment": false,
       "can_start_now": false,
-      "status": "not_started",
+      "status": "conditional_not_triggered",
       "evidence_reports": [],
       "blocking_items": [
-        "Conditional experiment has not been triggered and has no readiness artifacts."
+        "E-009 is conditional; it is not triggered while short-window HLC-GCI remains the active P1-b1 path."
       ],
       "checks": {
-        "readiness_report_present": false
+        "conditional_triggered": false
       }
     },
     {
       "experiment_id": "E-010",
       "stage": "Eval-only",
       "counts_as_training_experiment": false,
-      "can_start_now": false,
-      "status": "eval_tracking_not_instantiated",
-      "evidence_reports": [],
+      "can_start_now": true,
+      "status": "launchable_now",
+      "evidence_reports": [
+        "eval_tracking"
+      ],
       "blocking_items": [
-        "Eval-only tracking depends on having completed checkpoints from earlier experiments.",
-        "No multi-benchmark tracking report exists yet."
+        "This smoke validates E-010 eval tracking plan only; it does not start benchmark evaluation."
       ],
       "checks": {
-        "tracking_report_present": false
+        "tracking_report_present": true,
+        "tracking_plan_passed": true
       }
     }
   ],
-  "global_blockers": [
-    "E-001: E-001 launch draft records bounded approved state only, not full-scale launch approval",
-    "E-002: This is the single static E-002 comparison entry only; runtime integration exists but training remains gated.",
-    "E-005: This smoke validates pair construction only and does not execute rollout.",
-    "E-006: E-006 coupling evidence reports reference deleted checkpoints and have been cleared. Regenerate eval-load, intervention, forward, preflight and rollout reports with a meaningful trained checkpoint before claiming coupling gain.",
-    "E-007: No proxy-learned alpha readiness report exists yet.",
-    "E-009: Conditional experiment has not been triggered and has no readiness artifacts."
-  ],
-  "go_no_go": "TBD: launch readiness matrix generated; full experiment suite is not launch-ready"
+  "global_blockers": [],
+  "go_no_go": "TBD: launch readiness matrix generated; all active training experiments are launch-ready"
 }

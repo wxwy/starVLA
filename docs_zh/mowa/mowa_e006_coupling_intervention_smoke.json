@@ -1,0 +1,232 @@
+{
+  "stage": "M5",
+  "task_id": "M5-005",
+  "experiment_id": "E-006",
+  "experiment_name": "WAM-to-action coupling",
+  "training_started": false,
+  "eval_started": false,
+  "interventions": [
+    "baseline",
+    "zero",
+    "batch_shuffle",
+    "head_mask_control"
+  ],
+  "checks": {
+    "training_not_started": true,
+    "eval_not_started": true,
+    "baseline_coupled": true,
+    "zero_tokens_zeroed": true,
+    "batch_shuffle_swaps_samples": true,
+    "head_mask_control_keeps_constructible_heads": true,
+    "layerwisefm_internal_logic_not_modified": true,
+    "future_action_not_used_as_wam_input": true
+  },
+  "observed": {
+    "baseline": {
+      "forward": {
+        "action_loss": 0.0,
+        "mowa_layerwise_bridge_coupled": true,
+        "mowa_layerwise_bridge_intervention": "baseline",
+        "mowa_layerwise_bridge_intervention_applied": true,
+        "mowa_layerwise_bridge_intervention_note": null,
+        "mowa_layerwise_bridge_token_shape": [
+          2,
+          2,
+          4
+        ],
+        "mowa_layerwise_bridge_bridge_token_shape": [
+          2,
+          2,
+          4
+        ],
+        "mowa_layerwise_bridge_adapted_vl_embed_shape": [
+          2,
+          5,
+          4
+        ],
+        "mowa_layerwise_bridge_attention_mask_shape": [
+          2,
+          5
+        ],
+        "mowa_layerwise_bridge_feature_source": "mowa_future_feature_heads",
+        "mowa_layerwise_bridge_active_heads": [
+          "task_progress",
+          "action_outcome_class"
+        ],
+        "mowa_layerwise_bridge_masked_heads": [
+          "manipulation_readiness",
+          "failure_risk",
+          "next_best_view_score",
+          "subgoal_feasibility",
+          "object_visibility_future"
+        ]
+      },
+      "bridge_token_shape": [
+        2,
+        2,
+        4
+      ],
+      "bridge_token_abs_mean": 0.3455197513103485,
+      "attention_mask_shape": [
+        2,
+        5
+      ]
+    },
+    "zero": {
+      "forward": {
+        "action_loss": 0.0,
+        "mowa_layerwise_bridge_coupled": true,
+        "mowa_layerwise_bridge_intervention": "zero",
+        "mowa_layerwise_bridge_intervention_applied": true,
+        "mowa_layerwise_bridge_intervention_note": null,
+        "mowa_layerwise_bridge_token_shape": [
+          2,
+          2,
+          4
+        ],
+        "mowa_layerwise_bridge_bridge_token_shape": [
+          2,
+          2,
+          4
+        ],
+        "mowa_layerwise_bridge_adapted_vl_embed_shape": [
+          2,
+          5,
+          4
+        ],
+        "mowa_layerwise_bridge_attention_mask_shape": [
+          2,
+          5
+        ],
+        "mowa_layerwise_bridge_feature_source": "mowa_future_feature_heads",
+        "mowa_layerwise_bridge_active_heads": [
+          "task_progress",
+          "action_outcome_class"
+        ],
+        "mowa_layerwise_bridge_masked_heads": [
+          "manipulation_readiness",
+          "failure_risk",
+          "next_best_view_score",
+          "subgoal_feasibility",
+          "object_visibility_future"
+        ]
+      },
+      "bridge_token_shape": [
+        2,
+        2,
+        4
+      ],
+      "bridge_token_abs_mean": 0.0,
+      "attention_mask_shape": [
+        2,
+        5
+      ]
+    },
+    "batch_shuffle": {
+      "forward": {
+        "action_loss": 0.0,
+        "mowa_layerwise_bridge_coupled": true,
+        "mowa_layerwise_bridge_intervention": "batch_shuffle",
+        "mowa_layerwise_bridge_intervention_applied": true,
+        "mowa_layerwise_bridge_intervention_note": null,
+        "mowa_layerwise_bridge_token_shape": [
+          2,
+          2,
+          4
+        ],
+        "mowa_layerwise_bridge_bridge_token_shape": [
+          2,
+          2,
+          4
+        ],
+        "mowa_layerwise_bridge_adapted_vl_embed_shape": [
+          2,
+          5,
+          4
+        ],
+        "mowa_layerwise_bridge_attention_mask_shape": [
+          2,
+          5
+        ],
+        "mowa_layerwise_bridge_feature_source": "mowa_future_feature_heads",
+        "mowa_layerwise_bridge_active_heads": [
+          "task_progress",
+          "action_outcome_class"
+        ],
+        "mowa_layerwise_bridge_masked_heads": [
+          "manipulation_readiness",
+          "failure_risk",
+          "next_best_view_score",
+          "subgoal_feasibility",
+          "object_visibility_future"
+        ]
+      },
+      "bridge_token_shape": [
+        2,
+        2,
+        4
+      ],
+      "bridge_token_abs_mean": 0.3455197513103485,
+      "attention_mask_shape": [
+        2,
+        5
+      ]
+    },
+    "head_mask_control": {
+      "forward": {
+        "action_loss": 0.0,
+        "mowa_layerwise_bridge_coupled": true,
+        "mowa_layerwise_bridge_intervention": "head_mask_control",
+        "mowa_layerwise_bridge_intervention_applied": true,
+        "mowa_layerwise_bridge_intervention_note": "rebuilt_from_constructible_head_outputs",
+        "mowa_layerwise_bridge_token_shape": [
+          2,
+          2,
+          4
+        ],
+        "mowa_layerwise_bridge_bridge_token_shape": [
+          2,
+          2,
+          4
+        ],
+        "mowa_layerwise_bridge_adapted_vl_embed_shape": [
+          2,
+          5,
+          4
+        ],
+        "mowa_layerwise_bridge_attention_mask_shape": [
+          2,
+          5
+        ],
+        "mowa_layerwise_bridge_feature_source": "mowa_future_feature_heads",
+        "mowa_layerwise_bridge_active_heads": [
+          "task_progress",
+          "action_outcome_class"
+        ],
+        "mowa_layerwise_bridge_masked_heads": [
+          "manipulation_readiness",
+          "failure_risk",
+          "next_best_view_score",
+          "subgoal_feasibility",
+          "object_visibility_future"
+        ]
+      },
+      "bridge_token_shape": [
+        2,
+        2,
+        4
+      ],
+      "bridge_token_abs_mean": 0.4699251651763916,
+      "attention_mask_shape": [
+        2,
+        5
+      ]
+    }
+  },
+  "unresolved_items": [
+    "This is a synthetic forward smoke, not E-006 policy evaluation.",
+    "Action success/loss deltas still require a trained or smoke-compatible checkpoint.",
+    "Runtime policy and checkpoint/save/resume strategy remain unconfirmed."
+  ],
+  "go_no_go": "TBD: E-006 intervention smoke passed; checkpoint/runtime remain Data Gate"
+}

@@ -37,14 +37,14 @@ latent_cache:
     - observation.images.robot0_agentview_left
 
 framework:
-  name: StarFlowVLA
+  name: WanPI
   starflow_ft_variant: ft0
   state_mode: discretized_instruction
   qwenvl:
-    base_vlm: ./playground/Pretrained_models/Qwen3-VL-4B-Instruct
+    base_vlm: ./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
     attn_implementation: flash_attention_2
-    vl_hidden_dim: 2048
-    num_vl_layers: 36
+    vl_hidden_dim: 3072
+    num_vl_layers: 30
   action_model:
     action_model_type: LayerwiseFM
     action_dim: 12
@@ -69,6 +69,11 @@ framework:
       norm_type: ada_norm
       positional_embeddings: null
       attention_head_dim: 64
+      cross_attention_dim: 1024
+  world_model:
+    base_wm: ./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+    extract_layers:
+      - -1
   mowa:
     enable_qwenpi_projector_dtype_alignment: true
     enable_layerwise_bridge_token_coupling: true

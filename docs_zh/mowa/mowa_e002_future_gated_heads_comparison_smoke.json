@@ -9,7 +9,7 @@
     "single_fullheads_comparison_only": true,
     "per_head_sweep_disabled": true,
     "gated_heads_enabled": true,
-    "candidate_is_launch_gated": true,
+    "candidate_launch_guard_open": true,
     "unexpected_difference_paths_empty": true
   },
   "configs": {
@@ -21,9 +21,6 @@
       "experiment_id",
       "framework.mowa.gated_heads",
       "inherits",
-      "launch_guard.human_confirmed",
-      "launch_guard.launch_ready",
-      "launch_guard.policy_confirmed",
       "launch_guard.reason",
       "notes",
       "run_id"
@@ -39,9 +36,9 @@
     }
   },
   "unresolved_items": [
-    "This is the single static E-002 comparison entry only; runtime integration exists but training remains gated.",
+    "This is the single static E-002 comparison entry only; runtime integration exists and the long-training candidate is launch-approved.",
     "Per-head / leave-one-out / selected-head sweeps remain forbidden.",
     "No training is started by this smoke."
   ],
-  "go_no_go": "TBD: E-002 single FullHeads comparison entry is wired; training remains gated"
+  "go_no_go": "TBD: E-002 single FullHeads comparison entry is wired and launch-approved"
 }

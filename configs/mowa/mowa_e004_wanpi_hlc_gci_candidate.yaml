@@ -34,10 +34,11 @@ latent_cache:
   allow_partial_windows: false
   overwrite: false
   manifest_path: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/window_manifest_h10.parquet
+  instruction_text_latent: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/instruction_text_latents.pt
   video_keys:
   - observation.images.robot0_agentview_left
 interface:
-  history_latent_dim: 1024
+  history_latent_dim: 48
   condition_hidden_dim: 1024
   history_steps: 10
   compressed_history_dim: 512
@@ -57,7 +58,7 @@ framework:
   action_model:
     action_model_type: LayerwiseFM
     action_dim: 12
-    state_dim: 16
+    state_dim: 32
     action_horizon: 8
     future_action_window_size: 7
     past_action_window_size: 0
@@ -97,6 +98,8 @@ framework:
     base_wm: ./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
     extract_layers:
     - -1
+    use_text_cache: true
+    use_visual_cache: true
 history_contract:
   sampling_policy: train_inference_consistent_window_sampling
   history_source: robot_history_latent_only

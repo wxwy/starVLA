@@ -355,8 +355,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config-yaml",
         type=Path,
-        default=Path("configs/mowa/mowa_e003_future_latent_prior_long_training_candidate.yaml"),
-        help="Path to the E-003 long-training candidate config.",
+        default=Path("configs/mowa/mowa_e003_wanpi_future_latent_prior_candidate.yaml"),
+        help="Path to the E-003 WanPI future-latent-prior smoke config.",
     )
     parser.add_argument(
         "--execute-cache",

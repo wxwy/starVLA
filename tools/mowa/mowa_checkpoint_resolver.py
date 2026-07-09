@@ -49,7 +49,10 @@ def resolve_mowa_final_model_reference(
         Path(str(checkpoint_root_policy)),
         DEFAULT_CHECKPOINT_SUBDIR,
     )
-    return latest_checkpoint.parents[1] / Path(str(final_model_subdir))
+    final_model = latest_checkpoint.parents[1] / Path(str(final_model_subdir))
+    if (Path(repo_root) / final_model).is_dir():
+        return final_model
+    return latest_checkpoint
 
 
 def _resolve_latest_complete_run(
@@ -62,14 +65,26 @@ def _resolve_latest_complete_run(
     if not root.is_dir():
         return checkpoint_root / "__missing_latest_complete__" / checkpoint_subdir
     for run_dir in root.iterdir():
-        checkpoint = run_dir / checkpoint_subdir
-        completed_steps = _get_completed_steps_if_complete(checkpoint)
-        if completed_steps is not None:
-            candidates.append((completed_steps, run_dir.name, checkpoint))
+        for checkpoint in _candidate_checkpoints(run_dir, checkpoint_subdir):
+            completed_steps = _get_completed_steps_if_complete(checkpoint)
+            if completed_steps is not None:
+                candidates.append((completed_steps, run_dir.name, checkpoint))
     if not candidates:
         return checkpoint_root / "__missing_latest_complete__" / checkpoint_subdir
-    _, run_name, _ = sorted(candidates, key=lambda item: (item[0], item[1]))[-1]
-    return checkpoint_root / run_name / checkpoint_subdir
+    _, _, checkpoint = sorted(
+        candidates,
+        key=lambda item: (item[0], item[1], str(item[2])),
+    )[-1]
+    return checkpoint.relative_to(repo_root)
+
+
+def _candidate_checkpoints(run_dir: Path, checkpoint_subdir: Path) -> tuple[Path, ...]:
+    exact = run_dir / checkpoint_subdir
+    if checkpoint_subdir == DEFAULT_CHECKPOINT_SUBDIR:
+        checkpoints_root = run_dir / "checkpoints"
+        if checkpoints_root.is_dir():
+            return tuple(sorted(checkpoints_root.glob("steps_*")))
+    return (exact,)
 
 
 def _get_completed_steps_if_complete(checkpoint: Path) -> int | None:

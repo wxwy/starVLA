@@ -3434,70 +3434,6 @@ class MoWAFutureHeadsTest(unittest.TestCase):
             "TBD: E-004 checkpoint-backed preflight passed; rollout remains gated",
         )
 
-    def test_e003_future_latent_prior_long_training_config_preview_passes(self):
-        from tools.mowa.e003_future_latent_prior_long_training_config_preview import (
-            build_e003_future_latent_prior_long_training_config_preview,
-        )
-
-        report = build_e003_future_latent_prior_long_training_config_preview(Path("."))
-
-        self.assertEqual(report["experiment_id"], "E-003")
-        self.assertTrue(report["launch_ready"])
-        self.assertTrue(all(report["checks"].values()))
-        self.assertEqual(
-            report["go_no_go"],
-            "TBD: long-training config preview passed; launch wiring remains pending",
-        )
-
-    def test_e004_hlc_gci_long_training_config_preview_passes(self):
-        from tools.mowa.e004_hlc_gci_long_training_config_preview import (
-            build_e004_hlc_gci_long_training_config_preview,
-        )
-
-        report = build_e004_hlc_gci_long_training_config_preview(Path("."))
-
-        self.assertEqual(report["experiment_id"], "E-004")
-        self.assertTrue(report["launch_ready"])
-        self.assertTrue(all(report["checks"].values()))
-        self.assertEqual(
-            report["go_no_go"],
-            "TBD: long-training config preview passed; launch wiring remains pending",
-        )
-
-    def test_e003_future_latent_prior_long_training_launch_smoke_passes(self):
-        from tools.mowa.e003_future_latent_prior_long_training_launch_smoke import (
-            build_e003_future_latent_prior_long_training_launch_smoke,
-        )
-
-        report = build_e003_future_latent_prior_long_training_launch_smoke(Path("."))
-
-        self.assertEqual(report["experiment_id"], "E-003")
-        self.assertTrue(report["launch_ready"])
-        self.assertTrue(report["checks"]["future_latent_prior_integrated_in_training_framework"])
-        self.assertTrue(report["checks"]["latent_batch_contract_integrated_in_runtime_paths"])
-        self.assertTrue(report["checks"]["future_latent_loss_integrated_in_training_loop"])
-        self.assertEqual(
-            report["go_no_go"],
-            "TBD: E-003 long-training launch candidate passed; training command is wired",
-        )
-
-    def test_e004_hlc_gci_long_training_launch_smoke_passes(self):
-        from tools.mowa.e004_hlc_gci_long_training_launch_smoke import (
-            build_e004_hlc_gci_long_training_launch_smoke,
-        )
-
-        report = build_e004_hlc_gci_long_training_launch_smoke(Path("."))
-
-        self.assertEqual(report["experiment_id"], "E-004")
-        self.assertTrue(report["launch_ready"])
-        self.assertTrue(report["checks"]["hlcgci_integrated_in_training_framework"])
-        self.assertTrue(report["checks"]["history_latent_batch_contract_integrated_in_runtime_paths"])
-        self.assertTrue(report["checks"]["hlcgci_training_objective_integrated_in_training_loop"])
-        self.assertEqual(
-            report["go_no_go"],
-            "TBD: E-004 long-training launch candidate passed; training command is wired",
-        )
-
     def test_hlc_gci_interface_shapes_and_gate_range(self):
         try:
             import torch
@@ -3621,10 +3557,10 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertTrue(all(report["checks"].values()))
         self.assertEqual(
             report["go_no_go"],
-            "TBD: E-002 single FullHeads comparison entry is wired; training remains gated",
+            "TBD: E-002 single FullHeads comparison entry is wired and launch-approved",
         )
         self.assertIn(
-            "runtime integration exists but training remains gated",
+            "runtime integration exists and the long-training candidate is launch-approved",
             report["unresolved_items"][0],
         )
 
@@ -3638,15 +3574,16 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertFalse(report["all_training_experiments_ready"])
         self.assertIn("E-001", report["not_ready_training_experiments"])
         self.assertIn("E-002", report["not_ready_training_experiments"])
-        # E-003/E-004 training framework wiring and command candidates are now present,
-        # so they are no longer in the not-ready list in this evidence matrix.
-        self.assertNotIn("E-003", report["not_ready_training_experiments"])
-        self.assertNotIn("E-004", report["not_ready_training_experiments"])
+        # E-003/E-004 have been migrated to the WanPI path; the production episode latent
+        # cache is available but the WanPI-MoWA dry-run evidence is not yet generated,
+        # so they remain in the not-ready list until the dry-run is completed.
+        self.assertIn("E-003", report["not_ready_training_experiments"])
+        self.assertIn("E-004", report["not_ready_training_experiments"])
         entries = {entry["experiment_id"]: entry for entry in report["entries"]}
         self.assertEqual(entries["E-001"]["status"], "bounded_executable_but_full_launch_blocked")
         self.assertEqual(entries["E-002"]["status"], "runtime_integrated_but_training_gated")
-        self.assertEqual(entries["E-003"]["status"], "launchable_now")
-        self.assertEqual(entries["E-004"]["status"], "launchable_now")
+        self.assertEqual(entries["E-003"]["status"], "wanpi_path_ready_but_dry_run_pending")
+        self.assertEqual(entries["E-004"]["status"], "wanpi_path_ready_but_dry_run_pending")
         self.assertEqual(entries["E-006"]["status"], "coupling_evidence_incomplete")
 
     def test_share_tools_strict_mismatch_accepts_legacy_mowa_bridge_key_alias(self):

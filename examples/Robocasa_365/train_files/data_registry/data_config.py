@@ -177,6 +177,9 @@ DATASET_NAMED_MIXTURES = {
     "robocasa365_open_drawer_target_human": [
         ("v1.0/target/atomic/OpenDrawer/20250816/lerobot", 1.0, _ROBOT_TAG),
     ],
+    "robocasa365_close_blender_lid_target_human": [
+        ("v1.0/target/atomic/CloseBlenderLid/20250822/lerobot", 1.0, _ROBOT_TAG),
+    ],
     # ------- full mixtures (each task weighted 1.0; equal sampling per task) -------
     "robocasa365_atomic_target_human_all":    _entries(_TARGET_HUMAN_ATOMIC),
     "robocasa365_composite_target_human_all": _entries(_TARGET_HUMAN_COMPOSITE),

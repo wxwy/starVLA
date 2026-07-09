@@ -76,7 +76,11 @@ def build_e002_future_gated_heads_comparison_smoke(repo_root: Path | str) -> dic
         )
         is False,
         "gated_heads_enabled": OmegaConf.select(gated, "framework.mowa.gated_heads.enabled") is True,
-        "candidate_is_launch_gated": OmegaConf.select(gated, "launch_guard.launch_ready") is False,
+        "candidate_launch_guard_open": (
+            OmegaConf.select(gated, "launch_guard.launch_ready") is True
+            and OmegaConf.select(gated, "launch_guard.policy_confirmed") is True
+            and OmegaConf.select(gated, "launch_guard.human_confirmed") is True
+        ),
         "unexpected_difference_paths_empty": not unexpected,
     }
     return {
@@ -95,12 +99,12 @@ def build_e002_future_gated_heads_comparison_smoke(repo_root: Path | str) -> dic
         },
         "unresolved_items": [
             "This is the single static E-002 comparison entry only; "
-            "runtime integration exists but training remains gated.",
+            "runtime integration exists and the long-training candidate is launch-approved.",
             "Per-head / leave-one-out / selected-head sweeps remain forbidden.",
             "No training is started by this smoke.",
         ],
         "go_no_go": (
-            "TBD: E-002 single FullHeads comparison entry is wired; training remains gated"
+            "TBD: E-002 single FullHeads comparison entry is wired and launch-approved"
             if all(checks.values())
             else "No-Go: E-002 comparison candidate drift detected"
         ),

@@ -122,7 +122,12 @@ def _get_mowa_latent_cache_dataset(dataset) -> MoWALatentCacheDataset:
     if cache_root is None:
         raise ValueError("mowa_latent_cache.cache_root is required when latent cache is enabled.")
     manifest_path = cache_cfg.get("manifest_path", None)
-    cache_dataset = MoWALatentCacheDataset(cache_root=cache_root, manifest_path=manifest_path)
+    instruction_text_latent = cache_cfg.get("instruction_text_latent", None)
+    cache_dataset = MoWALatentCacheDataset(
+        cache_root=cache_root,
+        manifest_path=manifest_path,
+        instruction_text_latent=instruction_text_latent,
+    )
     dataset._mowa_latent_cache_dataset = cache_dataset
     return cache_dataset
 
@@ -157,7 +162,9 @@ def _attach_mowa_latent_cache(sample: dict, dataset, trajectory_id: int, base_in
         video_key=str(video_key),
     )
 
-    sample["mowa_current_latent"] = cache_sample["current_latent"]
+    sample["mowa_current_latent"] = cache_sample.get(
+        "mowa_current_latent", cache_sample["current_latent"]
+    )
     sample["mowa_future_latent_target"] = cache_sample["future_latent"]
     sample["mowa_history_latent"] = cache_sample["history_latent"]
     sample["mowa_latent_cache_metadata"] = {
@@ -167,6 +174,17 @@ def _attach_mowa_latent_cache(sample: dict, dataset, trajectory_id: int, base_in
         "cache_root": str(cache_dataset.cache_root),
         "history_latent_sequence_status": "per_step_history_sequence_from_cache",
     }
+
+    # WanPI cache path: pass pre-computed visual / text latents so the world
+    # model can skip loading the VAE and UMT5 text encoder.
+    if "visual_latent" in cache_sample:
+        sample["visual_latent"] = cache_sample["visual_latent"]
+    if "text_embeds" in cache_sample:
+        sample["text_embeds"] = cache_sample["text_embeds"]
+    if "text_attention_mask" in cache_sample:
+        sample["text_attention_mask"] = cache_sample["text_attention_mask"]
+    if "lang" in cache_sample:
+        sample["lang"] = cache_sample["lang"]
     return sample
 
 

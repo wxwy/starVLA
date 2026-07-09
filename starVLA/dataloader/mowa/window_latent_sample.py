@@ -13,7 +13,11 @@ from typing import Any, Mapping
 import torch
 
 from starVLA.dataloader.mowa.episode_latent_store import MoWAEpisodeLatentStore
+from starVLA.dataloader.mowa.instruction_text_latent_cache import (
+    MoWAInstructionTextLatentCache,
+)
 from starVLA.dataloader.mowa.schema import _FORBIDDEN_WAM_INPUT_KEYS
+from starVLA.dataloader.mowa.text_latent_store import MoWATextLatentStore
 from starVLA.dataloader.mowa.window_manifest import (
     MoWAWindowManifestEntry,
     load_mowa_window_manifest,
@@ -49,13 +53,29 @@ class MoWAWindowLatentSampleDataset:
         manifest_path: Path | str,
         *,
         label_sidecar_root: Path | str | None = None,
+        text_latent_cache_root: Path | str | None = None,
+        instruction_text_latent: Path | str | MoWAInstructionTextLatentCache | None = None,
     ) -> None:
         self.manifest_path = Path(manifest_path)
         self.label_sidecar_root = (
             Path(label_sidecar_root) if label_sidecar_root is not None else None
         )
+        self.text_latent_cache_root = (
+            Path(text_latent_cache_root)
+            if text_latent_cache_root is not None
+            else None
+        )
+        self._instruction_table: MoWAInstructionTextLatentCache | None = None
+        if instruction_text_latent is not None:
+            if isinstance(instruction_text_latent, MoWAInstructionTextLatentCache):
+                self._instruction_table = instruction_text_latent
+            else:
+                self._instruction_table = MoWAInstructionTextLatentCache(
+                    instruction_text_latent
+                )
         self._entries = load_mowa_window_manifest(self.manifest_path)
         self._store_cache: dict[str, MoWAEpisodeLatentStore] = {}
+        self._text_store_cache: dict[str, MoWATextLatentStore] = {}
 
     def __len__(self) -> int:
         return len(self._entries)
@@ -73,6 +93,90 @@ class MoWAWindowLatentSampleDataset:
             store = MoWAEpisodeLatentStore(Path(path))
             self._store_cache[path] = store
         return store
+
+    def _get_text_store(self, episode_id: str) -> MoWATextLatentStore | None:
+        if self.text_latent_cache_root is None:
+            return None
+        store = self._text_store_cache.get(episode_id)
+        if store is None:
+            store_path = self.text_latent_cache_root / f"{episode_id}.h5"
+            if not store_path.is_file():
+                return None
+            store = MoWATextLatentStore(store_path)
+            self._text_store_cache[episode_id] = store
+        return store
+
+    def _load_language(self, entry: MoWAWindowManifestEntry) -> str | dict[str, Any]:
+        """Return raw instruction string or cached text latent dict."""
+        store = self._get_store(entry.episode_latent_path)
+        instruction = store.get_language()
+
+        if self._instruction_table is not None:
+            cached = self._instruction_table.lookup(instruction)
+            if cached is not None:
+                return {
+                    "instruction": instruction,
+                    "text_embeds": cached["text_embeds"],
+                    "attention_mask": cached["attention_mask"],
+                    "pooled_text_hidden": cached["pooled_text_hidden"],
+                }
+
+        text_store = self._get_text_store(entry.episode_id)
+        if text_store is None:
+            return instruction
+        return {
+            "instruction": text_store.get_instruction(),
+            "text_embeds": text_store.get_text_embeds(),
+            "attention_mask": text_store.get_attention_mask(),
+            "pooled_text_hidden": text_store.get_pooled_text_hidden(),
+        }
+
+    def _load_labels(self, entry: MoWAWindowManifestEntry) -> dict[str, Any]:
+        if entry.label_sidecar_path is None:
+            return {}
+        sidecar_path = Path(entry.label_sidecar_path)
+        if self.label_sidecar_root is not None and not sidecar_path.is_absolute():
+            sidecar_path = self.label_sidecar_root / sidecar_path
+        if not sidecar_path.is_file():
+            sidecar_path = self._legacy_jsonl_sidecar_path(sidecar_path)
+            if not sidecar_path.is_file():
+                return {}
+        if sidecar_path.suffix == ".parquet":
+            return self._load_label_parquet(sidecar_path, entry.label_index)
+        try:
+            import json
+
+            with sidecar_path.open("r", encoding="utf-8") as file:
+                lines = [line.strip() for line in file if line.strip()]
+            if entry.label_index < len(lines):
+                return json.loads(lines[entry.label_index])
+        except Exception:  # noqa: BLE001
+            pass
+        return {}
+
+    def _legacy_jsonl_sidecar_path(self, sidecar_path: Path) -> Path:
+        if sidecar_path.suffix != ".parquet":
+            return sidecar_path
+        stem = sidecar_path.stem
+        if stem.startswith("episode_"):
+            return sidecar_path.with_name(f"ep_{stem.split('_')[-1]}.jsonl")
+        return sidecar_path.with_suffix(".jsonl")
+
+    def _load_label_parquet(self, sidecar_path: Path, label_index: int) -> dict[str, Any]:
+        try:
+            import pyarrow.parquet as pq
+
+            table = pq.read_table(sidecar_path)
+            if label_index >= table.num_rows:
+                return {}
+            row = table.slice(label_index, 1).to_pydict()
+            return {
+                key: values[0]
+                for key, values in row.items()
+                if values and values[0] is not None
+            }
+        except Exception:  # noqa: BLE001
+            return {}
 
     def _assemble_sample(self, entry: MoWAWindowManifestEntry) -> WindowLatentSample:
         validate_window_indices(entry)
@@ -94,7 +198,7 @@ class MoWAWindowLatentSampleDataset:
         history_actions = robot_action[list(entry.history_action_indices), ...]
         action_chunk = robot_action[list(entry.action_chunk_indices), ...]
 
-        language = store.get_language()
+        language = self._load_language(entry)
         labels = self._load_labels(entry)
 
         metadata = {
@@ -129,24 +233,6 @@ class MoWAWindowLatentSampleDataset:
         assert_no_future_leakage(sample)
         return sample
 
-    def _load_labels(self, entry: MoWAWindowManifestEntry) -> dict[str, Any]:
-        if entry.label_sidecar_path is None:
-            return {}
-        sidecar_path = Path(entry.label_sidecar_path)
-        if self.label_sidecar_root is not None and not sidecar_path.is_absolute():
-            sidecar_path = self.label_sidecar_root / sidecar_path
-        if not sidecar_path.is_file():
-            return {}
-        try:
-            import json
-
-            with sidecar_path.open("r", encoding="utf-8") as file:
-                lines = [line.strip() for line in file if line.strip()]
-            if entry.label_index < len(lines):
-                return json.loads(lines[entry.label_index])
-        except Exception:  # noqa: BLE001
-            pass
-        return {}
 
 
 def validate_window_indices(entry: MoWAWindowManifestEntry) -> None:

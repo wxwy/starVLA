@@ -378,7 +378,7 @@ class EpisodeLevelLatentCacheTest(unittest.TestCase):
             self.assertEqual(valid.shape[0], 8)
             self.assertTrue(valid.all())
 
-    def test_label_sidecar_loading(self):
+    def test_label_sidecar_jsonl_loading_legacy_compat(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             dataset_path = root / "dataset"
@@ -421,6 +421,64 @@ class EpisodeLevelLatentCacheTest(unittest.TestCase):
             sample = dataset[0]
             self.assertIn("row", sample.labels)
             self.assertEqual(sample.labels["row"], 2)
+
+    def test_label_sidecar_parquet_loading_matches_current_writer_contract(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / "dataset"
+            cache_root = root / "cache"
+            manifest_path = root / "manifest.parquet"
+            sidecar_root = root / "labels"
+            self._write_minimal_episode(dataset_path, length=8)
+
+            build_mowa_episode_latent_store(
+                MoWAEpisodeLatentStoreConfig(
+                    dataset_path=dataset_path,
+                    cache_root=cache_root,
+                    video_keys=("observation.images.robot0_agentview_left",),
+                    latent_dim=8,
+                    dry_run=False,
+                )
+            )
+
+            sidecar_root.mkdir(parents=True, exist_ok=True)
+            sidecar_path = sidecar_root / "episode_000000.parquet"
+            pq.write_table(
+                pa.table(
+                    {
+                        "row": list(range(8)),
+                        "failure_risk": [0.0] * 8,
+                        "failure_risk_mask": [True] * 8,
+                    }
+                ),
+                sidecar_path,
+            )
+
+            report = build_mowa_window_manifest(
+                MoWAWindowManifestConfig(
+                    cache_root=cache_root,
+                    output_path=manifest_path,
+                    window_config=MoWAWindowConfig(
+                        history_steps=3,
+                        future_steps=2,
+                        action_chunk_steps=2,
+                    ),
+                    video_keys=("observation.images.robot0_agentview_left",),
+                    label_sidecar_root=sidecar_root,
+                )
+            )
+
+            self.assertTrue(report.window_count > 0)
+            entries = load_mowa_window_manifest(manifest_path)
+            self.assertEqual(
+                Path(entries[0].label_sidecar_path).name,
+                "episode_000000.parquet",
+            )
+            dataset = MoWAWindowLatentSampleDataset(manifest_path, label_sidecar_root=sidecar_root)
+            sample = dataset[0]
+            self.assertEqual(sample.labels["row"], 2)
+            self.assertEqual(sample.labels["failure_risk"], 0.0)
+            self.assertTrue(sample.labels["failure_risk_mask"])
 
     @staticmethod
     def _replace_entry(entry: MoWAWindowManifestEntry, **kwargs) -> MoWAWindowManifestEntry:

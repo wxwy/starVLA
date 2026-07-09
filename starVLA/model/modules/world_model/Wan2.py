@@ -27,6 +27,7 @@ Key differences from CosmoPredict2:
   - No condition_mask / padding_mask (those are Cosmos-specific)
 """
 
+from pathlib import Path
 from typing import Optional
 
 import torch
@@ -62,6 +63,8 @@ class _Wan2_Interface(nn.Module):
             config.framework.get("qwenvl", {}).get("base_vlm", "Wan-AI/Wan2.2-TI2V-5B-Diffusers"),
         )
         self.config = config
+        self.use_text_cache = bool(wm_cfg.get("use_text_cache", False))
+        self.use_visual_cache = bool(wm_cfg.get("use_visual_cache", False))
 
         from diffusers import (
             AutoencoderKLWan,
@@ -70,15 +73,23 @@ class _Wan2_Interface(nn.Module):
         )
         from transformers import T5TokenizerFast, UMT5EncoderModel
 
-        logger.info(f"Loading Wan2.2-TI2V from {model_name}")
+        logger.info(
+            f"Loading Wan2.2-TI2V from {model_name} "
+            f"(use_text_cache={self.use_text_cache}, use_visual_cache={self.use_visual_cache})"
+        )
 
         # --- Text encoder: UMT5-XXL ---
-        self.tokenizer = T5TokenizerFast.from_pretrained(
-            model_name, subfolder="tokenizer"
-        )
-        self.text_encoder = UMT5EncoderModel.from_pretrained(
-            model_name, subfolder="text_encoder", torch_dtype=torch.bfloat16
-        )
+        # When use_text_cache=True we skip loading the 4.7B text encoder to save VRAM.
+        # Cached text_embeds/attention_mask must be supplied to build_inputs().
+        self.tokenizer = None
+        self.text_encoder = None
+        if not self.use_text_cache:
+            self.tokenizer = T5TokenizerFast.from_pretrained(
+                model_name, subfolder="tokenizer"
+            )
+            self.text_encoder = UMT5EncoderModel.from_pretrained(
+                model_name, subfolder="text_encoder", torch_dtype=torch.bfloat16
+            )
 
         # --- DiT transformer ---
         self.transformer = WanTransformer3DModel.from_pretrained(
@@ -86,9 +97,13 @@ class _Wan2_Interface(nn.Module):
         )
 
         # --- VAE (image → latents for DiT input, z_dim=48) ---
-        self.vae = AutoencoderKLWan.from_pretrained(
-            model_name, subfolder="vae", torch_dtype=torch.bfloat16
-        )
+        # Read VAE config to get scale factors without loading weights when visual cache is used.
+        self.vae = None
+        self._load_vae_config(model_name)
+        if not self.use_visual_cache:
+            self.vae = AutoencoderKLWan.from_pretrained(
+                model_name, subfolder="vae", torch_dtype=torch.bfloat16
+            )
 
         # --- Scheduler ---
         self.scheduler = UniPCMultistepScheduler.from_pretrained(
@@ -97,13 +112,13 @@ class _Wan2_Interface(nn.Module):
 
         # Use diffusers' VideoProcessor for image/video preprocessing (resize, normalize, etc.)
         from diffusers.video_processor import VideoProcessor
-        self.vae_scale_factor_spatial = 2 ** len(self.vae.temperal_downsample)
-        self.vae_scale_factor_temporal = 2 ** sum(self.vae.temperal_downsample)
         self.video_processor = VideoProcessor(vae_scale_factor=self.vae_scale_factor_spatial)
 
-        # # Freeze VAE and text encoder by default
-        # self.vae.requires_grad_(False)
-        # self.text_encoder.requires_grad_(False)
+        # Freeze VAE and text encoder by default when they are loaded
+        if self.text_encoder is not None:
+            self.text_encoder.requires_grad_(False)
+        if self.vae is not None:
+            self.vae.requires_grad_(False)
 
         # DiT: 24 heads × 128 dim = 3072
         self._hidden_size = (
@@ -157,6 +172,30 @@ class _Wan2_Interface(nn.Module):
             self._intermediate_features.append(output[0])
         else:
             self._intermediate_features.append(output)
+
+    def _load_vae_config(self, model_name: str) -> None:
+        """Load VAE scale factors and normalization constants from config.
+
+        This lets the world model consume pre-computed visual latents without
+        loading the full VAE weights into GPU memory.
+        """
+        import json
+
+        config_path = Path(model_name) / "vae" / "config.json"
+        if config_path.is_file():
+            with config_path.open("r", encoding="utf-8") as file:
+                vae_config = json.load(file)
+            temperal_downsample = vae_config.get("temperal_downsample", [False, True, True])
+            self._vae_latents_mean = vae_config.get("latents_mean")
+            self._vae_latents_std = vae_config.get("latents_std")
+            self._vae_z_dim = vae_config.get("z_dim", 48)
+        else:
+            temperal_downsample = [False, True, True]
+            self._vae_latents_mean = None
+            self._vae_latents_std = None
+            self._vae_z_dim = 48
+        self.vae_scale_factor_spatial = 2 ** len(temperal_downsample)
+        self.vae_scale_factor_temporal = 2 ** sum(int(x) for x in temperal_downsample)
 
     def _encode_text(self, instructions, max_length=512):
         """Encode text instructions using UMT5.
@@ -257,28 +296,82 @@ class _Wan2_Interface(nn.Module):
 
         return latents
 
-    def build_inputs(self, images, instructions, **kwargs):
+    def _normalize_cached_vae_latents(self, latents: torch.Tensor) -> torch.Tensor:
+        """Apply the same normalization used by the official Wan pipeline.
+
+        Cached visual latents are stored as raw VAE samples; the DiT expects
+        normalized latents. This mirrors the normalization in ``_encode_images_vae``.
+        """
+        if self._vae_latents_mean is None or self._vae_latents_std is None:
+            raise RuntimeError(
+                "VAE latents_mean/latents_std not available; cannot normalize cached latents."
+            )
+        latents_mean = (
+            torch.tensor(self._vae_latents_mean)
+            .view(1, self._vae_z_dim, 1, 1, 1)
+            .to(latents.device, latents.dtype)
+        )
+        latents_std = (
+            1.0
+            / torch.tensor(self._vae_latents_std)
+            .view(1, self._vae_z_dim, 1, 1, 1)
+            .to(latents.device, latents.dtype)
+        )
+        return (latents - latents_mean) * latents_std
+
+    def build_inputs(self, images=None, instructions=None, **kwargs):
         """Build inputs for the Wan DiT world model.
 
-        Encoding pipeline:
-        1. Text → UMT5 → text embeddings [B, L, 4096]
-        2. Image → VAE → latents [B, 48, T, H', W'] (DiT input)
+        Supports two modes:
 
-        Note: No CLIP image conditioning — this diffusers variant uses
-        expand_timesteps mode (per-token timesteps) instead.
+        1. Raw mode (default): ``images`` and ``instructions`` are provided; the
+           world model runs UMT5 + VAE encoding internally.
+        2. Cache mode: ``text_embeds`` / ``text_attention_mask`` and/or
+           ``visual_latents`` are provided. When the corresponding
+           ``use_*_cache`` flag is enabled, the heavy encoders are skipped.
 
-        Returns:
-            dict with keys matching forward() expectations
+        The cached ``visual_latents`` should have shape ``[B, C, T, H, W]`` or
+        ``[B, C, H, W]`` (the latter is treated as ``T=1``).
         """
-        assert len(images) == len(instructions)
-
         device = next(self.transformer.parameters()).device
 
-        text_embeds, text_attention_mask = self._encode_text(instructions)
-        latents = self._encode_images_vae(images)
+        # --- Text conditioning ---
+        text_embeds = kwargs.get("text_embeds")
+        text_attention_mask = kwargs.get("text_attention_mask")
+        if text_embeds is not None and text_attention_mask is not None:
+            text_embeds = text_embeds.to(device=device, dtype=torch.bfloat16)
+            text_attention_mask = text_attention_mask.to(device=device, dtype=torch.bfloat16)
+        elif instructions is not None:
+            if self.use_text_cache:
+                raise ValueError(
+                    "use_text_cache=True but text_embeds/text_attention_mask not provided."
+                )
+            text_embeds, text_attention_mask = self._encode_text(instructions)
+        else:
+            raise ValueError("Either instructions or text_embeds/text_attention_mask must be provided.")
+
+        # --- Visual conditioning ---
+        visual_latents = kwargs.get("visual_latents")
+        if visual_latents is not None:
+            latents = torch.as_tensor(visual_latents, device=device, dtype=torch.bfloat16)
+            if latents.dim() == 4:
+                # [B, C, H, W] -> [B, C, 1, H, W]
+                latents = latents.unsqueeze(2)
+            if latents.dim() != 5:
+                raise ValueError(
+                    f"visual_latents must be 4D or 5D, got {latents.dim()}D with shape {tuple(latents.shape)}"
+                )
+            latents = self._normalize_cached_vae_latents(latents)
+        elif images is not None:
+            if self.use_visual_cache:
+                raise ValueError(
+                    "use_visual_cache=True but visual_latents not provided."
+                )
+            latents = self._encode_images_vae(images)
+        else:
+            raise ValueError("Either images or visual_latents must be provided.")
 
         batch_size = latents.shape[0]
-        device = latents.device
 
         # Wan2.2 TI2V uses expand_timesteps: timestep is per-token
         # Shape: [B, seq_len] where seq_len = T_lat * (H_lat//p_h) * (W_lat//p_w)

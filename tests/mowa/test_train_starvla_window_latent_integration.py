@@ -296,7 +296,7 @@ class TrainStarVLAWindowLatentIntegrationTest(unittest.TestCase):
             self.assertEqual(tuple(future.shape), (self._LATENT_DIM,))
             self.assertEqual(tuple(history.shape), (self._HISTORY_STEPS, self._LATENT_DIM))
 
-    def test_spatial_latent_store_is_rejected(self):
+    def test_spatial_latent_store_returns_visual_latent(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             dataset_path = root / "dataset"
@@ -333,8 +333,10 @@ class TrainStarVLAWindowLatentIntegrationTest(unittest.TestCase):
             cache_dataset = MoWALatentCacheDataset(
                 cache_root=cache_root, manifest_path=manifest_path
             )
-            with self.assertRaisesRegex(ValueError, "pooled_vector"):
-                cache_dataset[0]
+            sample = cache_dataset[0]
+            self.assertIn("visual_latent", sample)
+            self.assertTrue(torch.is_tensor(sample["visual_latent"]))
+            self.assertIn("lang", sample)
 
 
 class _DummyDataset:

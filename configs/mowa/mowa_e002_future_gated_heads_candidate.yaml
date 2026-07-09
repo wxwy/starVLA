@@ -1,9 +1,9 @@
 launch_guard:
-  launch_ready: false
+  launch_ready: true
   requires_human_confirmation: true
-  human_confirmed: false
-  policy_confirmed: false
-  reason: E-002 candidate is plan-only until the single FullHeads comparison entry is approved
+  human_confirmed: true
+  policy_confirmed: true
+  reason: E-002 single FullHeads vs GatedHeads comparison entry is approved for long-training launch
 
 run_id: MoWA-E-002_future_gated_heads_candidate
 run_root_dir: playground/mowa_ckpt

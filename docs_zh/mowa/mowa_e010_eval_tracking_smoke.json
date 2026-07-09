@@ -1,0 +1,25 @@
+{
+  "stage": "eval_tracking",
+  "experiment_id": "E-010",
+  "training_started": false,
+  "eval_started": false,
+  "launch_ready": true,
+  "checks": {
+    "config_exists": true,
+    "launch_guard_open": true,
+    "checkpoint_exists": true,
+    "report_path_declared": true,
+    "benchmarks_declared": true,
+    "interventions_declared": true,
+    "counts_as_training_experiment_false": true,
+    "no_checkpoint_mutation": true,
+    "no_training_started": true
+  },
+  "observed": {
+    "checkpoint": "playground/mowa_ckpt/MoWA-E-001_starflow_ft0_baseline_4090_long_260706_1730/checkpoints/steps_66000"
+  },
+  "unresolved_items": [
+    "This smoke validates E-010 eval tracking plan only; it does not start benchmark evaluation."
+  ],
+  "go_no_go": "TBD: E-010 eval tracking plan is wired and launch-approved"
+}

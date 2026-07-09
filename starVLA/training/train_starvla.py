@@ -176,9 +176,13 @@ def _enforce_launch_guard(cfg, *, full_path_dry_run_only: bool) -> None:
 def _build_accelerator(cfg):
     deepspeed_plugin = DeepSpeedPlugin() if (_num_processes > 1 and not _use_accelerate_deepspeed) else None
     gradient_accumulation_steps = int(getattr(cfg.trainer, "gradient_accumulation_steps", 1))
+    mixed_precision = str(getattr(cfg.trainer, "mixed_precision", "no")).lower()
+    if mixed_precision not in {"no", "fp16", "bf16", "fp8"}:
+        mixed_precision = "no"
     return Accelerator(
         deepspeed_plugin=deepspeed_plugin,
         gradient_accumulation_steps=gradient_accumulation_steps,
+        mixed_precision=mixed_precision,
     )
 
 # Initialize logger

@@ -39,7 +39,7 @@ logger = initialize_overwatch(__name__)
 IGNORE_INDEX = -100
 
 from starVLA.model.framework.base_framework import baseframework
-from starVLA.model.framework.share_tools import merge_framework_config
+from starVLA.model.framework.share_tools import merge_framework_config, populate_layerwise_dit_cfg
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import LayerwiseFlowmatchingActionHead, get_action_model
 from starVLA.model.modules.mowa import (
     MoWAFutureLatentPrior,
@@ -127,13 +127,26 @@ class Wan_PI(baseframework):
         else:
             num_blocks = len(self.backbone.transformer.blocks)
 
-        # Project world model features to action model's cross-attention dim
+        # Project world model features to action model's cross-attention dim.
+        # The world model runs under bfloat16 AMP, so hidden states are bfloat16;
+        # we cast them to float32 before the projector so downstream modules
+        # (action head, MoWA auxiliary heads) stay in a consistent dtype.
         cross_attn_dim = self.config.framework.action_model.diffusion_model_cfg.cross_attention_dim
         self.wm_projector = torch.nn.Linear(wm_hidden, cross_attn_dim)
 
         # Sync vl_hidden_dim so LayerwiseFM action head stays consistent
         self.config.framework.qwenvl.vl_hidden_dim = cross_attn_dim
         self.config.framework.qwenvl.num_vl_layers = num_blocks
+
+        # Resolve DiT shape from config (default to cross_attn_dim).
+        diffusion_model_cfg = self.config.framework.action_model.diffusion_model_cfg
+        action_dit_hidden_dim = diffusion_model_cfg.get("action_dit_hidden_dim", cross_attn_dim)
+        self.action_dit_hidden_dim = int(action_dit_hidden_dim)
+        populate_layerwise_dit_cfg(
+            self.config,
+            dit_hidden_dim=self.action_dit_hidden_dim,
+            num_dit_layers=num_blocks,
+        )
 
         self.action_model: LayerwiseFlowmatchingActionHead = get_action_model(config=self.config)
 
@@ -353,14 +366,45 @@ class Wan_PI(baseframework):
             "history_sequence_policy": "per_step_history_sequence_from_cache",
         }
 
+    def _build_wan_inputs(self, examples: List[dict]) -> dict:
+        """Prepare Wan2.2 build_inputs kwargs from examples.
+
+        Prefer cached text/visual latents when present; fall back to raw
+        instructions/images so the world model can encode on its own.
+        """
+        kwargs: dict = {}
+
+        text_embeds = [example.get("text_embeds") for example in examples]
+        text_attention_mask = [example.get("text_attention_mask") for example in examples]
+        if all(t is not None for t in text_embeds) and all(m is not None for m in text_attention_mask):
+            text_embeds_tensor = torch.stack([torch.as_tensor(t) for t in text_embeds], dim=0)
+            text_attention_mask_tensor = torch.stack(
+                [torch.as_tensor(m) for m in text_attention_mask], dim=0
+            )
+            # Cached latents may include a leading singleton batch dim [1, L, D].
+            if text_embeds_tensor.dim() == 4 and text_embeds_tensor.shape[1] == 1:
+                text_embeds_tensor = text_embeds_tensor.squeeze(1)
+            if text_attention_mask_tensor.dim() == 3 and text_attention_mask_tensor.shape[1] == 1:
+                text_attention_mask_tensor = text_attention_mask_tensor.squeeze(1)
+            kwargs["text_embeds"] = text_embeds_tensor
+            kwargs["text_attention_mask"] = text_attention_mask_tensor
+        else:
+            kwargs["instructions"] = [example["lang"] for example in examples]
+
+        visual_latents = [example.get("visual_latent") for example in examples]
+        if all(v is not None for v in visual_latents):
+            kwargs["visual_latents"] = torch.stack([torch.as_tensor(v) for v in visual_latents], dim=0)
+        else:
+            kwargs["images"] = [example["image"] for example in examples]
+
+        return kwargs
+
     def forward(self, examples: List[dict] = None, **kwargs) -> Tuple:
-        batch_images = [example["image"] for example in examples]
-        instructions = [example["lang"] for example in examples]
         actions = [example["action"] for example in examples]
 
         state = [example["state"] for example in examples] if "state" in examples[0] else None
 
-        wm_inputs = self.backbone.build_inputs(images=batch_images, instructions=instructions)
+        wm_inputs = self.backbone.build_inputs(**self._build_wan_inputs(examples))
         encoder_hidden_states = wm_inputs["encoder_hidden_states"]
         encoder_attention_mask = wm_inputs.get("encoder_attention_mask")
         pooled_text_hidden = (
@@ -377,7 +421,7 @@ class Wan_PI(baseframework):
                 return_dict=True,
             )
             vl_embs_list = list(self._all_hidden_states)
-            vl_embs_list = [self.wm_projector(h) for h in vl_embs_list]
+            vl_embs_list = [self.wm_projector(h.to(dtype=torch.float32)) for h in vl_embs_list]
             base_hidden = vl_embs_list[-1]
 
         with torch.autocast("cuda", dtype=torch.float32):
@@ -402,6 +446,10 @@ class Wan_PI(baseframework):
             state_repeated = None
             if state is not None:
                 state = torch.tensor(np.array(state), device=base_hidden.device, dtype=base_hidden.dtype)
+                # The dataloader returns state as [B, 1, state_dim]; keep the
+                # singleton step dim so the action head's MLP emits
+                # [B, 1, hidden_size] and can be concatenated with future/action
+                # tokens along the sequence dimension.
                 state_repeated = state.repeat(repeated_diffusion_steps, 1, 1)
 
             action_loss = self.action_model(vl_embs_list_repeated, actions_target_repeated, state_repeated)
@@ -428,15 +476,26 @@ class Wan_PI(baseframework):
     def predict_action(self, examples: List[dict], **kwargs) -> np.ndarray:
         if type(examples) is not list:
             examples = [examples]
-        batch_images = [to_pil_preserve(example["image"]) for example in examples]
-        instructions = [example["lang"] for example in examples]
+
         state = [example["state"] for example in examples] if "state" in examples[0] else None
 
+        # Apply obs resize only when using raw images, not cached visual latents.
         train_obs_image_size = getattr(self.config.datasets.vla_data, "obs_image_size", None)
-        if train_obs_image_size:
-            batch_images = resize_images(batch_images, target_size=train_obs_image_size)
+        if train_obs_image_size and not all(example.get("visual_latent") is not None for example in examples):
+            for example in examples:
+                example["image"] = to_pil_preserve(example["image"])
+            examples = [
+                {**example, "image": img}
+                for example, img in zip(
+                    examples,
+                    resize_images(
+                        [example["image"] for example in examples],
+                        target_size=train_obs_image_size,
+                    ),
+                )
+            ]
 
-        wm_inputs = self.backbone.build_inputs(images=batch_images, instructions=instructions)
+        wm_inputs = self.backbone.build_inputs(**self._build_wan_inputs(examples))
         with torch.autocast("cuda", dtype=torch.bfloat16):
             self._all_hidden_states.clear()
             wm_outputs = self.backbone(

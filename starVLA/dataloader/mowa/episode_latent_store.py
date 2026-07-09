@@ -138,15 +138,24 @@ class MoWAWanVaeEpisodeEncoderAdapter:
 
         from PIL import Image
 
-        frames = self._load_frames(video_path, frame_indices)
-        pil_frames = [Image.fromarray(frame) for frame in frames]
-
         per_frame_latents: list[torch.Tensor] = []
-        for start in range(0, len(pil_frames), self.vae_batch_size):
-            batch = pil_frames[start : start + self.vae_batch_size]
-            latent = self._encode_frame_batch(batch)
-            # latent: [B, C, 1, h, w] for per-frame encoding or [1, C, B, h, w] for clip encoding.
-            per_frame_latents.extend(self._split_batch(latent))
+
+        if self.video_backend == "decord":
+            # decord can load the requested frames in one shot; chunk the VAE forward
+            # afterwards to keep GPU memory bounded.
+            frames = self._load_all_frames_decord(video_path, frame_indices)
+            pil_frames = [Image.fromarray(frame) for frame in frames]
+            for start in range(0, len(pil_frames), self.vae_batch_size):
+                batch = pil_frames[start : start + self.vae_batch_size]
+                latent = self._encode_frame_batch(batch)
+                per_frame_latents.extend(self._split_batch(latent))
+        else:
+            # opencv: read sequentially and encode in chunks to avoid per-frame seek.
+            self._encode_opencv_sequential(
+                video_path,
+                frame_indices,
+                per_frame_latents,
+            )
 
         full_latent = torch.stack(per_frame_latents, dim=0)  # [T, C, h, w]
 
@@ -178,25 +187,27 @@ class MoWAWanVaeEpisodeEncoderAdapter:
         self._video_processor = VideoProcessor(vae_scale_factor=2 ** len(self._vae.temperal_downsample))
         self._torch_dtype = dtype
 
-    def _load_frames(self, source_path: Path, frame_indices: tuple[int, ...]) -> list[Any]:
-        if self.video_backend == "decord":
-            try:
-                from starVLA.dataloader.gr00t_lerobot.video import get_frames_by_indices
-            except ImportError as exc:
-                raise RuntimeError("MoWA Wan encoder requires gr00t_lerobot video helpers.") from exc
-            try:
-                frames = get_frames_by_indices(
-                    str(source_path),
-                    list(frame_indices),
-                    video_backend="decord",
-                )
-            except ImportError as exc:
-                raise RuntimeError("MoWA Wan encoder requires decord for video_backend='decord'.") from exc
-            return [frame for frame in frames]
-        if self.video_backend != "opencv":
-            raise NotImplementedError(
-                f"Unsupported video_backend={self.video_backend!r}; only 'opencv' and 'decord' are available."
+    def _load_all_frames_decord(self, source_path: Path, frame_indices: tuple[int, ...]) -> list[Any]:
+        try:
+            from starVLA.dataloader.gr00t_lerobot.video import get_frames_by_indices
+        except ImportError as exc:
+            raise RuntimeError("MoWA Wan encoder requires gr00t_lerobot video helpers.") from exc
+        try:
+            frames = get_frames_by_indices(
+                str(source_path),
+                list(frame_indices),
+                video_backend="decord",
             )
+        except ImportError as exc:
+            raise RuntimeError("MoWA Wan encoder requires decord for video_backend='decord'.") from exc
+        return [frame for frame in frames]
+
+    def _encode_opencv_sequential(
+        self,
+        source_path: Path,
+        frame_indices: tuple[int, ...],
+        per_frame_latents: list[torch.Tensor],
+    ) -> None:
         try:
             import cv2
         except ImportError as exc:
@@ -205,25 +216,52 @@ class MoWAWanVaeEpisodeEncoderAdapter:
         cap = cv2.VideoCapture(str(source_path))
         if not cap.isOpened():
             raise RuntimeError(f"Failed to open video: {source_path}")
-        frames: list[Any] = []
+
+        from PIL import Image
+
+        target_indices = list(frame_indices)
+        idx_pointer = 0
+        frame_counter = 0
+        chunk: list[Any] = []
         try:
-            for frame_index in frame_indices:
-                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+            while True:
                 ok, frame = cap.read()
                 if not ok:
-                    raise ValueError(f"Unable to read frame at index {frame_index} from {source_path}")
-                frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                    break
+                if idx_pointer < len(target_indices) and frame_counter == target_indices[idx_pointer]:
+                    chunk.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                    idx_pointer += 1
+                    if len(chunk) >= self.vae_batch_size:
+                        pil_chunk = [Image.fromarray(f) for f in chunk]
+                        latent = self._encode_frame_batch(pil_chunk)
+                        per_frame_latents.extend(self._split_batch(latent))
+                        chunk = []
+                frame_counter += 1
         finally:
             cap.release()
-        return frames
+
+        if chunk:
+            pil_chunk = [Image.fromarray(f) for f in chunk]
+            latent = self._encode_frame_batch(pil_chunk)
+            per_frame_latents.extend(self._split_batch(latent))
+
+        if idx_pointer != len(target_indices):
+            raise ValueError(
+                f"Could not read all requested frames from {source_path}: "
+                f"got {idx_pointer}/{len(target_indices)}"
+            )
 
     def _encode_frame_batch(self, pil_frames: list[Any]) -> torch.Tensor:
         assert self._vae is not None and self._video_processor is not None and self._torch_dtype is not None
+        # preprocess_video returns [1, C, B, H, W] for a list of B frames.
         video_tensor = self._video_processor.preprocess_video(
             pil_frames,
             height=self.height,
             width=self.width,
         )
+        # Treat each frame as a separate sample with a single temporal step:
+        # preprocess_video returns [1, C, B, H, W]; permute to [B, C, 1, H, W].
+        video_tensor = video_tensor.permute(2, 1, 0, 3, 4)
         device = next(self._vae.parameters()).device
         video_tensor = video_tensor.to(device=device, dtype=self._torch_dtype)
         with torch.inference_mode():
@@ -231,20 +269,19 @@ class MoWAWanVaeEpisodeEncoderAdapter:
         return latents.to(dtype=torch.float32)
 
     def _split_batch(self, latent: torch.Tensor) -> list[torch.Tensor]:
-        """Split a VAE batch into per-frame latents.
+        """Split a batched per-frame VAE output into per-frame latents.
 
-        This first version supports only per-frame encoding (vae_batch_size=1),
-        which avoids temporal downsampling ambiguities across frame batches.
-        Expected shape: ``[1, C, 1, h, w]``.
+        Expected shape: ``[B, C, 1, h, w]`` (each frame encoded as a separate
+        batch sample with a single temporal step).
         """
         if latent.dim() != 5:
             raise ValueError(f"Expected 5D VAE latent, got {latent.dim()}D with shape {tuple(latent.shape)}.")
-        if latent.shape[0] != 1 or latent.shape[2] != 1:
+        if latent.shape[2] != 1:
             raise NotImplementedError(
-                "Only vae_batch_size=1 per-frame encoding is supported in this version. "
-                f"Got latent shape {tuple(latent.shape)}. Set vae_batch_size=1."
+                "Only per-frame encoding is supported; expected temporal dim 1, "
+                f"got latent shape {tuple(latent.shape)}."
             )
-        return [latent.squeeze(0).squeeze(1)]  # [C, h, w]
+        return [frame_latent.squeeze(1) for frame_latent in latent.unbind(dim=0)]  # [C, h, w]
 
     def _to_pooled_vector(self, spatial_latent: torch.Tensor) -> torch.Tensor:
         """Convert [T, C, h, w] spatial latent to [T, D] pooled vector."""
@@ -521,7 +558,11 @@ def build_mowa_episode_latent_store(
             row_count = _read_parquet_row_count(parquet_path)
             frame_indices = tuple(range(row_count))
 
-            with h5py.File(store_path, "w") as file:
+            # Write to a temporary file in the same directory and atomically rename
+            # to the final store path so that concurrent readers never see a partial
+            # HDF5 file.
+            tmp_path = store_path.with_suffix(".h5.tmp")
+            with h5py.File(tmp_path, "w") as file:
                 _write_metadata(file, config, episode_index, row_count)
                 _write_indices(file, row_count)
                 _write_robot_and_language(file, dataset_path, episode_index, row_count)
@@ -543,6 +584,7 @@ def build_mowa_episode_latent_store(
                 if "latents" in locals():
                     file.attrs["latent_shape_per_frame"] = json.dumps(list(latents.shape[1:]))
 
+            tmp_path.replace(store_path)
             written_count += 1
             detail["status"] = "written"
         except Exception as exc:  # noqa: BLE001
@@ -738,14 +780,37 @@ def _read_state_and_action(
     table = pq.read_table(parquet_path)
     state = np.asarray(table.column("observation.state").to_pylist(), dtype=np.float32)
     action = np.asarray(table.column("action").to_pylist(), dtype=np.float32)
-    if state.shape != (row_count, -1):
+    if state.ndim != 2 or state.shape[0] != row_count:
         state = state.reshape(row_count, -1)
-    if action.shape != (row_count, -1):
+    if action.ndim != 2 or action.shape[0] != row_count:
         action = action.reshape(row_count, -1)
     return state, action
 
 
 def _read_instruction(dataset_path: Path, episode_index: int) -> str:
+    """Read the language instruction for an episode.
+
+    LeRobot-style datasets store the episode-to-task mapping in
+    ``meta/episodes.jsonl`` and the task definitions in ``meta/tasks.jsonl``.
+    Prefer ``episodes.jsonl`` because it maps ``episode_index`` directly to the
+    list of task descriptions.
+    """
+    episodes_path = dataset_path / "meta" / "episodes.jsonl"
+    if episodes_path.is_file():
+        try:
+            with episodes_path.open("r", encoding="utf-8") as file:
+                for line in file:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    data = json.loads(line)
+                    if int(data.get("episode_index", -1)) == episode_index:
+                        tasks = data.get("tasks")
+                        if isinstance(tasks, list) and tasks:
+                            return "; ".join(str(task) for task in tasks if task)
+        except Exception:  # noqa: BLE001
+            pass
+
     tasks_path = dataset_path / "meta" / "tasks.jsonl"
     if tasks_path.is_file():
         try:

@@ -60,6 +60,7 @@ class _MoWAEpisodeLevelLatentCacheDataset:
         self,
         cache_root: Path | str,
         manifest_path: Path | str | None = None,
+        instruction_text_latent: Path | str | Any | None = None,
     ) -> None:
         self.cache_root = Path(cache_root)
         self.manifest_path = (
@@ -72,7 +73,10 @@ class _MoWAEpisodeLevelLatentCacheDataset:
                 f"MoWA window manifest not found: {self.manifest_path}"
             )
 
-        self._window_dataset = MoWAWindowLatentSampleDataset(self.manifest_path)
+        self._window_dataset = MoWAWindowLatentSampleDataset(
+            self.manifest_path,
+            instruction_text_latent=instruction_text_latent,
+        )
         self._sample_keys = tuple(
             sorted(
                 {
@@ -88,7 +92,6 @@ class _MoWAEpisodeLevelLatentCacheDataset:
         self._key_to_index = {
             key: idx for idx, key in enumerate(self._sample_keys)
         }
-        self._checked_store_paths: set[str] = set()
 
     def _resolve_manifest_path(self) -> Path:
         manifests = sorted(self.cache_root.glob("window_manifest*.parquet"))
@@ -130,58 +133,69 @@ class _MoWAEpisodeLevelLatentCacheDataset:
         sample_index = self._key_to_index[key]
         sample = self._window_dataset[sample_index]
         entry = self._window_dataset.get_entry(sample_index)
-        self._assert_pooled_vector(entry.episode_latent_path)
 
         current_latent = sample.current_latent
         # The window assembler already squeezes a single-frame current latent.
         # Future latents may contain multiple frames; mean-pool to a single
         # vector to match the legacy model contract ``[D]``.
         future_latents = sample.future_latents
-        if future_latents.ndim == 2:
-            future_latent = future_latents.mean(dim=0)
-        elif future_latents.ndim == 1:
-            future_latent = future_latents
-        else:
-            raise ValueError(
-                f"Unexpected future_latents ndim={future_latents.ndim}, "
-                f"shape={tuple(future_latents.shape)}"
-            )
+        future_latent = _mean_pool_latent(future_latents)
 
-        history_latent = sample.history_latents
+        # History latent keeps the time dimension; pool each frame separately.
+        history_latent = _mean_pool_latent_per_frame(sample.history_latents)
+
+        # Pool the current-frame latent to a 1-D vector for MoWA auxiliary heads
+        # (future latent prior, HLC-GCI) which expect [B, D] or [B, H, D].
+        mowa_current_latent = _mean_pool_latent(current_latent)
+
+        # WanPI cache path: pass the raw current-frame visual latent and cached
+        # text embeddings so the world model can skip VAE + UMT5 loading.
+        language = sample.language
+        text_embeds = None
+        text_attention_mask = None
+        lang = None
+        if isinstance(language, dict):
+            text_embeds = language.get("text_embeds")
+            text_attention_mask = language.get("attention_mask")
+            lang = language.get("instruction")
+        else:
+            lang = language
+
         latents = {
             "current_latent": current_latent,
             "future_latent": future_latent,
             "history_latent": history_latent,
+            "future_latents": future_latents,
+            "history_latents": sample.history_latents,
+            "mowa_current_latent": mowa_current_latent,
         }
         metadata = {
             **sample.metadata,
             "episode_id": sample.episode_id,
             "sample_id": sample.sample_id,
             "episode_latent_path": entry.episode_latent_path,
+            "latent_type": MoWAEpisodeLatentStore(entry.episode_latent_path).attrs.get(
+                "latent_type", "unknown"
+            ),
         }
-        return {
+        result = {
             "episode_index": episode_index,
             "anchor_index": anchor_index,
             "video_key": video_key,
             "current_latent": current_latent,
             "future_latent": future_latent,
             "history_latent": history_latent,
+            "mowa_current_latent": mowa_current_latent,
             "latents": latents,
             "metadata": metadata,
+            "visual_latent": current_latent,
+            "lang": lang,
         }
-
-    def _assert_pooled_vector(self, episode_latent_path: str) -> None:
-        if episode_latent_path in self._checked_store_paths:
-            return
-        store = MoWAEpisodeLatentStore(episode_latent_path)
-        latent_type = store.attrs.get("latent_type", "unknown")
-        if latent_type != "pooled_vector":
-            raise ValueError(
-                f"Episode latent store {episode_latent_path} uses latent_type={latent_type!r}. "
-                "The train_starvla data path only supports pooled_vector episode stores. "
-                "Please rebuild the cache with latent_type='pooled_vector'."
-            )
-        self._checked_store_paths.add(episode_latent_path)
+        if text_embeds is not None:
+            result["text_embeds"] = text_embeds
+        if text_attention_mask is not None:
+            result["text_attention_mask"] = text_attention_mask
+        return result
 
 
 class MoWALatentCacheDataset:
@@ -201,16 +215,20 @@ class MoWALatentCacheDataset:
         self,
         cache_root: Path | str,
         manifest_path: Path | str | None = None,
+        instruction_text_latent: Path | str | Any | None = None,
     ) -> None:
         self.cache_root = Path(cache_root)
         self.manifest_path = (
             Path(manifest_path) if manifest_path is not None else None
         )
+        self.instruction_text_latent = instruction_text_latent
 
         if self._is_episode_level():
             self._backend: _LegacyMoWALatentCacheDataset | _MoWAEpisodeLevelLatentCacheDataset = (
                 _MoWAEpisodeLevelLatentCacheDataset(
-                    self.cache_root, self.manifest_path
+                    self.cache_root,
+                    self.manifest_path,
+                    instruction_text_latent=instruction_text_latent,
                 )
             )
         else:
@@ -259,3 +277,40 @@ class MoWALatentCacheDataset:
             anchor_index=anchor_index,
             video_key=video_key,
         )
+
+
+def _mean_pool_latent(latent: torch.Tensor) -> torch.Tensor:
+    """Collapse a multi-frame / spatial latent to a 1-D vector per frame group.
+
+    Supports pooled vectors and VAE spatial latents.  The result is a flat
+    1-D tensor compatible with the legacy QwenPI / StarFlow model contract.
+    """
+    if latent.ndim == 1:
+        return latent
+    if latent.ndim == 2:
+        # [T, D] -> [D]
+        return latent.mean(dim=0)
+    if latent.ndim == 3:
+        # [C, h, w] -> [C]
+        return latent.mean(dim=(1, 2))
+    if latent.ndim == 4:
+        # [T, C, h, w] -> [C]
+        return latent.mean(dim=(0, 2, 3))
+    raise ValueError(
+        f"Unsupported latent ndim={latent.ndim}, shape={tuple(latent.shape)}"
+    )
+
+
+def _mean_pool_latent_per_frame(latent: torch.Tensor) -> torch.Tensor:
+    """Pool each frame of a history / future latent sequence independently.
+
+    Supports [H, D] pooled history and [H, C, h, w] spatial history.
+    """
+    if latent.ndim == 2:
+        return latent
+    if latent.ndim == 4:
+        # [H, C, h, w] -> [H, C]
+        return latent.mean(dim=(2, 3))
+    raise ValueError(
+        f"Unsupported history latent ndim={latent.ndim}, shape={tuple(latent.shape)}"
+    )

@@ -191,60 +191,38 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
     config_preview = _load_json(root, "docs_zh/mowa/mowa_e003_future_latent_prior_config_preview.json")
     cache_dry_run = _load_json(root, "docs_zh/mowa/mowa_e003_future_latent_prior_train_dry_run.json")
     launch_smoke = _load_json(root, "docs_zh/mowa/mowa_e003_future_latent_prior_launch_smoke.json")
-    long_training_launch = _load_json(
-        root,
-        "docs_zh/mowa/mowa_e003_future_latent_prior_long_training_launch_smoke.json",
-    )
+    wanpi_dry_run = _load_json(root, "docs_zh/mowa/mowa_e003_wanpi_future_latent_prior_dry_run.json")
     blockers = _merged_unresolved(prior, builder, consistency, config_preview, cache_dry_run)
     blockers.extend(
         [
-            "Latent-cache batches and MoWAFutureLatentPrior are now wired into train_starvla; "
-            "next required step is materializing the production cache root and an E-003 full-path dry-run.",
+            "E-003 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; "
+            "a WanPI-MoWA full-path dry-run on the production episode latent cache is required before launch.",
         ]
     )
     if not _report_not_nogo(launch_smoke):
         blockers.append("E-003 launch smoke has not yet passed on the real Wan2.2 cache path.")
-    if not _report_not_nogo(long_training_launch):
-        blockers.append("E-003 formal long-training launch smoke has not yet passed.")
+    if not _report_not_nogo(wanpi_dry_run):
+        blockers.append("E-003 WanPI dry-run evidence is not yet available.")
+    preconditions_met = (
+        _report_not_nogo(prior)
+        and _report_not_nogo(builder)
+        and _report_not_nogo(consistency)
+        and _report_not_nogo(config_preview)
+        and _report_not_nogo(cache_dry_run)
+        and _report_not_nogo(launch_smoke)
+    )
     return {
         "experiment_id": "E-003",
         "stage": "future_latent_prior",
         "counts_as_training_experiment": True,
-        "can_start_now": bool(
-            _report_not_nogo(prior)
-            and _report_not_nogo(builder)
-            and _report_not_nogo(consistency)
-            and _report_not_nogo(config_preview)
-            and _report_not_nogo(cache_dry_run)
-            and _report_not_nogo(launch_smoke)
-            and _report_not_nogo(long_training_launch)
-        ),
+        "can_start_now": bool(preconditions_met and _report_not_nogo(wanpi_dry_run)),
         "status": (
             "launchable_now"
-            if _report_not_nogo(prior)
-            and _report_not_nogo(builder)
-            and _report_not_nogo(consistency)
-            and _report_not_nogo(config_preview)
-            and _report_not_nogo(cache_dry_run)
-            and _report_not_nogo(launch_smoke)
-            and _report_not_nogo(long_training_launch)
+            if preconditions_met and _report_not_nogo(wanpi_dry_run)
             else (
-                "launch_candidate_present_but_training_integration_missing"
-                if _report_not_nogo(prior)
-                and _report_not_nogo(builder)
-                and _report_not_nogo(consistency)
-                and _report_not_nogo(config_preview)
-                and _report_not_nogo(cache_dry_run)
-                and _report_not_nogo(launch_smoke)
-                else (
-                "interface_ready_but_cache_dry_run_ready"
-                if _report_not_nogo(prior)
-                and _report_not_nogo(builder)
-                and _report_not_nogo(consistency)
-                and _report_not_nogo(config_preview)
-                and _report_not_nogo(cache_dry_run)
+                "wanpi_path_ready_but_dry_run_pending"
+                if preconditions_met
                 else "future_latent_prior_preconditions_incomplete"
-                )
             )
         ),
         "evidence_reports": _present_reports(
@@ -255,7 +233,7 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
                 "future_latent_prior_config_preview": config_preview,
                 "future_latent_prior_train_dry_run": cache_dry_run,
                 "future_latent_prior_launch_smoke": launch_smoke,
-                "future_latent_prior_long_training_launch": long_training_launch,
+                "wanpi_future_latent_prior_dry_run": wanpi_dry_run,
             }
         ),
         "blocking_items": blockers,
@@ -266,7 +244,7 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
             "future_latent_prior_config_preview_passed": _report_not_nogo(config_preview),
             "future_latent_prior_train_dry_run_passed": _report_not_nogo(cache_dry_run),
             "future_latent_prior_launch_smoke_passed": _report_not_nogo(launch_smoke),
-            "future_latent_prior_long_training_launch_passed": _report_not_nogo(long_training_launch),
+            "wanpi_future_latent_prior_dry_run_passed": _report_not_nogo(wanpi_dry_run),
         },
     }
 
@@ -276,66 +254,54 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
     hlcgci = _load_json(root, "docs_zh/mowa/mowa_hlc_gci_interface_smoke.json")
     consistency = _load_json(root, "docs_zh/mowa/mowa_e003_history_sampling_consistency_smoke.json")
     launch_smoke = _load_json(root, "docs_zh/mowa/mowa_e004_hlc_gci_launch_smoke.json")
-    long_training_launch = _load_json(
-        root,
-        "docs_zh/mowa/mowa_e004_hlc_gci_long_training_launch_smoke.json",
-    )
     checkpoint_preflight = _load_json(
         root,
         "docs_zh/mowa/mowa_e004_hlc_gci_checkpoint_preflight_smoke.json",
     )
     policy_rollout = _load_json(root, "docs_zh/mowa/mowa_e004_hlc_gci_policy_rollout_smoke.json")
+    wanpi_dry_run = _load_json(root, "docs_zh/mowa/mowa_e004_wanpi_hlc_gci_dry_run.json")
     blockers = _merged_unresolved(
         config_preview,
         hlcgci,
         consistency,
         launch_smoke,
-        long_training_launch,
         checkpoint_preflight,
         policy_rollout,
     )
     blockers.extend(
         [
-            "history_latent batches and MoWAHLCGCI are now wired into train_starvla as conditioning; "
-            "next required step is materializing the production cache root and an E-004 full-path dry-run.",
+            "E-004 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; "
+            "a WanPI-MoWA full-path dry-run on the production episode latent cache is required before launch.",
             "E-004 rollout remains gated on a trained E-003/E-004 checkpoint and success metrics.",
         ]
     )
     if not _report_not_nogo(launch_smoke):
         blockers.append("E-004 launch smoke has not yet passed on the synthetic HLC-GCI path.")
-    if not _report_not_nogo(long_training_launch):
-        blockers.append("E-004 formal long-training launch smoke has not yet passed.")
+    if not _report_not_nogo(wanpi_dry_run):
+        blockers.append("E-004 WanPI dry-run evidence is not yet available.")
     if not _report_not_nogo(checkpoint_preflight):
         blockers.append("E-004 checkpoint-backed preflight has not yet passed on a complete checkpoint reference.")
     if not _report_not_nogo(policy_rollout):
         blockers.append("E-004 checkpoint-backed policy rollout smoke has not yet passed.")
+    preconditions_met = (
+        _report_not_nogo(config_preview)
+        and _report_not_nogo(hlcgci)
+        and _report_not_nogo(consistency)
+        and _report_not_nogo(launch_smoke)
+        and _report_not_nogo(checkpoint_preflight)
+        and _report_not_nogo(policy_rollout)
+    )
     return {
         "experiment_id": "E-004",
         "stage": "hlc_gci",
         "counts_as_training_experiment": True,
-        "can_start_now": bool(
-            _report_not_nogo(config_preview)
-            and _report_not_nogo(hlcgci)
-            and _report_not_nogo(consistency)
-            and _report_not_nogo(launch_smoke)
-            and _report_not_nogo(long_training_launch)
-            and _report_not_nogo(checkpoint_preflight)
-            and _report_not_nogo(policy_rollout)
-        ),
+        "can_start_now": bool(preconditions_met and _report_not_nogo(wanpi_dry_run)),
         "status": (
             "launchable_now"
-            if _report_not_nogo(config_preview)
-            and _report_not_nogo(hlcgci)
-            and _report_not_nogo(consistency)
-            and _report_not_nogo(launch_smoke)
-            and _report_not_nogo(long_training_launch)
-            and _report_not_nogo(checkpoint_preflight)
-            and _report_not_nogo(policy_rollout)
+            if preconditions_met and _report_not_nogo(wanpi_dry_run)
             else (
-                "config_preview_and_interface_ready_but_framework_integration_missing"
-                if _report_not_nogo(config_preview)
-                and _report_not_nogo(hlcgci)
-                and _report_not_nogo(consistency)
+                "wanpi_path_ready_but_dry_run_pending"
+                if preconditions_met
                 else "hlc_gci_preconditions_incomplete"
             )
         ),
@@ -345,9 +311,9 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
                 "hlcgci_interface": hlcgci,
                 "history_sampling_consistency": consistency,
                 "hlcgci_launch_smoke": launch_smoke,
-                "hlcgci_long_training_launch": long_training_launch,
                 "hlcgci_checkpoint_preflight": checkpoint_preflight,
                 "hlcgci_policy_rollout": policy_rollout,
+                "wanpi_hlc_gci_dry_run": wanpi_dry_run,
             }
         ),
         "blocking_items": blockers,
@@ -356,9 +322,9 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
             "hlcgci_interface_passed": _report_not_nogo(hlcgci),
             "history_sampling_consistency_passed": _report_not_nogo(consistency),
             "hlcgci_launch_smoke_passed": _report_not_nogo(launch_smoke),
-            "hlcgci_long_training_launch_passed": _report_not_nogo(long_training_launch),
             "hlcgci_checkpoint_preflight_passed": _report_not_nogo(checkpoint_preflight),
             "hlcgci_policy_rollout_passed": _report_not_nogo(policy_rollout),
+            "wanpi_hlc_gci_dry_run_passed": _report_not_nogo(wanpi_dry_run),
             "hlcgci_policy_rollout_zero_success": (
                 bool(policy_rollout)
                 and all(

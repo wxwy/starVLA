@@ -63,8 +63,10 @@ class Args:
     num_steps_wait: int = 10  # Number of steps to wait for objects to stabilize i n sim
     num_trials_per_task: int = 50  # Number of rollouts per task
     max_tasks: int = -1  # If > 0, limit the number of tasks evaluated (smoke / quick check). -1 = run all.
+    task_ids: str = ""  # Comma-separated task IDs to evaluate, e.g. "0,2,5". Empty = run all (bounded by max_tasks).
     replan_interval: int | None = None  # None = use full action chunk; 1/2/4/... = replan cadence in env steps
     resume_eval: bool = False  # If true, continue from an existing eval_report.json in video_out_path
+    report_filename: str = ""  # Custom eval report filename (e.g. "eval_report_task_0.json"). Empty = default.
 
     #################################################################################################################
     # Utils
@@ -129,8 +131,9 @@ def eval_libero(args: Args) -> None:
     episode_records = []
     completed_episodes: set[tuple[int, int]] = set()
     resumed_task_rollup: dict[int, tuple[int, int]] = {}
+    report_filename = args.report_filename or "eval_report.json"
     if args.resume_eval:
-        existing_report = load_eval_report(args.video_out_path)
+        existing_report = load_eval_report(args.video_out_path, filename=report_filename)
         if existing_report is not None:
             existing_ckpt = existing_report.get("checkpoint_path")
             if existing_ckpt and pathlib.Path(existing_ckpt) != pathlib.Path(args.pretrained_path):
@@ -156,14 +159,21 @@ def eval_libero(args: Args) -> None:
                 )
             logging.info(
                 "Resuming eval from %s: total_episodes=%d total_successes=%d completed_pairs=%d",
-                pathlib.Path(args.video_out_path) / "eval_report.json",
+                pathlib.Path(args.video_out_path) / report_filename,
                 total_episodes,
                 total_successes,
                 len(completed_episodes),
             )
 
+    # Determine which task IDs to evaluate
+    if args.task_ids:
+        selected_task_ids = [int(t.strip()) for t in args.task_ids.split(",") if t.strip()]
+        logging.info(f"Using explicit task_ids: {selected_task_ids}")
+    else:
+        selected_task_ids = list(range(n_eval_tasks))
+
     # Start evaluation
-    for task_id in tqdm.tqdm(range(n_eval_tasks)):
+    for task_id in tqdm.tqdm(selected_task_ids):
         # Get task
         task = task_suite.get_task(task_id)
 
@@ -311,6 +321,9 @@ def eval_libero(args: Args) -> None:
             task_episodes += 1
             total_episodes += 1
 
+            # Capture inference timing from the last chunk
+            chunk_timings = client_model._last_chunk_timings or {}
+
             # Save report before video encoding so smoke metadata is preserved even
             # if EGL/video cleanup stalls during process teardown.
             suffix = "success" if done else "failure"
@@ -326,6 +339,7 @@ def eval_libero(args: Args) -> None:
                     "runtime_error": runtime_error,
                     "steps_executed": step,
                     "video_path": str(video_path) if video_path is not None else None,
+                    "chunk_timings": chunk_timings,
                 }
             )
             interim_report = build_eval_report(
@@ -335,7 +349,7 @@ def eval_libero(args: Args) -> None:
                 total_successes=total_successes,
                 episode_records=episode_records,
             )
-            write_eval_report(args.video_out_path, interim_report)
+            write_eval_report(args.video_out_path, interim_report, filename=report_filename)
 
             if replay_images:
                 imageio.mimwrite(
@@ -369,7 +383,7 @@ def eval_libero(args: Args) -> None:
         total_successes=total_successes,
         episode_records=episode_records,
     )
-    report_path = write_eval_report(args.video_out_path, report)
+    report_path = write_eval_report(args.video_out_path, report, filename=report_filename)
     logging.info(f"Eval report saved to: {report_path}")
 
 

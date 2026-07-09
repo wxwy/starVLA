@@ -1,0 +1,317 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 50,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/checkpoints/steps_60000",
+  "checkpoint_hash": "3de3105607ac31860832ab1da9faac18620e05314682ca0597c2b1525e5ce7be",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/checkpoints/steps_60000/config.yaml",
+  "config_hash": "b3a1e170990a607fc22aa5aafdec5c006b7f77531d8811f1c403db598a32e627",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "LayerwiseFM",
+    "state_mode": "continuous_head",
+    "state_enters_instruction": false,
+    "state_enters_action_head": true,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 32,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "total_episodes": 24,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "runtime_error": 24
+  },
+  "tasks": [
+    {
+      "task_description": "open the middle drawer of the cabinet",
+      "episodes": 24,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "runtime_error": 24
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00017290818504989147, 'server_roundtrip_sec': 4.983573513804004, 'unpack_sec': 7.876800373196602e-05, 'total_client_call_sec': 4.983829542063177}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode0_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00016821990720927715, 'server_roundtrip_sec': 8.260777293005958, 'unpack_sec': 3.138696774840355e-05, 'total_client_call_sec': 8.260981595842168}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode1_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 2,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002936660312116146, 'server_roundtrip_sec': 8.32886514486745, 'unpack_sec': 7.252814248204231e-05, 'total_client_call_sec': 8.329237794037908}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode2_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 3,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00037654279731214046, 'server_roundtrip_sec': 8.472665089182556, 'unpack_sec': 7.23949633538723e-05, 'total_client_call_sec': 8.473119333852082}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode3_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 4,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00021220906637609005, 'server_roundtrip_sec': 8.557969663990662, 'unpack_sec': 7.241894491016865e-05, 'total_client_call_sec': 8.55825904593803}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode4_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 5,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.000281232176348567, 'server_roundtrip_sec': 8.631999572971836, 'unpack_sec': 7.320917211472988e-05, 'total_client_call_sec': 8.632358939154074}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode5_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 6,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002406630665063858, 'server_roundtrip_sec': 6.793096387991682, 'unpack_sec': 3.8945116102695465e-05, 'total_client_call_sec': 6.793378587113693}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode6_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 7,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00022928905673325062, 'server_roundtrip_sec': 8.365246208850294, 'unpack_sec': 8.113612420856953e-05, 'total_client_call_sec': 8.365560848033056}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode7_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 8,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00022984109818935394, 'server_roundtrip_sec': 11.698645691853017, 'unpack_sec': 8.4359897300601e-05, 'total_client_call_sec': 11.698964491020888}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode8_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 9,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00027075596153736115, 'server_roundtrip_sec': 8.627083755098283, 'unpack_sec': 8.466304279863834e-05, 'total_client_call_sec': 8.62744436506182}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode9_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 10,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0001792600378394127, 'server_roundtrip_sec': 8.349261628929526, 'unpack_sec': 5.628005601465702e-05, 'total_client_call_sec': 8.34950229502283}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode10_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 11,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002115259412676096, 'server_roundtrip_sec': 8.688157758908346, 'unpack_sec': 5.4138945415616035e-05, 'total_client_call_sec': 8.688427564920858}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode11_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 12,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00030881608836352825, 'server_roundtrip_sec': 8.818771546939388, 'unpack_sec': 8.48651397973299e-05, 'total_client_call_sec': 8.81916985521093}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode12_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 13,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00017278920859098434, 'server_roundtrip_sec': 8.303934172959998, 'unpack_sec': 5.470402538776398e-05, 'total_client_call_sec': 8.304166252026334}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode13_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 14,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00020520109683275223, 'server_roundtrip_sec': 8.781029084930196, 'unpack_sec': 6.233900785446167e-05, 'total_client_call_sec': 8.781301184091717}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode14_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 15,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00021455087698996067, 'server_roundtrip_sec': 8.282223863061517, 'unpack_sec': 5.425792187452316e-05, 'total_client_call_sec': 8.28249602788128}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode15_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 16,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002506950404495001, 'server_roundtrip_sec': 8.426300768973306, 'unpack_sec': 8.029001764953136e-05, 'total_client_call_sec': 8.426636330084875}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode16_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 17,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.000292791984975338, 'server_roundtrip_sec': 8.350177351152524, 'unpack_sec': 5.467003211379051e-05, 'total_client_call_sec': 8.350529344985262}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode17_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 18,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00029199710115790367, 'server_roundtrip_sec': 8.562590187881142, 'unpack_sec': 0.00014359108172357082, 'total_client_call_sec': 8.563028409145772}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode18_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 19,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00022323406301438808, 'server_roundtrip_sec': 8.596809739014134, 'unpack_sec': 8.045113645493984e-05, 'total_client_call_sec': 8.59711810410954}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode19_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 20,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002853099722415209, 'server_roundtrip_sec': 8.203582095215097, 'unpack_sec': 6.473995745182037e-05, 'total_client_call_sec': 8.20393757103011}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode20_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 21,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.000302968081086874, 'server_roundtrip_sec': 8.684485125821084, 'unpack_sec': 8.412310853600502e-05, 'total_client_call_sec': 8.68487721006386}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode21_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 22,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002495679073035717, 'server_roundtrip_sec': 8.252045609988272, 'unpack_sec': 4.1146064177155495e-05, 'total_client_call_sec': 8.252338961930946}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode22_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 23,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002626271452754736, 'server_roundtrip_sec': 10.271407222840935, 'unpack_sec': 8.609797805547714e-05, 'total_client_call_sec': 10.2717601491604}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_open_the_middle_drawer_of_the_cabinet_episode23_failure.mp4",
+      "chunk_timings": {}
+    }
+  ]
+}

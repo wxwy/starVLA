@@ -1,0 +1,114 @@
+{
+  "task_suite_name": "libero_object",
+  "num_trials_per_task": 50,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/checkpoints/steps_70000",
+  "checkpoint_hash": "943dec5dd7d66d95250af8c7133dba208adf6d913db7b1c2dd967b432bb1c0d4",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/checkpoints/steps_70000/config.yaml",
+  "config_hash": "f3332da38966f91f426a13ff092d441d7ffb79eb58395bab1fe68d81178a41d3",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "future_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "LayerwiseFM",
+    "state_mode": "discretized_instruction",
+    "state_enters_instruction": true,
+    "state_enters_action_head": false,
+    "adapter_mode": "future_token_cross_dit",
+    "starflow_ft_variant": "config_defined",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 0,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "total_episodes": 2,
+  "total_successes": 1,
+  "success_rate": 0.5,
+  "failure_category": {
+    "timeout_no_success": 1
+  },
+  "tasks": [
+    {
+      "task_description": "pick up the ketchup and place it in the basket",
+      "episodes": 2,
+      "successes": 1,
+      "success_rate": 0.5,
+      "failure_category": {
+        "timeout_no_success": 1
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 4,
+      "task_description": "pick up the ketchup and place it in the basket",
+      "episode_idx": 0,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 135,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/steps_70000/rollout_pick_up_the_ketchup_and_place_it_in_the_basket_episode0_success.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 128,
+        "replan_interval": 8,
+        "resize_sec": 0.002055809833109379,
+        "client_pack_and_queue_sec": 6.76419585943222e-05,
+        "client_server_roundtrip_sec": 1.793619954958558,
+        "client_unpack_sec": 7.512490265071392e-05,
+        "client_total_call_sec": 1.7937668729573488,
+        "server_total_sec": 0.2059527279343456,
+        "server_framework_sec": 0.2055376749485731,
+        "server_unnorm_sec": 0.0004120250232517719,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 4,
+      "task_description": "pick up the ketchup and place it in the basket",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 280,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849/steps_70000/rollout_pick_up_the_ketchup_and_place_it_in_the_basket_episode1_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 272,
+        "replan_interval": 8,
+        "resize_sec": 0.0016618610825389624,
+        "client_pack_and_queue_sec": 6.697187200188637e-05,
+        "client_server_roundtrip_sec": 1.7038857510779053,
+        "client_unpack_sec": 8.385884575545788e-05,
+        "client_total_call_sec": 1.7040413548238575,
+        "server_total_sec": 0.1970005629118532,
+        "server_framework_sec": 0.19658584287390113,
+        "server_unnorm_sec": 0.00041090999729931355,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    }
+  ]
+}

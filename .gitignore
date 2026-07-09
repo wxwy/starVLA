@@ -1,6 +1,9 @@
 debug/
 ckpts/
 third_party/
+# LIBERO 环境
+.libero/
+LIBERO/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -213,6 +216,14 @@ starVLA/config/frameworks/*
 starVLA/model/modules/sam_model/*
 assets/SAMv2.txt
 playground/*
+!playground/nohup_eval*.sh
+!playground/eval_pool*.py
+!playground/.gitignore
+!playground/eval_results/
+playground/eval_results/*.mp4
+playground/eval_results/**/*.mp4
+!playground/eval_results/_sample_mp4s/*.mp4
+playground/eval_results/**/task_*/
 qwen_talk.md
 assets/R1Pro.py
 examples/SPVLA

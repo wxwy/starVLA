@@ -1,0 +1,317 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 50,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/checkpoints/steps_60000",
+  "checkpoint_hash": "3de3105607ac31860832ab1da9faac18620e05314682ca0597c2b1525e5ce7be",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/checkpoints/steps_60000/config.yaml",
+  "config_hash": "b3a1e170990a607fc22aa5aafdec5c006b7f77531d8811f1c403db598a32e627",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "LayerwiseFM",
+    "state_mode": "continuous_head",
+    "state_enters_instruction": false,
+    "state_enters_action_head": true,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 32,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "total_episodes": 24,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "runtime_error": 24
+  },
+  "tasks": [
+    {
+      "task_description": "put the bowl on top of the cabinet",
+      "episodes": 24,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "runtime_error": 24
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00019332696683704853, 'server_roundtrip_sec': 6.650553057901561, 'unpack_sec': 5.687796510756016e-05, 'total_client_call_sec': 6.650807482888922}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode0_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00017554592341184616, 'server_roundtrip_sec': 8.204113129060715, 'unpack_sec': 3.203912638127804e-05, 'total_client_call_sec': 8.20432488899678}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode1_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 2,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0004717637784779072, 'server_roundtrip_sec': 8.214923803228885, 'unpack_sec': 7.849815301597118e-05, 'total_client_call_sec': 8.215478667989373}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode2_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 3,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0003218331839889288, 'server_roundtrip_sec': 8.569772799964994, 'unpack_sec': 7.216911762952805e-05, 'total_client_call_sec': 8.570171767147258}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode3_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 4,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.000302259111776948, 'server_roundtrip_sec': 8.427020694827661, 'unpack_sec': 6.921705789864063e-05, 'total_client_call_sec': 8.427397109102458}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode4_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 5,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00020268792286515236, 'server_roundtrip_sec': 8.688421538099647, 'unpack_sec': 6.423983722925186e-05, 'total_client_call_sec': 8.688692265888676}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode5_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 6,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002125611063092947, 'server_roundtrip_sec': 8.36327165691182, 'unpack_sec': 8.63419845700264e-05, 'total_client_call_sec': 8.363574600080028}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode6_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 7,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00027965614572167397, 'server_roundtrip_sec': 8.181624982971698, 'unpack_sec': 5.87638933211565e-05, 'total_client_call_sec': 8.181967868003994}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode7_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 8,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00023261900059878826, 'server_roundtrip_sec': 6.983047732850537, 'unpack_sec': 5.099899135529995e-05, 'total_client_call_sec': 6.983335990924388}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode8_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 9,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00021346216090023518, 'server_roundtrip_sec': 8.304821057012305, 'unpack_sec': 6.530899554491043e-05, 'total_client_call_sec': 8.305104309227318}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode9_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 10,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00016158283688127995, 'server_roundtrip_sec': 8.620178043143824, 'unpack_sec': 4.828907549381256e-05, 'total_client_call_sec': 8.620392394950613}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode10_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 11,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00028639892116189003, 'server_roundtrip_sec': 8.704371816013008, 'unpack_sec': 4.1868072003126144e-05, 'total_client_call_sec': 8.704702778020874}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode11_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 12,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0003189840354025364, 'server_roundtrip_sec': 8.765018593985587, 'unpack_sec': 4.6788016334176064e-05, 'total_client_call_sec': 8.765387655002996}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode12_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 13,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002459581010043621, 'server_roundtrip_sec': 8.524857921060175, 'unpack_sec': 5.56320883333683e-05, 'total_client_call_sec': 8.525163619080558}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode13_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 14,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002624387852847576, 'server_roundtrip_sec': 8.466949095018208, 'unpack_sec': 6.69469591230154e-05, 'total_client_call_sec': 8.4672835029196}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode14_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 15,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002041109837591648, 'server_roundtrip_sec': 8.273704044055194, 'unpack_sec': 6.826501339673996e-05, 'total_client_call_sec': 8.273981800070032}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode15_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 16,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00023311888799071312, 'server_roundtrip_sec': 8.604098084149882, 'unpack_sec': 5.712313577532768e-05, 'total_client_call_sec': 8.604391566012055}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode16_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 17,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002103010192513466, 'server_roundtrip_sec': 8.361570009961724, 'unpack_sec': 3.058509901165962e-05, 'total_client_call_sec': 8.361813660012558}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode17_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 18,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00027750316075980663, 'server_roundtrip_sec': 8.483734067995101, 'unpack_sec': 4.215002991259098e-05, 'total_client_call_sec': 8.48405727208592}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode18_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 19,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00029159802943468094, 'server_roundtrip_sec': 8.794241508003324, 'unpack_sec': 3.3709919080138206e-05, 'total_client_call_sec': 8.794569841818884}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode19_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 20,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00027413596399128437, 'server_roundtrip_sec': 8.199780402006581, 'unpack_sec': 7.872818969190121e-05, 'total_client_call_sec': 8.200137436157092}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode20_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 21,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.00018431711941957474, 'server_roundtrip_sec': 8.808271961985156, 'unpack_sec': 3.622402437031269e-05, 'total_client_call_sec': 8.808495118049905}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode21_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 22,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002608390059322119, 'server_roundtrip_sec': 8.287588311126456, 'unpack_sec': 4.922202788293362e-05, 'total_client_call_sec': 8.287902243202552}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode22_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 23,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "\"Key 'actions' not found in response data: keys=[], full response={'status': 'error', 'ok': False, 'type': 'inference_result', 'request_id': 'default', 'error': {'message': 'CUDA error: out of memory\\\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\\\n'}, '_client_timings': {'pack_and_queue_sec': 0.0002833080943673849, 'server_roundtrip_sec': 10.326487339101732, 'unpack_sec': 3.355415537953377e-05, 'total_client_call_sec': 10.326809004181996}}\"",
+      "steps_executed": 0,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/steps_60000/rollout_put_the_bowl_on_top_of_the_cabinet_episode23_failure.mp4",
+      "chunk_timings": {}
+    }
+  ]
+}

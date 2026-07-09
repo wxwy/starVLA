@@ -1,0 +1,449 @@
+{
+  "task_suite_name": "libero_object",
+  "num_trials_per_task": 10,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/checkpoints/steps_60000",
+  "checkpoint_hash": "cffd70d5be2e6e6783a702e64ce84df67f6e9c8f58f062e088092cc302b4887d",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/checkpoints/steps_60000/config.yaml",
+  "config_hash": "aa7df539a903cd23573a9005b3b557d7843e96f7f8670a1b1b85d3a5d4cd36b3",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "total_episodes": 40,
+  "total_successes": 37,
+  "success_rate": 0.925,
+  "failure_category": {
+    "timeout_no_success": 3
+  },
+  "tasks": [
+    {
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episodes": 10,
+      "successes": 7,
+      "success_rate": 0.7
+    },
+    {
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episodes": 10,
+      "successes": 10,
+      "success_rate": 1.0
+    },
+    {
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episodes": 10,
+      "successes": 10,
+      "success_rate": 1.0
+    },
+    {
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episodes": 10,
+      "successes": 10,
+      "success_rate": 1.0
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 0,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 124,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode0_success.mp4"
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 1,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 119,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode1_success.mp4"
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 2,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 126,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode2_success.mp4"
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 3,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 120,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode3_success.mp4"
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 4,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 119,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode4_success.mp4"
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 5,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 182,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode5_success.mp4"
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 6,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 121,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode6_success.mp4"
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 7,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 120,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode7_success.mp4"
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 8,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 125,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode8_success.mp4"
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 9,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 118,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_1/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode9_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 0,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 248,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode0_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 1,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 118,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode1_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 2,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 280,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode2_failure.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 3,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 256,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode3_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 4,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 143,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode4_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 5,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 195,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode5_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 6,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 280,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode6_failure.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 7,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 280,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode7_failure.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 8,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 118,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode8_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 9,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 240,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_0/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode9_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 0,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 117,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode0_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 1,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 118,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode1_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 2,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 110,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode2_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 3,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 118,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode3_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 4,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 118,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode4_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 5,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 121,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode5_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 6,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 121,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode6_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 7,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 120,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode7_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 8,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 113,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode8_success.mp4"
+    },
+    {
+      "task_id": 2,
+      "task_description": "pick up the salad dressing and place it in the basket",
+      "episode_idx": 9,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 112,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_2/rollout_pick_up_the_salad_dressing_and_place_it_in_the_basket_episode9_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 0,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 123,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode0_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 1,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 122,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode1_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 2,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 127,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode2_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 3,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 181,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode3_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 4,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 153,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode4_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 5,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 120,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode5_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 6,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 127,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode6_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 7,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 122,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode7_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 8,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 118,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode8_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "pick up the bbq sauce and place it in the basket",
+      "episode_idx": 9,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 133,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/steps_60000/task_3/rollout_pick_up_the_bbq_sauce_and_place_it_in_the_basket_episode9_success.mp4"
+    }
+  ]
+}

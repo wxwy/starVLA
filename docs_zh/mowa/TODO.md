@@ -2,6 +2,7 @@
 
 - 默认 cache 设计已从 window-level artifact（方案 A）重构为 episode-level latent store + window manifest references（方案 C）；新增 `starVLA/dataloader/mowa/episode_latent_store.py`、`window_manifest.py`、`window_latent_sample.py` 和对应 CLI / 单测；遗留 `tools/mowa/build_future_latent_cache.py` 作为方案 A 短期兼容。
 - E-001 至 E-007 的活跃训练实验已在 `docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json` 收口为 `launchable_now`；E-009 是 conditional，未触发时不阻断；E-010 eval-only tracking plan/smoke 已补齐。
+- E-001 的 MoWA formal long-training candidate 已在 A100 上启动，当前 checkpoint 写入 `playground/mowa_ckpt`，先观察首个 checkpoint 与 step 统计，再决定是否补 baseline 对照或继续扩量。
 - E-003 / E-004 已迁移到 WanPI 路径，`train_starvla.py` 数据路径可消费 episode-level latent/history batch；当前仍需在全量 `vae_spatial` cache 完成后补 E-003/E-004 WanPI full-path dry-run evidence。
 - E-007 proxy-alpha candidate/readiness smoke 已补齐；实际 proxy optimization 与 frozen alpha 报告仍需单独执行后再接入下游 P0/P1 配置。
 - 真实 Wan2.2 已接到 `playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers`；`tools/mowa/e003_wan2_2_latent_cache_smoke.py --execute --episode-index 0 --episode-index 1 --episode-index 4` 已完成 3 episode 真实写盘和 `validate_mowa_latent_cache()` 复验，且 execute 模式现在会自动覆盖专用 cache_root，重复运行仍保持可复跑。E-003 还新增了 launch smoke，和 fake-cache dry-run 一起把 launch readiness 推到 `launchable_now`。

@@ -12,6 +12,7 @@ CKPT_DIR="$1"
 STEP_NAME="$2"
 PORT="${3:-6694}"
 WORKERS="${4:-2}"
+NUM_TRIALS="${5:-50}"
 
 EXP_NAME=$(basename "$(dirname "$(dirname "$CKPT_DIR")")")
 EVAL_ROOT="/disk/rl/starVLA/playground/eval_results"
@@ -29,11 +30,12 @@ for SUITE in libero_goal libero_10 libero_object libero_spatial; do
     SUITE_DIR="${EVAL_ROOT}/${SUITE}/${EXP_NAME}/${STEP_NAME}"
     EVAL_REPORT="${SUITE_DIR}/eval_report.json"
     if [ -f "$EVAL_REPORT" ]; then
+        SUITE_EXPECTED=$(( NUM_TRIALS * 10 ))
         COMPLETE=$(python3 -c "
 import json
 r=json.load(open('$EVAL_REPORT'))
 ep=r.get('total_episodes',0)
-print('yes' if ep >= 500 else 'no')
+print('yes' if ep >= $SUITE_EXPECTED else 'no')
 " 2>/dev/null || echo "no")
         if [ "$COMPLETE" = "yes" ]; then
             echo "[$(date)] ✅ ${SUITE} 已完成，跳过"
@@ -57,7 +59,7 @@ for f in files:
     try:
         r=json.load(open(f))
         ep=r.get('total_episodes',0)
-        if ep>=50:
+        if ep>=${NUM_TRIALS}:
             done+=1
     except:
         pass
@@ -136,7 +138,7 @@ $LIBERO_PY playground/eval_pool_manager.py \
   --port $PORT \
   --workers $WORKERS \
   --video-root "$EVAL_ROOT" \
-  --num-trials 50 $RESUME_FLAG 2>&1
+  --num-trials $NUM_TRIALS $RESUME_FLAG 2>&1
 
 POOL_EXIT=$?
 if [ $POOL_EXIT -ne 0 ]; then

@@ -1,0 +1,119 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 10,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000",
+  "checkpoint_step": "steps_40000",
+  "checkpoint_hash": "86c984e2dce6b1efb8a8abb57abc77a1097c827612db8b957cb3d32b88fea15e",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000/config.yaml",
+  "config_hash": "2dd9e51a1b6a2b92885b505e779205d9383a6067b06f7e66e6c8572d173d0eca",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "MLP",
+    "state_mode": "discretized_instruction",
+    "state_enters_instruction": true,
+    "state_enters_action_head": false,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 32,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "model": {
+    "framework_name": "QwenOFT",
+    "vlm": "Qwen3-VL-4B-Instruct",
+    "action_head": "MLP"
+  },
+  "total_episodes": 2,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "timeout_no_success": 2
+  },
+  "tasks": [
+    {
+      "task_description": "put the wine bottle on top of the cabinet",
+      "episodes": 2,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "timeout_no_success": 2
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 2,
+      "task_description": "put the wine bottle on top of the cabinet",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_put_the_wine_bottle_on_top_of_the_cabinet_episode0_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.0017250708770006895,
+        "client_pack_and_queue_sec": 7.023802027106285e-05,
+        "client_server_roundtrip_sec": 0.48874018900096416,
+        "client_unpack_sec": 8.402601815760136e-05,
+        "client_total_call_sec": 0.48889869707636535,
+        "server_total_sec": 0.2969502159394324,
+        "server_framework_sec": 0.2965792119503021,
+        "server_unnorm_sec": 0.0003683569375425577,
+        "framework_prepare_inputs_sec": 0.00040326802991330624,
+        "framework_build_qwen_inputs_sec": 0.09163104300387204,
+        "framework_qwen_forward_sec": 0.20213189790956676,
+        "framework_gather_action_tokens_sec": 0.0013966311234980822,
+        "framework_action_head_sec": 0.00047486484982073307,
+        "framework_to_numpy_sec": 0.0003749669995158911,
+        "framework_total_sec": 0.2964163809083402
+      }
+    },
+    {
+      "task_id": 2,
+      "task_description": "put the wine bottle on top of the cabinet",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_put_the_wine_bottle_on_top_of_the_cabinet_episode1_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.001722085988149047,
+        "client_pack_and_queue_sec": 7.715984247624874e-05,
+        "client_server_roundtrip_sec": 0.3306467111688107,
+        "client_unpack_sec": 7.723784074187279e-05,
+        "client_total_call_sec": 0.33080355380661786,
+        "server_total_sec": 0.3292025909759104,
+        "server_framework_sec": 0.3286236149724573,
+        "server_unnorm_sec": 0.0005723719950765371,
+        "framework_prepare_inputs_sec": 0.00103389797732234,
+        "framework_build_qwen_inputs_sec": 0.10081358696334064,
+        "framework_qwen_forward_sec": 0.22414903691969812,
+        "framework_gather_action_tokens_sec": 0.0013785341288894415,
+        "framework_action_head_sec": 0.0006667280104011297,
+        "framework_to_numpy_sec": 0.0002847719006240368,
+        "framework_total_sec": 0.3283375210594386
+      }
+    }
+  ]
+}

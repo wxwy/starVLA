@@ -1,0 +1,119 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 10,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000",
+  "checkpoint_step": "steps_40000",
+  "checkpoint_hash": "86c984e2dce6b1efb8a8abb57abc77a1097c827612db8b957cb3d32b88fea15e",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000/config.yaml",
+  "config_hash": "2dd9e51a1b6a2b92885b505e779205d9383a6067b06f7e66e6c8572d173d0eca",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "MLP",
+    "state_mode": "discretized_instruction",
+    "state_enters_instruction": true,
+    "state_enters_action_head": false,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 32,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "model": {
+    "framework_name": "QwenOFT",
+    "vlm": "Qwen3-VL-4B-Instruct",
+    "action_head": "MLP"
+  },
+  "total_episodes": 2,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "timeout_no_success": 2
+  },
+  "tasks": [
+    {
+      "task_description": "put the bowl on top of the cabinet",
+      "episodes": 2,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "timeout_no_success": 2
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_put_the_bowl_on_top_of_the_cabinet_episode0_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.0021043650340288877,
+        "client_pack_and_queue_sec": 7.217284291982651e-05,
+        "client_server_roundtrip_sec": 0.9299806130584329,
+        "client_unpack_sec": 5.940021947026253e-05,
+        "client_total_call_sec": 0.9301148110534996,
+        "server_total_sec": 0.20333239599131048,
+        "server_framework_sec": 0.20297472598031163,
+        "server_unnorm_sec": 0.00035511795431375504,
+        "framework_prepare_inputs_sec": 0.0004950268194079399,
+        "framework_build_qwen_inputs_sec": 0.07072452688589692,
+        "framework_qwen_forward_sec": 0.12933665001764894,
+        "framework_gather_action_tokens_sec": 0.0013953330926597118,
+        "framework_action_head_sec": 0.0004652028437703848,
+        "framework_to_numpy_sec": 0.00037860311567783356,
+        "framework_total_sec": 0.20280018192715943
+      }
+    },
+    {
+      "task_id": 4,
+      "task_description": "put the bowl on top of the cabinet",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_put_the_bowl_on_top_of_the_cabinet_episode1_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.0016382590401917696,
+        "client_pack_and_queue_sec": 0.0001482851803302765,
+        "client_server_roundtrip_sec": 1.013512504985556,
+        "client_unpack_sec": 8.455896750092506e-05,
+        "client_total_call_sec": 1.013750070007518,
+        "server_total_sec": 0.16327243600971997,
+        "server_framework_sec": 0.1628214588854462,
+        "server_unnorm_sec": 0.0004482429940253496,
+        "framework_prepare_inputs_sec": 0.0004594121128320694,
+        "framework_build_qwen_inputs_sec": 0.006103475112468004,
+        "framework_qwen_forward_sec": 0.15375155583024025,
+        "framework_gather_action_tokens_sec": 0.0014025310520082712,
+        "framework_action_head_sec": 0.0005984571762382984,
+        "framework_to_numpy_sec": 0.00031740590929985046,
+        "framework_total_sec": 0.16263679508119822
+      }
+    }
+  ]
+}

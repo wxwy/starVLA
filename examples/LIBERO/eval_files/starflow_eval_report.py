@@ -70,6 +70,26 @@ def _extract_config_scalar(config_text: str, key: str) -> str | None:
     return match.group(1).strip()
 
 
+def _get_config_model_info(config_text: str) -> dict[str, str]:
+    """Extract model identity from the YAML training config."""
+    import yaml
+    try:
+        cfg = yaml.safe_load(config_text)
+    except Exception:
+        return {}
+    fw = cfg.get("framework", {}) if isinstance(cfg, dict) else {}
+    info = {}
+    if isinstance(fw, dict):
+        info["framework_name"] = str(fw.get("name", ""))
+        vlm_path = fw.get("qwenvl", {}).get("base_vlm", "")
+        if vlm_path:
+            info["vlm"] = str(vlm_path).rstrip("/").split("/")[-1] if "/" in str(vlm_path) else str(vlm_path)
+        act = fw.get("action_model", {})
+        if isinstance(act, dict):
+            info["action_head"] = str(act.get("action_model_type", ""))
+    return info
+
+
 def load_eval_metadata(pretrained_path: str | Path) -> dict[str, Any]:
     """Load checkpoint/config/data metadata needed by the eval report."""
     checkpoint_path = Path(pretrained_path)
@@ -103,14 +123,18 @@ def load_eval_metadata(pretrained_path: str | Path) -> dict[str, Any]:
         "dataset_statistics_hash": dataset_statistics_hash,
     }
 
+    checkpoint_step = checkpoint_path.name  # e.g. "steps_30000"
+
     return {
         "checkpoint_path": str(checkpoint_path),
+        "checkpoint_step": checkpoint_step,
         "checkpoint_hash": checkpoint_hash,
         "config_path": str(config_path) if config_path is not None else None,
         "config_hash": config_hash,
         "dataset_statistics_path": str(dataset_statistics_path) if dataset_statistics_path is not None else None,
         "data_version": data_version,
         "starflow_mapping": starflow_mapping,
+        "model": _get_config_model_info(config_text),
     }
 
 
@@ -162,11 +186,13 @@ def build_eval_report(
         "num_trials_per_task": args["num_trials_per_task"],
         "max_tasks": args["max_tasks"],
         "checkpoint_path": metadata["checkpoint_path"],
+        "checkpoint_step": metadata.get("checkpoint_step", ""),
         "checkpoint_hash": metadata["checkpoint_hash"],
         "config_path": metadata["config_path"],
         "config_hash": metadata["config_hash"],
         "data_version": metadata["data_version"],
         "starflow_mapping": metadata["starflow_mapping"],
+        "model": metadata.get("model", {}),
         "total_episodes": total_episodes,
         "total_successes": total_successes,
         "success_rate": (float(total_successes) / float(total_episodes)) if total_episodes else 0.0,

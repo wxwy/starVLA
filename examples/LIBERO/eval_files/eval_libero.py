@@ -122,6 +122,19 @@ def eval_libero(args: Args) -> None:
         replan_interval=args.replan_interval,
     )
 
+    # 手检：验证 server 服务的 ckpt 与预期一致
+    server_ckpt = client_model._server_metadata.get("ckpt_path", "")
+    expected_ckpt = str(pathlib.Path(args.pretrained_path).resolve())
+    server_ckpt_resolved = str(pathlib.Path(server_ckpt).resolve())
+    if server_ckpt_resolved != expected_ckpt:
+        raise RuntimeError(
+            f"❌ Server checkpoint mismatch!\n"
+            f"  Server serves: {server_ckpt}\n"
+            f"  Expected:      {expected_ckpt}\n"
+            f"  Check --port, another eval might be connected to wrong server."
+        )
+    logging.info("✅ Server ckpt match: %s", server_ckpt)
+
     # Optional smoke-test cap (still useful for quick verification with -1 = full run).
     n_eval_tasks = num_tasks_in_suite if args.max_tasks <= 0 else min(args.max_tasks, num_tasks_in_suite)
     logging.info(f"Evaluating {n_eval_tasks} of {num_tasks_in_suite} tasks (max_tasks={args.max_tasks})")

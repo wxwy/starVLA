@@ -1,0 +1,119 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 10,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000",
+  "checkpoint_step": "steps_40000",
+  "checkpoint_hash": "86c984e2dce6b1efb8a8abb57abc77a1097c827612db8b957cb3d32b88fea15e",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000/config.yaml",
+  "config_hash": "2dd9e51a1b6a2b92885b505e779205d9383a6067b06f7e66e6c8572d173d0eca",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "MLP",
+    "state_mode": "discretized_instruction",
+    "state_enters_instruction": true,
+    "state_enters_action_head": false,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 32,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "model": {
+    "framework_name": "QwenOFT",
+    "vlm": "Qwen3-VL-4B-Instruct",
+    "action_head": "MLP"
+  },
+  "total_episodes": 2,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "timeout_no_success": 2
+  },
+  "tasks": [
+    {
+      "task_description": "open the top drawer and put the bowl inside",
+      "episodes": 2,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "timeout_no_success": 2
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode0_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.0020749198738485575,
+        "client_pack_and_queue_sec": 8.545489981770515e-05,
+        "client_server_roundtrip_sec": 0.9140869341790676,
+        "client_unpack_sec": 0.00011908402666449547,
+        "client_total_call_sec": 0.9142954989802092,
+        "server_total_sec": 0.29664404317736626,
+        "server_framework_sec": 0.2962156569119543,
+        "server_unnorm_sec": 0.00042524910531938076,
+        "framework_prepare_inputs_sec": 0.0003448470961302519,
+        "framework_build_qwen_inputs_sec": 0.16019746684469283,
+        "framework_qwen_forward_sec": 0.13323963293805718,
+        "framework_gather_action_tokens_sec": 0.001405478222295642,
+        "framework_action_head_sec": 0.0004938619676977396,
+        "framework_to_numpy_sec": 0.00036867382004857063,
+        "framework_total_sec": 0.2960537848994136
+      }
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode1_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.0021145229693502188,
+        "client_pack_and_queue_sec": 7.27679580450058e-05,
+        "client_server_roundtrip_sec": 0.12432206817902625,
+        "client_unpack_sec": 6.433390080928802e-05,
+        "client_total_call_sec": 0.12446159403771162,
+        "server_total_sec": 0.11236175894737244,
+        "server_framework_sec": 0.11185761890374124,
+        "server_unnorm_sec": 0.0005007931031286716,
+        "framework_prepare_inputs_sec": 0.000440813135355711,
+        "framework_build_qwen_inputs_sec": 0.005663356045261025,
+        "framework_qwen_forward_sec": 0.10315133002586663,
+        "framework_gather_action_tokens_sec": 0.001427802024409175,
+        "framework_action_head_sec": 0.0006044588517397642,
+        "framework_to_numpy_sec": 0.0003771709743887186,
+        "framework_total_sec": 0.11166905099526048
+      }
+    }
+  ]
+}

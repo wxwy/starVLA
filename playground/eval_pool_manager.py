@@ -82,6 +82,9 @@ class TaskPool:
         self.results_lock = Lock()
         self.active_count = 0
         self.active_lock = Lock()
+        self.abort = False
+        self.abort_lock = Lock()
+        self.runtime_error_threshold = 0.3  # >30% runtime_error → 熔断
 
         # Build task queue
         task_count = 0
@@ -101,9 +104,49 @@ class TaskPool:
             f"exp={self.exp_name}, step={self.step_name}, port={port}"
         )
 
+    def _check_runtime_error_abort(
+        self, worker_id: int, suite: str, task_id: int, report: dict[str, Any]
+    ) -> None:
+        """检查 task 报告的 runtime_error 比例，超过阈值则熔断中断所有 worker"""
+        episodes = report.get("episodes", [])
+        if not episodes:
+            return
+        runtime_errs = sum(1 for ep in episodes if ep.get("runtime_error"))
+        ratio = runtime_errs / len(episodes)
+        if ratio <= self.runtime_error_threshold:
+            return
+        # 熔断！
+        with self.abort_lock:
+            if self.abort:
+                return  # 已触发过，不再重复
+            self.abort = True
+        sample_err = next(
+            (ep.get("runtime_error", "")[:200] for ep in episodes if ep.get("runtime_error")),
+            "",
+        )
+        logging.critical(
+            f"🔥 熔断！[W{worker_id}] {suite}/task_{task_id} "
+            f"runtime_error={runtime_errs}/{len(episodes)} ({ratio*100:.0f}%) "
+            f"超过阈值 {self.runtime_error_threshold*100:.0f}%\n"
+            f"  sample: {sample_err}\n"
+            f"  Server ckpt: {report.get('checkpoint_path', '?')}\n"
+            f"  Server port: {self.port}\n"
+            f"  可能原因：OOM / ckpt 损坏 / server 异常，请检查后重试"
+        )
+        # 清空队列，阻止新 task 启动
+        while True:
+            try:
+                self.task_queue.get_nowait()
+                self.task_queue.task_done()
+            except Exception:
+                break
+
     def _worker_loop(self, worker_id: int) -> None:
         """Worker 线程：从队列取任务，运行 eval_libero.py"""
         while True:
+            with self.abort_lock:
+                if self.abort:
+                    break
             try:
                 suite, task_id = self.task_queue.get_nowait()
             except Exception:
@@ -130,6 +173,7 @@ class TaskPool:
                             f"[W{worker_id}] ✅ {suite}/task_{task_id} 已完成 "
                             f"(SR={sr:.1f}%), 跳过"
                         )
+                        self._check_runtime_error_abort(worker_id, suite, task_id, report)
                         with self.results_lock:
                             self.results[(suite, task_id)] = report
                         self.task_queue.task_done()
@@ -154,19 +198,34 @@ class TaskPool:
             if getattr(self, 'resume', False):
                 cmd.append("--args.resume-eval")
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=7200,  # 2h max per task
-                env={
-                    **os.environ,
-                    "PYTHONPATH": "/disk/rl/starVLA/LIBERO:/disk/rl/starVLA",
-                    "LIBERO_CONFIG_PATH": "/disk/rl/starVLA/LIBERO/libero/libero",
-                    "LIBERO_HOME": "/disk/rl/starVLA/LIBERO",
-                    "MUJOCO_GL": "egl",
-                },
-            )
+            try:
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=7200,  # 2h max per task
+                    env={
+                        **os.environ,
+                        "PYTHONPATH": "/disk/rl/starVLA/LIBERO:/disk/rl/starVLA",
+                        "LIBERO_CONFIG_PATH": "/disk/rl/starVLA/LIBERO/libero/libero",
+                        "LIBERO_HOME": "/disk/rl/starVLA/LIBERO",
+                        "MUJOCO_GL": "egl",
+                    },
+                )
+            except subprocess.TimeoutExpired:
+                logging.error(
+                    f"[W{worker_id}] ⏰ {suite}/task_{task_id} 超时(7200s)，重新入队!"
+                )
+                self.task_queue.put((suite, task_id))
+                self.task_queue.task_done()
+                continue
+            except Exception as e:
+                logging.error(
+                    f"[W{worker_id}] ❌ {suite}/task_{task_id} 子进程异常: {e}，重新入队!"
+                )
+                self.task_queue.put((suite, task_id))
+                self.task_queue.task_done()
+                continue
 
             elapsed = time.time() - t0
             task_report = None
@@ -187,16 +246,43 @@ class TaskPool:
                     logging.error(
                         f"[W{worker_id}] ❌ {suite}/task_{task_id} 报告解析失败: {e}"
                     )
-            else:
+            # 熔断检查：runtime_error 比例过高时中断全部 worker
+            if task_report is not None:
+                self._check_runtime_error_abort(worker_id, suite, task_id, task_report)
+            if self.abort:
+                # 标记已完成，让 pool 退出
+                with self.results_lock:
+                    self.results[(suite, task_id)] = task_report
+                self.task_queue.task_done()
+                continue
+            # 正常完成：检查是否足量，不足则重试
+            n_ep = task_report.get("total_episodes", 0) if task_report else 0
+            if n_ep < self.num_trials:
+                logging.error(
+                    f"[W{worker_id}] ⚠️ {suite}/task_{task_id} 仅完成 "
+                    f"{n_ep}/{self.num_trials} 轮，重新入队!"
+                )
+                # 重新入队重试
+                self.task_queue.put((suite, task_id))
+                self.task_queue.task_done()
+                continue
+            with self.results_lock:
+                self.results[(suite, task_id)] = task_report
+            self.task_queue.task_done()
+            # 无报告生成时的错误处理
+            if not report_path.exists():
+                if result.returncode != 0:
+                    logging.error(
+                        f"[W{worker_id}] ❌ {suite}/task_{task_id} 无报告生成 "
+                        f"(exit={result.returncode})，重新入队!"
+                    )
+                    self.task_queue.put((suite, task_id))
+                    self.task_queue.task_done()
+                    continue
                 logging.error(
                     f"[W{worker_id}] ❌ {suite}/task_{task_id} 无报告生成!\n"
                     f"  stdout: {result.stdout[-500:]}\n  stderr: {result.stderr[-500:]}"
                 )
-
-            with self.results_lock:
-                self.results[(suite, task_id)] = task_report
-
-            self.task_queue.task_done()
 
     def run(self) -> dict[str, dict[str, Any]]:
         """启动所有 worker，等待完成，返回合并后的 suite 级报告"""

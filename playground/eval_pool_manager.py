@@ -209,7 +209,7 @@ class TaskPool:
                         "PYTHONPATH": "/disk/rl/starVLA/LIBERO:/disk/rl/starVLA",
                         "LIBERO_CONFIG_PATH": "/disk/rl/starVLA/LIBERO/libero/libero",
                         "LIBERO_HOME": "/disk/rl/starVLA/LIBERO",
-                        "MUJOCO_GL": "egl",
+                        "MUJOCO_GL": "glfw",
                     },
                 )
             except subprocess.TimeoutExpired:

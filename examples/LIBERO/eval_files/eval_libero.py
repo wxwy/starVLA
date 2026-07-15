@@ -261,6 +261,7 @@ def eval_libero(args: Args) -> None:
                     example_dict = {
                         "image": [observation["observation.primary"][0], observation["observation.wrist_image"][0]],
                         "lang": observation["instruction"][0],
+                        "state": observation["observation.state"],  # (1, state_dim) matching training sample
                     }
                     obs_prepare_elapsed = time.perf_counter() - obs_prepare_start
 

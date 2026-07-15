@@ -187,23 +187,6 @@ class PolicyServerWrapper:
                     f"Pass one of {self._available_unnorm_keys}."
                 )
         overall_start = time.perf_counter()
-        # 验证输入是否包含 state（仅记录一次或低频）
-        if examples and isinstance(examples, list) and len(examples) > 0:
-            ex0 = examples[0]
-            input_keys = sorted(ex0.keys()) if isinstance(ex0, dict) else []
-            state_info = "NO_STATE"
-            if "state" in input_keys and ex0["state"] is not None:
-                try:
-                    state_arr = np.asarray(ex0["state"])
-                    state_info = f"state_shape={state_arr.shape}, state_dtype={state_arr.dtype}"
-                except Exception:
-                    state_info = "state_present_but_not_array"
-            logging.info(
-                "PolicyServerWrapper.predict_action: input_keys=%s, %s",
-                input_keys,
-                state_info,
-            )
-
         proc = self._get_processor(effective_key)
 
         framework_start = time.perf_counter()

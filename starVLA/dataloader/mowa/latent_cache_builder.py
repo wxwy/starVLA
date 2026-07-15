@@ -443,7 +443,7 @@ class MoWAWanVaeLatentEncoderAdapter:
         source_path: Path | None,
         source_identity: str,
     ) -> torch.Tensor:
-        del dataset_path, episode_index, anchor_index, video_key, window_role, row_count
+        del dataset_path, episode_index, anchor_index, video_key, row_count
         if self.video_backend not in {"opencv", "decord"}:
             raise NotImplementedError(
                 f"Unsupported video_backend={self.video_backend!r}; only 'opencv' and 'decord' are available."

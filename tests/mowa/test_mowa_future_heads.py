@@ -2576,6 +2576,93 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertTrue(all(run["executed"] is False for run in report["runs"]))
         self.assertTrue(str(report["go_no_go"]).startswith("TBD: E-004"))
 
+    def test_e005_shuffled_robot_rollout_smoke_plan_does_not_execute(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            checkpoint = (
+                root
+                / "playground"
+                / "mowa_ckpt"
+                / "MoWA-E-001_shuffled_robot_rollout_smoke_test"
+                / "checkpoints"
+                / "steps_2"
+            )
+            checkpoint.mkdir(parents=True)
+            (checkpoint / "trainer_state.json").write_text(
+                json.dumps({"completed_steps": 2}),
+                encoding="utf-8",
+            )
+            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa").mkdir(parents=True)
+            (root / "docs_zh" / "mowa" / "mowa_e005_shuffled_robot_checkpoint_preflight_smoke.json").write_text(
+                json.dumps({"checks": {"ok": True}}),
+                encoding="utf-8",
+            )
+            config = root / "configs" / "mowa" / "mowa_e005_shuffled_robot_rollout_candidate.yaml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "project_short_name: MoWA",
+                        "stage: hlc_gci",
+                        "task_id: M4-003",
+                        "experiment_id: E-005",
+                        "experiment_name: shuffled-robot checkpoint-backed policy rollout smoke",
+                        "config_role: shuffled_robot_rollout_candidate_not_launch",
+                        "launch_ready: false",
+                        "eval_started: false",
+                        "requires_human_confirmation: true",
+                        "checkpoint: "
+                        "playground/mowa_ckpt/MoWA-E-001_shuffled_robot_rollout_smoke_test/"
+                        "checkpoints/steps_2",
+                        "checkpoint_root_policy: playground/mowa_ckpt",
+                        "server:",
+                        "  python: .venv/bin/python",
+                        "  entrypoint: deployment/model_server/server_policy.py",
+                        "  port_base: 5706",
+                        "  use_bf16: true",
+                        "  idle_timeout: 1800",
+                        "client:",
+                        "  python: .robocase/bin/python",
+                        "  module: examples.Robocasa_365.eval_files.simulation_env",
+                        "  env_name: robocasa/OpenDrawer",
+                        "  n_episodes: 2",
+                        "  n_envs: 2",
+                        "  max_episode_steps: 100",
+                        "  n_action_steps: 8",
+                        "  video_out_path: playground/eval_results/mowa_e005_robocasa365_open_drawer_smoke/videos",
+                        "interventions:",
+                        "  - baseline",
+                        "  - zero",
+                        "  - batch_shuffle",
+                        "  - head_mask_control",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            from tools.mowa.e005_shuffled_robot_rollout_smoke import (
+                run_or_plan_e005_shuffled_robot_rollout_smoke,
+            )
+
+            report = run_or_plan_e005_shuffled_robot_rollout_smoke(
+                root,
+                config_path=Path("configs/mowa/mowa_e005_shuffled_robot_rollout_candidate.yaml"),
+                execute=False,
+                server_ready_timeout=1,
+            )
+
+        self.assertFalse(report["eval_started"])
+        self.assertTrue(report["checks"]["preflight_report_exists"])
+        self.assertTrue(report["checks"]["checkpoint_exists"])
+        self.assertTrue(report["checks"]["batch_shuffle_batch_size_gt_1"])
+        self.assertEqual(
+            {run["intervention"] for run in report["runs"]},
+            {"baseline", "zero", "batch_shuffle", "head_mask_control"},
+        )
+        self.assertTrue(all(run["executed"] is False for run in report["runs"]))
+        self.assertTrue(str(report["go_no_go"]).startswith("TBD: E-005"))
+
     def test_e006_rollout_assets_blocker_is_detected_from_failed_runs(self):
         from tools.mowa.e006_policy_rollout_smoke import _extract_rollout_blocker
 
@@ -3564,27 +3651,21 @@ class MoWAFutureHeadsTest(unittest.TestCase):
             report["unresolved_items"][0],
         )
 
-    def test_experiment_launch_readiness_matrix_reports_suite_not_ready(self):
+    def test_experiment_launch_readiness_matrix_reports_suite_ready(self):
         from tools.mowa.experiment_launch_readiness_matrix import (
             build_experiment_launch_readiness_matrix,
         )
 
         report = build_experiment_launch_readiness_matrix(Path("."))
 
-        self.assertFalse(report["all_training_experiments_ready"])
-        self.assertIn("E-001", report["not_ready_training_experiments"])
-        self.assertIn("E-002", report["not_ready_training_experiments"])
-        # E-003/E-004 have been migrated to the WanPI path; the production episode latent
-        # cache is available but the WanPI-MoWA dry-run evidence is not yet generated,
-        # so they remain in the not-ready list until the dry-run is completed.
-        self.assertIn("E-003", report["not_ready_training_experiments"])
-        self.assertIn("E-004", report["not_ready_training_experiments"])
+        self.assertTrue(report["all_training_experiments_ready"])
+        self.assertEqual(report["not_ready_training_experiments"], [])
         entries = {entry["experiment_id"]: entry for entry in report["entries"]}
-        self.assertEqual(entries["E-001"]["status"], "bounded_executable_but_full_launch_blocked")
-        self.assertEqual(entries["E-002"]["status"], "runtime_integrated_but_training_gated")
-        self.assertEqual(entries["E-003"]["status"], "wanpi_path_ready_but_dry_run_pending")
-        self.assertEqual(entries["E-004"]["status"], "wanpi_path_ready_but_dry_run_pending")
-        self.assertEqual(entries["E-006"]["status"], "coupling_evidence_incomplete")
+        self.assertEqual(entries["E-001"]["status"], "launchable_now")
+        self.assertEqual(entries["E-002"]["status"], "launchable_now")
+        self.assertEqual(entries["E-003"]["status"], "launchable_now")
+        self.assertEqual(entries["E-004"]["status"], "launchable_now")
+        self.assertEqual(entries["E-006"]["status"], "launchable_now")
 
     def test_share_tools_strict_mismatch_accepts_legacy_mowa_bridge_key_alias(self):
         from starVLA.model.framework.share_tools import _filter_strict_key_mismatches

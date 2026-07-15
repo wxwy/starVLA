@@ -216,26 +216,26 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
     consistency = _load_json(root, "docs_zh/mowa/mowa_e003_history_sampling_consistency_smoke.json")
     config_preview = _load_json(root, "docs_zh/mowa/mowa_e003_future_latent_prior_config_preview.json")
     cache_dry_run = _load_json(root, "docs_zh/mowa/mowa_e003_future_latent_prior_train_dry_run.json")
-    launch_smoke = _load_json(root, "docs_zh/mowa/mowa_e003_future_latent_prior_launch_smoke.json")
-    wanpi_dry_run = _load_json(root, "docs_zh/mowa/mowa_e003_wanpi_future_latent_prior_dry_run.json")
+    wanpi_launch_smoke = _load_json(
+        root,
+        "docs_zh/mowa/mowa_e003_future_latent_prior_launch_smoke.json",
+    )
     blockers = _merged_unresolved(prior, builder, consistency, config_preview, cache_dry_run)
     blockers.extend(
         [
             "E-003 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; "
-            "a WanPI-MoWA full-path dry-run on the production episode latent cache is required before launch.",
+            "the WanPI launch smoke is the required full-path evidence.",
         ]
     )
-    if not _report_not_nogo(launch_smoke):
-        blockers.append("E-003 launch smoke has not yet passed on the real Wan2.2 cache path.")
-    if not _report_not_nogo(wanpi_dry_run):
-        blockers.append("E-003 WanPI dry-run evidence is not yet available.")
+    if not _report_not_nogo(wanpi_launch_smoke):
+        blockers.append("E-003 WanPI launch smoke has not yet passed on the real Wan2.2 cache path.")
     preconditions_met = (
         _report_not_nogo(prior)
         and _report_not_nogo(builder)
         and _report_not_nogo(consistency)
         and _report_not_nogo(config_preview)
         and _report_not_nogo(cache_dry_run)
-        and _report_not_nogo(launch_smoke)
+        and _report_not_nogo(wanpi_launch_smoke)
     )
     return {
         "experiment_id": "E-003",
@@ -254,8 +254,7 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
                 "history_sampling_consistency": consistency,
                 "future_latent_prior_config_preview": config_preview,
                 "future_latent_prior_train_dry_run": cache_dry_run,
-                "future_latent_prior_launch_smoke": launch_smoke,
-                "wanpi_future_latent_prior_dry_run": wanpi_dry_run,
+                "wanpi_future_latent_prior_launch_smoke": wanpi_launch_smoke,
             }
         ),
         "blocking_items": blockers,
@@ -265,8 +264,7 @@ def _build_e003_entry(root: Path) -> dict[str, Any]:
             "history_sampling_consistency_passed": _report_not_nogo(consistency),
             "future_latent_prior_config_preview_passed": _report_not_nogo(config_preview),
             "future_latent_prior_train_dry_run_passed": _report_not_nogo(cache_dry_run),
-            "future_latent_prior_launch_smoke_passed": _report_not_nogo(launch_smoke),
-            "wanpi_future_latent_prior_dry_run_passed": _report_not_nogo(wanpi_dry_run),
+            "wanpi_future_latent_prior_launch_smoke_passed": _report_not_nogo(wanpi_launch_smoke),
         },
     }
 
@@ -281,7 +279,7 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
         "docs_zh/mowa/mowa_e004_hlc_gci_checkpoint_preflight_smoke.json",
     )
     policy_rollout = _load_json(root, "docs_zh/mowa/mowa_e004_hlc_gci_policy_rollout_smoke.json")
-    wanpi_dry_run = _load_json(root, "docs_zh/mowa/mowa_e004_wanpi_hlc_gci_dry_run.json")
+    wanpi_launch_smoke = _load_json(root, "docs_zh/mowa/mowa_e004_hlc_gci_launch_smoke.json")
     blockers = _merged_unresolved(
         config_preview,
         hlcgci,
@@ -293,14 +291,12 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
     blockers.extend(
         [
             "E-004 has been migrated from the StarFlowVLA/QwenPI_v3 path to the WanPI path; "
-            "a WanPI-MoWA full-path dry-run on the production episode latent cache is required before launch.",
+            "the WanPI launch smoke is the required full-path evidence.",
             "E-004 rollout remains gated on a trained E-003/E-004 checkpoint and success metrics.",
         ]
     )
-    if not _report_not_nogo(launch_smoke):
-        blockers.append("E-004 launch smoke has not yet passed on the synthetic HLC-GCI path.")
-    if not _report_not_nogo(wanpi_dry_run):
-        blockers.append("E-004 WanPI dry-run evidence is not yet available.")
+    if not _report_not_nogo(wanpi_launch_smoke):
+        blockers.append("E-004 WanPI launch smoke has not yet passed on the synthetic HLC-GCI path.")
     if not _report_not_nogo(checkpoint_preflight):
         blockers.append("E-004 checkpoint-backed preflight has not yet passed on a complete checkpoint reference.")
     if not _report_not_nogo(policy_rollout):
@@ -331,7 +327,7 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
                 "hlcgci_launch_smoke": launch_smoke,
                 "hlcgci_checkpoint_preflight": checkpoint_preflight,
                 "hlcgci_policy_rollout": policy_rollout,
-                "wanpi_hlc_gci_dry_run": wanpi_dry_run,
+                "wanpi_hlc_gci_launch_smoke": wanpi_launch_smoke,
             }
         ),
         "blocking_items": blockers,
@@ -342,7 +338,7 @@ def _build_e004_entry(root: Path) -> dict[str, Any]:
             "hlcgci_launch_smoke_passed": _report_not_nogo(launch_smoke),
             "hlcgci_checkpoint_preflight_passed": _report_not_nogo(checkpoint_preflight),
             "hlcgci_policy_rollout_passed": _report_not_nogo(policy_rollout),
-            "wanpi_hlc_gci_dry_run_passed": _report_not_nogo(wanpi_dry_run),
+            "wanpi_hlc_gci_launch_smoke_passed": _report_not_nogo(wanpi_launch_smoke),
             "hlcgci_policy_rollout_zero_success": (
                 bool(policy_rollout)
                 and all(
@@ -360,8 +356,11 @@ def _build_e005_entry(root: Path) -> dict[str, Any]:
         root,
         "docs_zh/mowa/mowa_e005_shuffled_robot_checkpoint_preflight_smoke.json",
     )
+    rollout = _load_json(root, "docs_zh/mowa/mowa_e005_shuffled_robot_rollout_smoke.json")
     blockers = list(shuffled.get("unresolved_items") or [])
     blockers.extend(list(checkpoint_preflight.get("unresolved_items") or []))
+    if rollout:
+        blockers.extend(list(rollout.get("unresolved_items") or []))
     blockers.extend(
         [
             "E-005 requires a meaningful E-004 checkpoint; shuffled-robot plan/smoke alone is not execution evidence.",
@@ -385,12 +384,14 @@ def _build_e005_entry(root: Path) -> dict[str, Any]:
             {
                 "shuffled_robot_sanity_plan": shuffled,
                 "shuffled_robot_checkpoint_preflight": checkpoint_preflight,
+                "shuffled_robot_rollout": rollout,
             }
         ),
         "blocking_items": blockers,
         "checks": {
             "sanity_plan_present": _report_not_nogo(shuffled),
             "checkpoint_preflight_passed": _report_not_nogo(checkpoint_preflight),
+            "shuffled_robot_rollout_passed": _report_not_nogo(rollout),
         },
     }
 

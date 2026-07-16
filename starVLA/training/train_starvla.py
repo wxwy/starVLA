@@ -208,10 +208,14 @@ def _parse_shard_size_to_bytes(raw_size) -> int:
     raise ValueError(f"Unsupported checkpoint shard size: {raw_size}")
 
 
-def _iter_model_state_tensors(model):
+def _iter_model_state_tensors(model, *, save_frozen_backbone: bool):
     for name, param in model.named_parameters():
+        if not save_frozen_backbone and name.startswith("backbone."):
+            continue
         yield name, param
     for name, buffer in model.named_buffers():
+        if not save_frozen_backbone and name.startswith("backbone."):
+            continue
         yield name, buffer
 
 
@@ -219,7 +223,14 @@ def _tensor_num_bytes(tensor: torch.Tensor) -> int:
     return tensor.numel() * tensor.element_size()
 
 
-def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str, max_shard_size) -> None:
+def _streaming_save_model_shards(
+    model,
+    checkpoint_path: Path,
+    save_format: str,
+    max_shard_size,
+    *,
+    save_frozen_backbone: bool,
+) -> None:
     checkpoint_path.mkdir(parents=True, exist_ok=True)
     max_shard_bytes = _parse_shard_size_to_bytes(max_shard_size)
     shard_entries = []
@@ -261,7 +272,10 @@ def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str,
 
     index_name = None
     bare_model = model
-    for name, tensor in _iter_model_state_tensors(bare_model):
+    for name, tensor in _iter_model_state_tensors(
+        bare_model,
+        save_frozen_backbone=save_frozen_backbone,
+    ):
         cpu_tensor = tensor.detach().to("cpu", copy=True).contiguous()
         tensor_bytes = _tensor_num_bytes(cpu_tensor)
 
@@ -1263,6 +1277,7 @@ class VLATrainer(TrainerUtils):
         self.save_with_training_state = getattr(self.config.trainer, "save_with_training_state", False)
         self.save_checkpoint_as_directory = getattr(self.config.trainer, "save_checkpoint_as_directory", True)
         self.checkpoint_max_shard_size = getattr(self.config.trainer, "checkpoint_max_shard_size", "5GB")
+        self.save_frozen_backbone = bool(getattr(self.config.trainer, "save_frozen_backbone", False))
         self.local_checkpoint_keep_count = max(int(getattr(self.config.trainer, "local_checkpoint_keep_count", 1)), 1)
         self.checkpoint_permanent_steps = {
             int(step) for step in getattr(self.config.trainer, "checkpoint_permanent_steps", [])
@@ -2264,7 +2279,13 @@ class VLATrainer(TrainerUtils):
         checkpoint_path.mkdir(parents=True, exist_ok=True)
         if self.accelerator.is_main_process:
             bare_model = self.accelerator.unwrap_model(self.model)
-            _streaming_save_model_shards(bare_model, checkpoint_path, save_format, self.checkpoint_max_shard_size)
+            _streaming_save_model_shards(
+                bare_model,
+                checkpoint_path,
+                save_format,
+                self.checkpoint_max_shard_size,
+                save_frozen_backbone=self.save_frozen_backbone,
+            )
             gc.collect()
 
             scheduler_state = self.lr_scheduler.state_dict()
@@ -2281,6 +2302,8 @@ class VLATrainer(TrainerUtils):
                 "checkpoint_type": "lightweight_training",
                 "optimizer_format": "rank_sharded",
                 "optimizer_world_size": self.accelerator.num_processes,
+                "save_frozen_backbone": self.save_frozen_backbone,
+                "omitted_model_state_prefixes": [] if self.save_frozen_backbone else ["backbone."],
             }
             with open(checkpoint_path / "trainer_state.json", "w", encoding="utf-8") as f:
                 json.dump(trainer_state, f, ensure_ascii=False, indent=2)

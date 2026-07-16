@@ -313,9 +313,43 @@ def _filter_strict_key_mismatches(model_keys: set[str], checkpoint_keys: set[str
     return sorted(missing_keys), sorted(unexpected_keys)
 
 
+def _checkpoint_omits_frozen_backbone(checkpoint_path: Path) -> bool:
+    trainer_state_path = checkpoint_path / "trainer_state.json"
+    if not trainer_state_path.is_file():
+        return False
+    try:
+        trainer_state = json.loads(trainer_state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return trainer_state.get("omitted_model_state_prefixes") == ["backbone."]
+
+
+def _validate_partial_frozen_backbone_load(model, checkpoint_keys: set[str]) -> None:
+    model_keys = set(model.state_dict().keys())
+    missing_keys, unexpected_keys = _filter_strict_key_mismatches(model_keys, checkpoint_keys)
+    initialized_frozen_backbone_keys = {key for key in model_keys if key.startswith("backbone.")}
+    covered_model_keys = (model_keys & checkpoint_keys) | initialized_frozen_backbone_keys
+    uncovered_model_keys = model_keys - covered_model_keys
+    invalid_missing_keys = [key for key in missing_keys if not key.startswith("backbone.")]
+    if uncovered_model_keys != set(invalid_missing_keys):
+        raise RuntimeError(
+            "Partial frozen-backbone checkpoint coverage mismatch: "
+            f"uncovered={sorted(uncovered_model_keys)}, "
+            f"missing_non_backbone={sorted(invalid_missing_keys)}"
+        )
+    if invalid_missing_keys or unexpected_keys:
+        raise RuntimeError(
+            f"Error(s) in loading state_dict for {type(model).__name__}:\n\t"
+            "A partial frozen-backbone checkpoint may omit only `backbone.*`; "
+            f"missing non-backbone key(s): {invalid_missing_keys}\n\t"
+            f"Unexpected key(s) in state_dict: {unexpected_keys}"
+        )
+
+
 def load_model_weights(model, pretrained_checkpoint, preferred_format=None, strict=False):
     resolved = _resolve_model_checkpoint_artifact(pretrained_checkpoint, preferred_format=preferred_format)
     checkpoint_path = resolved["path"]
+    omit_frozen_backbone = checkpoint_path.is_dir() and _checkpoint_omits_frozen_backbone(checkpoint_path)
 
     if resolved["kind"] == "deepspeed_model_states":
         checkpoint = torch.load(
@@ -327,17 +361,24 @@ def load_model_weights(model, pretrained_checkpoint, preferred_format=None, stri
         try:
             if isinstance(checkpoint, dict) and "module" in checkpoint and isinstance(checkpoint["module"], dict):
                 checkpoint = checkpoint["module"]
-            model.load_state_dict(checkpoint, strict=strict)
+            if omit_frozen_backbone:
+                _validate_partial_frozen_backbone_load(model, set(checkpoint))
+                model.load_state_dict(checkpoint, strict=False)
+            else:
+                model.load_state_dict(checkpoint, strict=strict)
         finally:
             del checkpoint
             gc.collect()
         return model
 
     if resolved["kind"] == "sharded_dir":
-        if strict:
+        if strict or omit_frozen_backbone:
             model_keys = set(model.state_dict().keys())
             checkpoint_keys = _collect_checkpoint_keys_from_index(Path(checkpoint_path))
             missing_keys, unexpected_keys = _filter_strict_key_mismatches(model_keys, checkpoint_keys)
+            if omit_frozen_backbone:
+                _validate_partial_frozen_backbone_load(model, checkpoint_keys)
+                missing_keys = []
             if missing_keys or unexpected_keys:
                 raise RuntimeError(
                     f"Error(s) in loading state_dict for {type(model).__name__}:\n\t"
@@ -364,7 +405,11 @@ def load_model_weights(model, pretrained_checkpoint, preferred_format=None, stri
             mmap=True,
         )
     try:
-        model.load_state_dict(checkpoint, strict=strict)
+        if omit_frozen_backbone:
+            _validate_partial_frozen_backbone_load(model, set(checkpoint))
+            model.load_state_dict(checkpoint, strict=False)
+        else:
+            model.load_state_dict(checkpoint, strict=strict)
     finally:
         del checkpoint
         gc.collect()

@@ -11,6 +11,8 @@ from accelerate.utils import SCALER_NAME
 from omegaconf import OmegaConf
 
 from starVLA.model.modules.starflow_vla.mapping import save_starflow_checkpoint_mapping
+from starVLA.model.framework.share_tools import _validate_partial_frozen_backbone_load, load_model_weights
+from starVLA.training.train_starvla import _streaming_save_model_shards
 from starVLA.training.trainer_utils.trainer_tools import (
     load_lightweight_scaler_state,
     save_lightweight_checkpoint_metadata,
@@ -115,6 +117,61 @@ class CheckpointRetentionPolicyTest(unittest.TestCase):
             _should_auto_resume_latest_complete("resume_latest_complete_only", True, "/tmp/checkpoints/steps_100")
         )
         self.assertFalse(_should_auto_resume_latest_complete("disabled", False, "/tmp/checkpoints/steps_100"))
+
+
+class FrozenBackboneCheckpointTest(unittest.TestCase):
+    @staticmethod
+    def _model():
+        model = torch.nn.Module()
+        model.backbone = torch.nn.Linear(3, 4)
+        model.head = torch.nn.Linear(4, 2)
+        return model
+
+    def test_partial_checkpoint_saves_all_non_backbone_tensors(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            model = self._model()
+            checkpoint_dir = Path(tmpdir)
+            _streaming_save_model_shards(
+                model,
+                checkpoint_dir,
+                "safetensors",
+                "1GB",
+                save_frozen_backbone=False,
+            )
+            weight_map = json.loads((checkpoint_dir / "model.safetensors.index.json").read_text())["weight_map"]
+            self.assertEqual(set(weight_map), {"head.weight", "head.bias"})
+
+    def test_partial_checkpoint_allows_only_backbone_missing_keys(self):
+        model = self._model()
+        _validate_partial_frozen_backbone_load(model, {"head.weight", "head.bias"})
+        with self.assertRaisesRegex(RuntimeError, "missing non-backbone"):
+            _validate_partial_frozen_backbone_load(model, {"head.weight"})
+        with self.assertRaisesRegex(RuntimeError, "Unexpected key"):
+            _validate_partial_frozen_backbone_load(
+                model,
+                {"head.weight", "head.bias", "other.weight"},
+            )
+
+    def test_partial_checkpoint_loads_head_and_keeps_initialized_backbone(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = self._model()
+            checkpoint_dir = Path(tmpdir)
+            _streaming_save_model_shards(
+                source,
+                checkpoint_dir,
+                "safetensors",
+                "1GB",
+                save_frozen_backbone=False,
+            )
+            (checkpoint_dir / "trainer_state.json").write_text(
+                json.dumps({"omitted_model_state_prefixes": ["backbone."]}),
+                encoding="utf-8",
+            )
+            target = self._model()
+            target_backbone = target.backbone.weight.detach().clone()
+            load_model_weights(target, checkpoint_dir, strict=False)
+            self.assertTrue(torch.equal(target.head.weight, source.head.weight))
+            self.assertTrue(torch.equal(target.backbone.weight, target_backbone))
 
 
 class StarFlowLightweightCheckpointArtifactTest(unittest.TestCase):

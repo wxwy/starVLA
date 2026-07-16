@@ -203,7 +203,7 @@ class TaskPool:
                     cmd,
                     capture_output=True,
                     text=True,
-                    timeout=7200,  # 2h max per task
+                    timeout=18000,  # 5h max per task (libero_10 can be very slow)
                     env={
                         **os.environ,
                         "PYTHONPATH": "/disk/rl/starVLA/LIBERO:/disk/rl/starVLA",

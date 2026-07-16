@@ -200,6 +200,9 @@ trainer:
   save_checkpoint_as_directory: true
   save_with_training_state: false
   checkpoint_max_shard_size: 4GB
+  checkpoint_permanent_steps: [5000, 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000]
+  checkpoint_keep_latest_count: 3
+  strip_optimizer_from_non_latest_checkpoints: true
   optimizer:
     name: AdamW
     betas: [0.9, 0.95]

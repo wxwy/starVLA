@@ -16,6 +16,7 @@ from starVLA.training.trainer_utils.trainer_tools import (
     save_lightweight_checkpoint_metadata,
     save_lightweight_scaler_state,
 )
+from starVLA.training.train_starvla import _apply_checkpoint_retention_policy
 
 
 def _config() -> SimpleNamespace:
@@ -70,6 +71,35 @@ class StarFlowCheckpointMappingTest(unittest.TestCase):
         self.assertEqual(path.name, "steps_10_pytorch_model.pt.starflow_mapping.json")
         self.assertEqual(payload["config_schema"], "0.21")
         self.assertEqual(payload["num_target_vision_tokens"], 32)
+
+
+class CheckpointRetentionPolicyTest(unittest.TestCase):
+    def test_retains_permanent_and_recent_checkpoints_and_strips_old_optimizer(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checkpoint_dir = Path(tmpdir)
+            for step in (5000, 5500, 6000, 6500, 7000):
+                path = checkpoint_dir / f"steps_{step}"
+                path.mkdir()
+                (path / "model.safetensors").write_bytes(b"model")
+                (path / "scheduler.pt").write_bytes(b"scheduler")
+                (path / "trainer_state.json").write_text("{}", encoding="utf-8")
+                (path / "optimizer_rank_00000.pt").write_bytes(b"optimizer")
+
+            _apply_checkpoint_retention_policy(
+                checkpoint_dir,
+                permanent_steps={5000},
+                keep_latest_count=3,
+                strip_optimizer_from_non_latest=True,
+            )
+
+            self.assertEqual(
+                sorted(path.name for path in checkpoint_dir.iterdir()),
+                ["steps_5000", "steps_6000", "steps_6500", "steps_7000"],
+            )
+            self.assertFalse((checkpoint_dir / "steps_5000" / "optimizer_rank_00000.pt").exists())
+            self.assertTrue((checkpoint_dir / "steps_6000" / "optimizer_rank_00000.pt").exists())
+            self.assertTrue((checkpoint_dir / "steps_6500" / "optimizer_rank_00000.pt").exists())
+            self.assertTrue((checkpoint_dir / "steps_7000" / "optimizer_rank_00000.pt").exists())
 
 
 class StarFlowLightweightCheckpointArtifactTest(unittest.TestCase):

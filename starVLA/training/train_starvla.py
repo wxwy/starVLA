@@ -424,6 +424,38 @@ def _prune_checkpoint_entries_for_stage(checkpoint_dir: Path, keep_count: int, e
     _remove_other_checkpoint_entries_for_stage(checkpoint_dir, keep_names)
 
 
+def _apply_checkpoint_retention_policy(
+    checkpoint_dir: Path,
+    *,
+    permanent_steps: set[int],
+    keep_latest_count: int,
+    strip_optimizer_from_non_latest: bool,
+):
+    """保留永久里程碑和最近 checkpoint，并可精简旧里程碑的 optimizer 状态。"""
+    complete_entries = _list_complete_checkpoint_entries(checkpoint_dir)
+    keep_latest_count = max(int(keep_latest_count), 0)
+    latest_names = {
+        entry["path"].name for entry in complete_entries[-keep_latest_count:]
+    } if keep_latest_count else set()
+    permanent_names = {
+        entry["path"].name for entry in complete_entries if entry["step"] in permanent_steps
+    }
+    keep_names = latest_names | permanent_names
+
+    for entry in complete_entries:
+        checkpoint_path = entry["path"]
+        if checkpoint_path.name not in keep_names:
+            shutil.rmtree(checkpoint_path, ignore_errors=True)
+            continue
+        if (
+            strip_optimizer_from_non_latest
+            and checkpoint_path.name in permanent_names
+            and checkpoint_path.name not in latest_names
+        ):
+            for optimizer_path in checkpoint_path.glob("optimizer_rank_*.pt"):
+                optimizer_path.unlink(missing_ok=True)
+
+
 def _copy_helper_artifacts_for_stage(src_dir: Path, dst_dir: Path, helper_artifact_names: tuple[str, ...]):
     dst_dir.mkdir(parents=True, exist_ok=True)
     for artifact_name in helper_artifact_names:
@@ -1220,6 +1252,15 @@ class VLATrainer(TrainerUtils):
         self.save_checkpoint_as_directory = getattr(self.config.trainer, "save_checkpoint_as_directory", True)
         self.checkpoint_max_shard_size = getattr(self.config.trainer, "checkpoint_max_shard_size", "5GB")
         self.local_checkpoint_keep_count = max(int(getattr(self.config.trainer, "local_checkpoint_keep_count", 1)), 1)
+        self.checkpoint_permanent_steps = {
+            int(step) for step in getattr(self.config.trainer, "checkpoint_permanent_steps", [])
+        }
+        self.checkpoint_keep_latest_count = max(
+            int(getattr(self.config.trainer, "checkpoint_keep_latest_count", 0)), 0
+        )
+        self.strip_optimizer_from_non_latest_checkpoints = bool(
+            getattr(self.config.trainer, "strip_optimizer_from_non_latest_checkpoints", False)
+        )
         self.save_universal_checkpoint = getattr(self.config.trainer, "save_universal_checkpoint", False)
         self.checkpoint_format = self._resolve_checkpoint_format()
 
@@ -1672,6 +1713,13 @@ class VLATrainer(TrainerUtils):
         if self.accelerator.is_main_process:
             self._append_summary_entry({"steps": self.completed_steps})
             self._sync_accessed_config_snapshots()
+            if self.checkpoint_permanent_steps or self.checkpoint_keep_latest_count:
+                _apply_checkpoint_retention_policy(
+                    self.local_checkpoint_dir,
+                    permanent_steps=self.checkpoint_permanent_steps,
+                    keep_latest_count=self.checkpoint_keep_latest_count,
+                    strip_optimizer_from_non_latest=self.strip_optimizer_from_non_latest_checkpoints,
+                )
             self.accelerator.print(f"✅ Checkpoint saved at {checkpoint_path}")
             self._enqueue_checkpoint_sync(checkpoint_path)
 

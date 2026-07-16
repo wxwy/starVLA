@@ -439,6 +439,22 @@ class MultiViewWanTest(unittest.TestCase):
         self.assertTrue(torch.equal(output[0]["mowa_multi_view_history_latents"][:, 0], torch.ones(2, 4, 2, 2)))
         self.assertTrue(torch.equal(output[0]["mowa_multi_view_current_latents"], torch.full((2, 4, 2, 2), 2.0)))
 
+    def test_strict_checkpoint_load_ignores_wan_runtime_buffers(self):
+        from starVLA.model.framework.share_tools import _filter_strict_key_mismatches
+
+        missing, unexpected = _filter_strict_key_mismatches(
+            {"cross_view_adapters.20.gate"},
+            {
+                "cross_view_adapters.20.gate",
+                "cross_view_adapters.20.last_output_norm",
+                "cross_view_adapters.20.last_grad_norm",
+                "backbone.transformer.rope.freqs_cos",
+                "backbone.transformer.rope.freqs_sin",
+            },
+        )
+        self.assertEqual(missing, [])
+        self.assertEqual(unexpected, [])
+
 
 if __name__ == "__main__":
     unittest.main()

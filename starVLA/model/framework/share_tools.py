@@ -302,6 +302,12 @@ def _filter_strict_key_mismatches(model_keys: set[str], checkpoint_keys: set[str
         for key in unexpected_keys
         if not key.endswith(".rotary_emb.inv_freq")
         and not key.endswith(".rotary_pos_emb.inv_freq")
+        # Wan checkpoint exports its computed RoPE tables and MoWA cross-view
+        # diagnostic buffers even though both are rebuilt at model construction.
+        and not key.endswith(".rope.freqs_cos")
+        and not key.endswith(".rope.freqs_sin")
+        and not key.endswith(".last_output_norm")
+        and not key.endswith(".last_grad_norm")
     }
 
     return sorted(missing_keys), sorted(unexpected_keys)

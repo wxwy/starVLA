@@ -877,6 +877,12 @@ class Wan_PI(baseframework):
             "future_token_start": future_token_start,
         }
 
+    def _project_wan_hidden_states(self, hidden_states: List[torch.Tensor]) -> List[torch.Tensor]:
+        """投影 Wan hidden，并兼容 fp32 训练与 bf16 服务加载。"""
+        projector_parameter = next(self.wm_projector.parameters(), None)
+        projector_dtype = projector_parameter.dtype if projector_parameter is not None else hidden_states[0].dtype
+        return [self.wm_projector(hidden.to(dtype=projector_dtype)) for hidden in hidden_states]
+
     def _sample_multiview_future_latents(
         self,
         examples: List[dict],
@@ -911,7 +917,7 @@ class Wan_PI(baseframework):
                 wm_outputs = self.backbone(**wm_inputs, output_hidden_states=True, return_dict=True)
                 captured_layers = list(self._all_hidden_states)
             if validate_data_flow:
-                projected_layers = [self.wm_projector(hidden.to(dtype=torch.float32)) for hidden in captured_layers]
+                projected_layers = self._project_wan_hidden_states(captured_layers)
                 action_layers = self._fuse_multiview_layerwise(projected_layers, context)
                 self._validate_mowa_wan_flow_once(
                     phase="predict",
@@ -936,7 +942,7 @@ class Wan_PI(baseframework):
         with torch.autocast("cuda", dtype=torch.bfloat16):
             wm_outputs = self.backbone(**wm_inputs, output_hidden_states=True, return_dict=True)
             captured_layers = list(self._all_hidden_states)
-            projected_layers = [self.wm_projector(hidden.to(dtype=torch.float32)) for hidden in captured_layers]
+            projected_layers = self._project_wan_hidden_states(captured_layers)
             action_layers = self._fuse_multiview_layerwise(projected_layers, context)
         if validate_data_flow:
             self._validate_mowa_wan_flow_once(
@@ -1244,7 +1250,7 @@ class Wan_PI(baseframework):
                 return_dict=True,
             )
             captured_layers = list(self._all_hidden_states)
-            vl_embs_list = [self.wm_projector(h.to(dtype=torch.float32)) for h in captured_layers]
+            vl_embs_list = self._project_wan_hidden_states(captured_layers)
             if multiview_context is not None:
                 vl_embs_list = self._fuse_multiview_layerwise(vl_embs_list, multiview_context)
                 if validate_data_flow:

@@ -157,7 +157,7 @@ class MultiViewFutureFusion(nn.Module):
             )
         batch_size = future_hidden.shape[0]
         key_value = future_hidden.reshape(batch_size, -1, future_hidden.shape[-1])
-        key_value = self.norm(key_value.float()).to(dtype=future_hidden.dtype)
+        key_value = self.norm(key_value.to(dtype=self.norm.weight.dtype)).to(dtype=future_hidden.dtype)
         queries = self.queries.expand(batch_size, -1, -1).to(dtype=future_hidden.dtype)
         fused, _ = self.attention(queries, key_value, key_value, need_weights=False)
         return fused
@@ -191,7 +191,8 @@ class MultiViewDoneHead(nn.Module):
             dtype=future_hidden.dtype
         )
         fused = torch.cat((view_features[:, 0], view_features[:, 1]), dim=-1)
-        return self.mlp(self.norm(fused.float())).squeeze(-1)
+        fused = self.norm(fused.to(dtype=self.norm.weight.dtype))
+        return self.mlp(fused).squeeze(-1)
 
 
 def masked_future_flow_loss(

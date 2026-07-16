@@ -161,6 +161,7 @@ class Args:
     n_envs: int = 1
     max_episode_steps: int = 500
     n_action_steps: int = 8
+    wan_history_frames: int = 5
     video_out_path: Optional[str] = "results/robocasa365_eval_test/videos"
     seed: int = 7
     pretrained_path: str = (
@@ -178,6 +179,7 @@ def main(args: Args) -> None:
         port=args.port,
         image_size=args.resize_size,
         n_action_steps=args.n_action_steps,
+        wan_history_frames=args.wan_history_frames,
     )
     cfg = SimulationConfig(
         env_name=args.env_name,
@@ -185,7 +187,9 @@ def main(args: Args) -> None:
         n_envs=args.n_envs,
         video=VideoConfig(video_dir=args.video_out_path),
         multistep=MultiStepConfig(
-            n_action_steps=args.n_action_steps, max_episode_steps=args.max_episode_steps
+            video_delta_indices=np.arange(1 - args.wan_history_frames, 1),
+            n_action_steps=args.n_action_steps,
+            max_episode_steps=args.max_episode_steps,
         ),
     )
     name, successes = run_simulation(model, cfg)
@@ -207,6 +211,12 @@ def _parse_args_without_tyro() -> Args:
     parser.add_argument("--args.n-envs", dest="n_envs", type=int, default=Args.n_envs)
     parser.add_argument("--args.max-episode-steps", dest="max_episode_steps", type=int, default=Args.max_episode_steps)
     parser.add_argument("--args.n-action-steps", dest="n_action_steps", type=int, default=Args.n_action_steps)
+    parser.add_argument(
+        "--args.wan-history-frames",
+        dest="wan_history_frames",
+        type=int,
+        default=Args.wan_history_frames,
+    )
     parser.add_argument("--args.video-out-path", dest="video_out_path", default=Args.video_out_path)
     parser.add_argument("--args.seed", dest="seed", type=int, default=Args.seed)
     parser.add_argument("--args.pretrained-path", dest="pretrained_path", default=Args.pretrained_path)

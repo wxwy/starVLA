@@ -33,6 +33,7 @@ from starVLA.dataloader.mowa.window_latent_sample import (
 )
 from starVLA.dataloader.mowa.window_manifest import (
     MoWAWindowManifestConfig,
+    default_mowa_window_manifest_path,
     build_mowa_window_manifest,
 )
 from starVLA.model.modules.mowa.hlcgci import (
@@ -150,7 +151,7 @@ def _build_manifest(
 ) -> Path:
     latent_cache = config.get("latent_cache", {})
     interface = config.get("interface", {})
-    manifest_path = cache_root / "window_manifest_e004.parquet"
+    manifest_path = default_mowa_window_manifest_path(cache_root, "window_manifest_e004.parquet")
     window_config = MoWAWindowConfig(
         history_steps=interface.get("history_steps", 10),
         future_steps=latent_cache.get("future_window_steps", 1),
@@ -161,9 +162,9 @@ def _build_manifest(
         cache_root=cache_root,
         output_path=manifest_path,
         window_config=window_config,
-        video_keys=tuple(video_keys),
+        anchor_video_key=str(video_keys[0]),
         history_stride=latent_cache.get("history_stride", 1),
-        wam_hz=latent_cache.get("wam_hz", 4.0),
+        wam_hz=latent_cache.get("wam_hz"),
         obs_fps="Data Gate",
         action_hz="Data Gate",
         split="train",
@@ -391,7 +392,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config-yaml",
         type=Path,
-        default=Path("configs/mowa/mowa_e004_wanpi_hlc_gci_candidate.yaml"),
+        default=Path("configs/mowa/smoke/mowa_e004_wanpi_hlc_gci_candidate.yaml"),
         help="Path to the E-004 WanPI HLC-GCI smoke config.",
     )
     parser.add_argument(

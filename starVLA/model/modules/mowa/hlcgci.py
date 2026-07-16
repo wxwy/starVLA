@@ -23,10 +23,11 @@ class MoWAHLCGCIOutput:
     compressed_history: Any
     gate_values: Any
     gated_condition_tokens: Any
+    history_tokens: Any
 
 
 class MoWAHLCGCI(nn.Module):
-    """Compress history latent and gate condition-path injection."""
+    """Encode history latent into condition-side history tokens."""
 
     def __init__(self, config: MoWAHLCGCIConfig | None = None):
         super().__init__()
@@ -34,6 +35,15 @@ class MoWAHLCGCI(nn.Module):
         self.history_projector = nn.Linear(
             self.config.history_latent_dim,
             self.config.compressed_history_dim,
+        )
+        self.temporal_encoder = nn.GRU(
+            input_size=self.config.history_latent_dim,
+            hidden_size=self.config.compressed_history_dim,
+            batch_first=True,
+        )
+        self.history_token_projector = nn.Linear(
+            self.config.compressed_history_dim,
+            self.config.condition_hidden_dim,
         )
         self.gate_mlp = nn.Sequential(
             nn.Linear(self.config.compressed_history_dim, self.config.gate_hidden_dim),
@@ -45,6 +55,10 @@ class MoWAHLCGCI(nn.Module):
             self.config.condition_hidden_dim,
             self.config.condition_hidden_dim,
         )
+
+    def encode_history_tokens(self, history_latent: Any) -> Any:
+        temporal_history, _ = self.temporal_encoder(history_latent)
+        return self.history_token_projector(temporal_history)
 
     def forward(
         self,
@@ -72,6 +86,7 @@ class MoWAHLCGCI(nn.Module):
             )
         compressed_per_step = self.history_projector(history_latent)
         compressed_history = compressed_per_step.mean(dim=1)
+        history_tokens = self.encode_history_tokens(history_latent)
         gate_values = self.gate_mlp(compressed_history)
         gated_condition_tokens = self.condition_projector(condition_tokens)
         gated_condition_tokens = gated_condition_tokens * gate_values.unsqueeze(1)
@@ -79,4 +94,5 @@ class MoWAHLCGCI(nn.Module):
             compressed_history=compressed_history,
             gate_values=gate_values,
             gated_condition_tokens=gated_condition_tokens,
+            history_tokens=history_tokens,
         )

@@ -12,7 +12,7 @@ launch_guard:
   reason: Real Wan2.2 smoke and fake-cache dry-run evidence both passed; launch smoke approved
 
 references:
-  dry_run_candidate_config: configs/mowa/mowa_e003_future_latent_prior_candidate.yaml
+  dry_run_candidate_config: configs/mowa/smoke/mowa_e003_future_latent_prior_candidate.yaml
   real_wan_smoke_report: docs_zh/mowa/mowa_e003_wan2_2_latent_cache_smoke.json
   config_preview_report: docs_zh/mowa/mowa_e003_future_latent_prior_config_preview.json
   train_dry_run_report: docs_zh/mowa/mowa_e003_future_latent_prior_train_dry_run.json
@@ -46,5 +46,5 @@ interface:
   target_policy: future_latent_only
 
 smoke:
-  dry_run_config: configs/mowa/mowa_e003_future_latent_prior_candidate.yaml
+  dry_run_config: configs/mowa/smoke/mowa_e003_future_latent_prior_candidate.yaml
   execute_cache: true

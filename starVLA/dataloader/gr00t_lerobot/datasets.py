@@ -118,18 +118,46 @@ def _get_mowa_latent_cache_dataset(dataset) -> MoWALatentCacheDataset:
     if cache_cfg is None:
         raise RuntimeError("MoWA latent cache is not configured for this dataset.")
 
-    cache_root = cache_cfg.get("cache_root", None)
-    if cache_root is None:
+    configured_cache_root = cache_cfg.get("cache_root", None)
+    if configured_cache_root is None:
         raise ValueError("mowa_latent_cache.cache_root is required when latent cache is enabled.")
+    cache_root = _resolve_mowa_cache_root(dataset, cache_cfg, Path(configured_cache_root))
     manifest_path = cache_cfg.get("manifest_path", None)
     instruction_text_latent = cache_cfg.get("instruction_text_latent", None)
+    future_steps = cache_cfg.get("future_window_steps", None)
+    action_chunk_steps = cache_cfg.get("action_chunk_steps", None)
+    if action_chunk_steps is None and future_steps is not None:
+        action_chunk_steps = int(future_steps) * 4
     cache_dataset = MoWALatentCacheDataset(
         cache_root=cache_root,
         manifest_path=manifest_path,
         instruction_text_latent=instruction_text_latent,
+        history_steps=cache_cfg.get("history_window_steps", None),
+        future_steps=future_steps,
+        action_chunk_steps=action_chunk_steps,
+        video_keys=tuple(cache_cfg.get("video_keys", ())) or None,
     )
     dataset._mowa_latent_cache_dataset = cache_dataset
     return cache_dataset
+
+
+def _resolve_mowa_cache_root(dataset, cache_cfg, configured_cache_root: Path) -> Path:
+    """将 atomic 总 cache 根映射到当前 LeRobot 子数据集的 episode cache 根。"""
+
+    if any(configured_cache_root.glob("ep_*.h5")):
+        return configured_cache_root
+    source_root = cache_cfg.get("dataset_path", None)
+    dataset_path = getattr(dataset, "dataset_path", None)
+    if source_root is None or dataset_path is None:
+        return configured_cache_root
+    try:
+        relative_dataset_path = Path(dataset_path).resolve().relative_to(Path(source_root).resolve())
+    except ValueError:
+        return configured_cache_root
+    candidate = configured_cache_root / relative_dataset_path
+    if any(candidate.glob("ep_*.h5")):
+        return candidate
+    return configured_cache_root
 
 
 def _filter_steps_to_mowa_latent_cache(dataset) -> None:
@@ -154,8 +182,10 @@ def _attach_mowa_latent_cache(sample: dict, dataset, trajectory_id: int, base_in
 
     cache_cfg = _mowa_latent_cache_cfg(dataset.data_cfg)
     cache_dataset = _get_mowa_latent_cache_dataset(dataset)
-    configured_video_keys = tuple(cache_cfg.get("video_keys", ()))
-    video_key = configured_video_keys[0] if configured_video_keys else "observation.images.robot0_agentview_left"
+    # Manifest rows are view-independent.  The anchor view alone defines the
+    # temporal grid; any additional configured views must not create duplicate
+    # action/state samples.
+    video_key = "observation.images.robot0_agentview_left"
     cache_sample = cache_dataset.get_sample(
         episode_index=int(trajectory_id),
         anchor_index=int(base_index),
@@ -165,8 +195,23 @@ def _attach_mowa_latent_cache(sample: dict, dataset, trajectory_id: int, base_in
     sample["mowa_current_latent"] = cache_sample.get(
         "mowa_current_latent", cache_sample["current_latent"]
     )
-    sample["mowa_future_latent_target"] = cache_sample["future_latent"]
+    sample["mowa_future_latent_target"] = cache_sample.get("mowa_future_latent_sequence", cache_sample["future_latent"])
     sample["mowa_history_latent"] = cache_sample["history_latent"]
+    if "mowa_history_valid_mask" in cache_sample:
+        sample["mowa_history_valid_mask"] = cache_sample["mowa_history_valid_mask"]
+    future_mask = cache_sample.get("mowa_future_valid_mask")
+    if future_mask is not None:
+        sample["mowa_future_valid_mask"] = future_mask
+    if "mowa_future_done_target" in cache_sample:
+        sample["mowa_future_done_target"] = cache_sample["mowa_future_done_target"]
+    for key in (
+        "mowa_multi_view_video_keys",
+        "mowa_multi_view_history_latents",
+        "mowa_multi_view_current_latents",
+        "mowa_multi_view_future_latents",
+    ):
+        if key in cache_sample:
+            sample[key] = cache_sample[key]
     sample["mowa_latent_cache_metadata"] = {
         "episode_index": int(trajectory_id),
         "anchor_index": int(base_index),

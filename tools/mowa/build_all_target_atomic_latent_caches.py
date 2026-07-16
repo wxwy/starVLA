@@ -1,8 +1,9 @@
-"""Build visual and text latent caches for all target atomic tasks.
+"""Build Wan2.2 visual latent caches for all target atomic tasks.
 
 This driver iterates over every ``robocasa365/v1.0/target/atomic/<task>/<date>/lerobot``
-dataset, builds an episode-level visual latent store (Wan2.2 VAE pooled vector) and
-an episode-level text latent store (UMT5), and writes an aggregate report.
+dataset, builds an episode-level visual latent store (Wan2.2 temporal VAE), and
+writes an aggregate report. UMT5 text latents are built separately as one cache
+per unique instruction.
 
 The driver is resumable: existing episode stores are skipped unless ``--overwrite``
 is passed.
@@ -21,15 +22,11 @@ from starVLA.dataloader.mowa.episode_latent_store import (
     build_mowa_episode_latent_store,
 )
 from starVLA.dataloader.mowa.schema import DATA_GATE
-from starVLA.dataloader.mowa.text_latent_store import (
-    MoWATextLatentStoreConfig,
-    build_mowa_text_latent_store,
-)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build visual and text latent caches for all target atomic tasks."
+        description="Build Wan2.2 visual latent caches for all target atomic tasks."
     )
     parser.add_argument(
         "--dataset-root",
@@ -70,14 +67,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--visual-dtype",
         default="float32",
-        choices=("float16", "float32", "bfloat16"),
+        choices=("float16", "float32"),
         help="Stored visual latent dtype.",
-    )
-    parser.add_argument(
-        "--text-dtype",
-        default="float32",
-        choices=("float16", "float32", "bfloat16"),
-        help="Stored text latent dtype.",
     )
     parser.add_argument(
         "--video-backend",
@@ -89,8 +80,9 @@ def parse_args() -> argparse.Namespace:
         "--vae-batch-size",
         type=int,
         default=8,
-        help="Batch size for Wan VAE encoding per step.",
+        help="Legacy compatibility field. Wan2.2 VAE encodes each episode as a continuous clip.",
     )
+    parser.add_argument("--num-workers", type=int, default=6, help="CPU video decode threads per episode.")
     parser.add_argument(
         "--video-keys",
         default=None,
@@ -105,16 +97,6 @@ def parse_args() -> argparse.Namespace:
         "--overwrite",
         action="store_true",
         help="Overwrite existing episode stores.",
-    )
-    parser.add_argument(
-        "--skip-visual",
-        action="store_true",
-        help="Skip visual latent cache generation.",
-    )
-    parser.add_argument(
-        "--skip-text",
-        action="store_true",
-        help="Skip text latent cache generation.",
     )
     parser.add_argument(
         "--output",
@@ -156,6 +138,7 @@ def build_visual_cache(
     video_backend: str,
     overwrite: bool,
     vae_batch_size: int = 8,
+    num_workers: int = 6,
     video_keys: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     if video_keys is None:
@@ -181,6 +164,7 @@ def build_visual_cache(
         dtype=dtype,
         video_backend=video_backend,
         vae_batch_size=vae_batch_size,
+        num_workers=num_workers,
         obs_fps=DATA_GATE,
         action_hz=DATA_GATE,
         wam_hz=DATA_GATE,
@@ -188,32 +172,6 @@ def build_visual_cache(
         overwrite=overwrite,
     )
     report = build_mowa_episode_latent_store(config)
-    return report.to_dict()
-
-
-def build_text_cache(
-    dataset_path: Path,
-    cache_root: Path,
-    encoder_model_path: Path,
-    text_dtype: str,
-    overwrite: bool,
-) -> dict[str, Any]:
-    config = MoWATextLatentStoreConfig(
-        dataset_path=dataset_path,
-        cache_root=cache_root,
-        encoder_kind="umt5",
-        encoder_name="google/umt5-xxl",
-        encoder_version="TBD",
-        encoder_model_path=encoder_model_path,
-        text_encoder_name="google/umt5-xxl",
-        text_encoder_version="TBD",
-        text_hidden_dim=4096,
-        max_length=512,
-        dtype=text_dtype,
-        dry_run=False,
-        overwrite=overwrite,
-    )
-    report = build_mowa_text_latent_store(config)
     return report.to_dict()
 
 
@@ -240,60 +198,36 @@ def main() -> None:
         }
 
         visual_cache_root = args.cache_root / rel_path
-        text_cache_root = visual_cache_root.parent / f"{visual_cache_root.name}_text_latent"
-
-        if not args.skip_visual:
-            print("Building visual latent cache...")
-            t0 = time.time()
-            try:
-                video_keys = None
-                if args.video_keys:
-                    video_keys = tuple(key.strip() for key in args.video_keys.split(",") if key.strip())
-                visual_report = build_visual_cache(
-                    dataset_path=dataset_path,
-                    cache_root=visual_cache_root,
-                    encoder_model_path=args.encoder_model_path,
-                    latent_type=args.latent_type,
-                    latent_dim=args.latent_dim,
-                    flatten_policy=args.flatten_policy,
-                    dtype=args.visual_dtype,
-                    video_backend=args.video_backend,
-                    overwrite=args.overwrite,
-                    vae_batch_size=args.vae_batch_size,
-                    video_keys=video_keys,
-                )
-                visual_report["elapsed_seconds"] = round(time.time() - t0, 2)
-                task_result["visual"] = visual_report
-                print(
-                    f"  visual: {visual_report['written_count']} written, "
-                    f"{visual_report['skipped_count']} skipped, "
-                    f"{visual_report['failed_count']} failed"
-                )
-            except Exception as exc:  # noqa: BLE001
-                task_result["visual_error"] = str(exc)
-                print(f"  visual failed: {exc}")
-
-        if not args.skip_text:
-            print("Building text latent cache...")
-            t0 = time.time()
-            try:
-                text_report = build_text_cache(
-                    dataset_path=dataset_path,
-                    cache_root=text_cache_root,
-                    encoder_model_path=args.encoder_model_path,
-                    text_dtype=args.text_dtype,
-                    overwrite=args.overwrite,
-                )
-                text_report["elapsed_seconds"] = round(time.time() - t0, 2)
-                task_result["text"] = text_report
-                print(
-                    f"  text: {text_report['written_count']} written, "
-                    f"{text_report['skipped_count']} skipped, "
-                    f"{text_report['failed_count']} failed"
-                )
-            except Exception as exc:  # noqa: BLE001
-                task_result["text_error"] = str(exc)
-                print(f"  text failed: {exc}")
+        print("Building visual latent cache...")
+        t0 = time.time()
+        try:
+            video_keys = None
+            if args.video_keys:
+                video_keys = tuple(key.strip() for key in args.video_keys.split(",") if key.strip())
+            visual_report = build_visual_cache(
+                dataset_path=dataset_path,
+                cache_root=visual_cache_root,
+                encoder_model_path=args.encoder_model_path,
+                latent_type=args.latent_type,
+                latent_dim=args.latent_dim,
+                flatten_policy=args.flatten_policy,
+                dtype=args.visual_dtype,
+                video_backend=args.video_backend,
+                overwrite=args.overwrite,
+                vae_batch_size=args.vae_batch_size,
+                num_workers=args.num_workers,
+                video_keys=video_keys,
+            )
+            visual_report["elapsed_seconds"] = round(time.time() - t0, 2)
+            task_result["visual"] = visual_report
+            print(
+                f"  visual: {visual_report['written_count']} written, "
+                f"{visual_report['skipped_count']} skipped, "
+                f"{visual_report['failed_count']} failed"
+            )
+        except Exception as exc:  # noqa: BLE001
+            task_result["visual_error"] = str(exc)
+            print(f"  visual failed: {exc}")
 
         results.append(task_result)
 

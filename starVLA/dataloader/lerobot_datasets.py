@@ -5,6 +5,7 @@
 # Modification: [suport topdowm processing, suport param from config].
 
 import logging
+import copy
 from pathlib import Path
 from typing import Sequence
 from omegaconf import OmegaConf
@@ -39,6 +40,19 @@ def make_LeRobotSingleDataset(
     """
     
     data_config = ROBOT_TYPE_CONFIG_MAP[robot_type]
+    latent_cache_cfg = data_cfg.get("mowa_latent_cache", None) if data_cfg else None
+    if (
+        latent_cache_cfg is not None
+        and bool(latent_cache_cfg.get("override_action_horizon_from_cache", False))
+        and hasattr(data_config, "action_indices")
+    ):
+        future_steps = latent_cache_cfg.get("future_window_steps", None)
+        action_chunk_steps = latent_cache_cfg.get("action_chunk_steps", None)
+        if action_chunk_steps is None and future_steps is not None:
+            action_chunk_steps = int(future_steps) * 4
+        if action_chunk_steps is not None:
+            data_config = copy.deepcopy(data_config)
+            data_config.action_indices = list(range(int(action_chunk_steps)))
     modality_config = data_config.modality_config()
     transforms = data_config.transform()
     dataset_path = data_root_dir / data_name

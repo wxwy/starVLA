@@ -1923,6 +1923,27 @@ class VLATrainer(TrainerUtils):
                         mowa_future_supervision_loss
                         * float(getattr(self.config.trainer.loss_scale, "mowa_future_supervision", 1.0))
                     )
+
+                multiview_metrics = {}
+                if output_dict.get("loss_future_main") is not None:
+                    for name in (
+                        "loss_future_main",
+                        "loss_future_wrist",
+                        "loss_future_total",
+                        "cross_view_gate_mean",
+                        "cross_view_output_norm",
+                        "main_future_pred_norm",
+                        "wrist_future_pred_norm",
+                    ):
+                        value = output_dict.get(name)
+                        if value is not None:
+                            multiview_metrics[name] = float(value.detach().float().item())
+                    multiview_metrics["loss_action"] = float(action_loss.detach().float().item())
+                    multiview_metrics["loss_total"] = float(total_loss.detach().float().item())
+                    for layer, value in output_dict.get("cross_view_gate_by_layer", {}).items():
+                        multiview_metrics[f"cross_view_gate/layer_{layer}"] = float(
+                            value.detach().float().item()
+                        )
                 if (
                     bool(getattr(self.config.trainer, "enable_mowa_future_latent_prior_loss", False))
                     and mowa_future_latent_prior_loss is not None
@@ -1948,6 +1969,14 @@ class VLATrainer(TrainerUtils):
             self._loss_accum["count"] += 1
 
             self.accelerator.backward(total_loss)
+            if multiview_metrics:
+                cross_view_grad_sq = sum(
+                    float(parameter.grad.detach().float().pow(2).sum().item())
+                    for name, parameter in self.model.named_parameters()
+                    if "cross_view_adapters" in name and parameter.grad is not None
+                )
+                if cross_view_grad_sq > 0:
+                    multiview_metrics["cross_view_grad_norm"] = cross_view_grad_sq**0.5
 
             if self.accelerator.sync_gradients and self.config.trainer.gradient_clipping is not None:
                 self.accelerator.clip_grad_norm_(self.model.parameters(), self.config.trainer.gradient_clipping)
@@ -1972,6 +2001,7 @@ class VLATrainer(TrainerUtils):
                     "action_dit_loss_last_micro": action_loss_item,
                     "train_accumulation_micro_steps": self._loss_accum["count"],
                 }
+                metrics.update(multiview_metrics)
                 self._loss_accum = {
                     "action_dit_loss": 0.0,
                     "mowa_future_supervision_loss": 0.0,
@@ -2452,12 +2482,26 @@ if __name__ == "__main__":
         default="examples/SimplerEnv/train_files/starvla_cotrain_oxe.yaml",
         help="Path to YAML config",
     )
+    parser.add_argument(
+        "--validate-data-flow",
+        action="store_true",
+        help="Validate the first MoWA training batches end to end.",
+    )
+    parser.add_argument(
+        "--validation-steps",
+        type=int,
+        default=2,
+        help="Number of initial MoWA batches to validate (default: 2).",
+    )
     args, clipargs = parser.parse_known_args()
 
     cfg = OmegaConf.load(args.config_yaml)
     dotlist = normalize_dotlist_args(clipargs)
     cli_cfg = OmegaConf.from_dotlist(dotlist)
     cfg = OmegaConf.merge(cfg, cli_cfg)
+    if args.validate_data_flow:
+        cfg.framework.mowa.validate_data_flow = True
+        cfg.framework.mowa.validation_steps = args.validation_steps
 
     # Normalise legacy YAML keys into the current `version_id == "0.21"` schema.
     # This is idempotent and does not modify framework class signatures.

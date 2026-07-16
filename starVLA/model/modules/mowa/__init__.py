@@ -25,6 +25,15 @@ from .hlcgci import (
     MoWAHLCGCIConfig,
     MoWAHLCGCIOutput,
 )
+from .multiview_wan import (
+    CrossViewAttentionAdapter,
+    MultiViewFutureFusion,
+    MultiViewPatchGrid,
+    flatten_view_batch,
+    masked_future_flow_loss,
+    resolve_cross_view_layer_indices,
+    unflatten_view_batch,
+)
 from .gated_heads import (
     MoWAFutureGatedHeads,
     MoWAFutureGatedHeadsConfig,
@@ -82,12 +91,19 @@ __all__ = [
     "MoWAHLCGCI",
     "MoWAHLCGCIConfig",
     "MoWAHLCGCIOutput",
+    "CrossViewAttentionAdapter",
+    "MultiViewFutureFusion",
+    "MultiViewPatchGrid",
     "append_layerwise_bridge_tokens",
     "append_single_sequence_bridge_tokens",
     "append_vla_adapter_bridge_tokens",
     "build_mowa_future_constructible_batch_from_smoke",
     "describe_mowa_action_head_bindings",
     "fuse_mlp_bridge_features",
+    "flatten_view_batch",
+    "masked_future_flow_loss",
+    "resolve_cross_view_layer_indices",
     "mowa_manual_sgd_step",
     "resolve_mowa_action_head_binding",
+    "unflatten_view_batch",
 ]

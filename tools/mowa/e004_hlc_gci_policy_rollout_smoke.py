@@ -20,7 +20,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution fallba
     from mowa_checkpoint_resolver import resolve_mowa_checkpoint_reference
 
 
-ROLLOUT_CONFIG = Path("configs/mowa/mowa_e004_hlc_gci_policy_rollout_candidate.yaml")
+ROLLOUT_CONFIG = Path("configs/mowa/smoke/mowa_e004_hlc_gci_policy_rollout_candidate.yaml")
 ROLLOUT_OUTPUT = Path("docs_zh/mowa/mowa_e004_hlc_gci_policy_rollout_smoke.json")
 ARTIFACT_ROOT = Path("docs_zh/mowa/e004_hlc_gci_policy_rollout")
 

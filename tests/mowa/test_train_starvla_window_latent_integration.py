@@ -397,6 +397,48 @@ class BuildDataloaderManifestWiringTest(unittest.TestCase):
                     str(cache_root),
                 )
 
+    def test_build_dataloader_prefers_manifest_matching_history_window_steps(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            cache_root = root / "cache"
+            cache_root.mkdir()
+            default_manifest = cache_root / "window_manifest.parquet"
+            history_manifest = cache_root / "window_manifest_h10.parquet"
+            default_manifest.write_bytes(b"default")
+            history_manifest.write_bytes(b"h10")
+
+            cfg = OmegaConf.create(
+                {
+                    "output_dir": str(root / "out"),
+                    "run_root_dir": str(root / "run"),
+                    "run_id": "smoke",
+                    "datasets": {
+                        "vla_data": {
+                            "dataset_py": "lerobot_datasets",
+                            "per_device_batch_size": 1,
+                            "num_workers": 0,
+                        }
+                    },
+                    "latent_cache": {
+                        "cache_root": str(cache_root),
+                        "history_window_steps": 10,
+                        "video_keys": ["observation.images.robot0_agentview_left"],
+                    },
+                }
+            )
+
+            with patch(
+                "starVLA.dataloader.lerobot_datasets.get_vla_dataset"
+            ) as mock_get:
+                mock_get.return_value = _DummyDataset()
+                build_dataloader(cfg, dataset_py="lerobot_datasets")
+
+                passed_cfg = mock_get.call_args.kwargs["data_cfg"]
+                self.assertEqual(
+                    passed_cfg["mowa_latent_cache"]["manifest_path"],
+                    str(history_manifest),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

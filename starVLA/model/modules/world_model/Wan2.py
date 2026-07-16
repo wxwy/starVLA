@@ -34,6 +34,11 @@ import torch
 import torch.nn as nn
 
 from starVLA.training.trainer_utils import initialize_overwatch
+from starVLA.model.modules.world_model.wan_vae_utils import (
+    encode_wan_vae_video,
+    prepare_wan_vae_video_tensor,
+    wan_padded_frame_count,
+)
 
 logger = initialize_overwatch(__name__)
 
@@ -95,6 +100,9 @@ class _Wan2_Interface(nn.Module):
         self.transformer = WanTransformer3DModel.from_pretrained(
             model_name, subfolder="transformer", torch_dtype=torch.bfloat16
         )
+        if bool(wm_cfg.get("gradient_checkpointing", False)):
+            self.transformer.enable_gradient_checkpointing()
+            logger.info("Wan transformer gradient checkpointing enabled.")
 
         # --- VAE (image → latents for DiT input, z_dim=48) ---
         # Read VAE config to get scale factors without loading weights when visual cache is used.
@@ -244,8 +252,6 @@ class _Wan2_Interface(nn.Module):
         """
         device = next(self.vae.parameters()).device
         dtype = self.vae.dtype
-        height, width = 480, 832
-
         # Pass 1: preprocess each sample, record real frame counts
         preprocessed = []
         frame_counts = []
@@ -253,13 +259,15 @@ class _Wan2_Interface(nn.Module):
             if not isinstance(sample_imgs, (list, tuple)):
                 sample_imgs = [sample_imgs]
 
-            video_tensor = self.video_processor.preprocess_video(sample_imgs, height=height, width=width)
+            video_tensor = prepare_wan_vae_video_tensor(self.video_processor, list(sample_imgs))
             video_tensor = video_tensor.to(device=device, dtype=dtype)  # [1, C, n_imgs, H, W]
             preprocessed.append(video_tensor)
             frame_counts.append(video_tensor.shape[2])
 
         # Determine target frame count: use num_frames if specified, otherwise batch max
-        target_frames = num_frames if num_frames is not None else max(frame_counts)
+        target_frames = wan_padded_frame_count(
+            num_frames if num_frames is not None else max(frame_counts)
+        )
 
         # Pass 2: truncate or pad each sample to target_frames
         batch_videos = []
@@ -277,30 +285,14 @@ class _Wan2_Interface(nn.Module):
         # Stack to [B, C, target_frames, H, W]
         video = torch.stack(batch_videos, dim=0)
 
-        with torch.no_grad():
-            latents = self.vae.encode(video).latent_dist.sample()  # [B, 48, T_latent, H/16, W/16]
-
-        # Normalize latents (matches official Wan pipeline: (latent - mean) * (1/std))
-        latents_mean = (
-            torch.tensor(self.vae.config.latents_mean)
-            .view(1, self.vae.config.z_dim, 1, 1, 1)
-            .to(latents.device, latents.dtype)
-        )
-        latents_std = (
-            1.0
-            / torch.tensor(self.vae.config.latents_std)
-            .view(1, self.vae.config.z_dim, 1, 1, 1)
-            .to(latents.device, latents.dtype)
-        )
-        latents = (latents - latents_mean) * latents_std
-
-        return latents
+        return encode_wan_vae_video(self.vae, video)
 
     def _normalize_cached_vae_latents(self, latents: torch.Tensor) -> torch.Tensor:
         """Apply the same normalization used by the official Wan pipeline.
 
-        Cached visual latents are stored as raw VAE samples; the DiT expects
-        normalized latents. This mirrors the normalization in ``_encode_images_vae``.
+        Cached visual latents from legacy stores are raw VAE samples; the DiT
+        expects normalized latents. New temporal stores are marked normalized
+        and bypass this compatibility path.
         """
         if self._vae_latents_mean is None or self._vae_latents_std is None:
             raise RuntimeError(
@@ -361,7 +353,8 @@ class _Wan2_Interface(nn.Module):
                 raise ValueError(
                     f"visual_latents must be 4D or 5D, got {latents.dim()}D with shape {tuple(latents.shape)}"
                 )
-            latents = self._normalize_cached_vae_latents(latents)
+            if not kwargs.get("visual_latents_normalized", False):
+                latents = self._normalize_cached_vae_latents(latents)
         elif images is not None:
             if self.use_visual_cache:
                 raise ValueError(
@@ -378,12 +371,13 @@ class _Wan2_Interface(nn.Module):
         # For feature extraction at σ≈0, use zeros (clean input)
         p_t, p_h, p_w = self.transformer.config.patch_size
         _, _, T, H, W = latents.shape
-        seq_len = (T // p_t) * (H // p_h) * (W // p_w)
-        assert seq_len <= 1024, (
-            f"seq_len={seq_len} exceeds WanTransformer3D rope_max_seq_len=1024. "
-            f"Reduce num_frames or image resolution. "
-            f"(T_lat={T}, H_lat={H}, W_lat={W}, patch={p_t},{p_h},{p_w})"
-        )
+        patch_grid = (T // p_t, H // p_h, W // p_w)
+        seq_len = patch_grid[0] * patch_grid[1] * patch_grid[2]
+        rope_max_seq_len = int(self.transformer.config.rope_max_seq_len)
+        if any(size > rope_max_seq_len for size in patch_grid):
+            raise ValueError(
+                f"Wan patch grid {patch_grid} exceeds per-axis rope_max_seq_len={rope_max_seq_len}."
+            )
         timestep = torch.zeros(batch_size, seq_len, device=device, dtype=torch.long)
 
         return {
@@ -436,11 +430,12 @@ class _Wan2_Interface(nn.Module):
             extracted.append(out)
 
         class _WMOutput:
-            def __init__(self, hidden_states_tuple, loss=None):
+            def __init__(self, hidden_states_tuple, sample=None, loss=None):
                 self.hidden_states = hidden_states_tuple
+                self.sample = sample
                 self.loss = loss # TODO if you want to add loss for image reconstruction or other auxiliary objectives, you can include it here and return it in the forward pass
 
-        return _WMOutput(hidden_states_tuple=tuple(extracted))
+        return _WMOutput(hidden_states_tuple=tuple(extracted), sample=dit_output.sample)
 
     def generate(self, **kwargs):
         """Video generation using the WanPipeline.

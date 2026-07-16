@@ -42,15 +42,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--action-chunk-steps",
         type=int,
-        default=8,
-        help="Action chunk steps.",
+        default=None,
+        help="Raw action steps. Default: future-steps × 4 for Wan latent windows.",
     )
     parser.add_argument(
-        "--video-key",
-        dest="video_keys",
-        action="append",
-        default=None,
-        help="Video key to include. Can be repeated.",
+        "--anchor-video-key",
+        default="observation.images.robot0_agentview_left",
+        help="Video key used only to define the shared temporal latent grid.",
+    )
+    parser.add_argument(
+        "--recursive-cache-search",
+        action="store_true",
+        help="Recursively discover ep_*.h5 under cache-root for one global manifest.",
     )
     parser.add_argument(
         "--history-stride",
@@ -61,8 +64,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--wam-hz",
         type=float,
-        default=4.0,
-        help="WAM control frequency for seconds conversion.",
+        default=None,
+        help="Optional WAM frequency override. Default infers original fps / Wan temporal factor.",
     )
     parser.add_argument(
         "--split",
@@ -106,10 +109,6 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    video_keys = tuple(args.video_keys) if args.video_keys is not None else (
-        "observation.images.robot0_agentview_left",
-    )
-
     config = MoWAWindowManifestConfig(
         cache_root=args.cache_root,
         output_path=args.output_path,
@@ -118,7 +117,7 @@ def main() -> None:
             future_steps=args.future_steps,
             action_chunk_steps=args.action_chunk_steps,
         ),
-        video_keys=video_keys,
+        anchor_video_key=args.anchor_video_key,
         history_stride=args.history_stride,
         wam_hz=args.wam_hz,
         split=args.split,
@@ -126,6 +125,7 @@ def main() -> None:
         label_sidecar_root=args.label_sidecar_root,
         episode_indices=tuple(args.episode_indices) if args.episode_indices is not None else None,
         allow_partial_windows=args.allow_partial_windows,
+        recursive_cache_search=args.recursive_cache_search,
     )
 
     report = build_mowa_window_manifest(config).to_dict()

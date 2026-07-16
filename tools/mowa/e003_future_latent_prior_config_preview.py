@@ -12,7 +12,7 @@ from omegaconf import OmegaConf
 from starVLA.dataloader.mowa import DATA_GATE
 
 
-CONFIG = Path("configs/mowa/mowa_e003_future_latent_prior_candidate.yaml")
+CONFIG = Path("configs/mowa/smoke/mowa_e003_future_latent_prior_candidate.yaml")
 
 
 def parse_args() -> argparse.Namespace:

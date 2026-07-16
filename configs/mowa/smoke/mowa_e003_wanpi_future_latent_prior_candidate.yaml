@@ -30,25 +30,34 @@ latent_cache:
   anchor_mode: production
   current_window_steps: 1
   future_window_steps: 8
-  history_window_steps: 8
+  history_window_steps: 0
   allow_partial_windows: false
+  latent_sampling:
+    sampling_mode: task_uniform_episode_uniform_anchor
+    samples_per_episode_per_epoch: 1
+    regular_anchor_ratio: 0.80
+    terminal_anchor_ratio: 0.20
+    early_anchor_ratio: 0.00
+    replacement: false
+    seed: 42
   overwrite: false
   manifest_path: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot/window_manifest.parquet
   instruction_text_latent: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/instruction_text_latents.pt
   video_keys:
   - observation.images.robot0_agentview_left
 interface:
-  current_latent_dim: 48
+  current_latent_dim: 1024
   text_hidden_dim: 4096
   hidden_dim: 2048
   future_latent_dim: 48
+  future_steps: 8
   batch_size_smoke: 2
-  input_policy: current_latent_plus_text_only
-  target_policy: future_latent_only
+  input_policy: wanpi_backbone_pooled_hidden_plus_text
+  target_policy: future_vae_latent_channel_vector
 framework:
   name: WanPI
   starflow_ft_variant: ft0
-  state_mode: discretized_instruction
+  state_mode: continuous_head
   qwenvl:
     base_vlm: ./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
     attn_implementation: flash_attention_2

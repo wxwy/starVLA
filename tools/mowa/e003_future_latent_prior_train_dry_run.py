@@ -23,7 +23,7 @@ from starVLA.model.modules.mowa import (
 )
 
 
-CONFIG = Path("configs/mowa/mowa_e003_future_latent_prior_candidate.yaml")
+CONFIG = Path("configs/mowa/smoke/mowa_e003_future_latent_prior_candidate.yaml")
 
 
 def parse_args() -> argparse.Namespace:

@@ -252,6 +252,139 @@ class Qwen_PI_v3(baseframework):
         self.action_horizon = int(self.config.framework.action_model.action_horizon)
         self._setup_mowa_future_supervision_loss()
         self._setup_mowa_layerwise_bridge_coupling()
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        self.starflow_validate_data_flow = bool(
+            getattr(self.config.framework, "name", None) == "StarFlowVLA"
+            and getattr(mowa_cfg, "validate_data_flow", False)
+        )
+        self.starflow_validation_steps = int(getattr(mowa_cfg, "validation_steps", 2))
+        if self.starflow_validation_steps <= 0:
+            raise ValueError("framework.mowa.validation_steps must be positive.")
+        self._starflow_train_validation_count = 0
+        self._starflow_predict_validation_count = 0
+
+    def _starflow_should_validate(self, phase: str) -> bool:
+        count = (
+            getattr(self, "_starflow_train_validation_count", 0)
+            if phase == "train"
+            else getattr(self, "_starflow_predict_validation_count", 0)
+        )
+        return bool(getattr(self, "starflow_validate_data_flow", False)) and count < int(
+            getattr(self, "starflow_validation_steps", 2)
+        )
+
+    @staticmethod
+    def _starflow_require_finite(name: str, value: torch.Tensor) -> None:
+        if not torch.is_tensor(value):
+            raise TypeError(f"StarFlow contract `{name}` must be a tensor.")
+        if not torch.isfinite(value).all():
+            raise ValueError(f"StarFlow contract `{name}` contains NaN or Inf.")
+
+    def _validate_starflow_examples(self, examples: List[dict], *, phase: str) -> None:
+        if not examples:
+            raise ValueError(f"StarFlow {phase} contract requires a non-empty batch.")
+        action_dim = int(self.config.framework.action_model.action_dim)
+        state_mode = str(getattr(self.config.framework, "state_mode", "discretized_instruction"))
+        required = {"image", "lang", "state"}
+        if phase == "train":
+            required.add("action")
+            if self.mowa_future_supervision_loss_enabled:
+                required.update(("mowa_future_targets", "mowa_future_masks"))
+        for batch_index, example in enumerate(examples):
+            missing = sorted(key for key in required if key not in example or example[key] is None)
+            if missing:
+                raise ValueError(
+                    f"StarFlow {phase} sample {batch_index} is missing required fields: {missing}."
+                )
+            if not isinstance(example["lang"], str) or not example["lang"].strip():
+                raise ValueError(f"StarFlow {phase} instruction must be a non-empty string.")
+            images = example["image"] if isinstance(example["image"], (list, tuple)) else [example["image"]]
+            if not images or any(image is None for image in images):
+                raise ValueError(f"StarFlow {phase} sample {batch_index} has no valid image.")
+            state = torch.as_tensor(example["state"])
+            if state.ndim != 2 or state.shape[0] != 1:
+                raise ValueError(
+                    f"StarFlow {phase} state must be [1,state_dim], got {tuple(state.shape)}."
+                )
+            self._starflow_require_finite(f"{phase}.state[{batch_index}]", state)
+            if state_mode == "continuous_head" and state.shape[1] != int(
+                self.config.framework.action_model.state_dim
+            ):
+                raise ValueError("StarFlow continuous state_dim does not match action head config.")
+            if phase == "train":
+                action = torch.as_tensor(example["action"])
+                if action.ndim != 2 or action.shape[0] < self.action_horizon or action.shape[1] != action_dim:
+                    raise ValueError(
+                        f"StarFlow train action must be [T>={self.action_horizon},{action_dim}], "
+                        f"got {tuple(action.shape)}."
+                    )
+                self._starflow_require_finite(f"train.action[{batch_index}]", action)
+                if self.mowa_future_supervision_loss_enabled:
+                    targets = example["mowa_future_targets"]
+                    masks = example["mowa_future_masks"]
+                    for head in self.mowa_future_supervision_active_heads:
+                        if head not in targets or head not in masks:
+                            raise ValueError(f"StarFlow future supervision is missing head `{head}`.")
+                        target = torch.as_tensor(targets[head])
+                        self._starflow_require_finite(f"train.future_target.{head}", target)
+
+    def _validate_starflow_hidden_flow(
+        self,
+        vl_embs_list: List[torch.Tensor],
+        attention_mask: torch.Tensor | None,
+        raw_last_hidden: torch.Tensor,
+        *,
+        phase: str,
+    ) -> None:
+        if len(vl_embs_list) != self.num_action_dit_layers:
+            raise ValueError(
+                f"StarFlow {phase} hidden layer count mismatch: got {len(vl_embs_list)}, "
+                f"expected {self.num_action_dit_layers}."
+            )
+        batch_size = raw_last_hidden.shape[0]
+        self._starflow_require_finite(f"{phase}.raw_last_hidden", raw_last_hidden)
+        for layer_index, hidden in enumerate(vl_embs_list):
+            if hidden.ndim != 3 or hidden.shape[0] != batch_size or hidden.shape[2] != self.action_dit_hidden_dim:
+                raise ValueError(
+                    f"StarFlow {phase} projected hidden layer {layer_index} shape mismatch: "
+                    f"{tuple(hidden.shape)}."
+                )
+            self._starflow_require_finite(f"{phase}.projected_hidden[{layer_index}]", hidden)
+        if attention_mask is not None:
+            if attention_mask.ndim != 2 or attention_mask.shape[0] != batch_size:
+                raise ValueError(f"StarFlow {phase} attention mask shape mismatch.")
+            self._starflow_require_finite(f"{phase}.attention_mask", attention_mask)
+
+    def _validate_starflow_output(self, output: dict, *, phase: str, batch_size: int) -> None:
+        if phase == "train":
+            action_loss = output.get("action_loss")
+            if action_loss is None or action_loss.numel() != 1:
+                raise ValueError("StarFlow train output `action_loss` must be a scalar tensor.")
+            self._starflow_require_finite("train.action_loss", action_loss)
+            if self.mowa_layerwise_bridge_coupling_enabled and not output.get(
+                "mowa_layerwise_bridge_coupled", False
+            ):
+                raise ValueError("StarFlow MoWA bridge is enabled but did not condition the action head.")
+            future_loss = output.get("mowa_future_supervision_loss")
+            if self.mowa_future_supervision_loss_enabled:
+                if future_loss is None:
+                    raise ValueError("StarFlow future supervision is enabled but produced no loss.")
+                self._starflow_require_finite("train.mowa_future_supervision_loss", future_loss)
+        else:
+            actions = np.asarray(output.get("normalized_actions"))
+            expected = (
+                batch_size,
+                self.action_horizon,
+                int(self.config.framework.action_model.action_dim),
+            )
+            if actions.shape != expected or not np.isfinite(actions).all():
+                raise ValueError(
+                    f"StarFlow predict output must be finite with shape {expected}, got {actions.shape}."
+                )
+            if self.mowa_layerwise_bridge_coupling_enabled and not output.get(
+                "mowa_layerwise_bridge_coupled", False
+            ):
+                raise ValueError("StarFlow inference bypassed the enabled MoWA bridge.")
 
     def _setup_mowa_layerwise_bridge_coupling(self) -> None:
         mowa_cfg = getattr(self.config.framework, "mowa", None)
@@ -783,6 +916,9 @@ class Qwen_PI_v3(baseframework):
             dict:
                 action_loss (torch.Tensor): Scalar diffusion noise prediction loss.
         """
+        validate_data_flow = self._starflow_should_validate("train")
+        if validate_data_flow:
+            self._validate_starflow_examples(examples, phase="train")
         batch_images = [example["image"] for example in examples]  # List[List[PIL.Image]], length B
         instructions = [example["lang"] for example in examples]  # List[str], length B
         actions = [example["action"] for example in examples]  # List[ndarray (T, action_dim)]
@@ -790,13 +926,28 @@ class Qwen_PI_v3(baseframework):
             [example["state"] for example in examples] if "state" in examples[0] else None
         )  # List[ndarray (1, state_dim)] or None
 
+        raw_state = state
         instructions, state = self._prepare_state_condition(instructions, state)
+        if validate_data_flow:
+            state_mode = str(getattr(self.config.framework, "state_mode", "discretized_instruction"))
+            if state_mode == "discretized_instruction":
+                if state is not None or raw_state is None or any("[STATE]" not in item for item in instructions):
+                    raise ValueError("StarFlow discretized state did not enter the instruction path.")
+            elif state_mode == "continuous_head" and state is None:
+                raise ValueError("StarFlow continuous state did not enter the action-head path.")
 
         # Step 1: encode through QwenVL
         vl_embs_list, backbone_attention_mask, raw_last_hidden = self._encode_vl_hidden_states(
             batch_images,
             instructions,
         )
+        if validate_data_flow:
+            self._validate_starflow_hidden_flow(
+                vl_embs_list,
+                backbone_attention_mask,
+                raw_last_hidden,
+                phase="train",
+            )
         base_hidden = vl_embs_list[-1]
         pooled_text_hidden = self._mask_aware_pool_last_hidden(raw_last_hidden, backbone_attention_mask)
 
@@ -881,6 +1032,14 @@ class Qwen_PI_v3(baseframework):
                 output["mowa_future_supervision_gated_heads_summary"] = mowa_future_supervision[
                     "gated_heads_summary"
                 ]
+        if validate_data_flow:
+            self._validate_starflow_output(output, phase="train", batch_size=len(examples))
+            self._starflow_train_validation_count += 1
+            logger.info(
+                "[StarFlow contract] training data flow validation %d/%d passed.",
+                self._starflow_train_validation_count,
+                self.starflow_validation_steps,
+            )
         return output
 
     @torch.inference_mode()
@@ -910,11 +1069,22 @@ class Qwen_PI_v3(baseframework):
                     denoised actions in the normalised action space.
         """
 
+        validate_data_flow = self._starflow_should_validate("predict")
+        if validate_data_flow:
+            self._validate_starflow_examples(examples, phase="predict")
         batch_images = [to_pil_preserve(example["image"]) for example in examples]  # List[List[PIL.Image]]
         instructions = [example["lang"] for example in examples]  # List[str]
         state = [example["state"] for example in examples] if "state" in examples[0] else None  # List[ndarray] or None
 
+        raw_state = state
         instructions, state = self._prepare_state_condition(instructions, state)
+        if validate_data_flow:
+            state_mode = str(getattr(self.config.framework, "state_mode", "discretized_instruction"))
+            if state_mode == "discretized_instruction":
+                if state is not None or raw_state is None or any("[STATE]" not in item for item in instructions):
+                    raise ValueError("StarFlow discretized state did not enter the inference instruction path.")
+            elif state_mode == "continuous_head" and state is None:
+                raise ValueError("StarFlow continuous state did not enter the inference action-head path.")
 
         # Optionally resize images to the resolution used during training.
         train_obs_image_size = getattr(self.config.datasets.vla_data, "obs_image_size", None)
@@ -922,7 +1092,16 @@ class Qwen_PI_v3(baseframework):
             batch_images = resize_images(batch_images, target_size=train_obs_image_size)
 
         # Step 1: encode through QwenVL
-        vl_embs_list, backbone_attention_mask, _ = self._encode_vl_hidden_states(batch_images, instructions)
+        vl_embs_list, backbone_attention_mask, raw_last_hidden = self._encode_vl_hidden_states(
+            batch_images, instructions
+        )
+        if validate_data_flow:
+            self._validate_starflow_hidden_flow(
+                vl_embs_list,
+                backbone_attention_mask,
+                raw_last_hidden,
+                phase="predict",
+            )
         base_hidden = vl_embs_list[-1]
         if backbone_attention_mask is not None:
             backbone_attention_mask = backbone_attention_mask.to(dtype=torch.bool)
@@ -968,6 +1147,14 @@ class Qwen_PI_v3(baseframework):
             output["mowa_layerwise_bridge_feature_source"] = mowa_bridge_metadata["feature_source"]
             output["mowa_layerwise_bridge_active_heads"] = mowa_bridge_metadata["active_heads"]
             output["mowa_layerwise_bridge_masked_heads"] = mowa_bridge_metadata["masked_heads"]
+        if validate_data_flow:
+            self._validate_starflow_output(output, phase="predict", batch_size=len(examples))
+            self._starflow_predict_validation_count += 1
+            logger.info(
+                "[StarFlow contract] inference data flow validation %d/%d passed.",
+                self._starflow_predict_validation_count,
+                self.starflow_validation_steps,
+            )
         return output
 
     def _prepare_state_condition(

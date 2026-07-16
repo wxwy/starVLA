@@ -4,12 +4,12 @@ launch_guard:
   requires_human_confirmation: true
   policy_confirmed: true
   human_confirmed: true
-  reason: formal long-training launch for E-003 future latent prior; confirmed for execution
+  reason: formal long-training launch for E-003 future latent prior without history; confirmed for execution
 
-run_id: MoWA-E-003_future_latent_prior_4090_long
-run_root_dir: playground/mowa_ckpt/p1_long_training
+run_id: MoWA-E-003_future_latent_prior_wo_history
+run_root_dir: playground/mowa_ckpt/MoWA-E-003_future_latent_prior_wo_history
 experiment_id: E-003
-experiment_role: mowa_future_latent_prior
+experiment_role: mowa_future_latent_prior_wo_history
 seed: 42
 wandb_entity: silencewx-harbin-institute-of-technology
 wandb_project: MoWA
@@ -18,37 +18,40 @@ is_debug: false
 version_id: "0.21"
 
 latent_cache:
-  dataset_path: playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot
-  cache_root: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/OpenDrawer/20250816/lerobot
+  dataset_path: playground/Datasets/robocasa365/v1.0/target/atomic
+  cache_root: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic
   encoder_name: Wan-AI/Wan2.2-TI2V-5B-Diffusers
   encoder_version: wan2.2-vae-v1
   encoder_kind: wan2.2-vae
   encoder_model_path: playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  instruction_text_latent: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/instruction_text_latents.pt
   latent_dim: 1024
   episode_indices: null  # use all episodes; set to a small list for smoke runs
   anchor_mode: production
   current_window_steps: 1
   future_window_steps: 8
-  history_window_steps: 8
+  history_window_steps: 0
   allow_partial_windows: false
   overwrite: true
   materialize_cache_for_dry_run: true
+  override_action_horizon_from_cache: true
   video_keys:
     - observation.images.robot0_agentview_left
+    - observation.images.robot0_eye_in_hand
 
 interface:
   current_latent_dim: 1024
   text_hidden_dim: 4096
   hidden_dim: 2048
-  future_latent_dim: 1024
-  batch_size_smoke: 2
-  input_policy: current_latent_plus_text_only
-  target_policy: future_latent_only
+  future_latent_dim: 48
+  batch_size_smoke: 4
+  input_policy: wanpi_backbone_pooled_hidden_plus_text
+  target_policy: future_vae_latent_channel_vector
 
 framework:
   name: WanPI
   starflow_ft_variant: ft0
-  state_mode: discretized_instruction
+  state_mode: continuous_head
   qwenvl:
     base_vlm: ./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
     attn_implementation: flash_attention_2
@@ -58,8 +61,7 @@ framework:
     action_model_type: LayerwiseFM
     action_dim: 12
     state_dim: 32
-    action_horizon: 8
-    future_action_window_size: 7
+    action_horizon: 32
     past_action_window_size: 0
     repeated_diffusion_steps: 1
     num_inference_timesteps: 4
@@ -81,6 +83,9 @@ framework:
       cross_attention_dim: 1024
   world_model:
     base_wm: ./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+    use_text_cache: true
+    use_visual_cache: true
+    gradient_checkpointing: true
     extract_layers:
       - -1
   mowa:
@@ -98,6 +103,35 @@ framework:
     wam_feature_dim: 1024
     action_hidden_dim: 1024
     num_bridge_tokens: 2
+    multi_view:
+      enabled: true
+      views: [main, wrist]
+      flatten_view_into_batch: true
+      shared_wan_backbone: true
+      view_embedding: true
+      dynamic_wrist_pose_embedding: false
+      debug_mode: normal
+    cross_view:
+      enabled: true
+      mode: per_timestep
+      bidirectional: true
+      num_layers: 10
+      start_layer_ratio: 0.6667
+      num_heads: 8
+      bottleneck_dim: 512
+      zero_init_output: true
+      gate_init: 0.001
+    future_loss:
+      main_weight: 1.0
+      wrist_weight: 1.0
+      normalize_per_view: true
+    noise:
+      shared_timestep_across_views: true
+      shared_noise_across_views: false
+    action_fusion:
+      mode: learnable_queries
+      num_queries: 8
+      num_heads: 8
 
 datasets:
   vla_data:
@@ -107,8 +141,8 @@ datasets:
     data_mix: robocasa365_open_drawer_target_human
     action_type: delta_ee
     sequential_step_sampling: false
-    per_device_batch_size: 1
-    num_workers: 3
+    per_device_batch_size: 4
+    num_workers: 8
     load_all_data_for_training: false
     obs_image_size: [224, 224]
     delete_pause_frame: false
@@ -116,13 +150,13 @@ datasets:
     enable_mowa_future_labels: true
 
 training:
-  per_device_batch_size: 1
-  gradient_accumulation_steps: 32
+  per_device_batch_size: 4
+  gradient_accumulation_steps: 8
   effective_batch_size: 32
   max_train_steps: 80000
   num_warmup_steps: 500
-  save_interval: 2000
-  eval_interval: 2000
+  save_interval: 500
+  eval_interval: 500
   checkpoint_format: lightweight
   resume_policy: resume_latest_complete_only
 
@@ -131,8 +165,8 @@ trainer:
   enable_mowa_future_latent_prior_loss: true
   max_train_steps: 80000
   num_warmup_steps: 500
-  save_interval: 2000
-  eval_interval: 2000
+  save_interval: 500
+  eval_interval: 500
   repeated_diffusion_steps: 1
   learning_rate:
     base: 2.5e-05
@@ -149,9 +183,9 @@ trainer:
     mowa_future_latent_prior: 1.0
   max_grad_norm: 1.0
   weight_decay: 0.0
-  logging_frequency: 50
+  logging_frequency: 20
   gradient_clipping: 1.0
-  gradient_accumulation_steps: 32
+  gradient_accumulation_steps: 8
   gradient_checkpointing: true
   checkpoint_format: lightweight
   resume_policy: resume_latest_complete_only

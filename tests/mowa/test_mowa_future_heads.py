@@ -392,7 +392,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
     def test_e006_coupling_eval_plan_smoke_keeps_eval_disabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "smoke").mkdir(parents=True)
             (root / "docs_zh" / "mowa").mkdir(parents=True)
             (root / "configs" / "mowa" / "mowa_e006_coupling_eval_plan.yaml").write_text(
                 "config_role: eval_plan_not_launch\n",
@@ -2506,13 +2506,13 @@ class MoWAFutureHeadsTest(unittest.TestCase):
                 json.dumps({"completed_steps": 2}),
                 encoding="utf-8",
             )
-            (root / "configs" / "mowa").mkdir(parents=True)
+            (root / "configs" / "mowa" / "smoke").mkdir(parents=True)
             (root / "docs_zh" / "mowa").mkdir(parents=True)
             (root / "docs_zh" / "mowa" / "mowa_e004_hlc_gci_checkpoint_preflight_smoke.json").write_text(
                 json.dumps({"checks": {"ok": True}}),
                 encoding="utf-8",
             )
-            config = root / "configs" / "mowa" / "mowa_e004_hlc_gci_policy_rollout_candidate.yaml"
+            config = root / "configs" / "mowa" / "smoke" / "mowa_e004_hlc_gci_policy_rollout_candidate.yaml"
             config.write_text(
                 "\n".join(
                     [
@@ -2560,7 +2560,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
 
             report = run_or_plan_e004_hlc_gci_policy_rollout_smoke(
                 root,
-                config_path=Path("configs/mowa/mowa_e004_hlc_gci_policy_rollout_candidate.yaml"),
+                config_path=Path("configs/mowa/smoke/mowa_e004_hlc_gci_policy_rollout_candidate.yaml"),
                 execute=False,
                 server_ready_timeout=1,
             )
@@ -3151,6 +3151,109 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "does not accept history_latent"):
             model.forward(current, text, history_latent=history)
 
+    def test_wanpi_future_latent_prior_uses_backbone_context(self):
+        try:
+            import torch
+            import torch.nn as nn
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.framework.WM4A.WanPI import Wan_PI
+        from starVLA.model.modules.mowa import (
+            MoWAFutureLatentPrior,
+            MoWAFutureLatentPriorConfig,
+        )
+
+        model_owner = object.__new__(Wan_PI)
+        nn.Module.__init__(model_owner)
+        model_owner.mowa_future_latent_prior_loss_enabled = True
+        model_owner.mowa_future_latent_prior = MoWAFutureLatentPrior(
+            MoWAFutureLatentPriorConfig(
+                current_latent_dim=4,
+                text_hidden_dim=6,
+                hidden_dim=8,
+                future_latent_dim=3,
+            )
+        )
+
+        current_context = torch.randn(2, 4)
+        text_hidden = torch.randn(2, 6)
+        examples = [
+            {
+                "mowa_current_latent": torch.randn(48),
+                "mowa_future_latent_target": torch.randn(3),
+            },
+            {
+                "mowa_current_latent": torch.randn(48),
+                "mowa_future_latent_target": torch.randn(3),
+            },
+        ]
+
+        report = model_owner._maybe_run_mowa_future_latent_prior_loss(
+            current_context,
+            text_hidden,
+            examples,
+        )
+
+        self.assertIsNotNone(report)
+        self.assertTrue(report["supervision_available"])
+        self.assertEqual(report["predicted_future_latent_shape"], (2, 3))
+        self.assertTrue(torch.isfinite(report["loss"]))
+
+    def test_wanpi_hlc_gci_appends_variable_history_tokens_to_each_layer(self):
+        try:
+            import torch
+            import torch.nn as nn
+        except ImportError:
+            self.skipTest("torch is not available")
+
+        from starVLA.model.framework.WM4A.WanPI import Wan_PI
+        from starVLA.model.modules.mowa import MoWAHLCGCIConfig, MoWAHLCGCIOutput
+
+        class FakeHLCGCI(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.weight = nn.Parameter(torch.ones(()))
+                self.config = MoWAHLCGCIConfig(
+                    history_latent_dim=6,
+                    condition_hidden_dim=8,
+                    history_steps=3,
+                    compressed_history_dim=4,
+                    gate_hidden_dim=5,
+                )
+
+            def forward(self, history_latent, condition_tokens):
+                batch_size = history_latent.shape[0]
+                return MoWAHLCGCIOutput(
+                    compressed_history=torch.zeros(batch_size, 4),
+                    gate_values=torch.ones(batch_size, 8),
+                    gated_condition_tokens=condition_tokens,
+                    history_tokens=torch.zeros(batch_size, 2, 8),
+                )
+
+        model_owner = object.__new__(Wan_PI)
+        nn.Module.__init__(model_owner)
+        model_owner.mowa_hlc_gci_conditioning_enabled = True
+        model_owner.mowa_hlc_gci_condition_token_count = 4
+        model_owner.mowa_hlc_gci = FakeHLCGCI()
+
+        layers = [torch.randn(2, 5, 8), torch.randn(2, 5, 8)]
+        original_layers = [layer.clone() for layer in layers]
+        examples = [
+            {"mowa_history_latent": torch.randn(3, 6)},
+            {"mowa_history_latent": torch.randn(3, 6)},
+        ]
+
+        conditioned_layers, report = model_owner._maybe_apply_mowa_hlc_gci_conditioning(layers, examples)
+
+        self.assertTrue(report["conditioned"])
+        self.assertEqual(report["history_latent_sequence_shape"], (2, 3, 6))
+        self.assertEqual(report["history_tokens_shape"], (2, 2, 8))
+        self.assertEqual(report["injection_policy"], "append_history_tokens_to_each_layer_condition")
+        for conditioned_layer, original_layer in zip(conditioned_layers, original_layers):
+            self.assertEqual(tuple(conditioned_layer.shape), (2, 7, 8))
+            self.assertTrue(torch.equal(conditioned_layer[:, :5, :], original_layer))
+
     def test_future_latent_prior_interface_smoke_passes(self):
         from tools.mowa.future_latent_prior_interface_smoke import (
             build_future_latent_prior_interface_smoke,
@@ -3546,6 +3649,7 @@ class MoWAFutureHeadsTest(unittest.TestCase):
         self.assertEqual(tuple(output.compressed_history.shape), (2, 4))
         self.assertEqual(tuple(output.gate_values.shape), (2, 8))
         self.assertEqual(tuple(output.gated_condition_tokens.shape), (2, 4, 8))
+        self.assertEqual(tuple(output.history_tokens.shape), (2, 3, 8))
         self.assertGreaterEqual(float(output.gate_values.min().item()), 0.0)
         self.assertLessEqual(float(output.gate_values.max().item()), 1.0)
 

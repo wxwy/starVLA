@@ -9,7 +9,7 @@ Public API
 ``MoWALatentCacheDataset(cache_root, manifest_path=None)`` auto-detects the
 cache layout and exposes:
 
-- ``sample_keys``: tuple of ``(episode_index, anchor_index, video_key)``.
+- ``sample_keys``: tuple of ``(episode_index, anchor_index, anchor_video_key)``.
 - ``get_sample(episode_index=..., anchor_index=..., video_key=...) -> dict``
   with keys ``current_latent``, ``future_latent``, ``history_latent``,
   ``metadata``.
@@ -61,6 +61,10 @@ class _MoWAEpisodeLevelLatentCacheDataset:
         cache_root: Path | str,
         manifest_path: Path | str | None = None,
         instruction_text_latent: Path | str | Any | None = None,
+        history_steps: int | None = None,
+        future_steps: int | None = None,
+        action_chunk_steps: int | None = None,
+        video_keys: tuple[str, ...] | None = None,
     ) -> None:
         self.cache_root = Path(cache_root)
         self.manifest_path = (
@@ -76,30 +80,35 @@ class _MoWAEpisodeLevelLatentCacheDataset:
         self._window_dataset = MoWAWindowLatentSampleDataset(
             self.manifest_path,
             instruction_text_latent=instruction_text_latent,
+            history_steps=history_steps,
+            future_steps=future_steps,
+            action_chunk_steps=action_chunk_steps,
+            episode_latent_path_prefix=self.cache_root,
+            video_keys=video_keys,
         )
-        self._sample_keys = tuple(
-            sorted(
-                {
-                    (
-                        _episode_index_from_id(entry.episode_id),
-                        entry.anchor_index,
-                        entry.video_key,
-                    )
-                    for entry in self._window_dataset._entries
-                }
-            )
-        )
+        self._sample_keys = tuple(sorted(set(self._window_dataset.sample_keys())))
         self._key_to_index = {
             key: idx for idx, key in enumerate(self._sample_keys)
         }
 
     def _resolve_manifest_path(self) -> Path:
-        manifests = sorted(self.cache_root.glob("window_manifest*.parquet"))
+        manifests = self._candidate_manifest_paths()
         if not manifests:
             raise FileNotFoundError(
-                f"No window_manifest*.parquet found in episode cache root: {self.cache_root}"
+                f"No window_manifest*.parquet found near episode cache root: {self.cache_root}"
             )
         return manifests[0]
+
+    def _candidate_manifest_paths(self) -> tuple[Path, ...]:
+        candidates: list[Path] = []
+        candidates.extend(sorted(self.cache_root.glob("window_manifest*.parquet")))
+        sibling_dirs = (
+            self.cache_root.parent / f"{self.cache_root.name}_manifests",
+            self.cache_root.parent / "window_manifests",
+        )
+        for sibling_dir in sibling_dirs:
+            candidates.extend(sorted(sibling_dir.glob("window_manifest*.parquet")))
+        return tuple(candidates)
 
     def __len__(self) -> int:
         return len(self._sample_keys)
@@ -164,24 +173,29 @@ class _MoWAEpisodeLevelLatentCacheDataset:
         latents = {
             "current_latent": current_latent,
             "future_latent": future_latent,
+            "mowa_future_latent_sequence": _mean_pool_latent_per_frame(future_latents),
             "history_latent": history_latent,
             "future_latents": future_latents,
             "history_latents": sample.history_latents,
             "mowa_current_latent": mowa_current_latent,
+            "history_valid_mask": sample.history_valid_mask,
+            "future_valid_mask": sample.future_valid_mask,
+            "action_valid_mask": sample.action_valid_mask,
+            "history_action_valid_mask": sample.history_action_valid_mask,
         }
+        store_attrs = MoWAEpisodeLatentStore(entry.episode_latent_path).attrs
         metadata = {
             **sample.metadata,
             "episode_id": sample.episode_id,
             "sample_id": sample.sample_id,
             "episode_latent_path": entry.episode_latent_path,
-            "latent_type": MoWAEpisodeLatentStore(entry.episode_latent_path).attrs.get(
-                "latent_type", "unknown"
-            ),
+            "latent_type": store_attrs.get("latent_type", "unknown"),
+            "vae_latents_normalized": bool(store_attrs.get("vae_latents_normalized", False)),
         }
         result = {
             "episode_index": episode_index,
             "anchor_index": anchor_index,
-            "video_key": video_key,
+            "anchor_video_key": entry.anchor_video_key,
             "current_latent": current_latent,
             "future_latent": future_latent,
             "history_latent": history_latent,
@@ -189,6 +203,20 @@ class _MoWAEpisodeLevelLatentCacheDataset:
             "latents": latents,
             "metadata": metadata,
             "visual_latent": current_latent,
+            "visual_latents_normalized": metadata["vae_latents_normalized"],
+            "mowa_history_valid_mask": sample.history_valid_mask,
+            "mowa_future_valid_mask": sample.future_valid_mask,
+            "mowa_action_valid_mask": sample.action_valid_mask,
+            "mowa_history_action_valid_mask": sample.history_action_valid_mask,
+            "mowa_future_done_target": sample.future_done_target,
+            "mowa_multi_view_video_keys": sample.multi_view_video_keys,
+            "mowa_multi_view_history_latents": sample.multi_view_history_latents,
+            "mowa_multi_view_current_latents": sample.multi_view_current_latents,
+            "mowa_multi_view_future_latents": sample.multi_view_future_latents,
+            "mowa_current_robot_state": sample.current_robot_state,
+            "mowa_future_robot_states": sample.future_robot_states,
+            "mowa_history_state_valid_mask": sample.history_state_valid_mask,
+            "mowa_future_state_valid_mask": sample.future_state_valid_mask,
             "lang": lang,
         }
         if text_embeds is not None:
@@ -216,6 +244,10 @@ class MoWALatentCacheDataset:
         cache_root: Path | str,
         manifest_path: Path | str | None = None,
         instruction_text_latent: Path | str | Any | None = None,
+        history_steps: int | None = None,
+        future_steps: int | None = None,
+        action_chunk_steps: int | None = None,
+        video_keys: tuple[str, ...] | None = None,
     ) -> None:
         self.cache_root = Path(cache_root)
         self.manifest_path = (
@@ -229,6 +261,10 @@ class MoWALatentCacheDataset:
                     self.cache_root,
                     self.manifest_path,
                     instruction_text_latent=instruction_text_latent,
+                    history_steps=history_steps,
+                    future_steps=future_steps,
+                    action_chunk_steps=action_chunk_steps,
+                    video_keys=video_keys,
                 )
             )
         else:
@@ -252,8 +288,19 @@ class MoWALatentCacheDataset:
             ):
                 return True
         return bool(list(self.cache_root.glob("ep_*.h5"))) and bool(
-            list(self.cache_root.glob("window_manifest*.parquet"))
+            self._candidate_manifest_paths()
         )
+
+    def _candidate_manifest_paths(self) -> tuple[Path, ...]:
+        candidates: list[Path] = []
+        candidates.extend(sorted(self.cache_root.glob("window_manifest*.parquet")))
+        sibling_dirs = (
+            self.cache_root.parent / f"{self.cache_root.name}_manifests",
+            self.cache_root.parent / "window_manifests",
+        )
+        for sibling_dir in sibling_dirs:
+            candidates.extend(sorted(sibling_dir.glob("window_manifest*.parquet")))
+        return tuple(candidates)
 
     def __len__(self) -> int:
         return len(self._backend)
@@ -277,6 +324,15 @@ class MoWALatentCacheDataset:
             anchor_index=anchor_index,
             video_key=video_key,
         )
+
+
+def _entry_belongs_to_cache_root(episode_latent_path: str, cache_root: Path) -> bool:
+    """Scope a global manifest to the dataset-specific cache root of this loader."""
+    try:
+        Path(episode_latent_path).resolve().relative_to(cache_root.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def _mean_pool_latent(latent: torch.Tensor) -> torch.Tensor:

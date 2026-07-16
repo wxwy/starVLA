@@ -26,7 +26,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution fallba
     )
 
 
-CONFIG = Path("configs/mowa/mowa_e003_future_latent_prior_launch_candidate.yaml")
+CONFIG = Path("configs/mowa/smoke/mowa_e003_future_latent_prior_launch_candidate.yaml")
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,7 +58,7 @@ def build_e003_future_latent_prior_launch_smoke(
     launch_guard = _select(cfg, "launch_guard") or {}
     latent_cache = _select(cfg, "latent_cache") or {}
     smoke_cfg = _select(cfg, "smoke") or {}
-    dry_run_config = Path(smoke_cfg.get("dry_run_config", "configs/mowa/mowa_e003_future_latent_prior_candidate.yaml"))
+    dry_run_config = Path(smoke_cfg.get("dry_run_config", "configs/mowa/smoke/mowa_e003_future_latent_prior_candidate.yaml"))
     with tempfile.TemporaryDirectory(prefix="mowa_e003_launch_smoke_") as temp_dir:
         dry_run_config = _materialize_overwrite_dry_run_config(root, dry_run_config, Path(temp_dir))
 

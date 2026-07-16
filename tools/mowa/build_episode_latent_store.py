@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from starVLA.dataloader.mowa.episode_latent_store import (
@@ -92,7 +93,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dtype",
         default="float32",
-        choices=("float16", "float32", "bfloat16"),
+        choices=("float16", "float32"),
         help="Latent dtype.",
     )
     parser.add_argument(
@@ -105,7 +106,7 @@ def parse_args() -> argparse.Namespace:
         "--vae-batch-size",
         type=int,
         default=1,
-        help="Frames per VAE forward pass. Currently only 1 is supported.",
+        help="Legacy compatibility field. Wan2.2 VAE always encodes a full continuous video clip.",
     )
     parser.add_argument(
         "--episode-index",
@@ -114,6 +115,13 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=None,
         help="Episode index to include. Can be repeated. Default scans all episodes.",
+    )
+    parser.add_argument("--shard-index", type=int, default=0, help="This worker's deterministic episode shard.")
+    parser.add_argument("--num-shards", type=int, default=1, help="Total independent encoding workers. Default: 1 GPU worker.")
+    parser.add_argument("--cuda-visible-devices", default=None, help="Optional CUDA_VISIBLE_DEVICES value for this worker.")
+    parser.add_argument(
+        "--num-workers", type=int, default=6,
+        help="CPU video decode threads per episode. Default: 4; VAE encoding remains single-GPU-process.",
     )
     parser.add_argument(
         "--overwrite",
@@ -136,6 +144,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.cuda_visible_devices is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda_visible_devices
 
     latent_shape_per_frame: tuple[str | int, ...] = ("D",)
     if args.latent_shape_per_frame is not None:
@@ -173,6 +183,9 @@ def main() -> None:
         dry_run=not args.execute,
         overwrite=args.overwrite,
         episode_indices=tuple(args.episode_indices) if args.episode_indices is not None else None,
+        shard_index=args.shard_index,
+        num_shards=args.num_shards,
+        num_workers=args.num_workers,
     )
 
     report = build_mowa_episode_latent_store(config).to_dict()

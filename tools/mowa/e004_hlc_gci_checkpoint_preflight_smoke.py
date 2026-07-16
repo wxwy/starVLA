@@ -21,7 +21,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution fallba
 from starVLA.model.modules.mowa import MoWAHLCGCI, MoWAHLCGCIConfig
 
 
-CONFIG = Path("configs/mowa/mowa_e004_hlc_gci_checkpoint_candidate.yaml")
+CONFIG = Path("configs/mowa/smoke/mowa_e004_hlc_gci_checkpoint_candidate.yaml")
 OUTPUT = Path("docs_zh/mowa/mowa_e004_hlc_gci_checkpoint_preflight_smoke.json")
 
 

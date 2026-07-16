@@ -23,6 +23,10 @@ import torch
 import torch.nn as nn
 
 from starVLA.dataloader.mowa.sampler import select_mowa_smoke_anchor_index
+from starVLA.model.modules.world_model.wan_vae_utils import (
+    encode_wan_vae_video,
+    prepare_wan_vae_video_tensor,
+)
 
 
 _WINDOW_ROLE_CURRENT = "current"
@@ -346,7 +350,7 @@ class MoWAFakeLatentEncoderAdapter:
 
 
 class MoWAWanVaeLatentEncoderAdapter:
-    """Encode video windows with Wan2.2 VAE and pool them into 1D latents."""
+    """Encode continuous video windows with the shared Wan2.2 VAE path."""
 
     def __init__(
         self,
@@ -454,57 +458,23 @@ class MoWAWanVaeLatentEncoderAdapter:
         self._ensure_loaded()
         assert self._vae is not None and self._video_processor is not None and self._torch_dtype is not None
 
-        from PIL import Image
-
         frames = self._load_frames(source_path, frame_indices)
-        pil_frames = [Image.fromarray(frame) for frame in frames]
-
+        video_tensor = prepare_wan_vae_video_tensor(self._video_processor, frames)
+        device = next(self._vae.parameters()).device
+        video_tensor = video_tensor.to(device=device, dtype=self._torch_dtype)
+        latents = encode_wan_vae_video(self._vae, video_tensor)
+        pooled = latents.float().mean(dim=(3, 4)).squeeze(0)  # [T_z, C]
+        if self._projection is None:
+            vae_channels = pooled.shape[-1]
+            with torch.random.fork_rng():
+                torch.manual_seed(self._projection_seed)
+                self._projection = nn.Linear(vae_channels, self.latent_dim).to(
+                    device=pooled.device, dtype=pooled.dtype
+                ).eval()
+        projected = self._projection(pooled.to(dtype=self._projection.weight.dtype))
         if window_role == _WINDOW_ROLE_HISTORY:
-            # Encode each history frame independently and stack per-frame latents.
-            frame_latents = [self._encode_single_frame(frame) for frame in pil_frames]
-            return torch.stack(frame_latents, dim=0).to(dtype=torch.float32, device="cpu")
-
-        video_tensor = self._video_processor.preprocess_video(
-            pil_frames,
-            height=480,
-            width=832,
-        )
-        device = next(self._vae.parameters()).device
-        video_tensor = video_tensor.to(device=device, dtype=self._torch_dtype)
-        with torch.inference_mode():
-            latents = self._vae.encode(video_tensor).latent_dist.sample()
-        if self._projection is None:
-            vae_channels = latents.shape[1]
-            with torch.random.fork_rng():
-                torch.manual_seed(self._projection_seed)
-                self._projection = nn.Linear(vae_channels, self.latent_dim).to(
-                    device=latents.device, dtype=latents.dtype
-                ).eval()
-        pooled = latents.float().mean(dim=(2, 3, 4))  # [B, vae_channels]
-        latent = self._projection(pooled.to(dtype=self._projection.weight.dtype)).reshape(-1)
-        return latent.to(dtype=torch.float32, device="cpu")
-
-    def _encode_single_frame(self, pil_frame: Any) -> torch.Tensor:
-        """Encode a single frame and return a 1D latent vector of length latent_dim."""
-        assert self._vae is not None and self._video_processor is not None and self._torch_dtype is not None
-        video_tensor = self._video_processor.preprocess_video(
-            [pil_frame],
-            height=480,
-            width=832,
-        )
-        device = next(self._vae.parameters()).device
-        video_tensor = video_tensor.to(device=device, dtype=self._torch_dtype)
-        with torch.inference_mode():
-            latents = self._vae.encode(video_tensor).latent_dist.sample()
-        if self._projection is None:
-            vae_channels = latents.shape[1]
-            with torch.random.fork_rng():
-                torch.manual_seed(self._projection_seed)
-                self._projection = nn.Linear(vae_channels, self.latent_dim).to(
-                    device=latents.device, dtype=latents.dtype
-                ).eval()
-        pooled = latents.float().mean(dim=(2, 3, 4)).reshape(-1)
-        return self._projection(pooled.to(dtype=self._projection.weight.dtype)).reshape(-1)
+            return projected.to(dtype=torch.float32, device="cpu")
+        return projected.mean(dim=0).to(dtype=torch.float32, device="cpu")
 
 
 def build_mowa_latent_cache(

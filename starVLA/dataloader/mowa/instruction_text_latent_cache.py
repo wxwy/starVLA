@@ -15,13 +15,78 @@ and inference can then drop the ~4.7B-parameter UMT5 text encoder entirely.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import torch
+from tqdm.auto import tqdm
 
-from starVLA.dataloader.mowa.text_latent_store import MoWAUmt5TextEncoderAdapter
+
+@dataclass
+class MoWAUmt5TextEncoderAdapter:
+    """Encode instructions with the UMT5-XXL text encoder from Wan2.2-TI2V."""
+
+    model_path: Path | str
+    encoder_name: str = "google/umt5-xxl"
+    encoder_version: str = "TBD"
+    text_hidden_dim: int = 4096
+    max_length: int = 512
+    _tokenizer: Any = None
+    _text_encoder: Any = None
+
+    def __post_init__(self) -> None:
+        if not Path(self.model_path).exists():
+            raise FileNotFoundError(f"UMT5 model path not found: {self.model_path}")
+
+    def encode_instruction(self, instruction: str) -> dict[str, torch.Tensor]:
+        self._ensure_loaded()
+        assert self._tokenizer is not None and self._text_encoder is not None
+        device = next(self._text_encoder.parameters()).device
+        text_inputs = self._tokenizer(
+            instruction,
+            padding="max_length",
+            max_length=self.max_length,
+            truncation=True,
+            add_special_tokens=True,
+            return_attention_mask=True,
+            return_tensors="pt",
+        ).to(device)
+        with torch.inference_mode():
+            text_embeds = self._text_encoder(
+                input_ids=text_inputs.input_ids,
+                attention_mask=text_inputs.attention_mask,
+            ).last_hidden_state
+        attention_mask = text_inputs.attention_mask.to(dtype=torch.int64)
+        mask = attention_mask.unsqueeze(-1).to(dtype=text_embeds.dtype)
+        pooled = (text_embeds * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)
+        return {
+            "text_embeds": text_embeds.detach().cpu(),
+            "attention_mask": attention_mask.detach().cpu(),
+            "pooled_text_hidden": pooled.detach().cpu(),
+        }
+
+    def _ensure_loaded(self) -> None:
+        if self._text_encoder is not None and self._tokenizer is not None:
+            return
+        try:
+            from transformers import T5TokenizerFast, UMT5EncoderModel
+        except ImportError as exc:
+            raise RuntimeError("MoWA UMT5 text encoder requires transformers.") from exc
+        model_path = Path(self.model_path)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        dtype = torch.bfloat16 if device.type == "cuda" else torch.float32
+        print(
+            f"[instruction-text-cache] loading UMT5 model={model_path} device={device} "
+            f"compute_dtype={dtype}",
+            flush=True,
+        )
+        self._tokenizer = T5TokenizerFast.from_pretrained(str(model_path), subfolder="tokenizer")
+        self._text_encoder = UMT5EncoderModel.from_pretrained(
+            str(model_path), subfolder="text_encoder", torch_dtype=dtype
+        ).to(device)
+        print("[instruction-text-cache] UMT5 ready", flush=True)
 
 
 @dataclass(frozen=True)
@@ -163,16 +228,51 @@ def build_mowa_instruction_text_latent_cache(
 
     table: dict[str, dict[str, torch.Tensor]] = {}
     failed_count = 0
-    for instruction in instructions:
+    storage_dtype = getattr(torch, dtype)
+    print("[instruction-text-cache] configuration", flush=True)
+    print(f"  dataset_root: {dataset_root}", flush=True)
+    print(f"  output_path: {output_path or 'memory-only'}", flush=True)
+    print(f"  model_path: {encoder_model_path}", flush=True)
+    print(
+        f"  instructions: {len(instructions)} | storage_dtype: {dtype} | "
+        f"max_length: {max_length}",
+        flush=True,
+    )
+    started_at = time.monotonic()
+    progress_bar = tqdm(
+        total=len(instructions),
+        desc="Encoding text",
+        unit="instruction",
+        dynamic_ncols=True,
+    )
+    for instruction_index, instruction in enumerate(instructions):
         try:
+            encode_started_at = time.monotonic()
             encoded = encoder.encode_instruction(instruction)
             table[instruction] = {
-                "text_embeds": torch.from_numpy(encoded["text_embeds"]),
-                "attention_mask": torch.from_numpy(encoded["attention_mask"]),
-                "pooled_text_hidden": torch.from_numpy(encoded["pooled_text_hidden"]),
+                "text_embeds": encoded["text_embeds"].to(dtype=storage_dtype),
+                "attention_mask": encoded["attention_mask"],
+                "pooled_text_hidden": encoded["pooled_text_hidden"].to(dtype=storage_dtype),
             }
-        except Exception:  # noqa: BLE001
+            token_count = int(encoded["attention_mask"].sum())
+            encode_seconds = time.monotonic() - encode_started_at
+        except Exception as exc:  # noqa: BLE001
             failed_count += 1
+            progress_bar.write(
+                f"[instruction-text-cache] failed instruction={instruction_index}: {exc}"
+            )
+            token_count = "-"
+            encode_seconds = 0.0
+        progress_bar.set_postfix(
+            instruction=instruction_index + 1,
+            tokens=token_count,
+            text=f"{encode_seconds:.1f}s",
+            failed=failed_count,
+            refresh=False,
+        )
+        progress_bar.update(1)
+
+    progress_bar.close()
 
     metadata: dict[str, Any] = {
         "text_encoder_name": "google/umt5-xxl",
@@ -189,6 +289,12 @@ def build_mowa_instruction_text_latent_cache(
     if output_path is not None:
         output_path = Path(output_path)
         cache.save(output_path)
+
+    print(
+        f"[instruction-text-cache] finished encoded={len(table)} failed={failed_count} "
+        f"elapsed={(time.monotonic() - started_at) / 60:.1f} min",
+        flush=True,
+    )
 
     all_ok = len(table) == len(instructions)
     report = MoWAInstructionTextLatentCacheBuildReport(

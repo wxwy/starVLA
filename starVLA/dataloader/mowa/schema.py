@@ -76,15 +76,33 @@ class MoWAWindowConfig:
 
     history_steps: int
     future_steps: int
-    action_chunk_steps: int
+    action_chunk_steps: int | None = None
+    history_action_steps: int | None = None
 
     def validate(self) -> None:
-        if self.history_steps <= 0:
-            raise ValueError("MoWA history_steps must be positive.")
+        if self.history_steps < 0:
+            raise ValueError("MoWA history_steps must be non-negative.")
         if self.future_steps <= 0:
             raise ValueError("MoWA future_steps must be positive.")
-        if self.action_chunk_steps <= 0:
+        if self.action_chunk_steps is not None and self.action_chunk_steps <= 0:
             raise ValueError("MoWA action_chunk_steps must be positive.")
+        if self.history_action_steps is not None and self.history_action_steps <= 0:
+            raise ValueError("MoWA history_action_steps must be positive when set.")
+
+    @property
+    def resolved_history_action_steps(self) -> int:
+        """History-action horizon at raw action frequency."""
+        return self.history_action_steps or self.history_steps * 4
+
+    @property
+    def resolved_action_chunk_steps(self) -> int:
+        """Future-action horizon at raw action frequency.
+
+        Wan's regular latent grid advances by four original RoboCasa frames.
+        An explicit ``action_chunk_steps`` remains available for experiments
+        that intentionally use a different action horizon.
+        """
+        return self.action_chunk_steps or self.future_steps * 4
 
 
 @dataclass(frozen=True)

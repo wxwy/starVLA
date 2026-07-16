@@ -19,7 +19,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution fallba
 from starVLA.model.modules.mowa import MoWAHLCGCI, MoWAHLCGCIConfig
 
 
-CONFIG = Path("configs/mowa/mowa_e004_hlc_gci_launch_candidate.yaml")
+CONFIG = Path("configs/mowa/smoke/mowa_e004_hlc_gci_launch_candidate.yaml")
 
 
 def parse_args() -> argparse.Namespace:

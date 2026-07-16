@@ -104,6 +104,81 @@ def _minimal_config_with_mowa_future_supervision(
 
 
 class StarFlowVLAReuseTest(unittest.TestCase):
+    def test_optional_data_flow_contract_defaults_off_and_validates_inputs(self):
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.config = SimpleNamespace(
+            framework=SimpleNamespace(
+                name="StarFlowVLA",
+                state_mode="continuous_head",
+                action_model=SimpleNamespace(action_dim=3, state_dim=4),
+            )
+        )
+        model.action_horizon = 2
+        model.mowa_future_supervision_loss_enabled = True
+        model.mowa_future_supervision_active_heads = ("task_progress",)
+        self.assertFalse(model._starflow_should_validate("train"))
+
+        model.starflow_validate_data_flow = True
+        model.starflow_validation_steps = 2
+        model._starflow_train_validation_count = 0
+        example = {
+            "image": [object()],
+            "lang": "open drawer",
+            "state": np.zeros((1, 4), dtype=np.float32),
+            "action": np.zeros((2, 3), dtype=np.float32),
+            "mowa_future_targets": {"task_progress": 0.5},
+            "mowa_future_masks": {"task_progress": True},
+        }
+        model._validate_starflow_examples([example], phase="train")
+        self.assertTrue(model._starflow_should_validate("train"))
+        model._starflow_train_validation_count = 2
+        self.assertFalse(model._starflow_should_validate("train"))
+
+        missing_state = dict(example)
+        missing_state.pop("state")
+        with self.assertRaisesRegex(ValueError, "state"):
+            model._validate_starflow_examples([missing_state], phase="train")
+
+        bad_action = dict(example, action=np.zeros((2, 4), dtype=np.float32))
+        with self.assertRaisesRegex(ValueError, "action"):
+            model._validate_starflow_examples([bad_action], phase="train")
+
+    def test_data_flow_contract_validates_hidden_and_outputs(self):
+        model = object.__new__(StarFlowVLA)
+        torch.nn.Module.__init__(model)
+        model.num_action_dit_layers = 2
+        model.action_dit_hidden_dim = 4
+        model.action_horizon = 2
+        model.config = SimpleNamespace(
+            framework=SimpleNamespace(action_model=SimpleNamespace(action_dim=3))
+        )
+        model.mowa_layerwise_bridge_coupling_enabled = True
+        model.mowa_future_supervision_loss_enabled = True
+        hidden = [torch.zeros(1, 3, 4), torch.ones(1, 3, 4)]
+        model._validate_starflow_hidden_flow(
+            hidden,
+            torch.ones(1, 3),
+            torch.zeros(1, 3, 8),
+            phase="train",
+        )
+        model._validate_starflow_output(
+            {
+                "action_loss": torch.tensor(1.0),
+                "mowa_future_supervision_loss": torch.tensor(0.5),
+                "mowa_layerwise_bridge_coupled": True,
+            },
+            phase="train",
+            batch_size=1,
+        )
+        with self.assertRaisesRegex(ValueError, "NaN or Inf"):
+            model._validate_starflow_hidden_flow(
+                [torch.full((1, 3, 4), float("nan")), hidden[1]],
+                torch.ones(1, 3),
+                torch.zeros(1, 3, 8),
+                phase="train",
+            )
+
     def test_starflow_vla_inherits_qwenpi_without_copying_main_paths(self):
         self.assertTrue(issubclass(StarFlowVLA, Qwen_PI_v3))
         self.assertNotIn("forward", StarFlowVLA.__dict__)

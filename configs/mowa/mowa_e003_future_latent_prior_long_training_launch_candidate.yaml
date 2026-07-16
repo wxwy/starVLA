@@ -111,6 +111,8 @@ framework:
       view_embedding: true
       dynamic_wrist_pose_embedding: false
       debug_mode: normal
+      inference_future_steps: 8
+      inference_flow_steps: 4
     cross_view:
       enabled: true
       mode: per_timestep

@@ -45,6 +45,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--validate-data-flow", action="store_true")
     parser.add_argument("--validation-steps", type=int, default=2)
+    parser.add_argument(
+        "--run-inference",
+        action="store_true",
+        help="训练 smoke 后用同一批 history/current latent 执行一次双视角 future-flow 推理。",
+    )
     return parser.parse_args()
 
 
@@ -93,6 +98,7 @@ def main() -> None:
         f"optimizer: {args.optimizer} | device: {args.device}",
         flush=True,
     )
+    print(f"  run_inference: {args.run_inference}", flush=True)
 
     dataset = MoWALatentCacheDataset(
         args.cache_root,
@@ -184,6 +190,29 @@ def main() -> None:
         f"  peak_reserved: {_memory_gib(torch.cuda.max_memory_reserved()):.3f} GiB",
         flush=True,
     )
+    if args.run_inference:
+        # 明确删除训练专用 future GT/action, 验证 predict_action 不会静默读取它们。
+        inference_samples = [
+            {
+                key: value
+                for key, value in item.items()
+                if key not in {"mowa_multi_view_future_latents", "action", "mowa_future_done_target"}
+            }
+            for item in samples
+        ]
+        model.eval()
+        inference_start = time.perf_counter()
+        prediction = model.predict_action(inference_samples)
+        torch.cuda.synchronize()
+        print("[smoke] dual-view inference finished", flush=True)
+        print(
+            f"  actions: {tuple(prediction['normalized_actions'].shape)} | "
+            f"future_latents: {tuple(prediction['mowa_predicted_future_latents'].shape)} | "
+            f"done_logits: {tuple(prediction['mowa_future_done_logits'].shape)} | "
+            f"flow_steps: {prediction['mowa_future_flow_steps']} | "
+            f"elapsed: {time.perf_counter() - inference_start:.2f}s",
+            flush=True,
+        )
 
 
 if __name__ == "__main__":

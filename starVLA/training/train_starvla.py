@@ -385,6 +385,18 @@ def _list_complete_checkpoint_entries(checkpoint_dir: Path):
     return checkpoint_entries
 
 
+def _should_auto_resume_latest_complete(
+    resume_policy: str | None,
+    is_resume: bool,
+    latest_checkpoint: str | Path | None,
+) -> bool:
+    return (
+        not is_resume
+        and str(resume_policy or "").strip().lower() == "resume_latest_complete_only"
+        and latest_checkpoint is not None
+    )
+
+
 def _copy_path_for_stage(src_path: Path, dst_path: Path):
     if src_path.is_dir():
         shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
@@ -1379,6 +1391,14 @@ class VLATrainer(TrainerUtils):
 
         pretrained_checkpoint = getattr(self.config.trainer, "pretrained_checkpoint", None)
         is_resume = getattr(self.config.trainer, "is_resume", False)
+        resume_policy = str(getattr(self.config.trainer, "resume_policy", "")).strip().lower()
+        latest_checkpoint, _ = self._get_latest_checkpoint(self.checkpoint_dir)
+        if _should_auto_resume_latest_complete(resume_policy, is_resume, latest_checkpoint):
+            is_resume = True
+            logger.info(
+                "resume_policy=resume_latest_complete_only 找到完整 checkpoint，"
+                f"自动恢复: {latest_checkpoint}"
+            )
         self.resume_from_checkpoint = pretrained_checkpoint
 
         if is_resume:

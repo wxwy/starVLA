@@ -32,7 +32,7 @@ latent_cache:
   future_window_steps: 8
   history_window_steps: 0
   allow_partial_windows: false
-  overwrite: true
+  overwrite: false
   materialize_cache_for_dry_run: true
   override_action_horizon_from_cache: true
   video_keys:

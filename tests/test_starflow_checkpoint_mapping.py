@@ -16,7 +16,10 @@ from starVLA.training.trainer_utils.trainer_tools import (
     save_lightweight_checkpoint_metadata,
     save_lightweight_scaler_state,
 )
-from starVLA.training.train_starvla import _apply_checkpoint_retention_policy
+from starVLA.training.train_starvla import (
+    _apply_checkpoint_retention_policy,
+    _should_auto_resume_latest_complete,
+)
 
 
 def _config() -> SimpleNamespace:
@@ -100,6 +103,18 @@ class CheckpointRetentionPolicyTest(unittest.TestCase):
             self.assertTrue((checkpoint_dir / "steps_6000" / "optimizer_rank_00000.pt").exists())
             self.assertTrue((checkpoint_dir / "steps_6500" / "optimizer_rank_00000.pt").exists())
             self.assertTrue((checkpoint_dir / "steps_7000" / "optimizer_rank_00000.pt").exists())
+
+    def test_resume_policy_only_resumes_from_an_existing_complete_checkpoint(self):
+        self.assertTrue(
+            _should_auto_resume_latest_complete(
+                "resume_latest_complete_only", False, "/tmp/checkpoints/steps_100"
+            )
+        )
+        self.assertFalse(_should_auto_resume_latest_complete("resume_latest_complete_only", False, None))
+        self.assertFalse(
+            _should_auto_resume_latest_complete("resume_latest_complete_only", True, "/tmp/checkpoints/steps_100")
+        )
+        self.assertFalse(_should_auto_resume_latest_complete("disabled", False, "/tmp/checkpoints/steps_100"))
 
 
 class StarFlowLightweightCheckpointArtifactTest(unittest.TestCase):

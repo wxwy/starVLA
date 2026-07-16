@@ -59,7 +59,7 @@ STEP_INDEX[75500]=9
 # 默认值
 EXP_LIST=""
 STEP_LIST=""
-WORKERS=20
+WORKERS=10
 NUM_TRIALS=50
 CKPT_BASE="/disk/rl/starVLA/playground/Checkpoints"
 

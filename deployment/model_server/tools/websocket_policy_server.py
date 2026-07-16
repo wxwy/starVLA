@@ -17,7 +17,8 @@ from . import msgpack_numpy
 class WebsocketPolicyServer:
     """Serves a policy using the websocket protocol. See websocket_client_policy.py for a client implementation.
 
-    Currently only implements the `load` and `infer` methods.
+    Supports optional request batching for infer/predict_action to improve throughput
+    when many workers connect to a single server.
     """
 
     def __init__(
@@ -27,6 +28,8 @@ class WebsocketPolicyServer:
         port: int = 10093,
         idle_timeout: int = -1,  # Idle timeout in seconds, -1 means never auto-close
         metadata: dict | None = None,
+        max_batch_size: int = 8,
+        batch_timeout_ms: float = 30.0,
     ) -> None:
         self._policy = policy  #
         self._host = host
@@ -34,6 +37,9 @@ class WebsocketPolicyServer:
         self._metadata = metadata or {}
         self._idle_timeout = idle_timeout
         self._last_active = time.time()
+        self._max_batch_size = max_batch_size
+        self._batch_timeout_ms = batch_timeout_ms
+        self._infer_queue: asyncio.Queue = asyncio.Queue()
         logging.getLogger("websockets.server").setLevel(logging.INFO)
 
     def serve_forever(self) -> None:
@@ -47,10 +53,102 @@ class WebsocketPolicyServer:
             compression=None,
             max_size=None,
         ) as server:
-            if self._idle_timeout > 0:
-                await self._idle_watchdog(server)
-            else:
-                await server.serve_forever()
+            batch_task = asyncio.create_task(self._batch_processor())
+            try:
+                if self._idle_timeout > 0:
+                    await self._idle_watchdog(server)
+                else:
+                    await server.serve_forever()
+            finally:
+                batch_task.cancel()
+                try:
+                    await batch_task
+                except asyncio.CancelledError:
+                    pass
+
+    async def _batch_processor(self):
+        """Collect infer requests into batches and process them together."""
+        while True:
+            # Wait for at least one request
+            first_item = await self._infer_queue.get()
+            batch = [first_item]
+
+            # Collect more requests until batch is full or timeout expires
+            deadline = time.time() + self._batch_timeout_ms / 1000.0
+            while len(batch) < self._max_batch_size and time.time() < deadline:
+                try:
+                    item = self._infer_queue.get_nowait()
+                    batch.append(item)
+                except asyncio.QueueEmpty:
+                    try:
+                        # Wait a tiny bit for more requests without blocking forever
+                        remaining = deadline - time.time()
+                        if remaining > 0:
+                            item = await asyncio.wait_for(
+                                self._infer_queue.get(), timeout=max(remaining, 0.001)
+                            )
+                            batch.append(item)
+                    except asyncio.TimeoutError:
+                        break
+
+            await self._process_batch(batch)
+
+    async def _process_batch(self, batch):
+        """Run a batch of infer requests through the policy and return results."""
+        futures = []
+        examples = []
+        kwargs_common = {}
+
+        for future, msg, payload in batch:
+            futures.append(future)
+            ex_list = payload.get("examples")
+            if isinstance(ex_list, list) and ex_list:
+                examples.extend(ex_list)
+            elif isinstance(payload, dict):
+                # Fallback: treat payload itself as a single example if it has image/lang
+                examples.append(payload)
+
+            # Use kwargs from the first request as the common kwargs
+            if not kwargs_common and isinstance(payload, dict):
+                for k, v in payload.items():
+                    if k != "examples":
+                        kwargs_common[k] = v
+
+        if not examples:
+            for fut in futures:
+                if not fut.done():
+                    fut.set_exception(ValueError("No examples in batch"))
+            return
+
+        try:
+            output_dict = self._policy.predict_action(examples=examples, **kwargs_common)
+            actions = output_dict["actions"]  # (B, T, D)
+            timings = output_dict.get("timings", {})
+
+            if len(actions) < len(futures):
+                raise RuntimeError(
+                    f"Batch output actions count ({len(actions)}) less than requests ({len(futures)})"
+                )
+
+            for i, fut in enumerate(futures):
+                if fut.done():
+                    continue
+                ret = {
+                    "status": "ok",
+                    "ok": True,
+                    "type": "inference_result",
+                    "request_id": batch[i][1].get("request_id", "default"),
+                    "data": {
+                        "actions": actions[i : i + 1],
+                        "timings": timings,
+                    },
+                }
+                fut.set_result(ret)
+        except Exception as e:
+            logging.exception("Batch inference error")
+            for fut in futures:
+                if not fut.done():
+                    fut.set_exception(e)
 
     async def _idle_watchdog(self, server):
         """Monitor idle time and shut down the server on timeout."""
@@ -72,7 +170,16 @@ class WebsocketPolicyServer:
             try:
                 msg = msgpack_numpy.unpackb(await websocket.recv())
                 self._last_active = time.time()  # Refresh active time on each received message
-                ret = self._route_message(msg)  # route message
+
+                mtype = msg.get("type", "infer")
+                if mtype in ("infer", "predict_action"):
+                    payload = msg.get("payload", msg)
+                    future = asyncio.get_event_loop().create_future()
+                    await self._infer_queue.put((future, msg, payload))
+                    ret = await future
+                else:
+                    ret = self._route_message(msg)
+
                 await websocket.send(packer.pack(ret))
             except websockets.ConnectionClosed:
                 logging.info(f"Connection from {websocket.remote_address} closed")

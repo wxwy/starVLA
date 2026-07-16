@@ -449,7 +449,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="StarFlow VLA 多 Worker 任务池评估")
     parser.add_argument("--ckpt-path", required=True, help="Checkpoint 路径")
     parser.add_argument("--port", type=int, default=6694, help="Server 端口")
-    parser.add_argument("--workers", type=int, default=2, help="并发 Worker 数")
+    parser.add_argument("--workers", type=int, default=10, help="并发 Worker 数")
     parser.add_argument(
         "--suites",
         default="libero_goal,libero_10,libero_object,libero_spatial",

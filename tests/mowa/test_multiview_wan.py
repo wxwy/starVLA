@@ -408,6 +408,37 @@ class MultiViewWanTest(unittest.TestCase):
         self.assertEqual(tuple(output["mowa_future_done_logits"].shape), (1, 2))
         self.assertEqual(model._mowa_predict_validation_count, 1)
 
+    def test_online_raw_views_convert_to_regular_multiview_latents(self):
+        class FakeBackbone:
+            def __init__(self):
+                self.vae_ready = False
+
+            def ensure_vae_for_inference(self):
+                self.vae_ready = True
+
+            @staticmethod
+            def _encode_images_vae(images, num_frames):
+                batch_size = len(images)
+                regular_steps = (num_frames - 1) // 4
+                values = torch.arange(regular_steps + 1, dtype=torch.float32)
+                return values[None, None, :, None, None].expand(batch_size, 4, -1, 2, 2).clone()
+
+        owner = SimpleNamespace(
+            config=SimpleNamespace(latent_cache=SimpleNamespace(history_window_steps=1)),
+            backbone=FakeBackbone(),
+        )
+        frames = [object() for _ in range(9)]
+        output = Wan_PI._populate_mowa_inference_visual_latents(
+            owner,
+            [{"mowa_multi_view_images": [frames, frames]}],
+        )
+
+        self.assertTrue(owner.backbone.vae_ready)
+        self.assertEqual(tuple(output[0]["mowa_multi_view_history_latents"].shape), (2, 1, 4, 2, 2))
+        self.assertEqual(tuple(output[0]["mowa_multi_view_current_latents"].shape), (2, 4, 2, 2))
+        self.assertTrue(torch.equal(output[0]["mowa_multi_view_history_latents"][:, 0], torch.ones(2, 4, 2, 2)))
+        self.assertTrue(torch.equal(output[0]["mowa_multi_view_current_latents"], torch.full((2, 4, 2, 2), 2.0)))
+
 
 if __name__ == "__main__":
     unittest.main()

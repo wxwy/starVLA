@@ -67,6 +67,7 @@ class _Wan2_Interface(nn.Module):
             "base_wm",
             config.framework.get("qwenvl", {}).get("base_vlm", "Wan-AI/Wan2.2-TI2V-5B-Diffusers"),
         )
+        self.model_name = model_name
         self.config = config
         self.use_text_cache = bool(wm_cfg.get("use_text_cache", False))
         self.use_visual_cache = bool(wm_cfg.get("use_visual_cache", False))
@@ -109,9 +110,7 @@ class _Wan2_Interface(nn.Module):
         self.vae = None
         self._load_vae_config(model_name)
         if not self.use_visual_cache:
-            self.vae = AutoencoderKLWan.from_pretrained(
-                model_name, subfolder="vae", torch_dtype=torch.bfloat16
-            )
+            self._load_vae_weights()
 
         # --- Scheduler ---
         self.scheduler = UniPCMultistepScheduler.from_pretrained(
@@ -148,6 +147,24 @@ class _Wan2_Interface(nn.Module):
         extract_layers = wm_cfg.get("extract_layers", [-1])
         self._extract_layers = extract_layers
         self._register_hooks()
+
+    def _load_vae_weights(self) -> None:
+        """按需加载 Wan VAE，避免 visual cache 训练路径占用额外显存。"""
+        if self.vae is not None:
+            return
+        from diffusers import AutoencoderKLWan
+
+        self.vae = AutoencoderKLWan.from_pretrained(
+            self.model_name, subfolder="vae", torch_dtype=torch.bfloat16
+        )
+        self.vae.requires_grad_(False)
+
+    def ensure_vae_for_inference(self) -> None:
+        """为在线原始相机帧推理惰性加载 VAE 并迁移到 Wan transformer 设备。"""
+        self._load_vae_weights()
+        device = next(self.transformer.parameters()).device
+        self.vae.to(device=device)
+        self.vae.eval()
 
     @property
     def model(self):

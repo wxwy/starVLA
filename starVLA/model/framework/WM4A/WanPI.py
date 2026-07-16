@@ -223,6 +223,7 @@ class Wan_PI(baseframework):
             raise ValueError("framework.mowa.validation_steps must be positive.")
         self._mowa_train_validation_count = 0
         self._mowa_predict_validation_count = 0
+        self._mowa_instruction_text_cache = None
 
         # Register hooks for ALL transformer blocks
         self._all_hidden_states = []
@@ -585,6 +586,105 @@ class Wan_PI(baseframework):
             }
         else:
             return {"instructions": [example["lang"] for example in examples]}
+
+    def _populate_mowa_inference_text_cache(self, examples: List[dict]) -> List[dict]:
+        """在 Wan 使用 text cache 时，从预计算指令表补齐在线推理文本条件。"""
+        if all(
+            example.get("text_embeds") is not None and example.get("text_attention_mask") is not None
+            for example in examples
+        ):
+            return examples
+        if not getattr(self.backbone, "use_text_cache", False):
+            return examples
+        cache_path = getattr(getattr(self.config, "latent_cache", None), "instruction_text_latent", None)
+        if not cache_path:
+            raise ValueError(
+                "E003 online inference needs cached text embeddings but latent_cache.instruction_text_latent "
+                "is not configured."
+            )
+        if self._mowa_instruction_text_cache is None:
+            from starVLA.dataloader.mowa.instruction_text_latent_cache import MoWAInstructionTextLatentCache
+
+            self._mowa_instruction_text_cache = MoWAInstructionTextLatentCache(Path(cache_path))
+            logger.info(
+                "[E003 multi-view] loaded instruction text cache=%s entries=%d",
+                cache_path,
+                len(self._mowa_instruction_text_cache),
+            )
+        resolved = []
+        for index, example in enumerate(examples):
+            entry = self._mowa_instruction_text_cache.lookup(str(example.get("lang", "")))
+            if entry is None:
+                raise KeyError(
+                    "E003 online inference instruction is absent from the cached UMT5 table at "
+                    f"batch index {index}: {example.get('lang')!r}."
+                )
+            resolved.append(
+                {
+                    **example,
+                    "text_embeds": entry["text_embeds"],
+                    "text_attention_mask": entry["attention_mask"],
+                }
+            )
+        return resolved
+
+    def _populate_mowa_inference_visual_latents(self, examples: List[dict]) -> List[dict]:
+        """将在线双视角原始帧编码为与 episode cache 一致的 regular Wan latent。"""
+        if all(
+            example.get("mowa_multi_view_history_latents") is not None
+            and example.get("mowa_multi_view_current_latents") is not None
+            for example in examples
+        ):
+            return examples
+        raw_views = [example.get("mowa_multi_view_images") for example in examples]
+        if not all(raw_views):
+            raise ValueError(
+                "E003 multi-view inference requires cached history/current latents or "
+                "mowa_multi_view_images=[main_frames,wrist_frames]."
+            )
+        history_steps = int(getattr(getattr(self.config, "latent_cache", None), "history_window_steps", 0))
+        required_frames = 1 + 4 * (history_steps + 1)
+        for batch_index, views in enumerate(raw_views):
+            if not isinstance(views, (list, tuple)) or len(views) != 2:
+                raise ValueError(
+                    "mowa_multi_view_images must contain [main_frames,wrist_frames], got "
+                    f"batch index {batch_index}: {type(views).__name__}."
+                )
+            if any(not isinstance(frames, (list, tuple)) or len(frames) < required_frames for frames in views):
+                raise ValueError(
+                    f"E003 online inference needs at least {required_frames} synchronized raw frames per view "
+                    f"for history_steps={history_steps}."
+                )
+        if not hasattr(self.backbone, "ensure_vae_for_inference"):
+            raise RuntimeError("The configured Wan backbone does not support online VAE encoding.")
+        self.backbone.ensure_vae_for_inference()
+        encoded_by_view = []
+        for view_index in range(2):
+            view_batch = [list(views[view_index])[-required_frames:] for views in raw_views]
+            encoded = self.backbone._encode_images_vae(view_batch, num_frames=required_frames)
+            regular = encoded[:, :, 1:]
+            if regular.shape[2] != history_steps + 1:
+                raise ValueError(
+                    "Online Wan VAE output does not provide the required regular latent grid: "
+                    f"got {regular.shape[2]}, expected {history_steps + 1}."
+                )
+            encoded_by_view.append(regular)
+        paired = torch.stack(encoded_by_view, dim=1)
+        history = paired[:, :, :, :-1].permute(0, 1, 3, 2, 4, 5).cpu()
+        current = paired[:, :, :, -1].cpu()
+        return [
+            {
+                **example,
+                "mowa_multi_view_history_latents": history[index],
+                "mowa_multi_view_current_latents": current[index],
+            }
+            for index, example in enumerate(examples)
+        ]
+
+    def _prepare_mowa_multiview_inference_examples(self, examples: List[dict]) -> List[dict]:
+        """补齐在线可观测条件，不允许 future target/action 参与推理输入。"""
+        examples = self._populate_mowa_inference_visual_latents(examples)
+        return self._populate_mowa_inference_text_cache(examples)
 
     def _build_wan_inputs(self, examples: List[dict]) -> dict:
         """Prepare Wan2.2 build_inputs kwargs from examples.
@@ -1319,6 +1419,9 @@ class Wan_PI(baseframework):
     def predict_action(self, examples: List[dict], **kwargs) -> np.ndarray:
         if type(examples) is not list:
             examples = [examples]
+
+        if self.mowa_multiview_enabled:
+            examples = self._prepare_mowa_multiview_inference_examples(examples)
 
         validate_data_flow = (
             self.mowa_multiview_enabled

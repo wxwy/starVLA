@@ -947,6 +947,19 @@ class Wan_PI(baseframework):
             )
             actions_target_repeated = actions_target.repeat(repeated_diffusion_steps, 1, 1)
             vl_embs_list_repeated = [h.repeat(repeated_diffusion_steps, 1, 1) for h in vl_embs_list]
+            action_valid_mask = self._build_mowa_latent_batch(
+                examples, "mowa_action_valid_mask", device=base_hidden.device, dtype=torch.bool
+            )
+            if action_valid_mask is None:
+                action_valid_mask = torch.ones(
+                    actions_target.shape[:2], device=base_hidden.device, dtype=torch.bool
+                )
+            if action_valid_mask.shape != actions_target.shape[:2]:
+                raise ValueError(
+                    "MoWA action valid mask must match [B,action_horizon], "
+                    f"got {tuple(action_valid_mask.shape)} for {tuple(actions_target.shape[:2])}."
+                )
+            action_valid_mask_repeated = action_valid_mask.repeat(repeated_diffusion_steps, 1)
 
             state_repeated = None
             if validate_data_flow:
@@ -980,7 +993,12 @@ class Wan_PI(baseframework):
                     )
                     self._mowa_state_debug_logged = True
 
-            action_loss = self.action_model(vl_embs_list_repeated, actions_target_repeated, state_repeated)
+            action_loss = self.action_model(
+                vl_embs_list_repeated,
+                actions_target_repeated,
+                state_repeated,
+                action_valid_mask=action_valid_mask_repeated,
+            )
 
         output = {"action_loss": action_loss, "mowa_state_conditioned": state is not None}
         if multiview_future_loss is not None:

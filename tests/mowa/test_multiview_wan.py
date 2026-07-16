@@ -11,7 +11,7 @@ import torch
 from omegaconf import OmegaConf
 
 from starVLA.model.framework.WM4A.WanPI import Wan_PI, _prepare_action_state, _require_finite_tensor
-from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import MLP
+from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import MLP, masked_action_flow_loss
 from starVLA.model.modules.mowa.multiview_wan import (
     CrossViewAttentionAdapter,
     MultiViewFutureFusion,
@@ -24,6 +24,18 @@ from starVLA.model.modules.mowa.multiview_wan import (
 
 
 class MultiViewWanTest(unittest.TestCase):
+    def test_action_flow_loss_excludes_terminal_padding(self):
+        prediction = torch.zeros(1, 3, 2, requires_grad=True)
+        target = torch.tensor([[[1.0, 3.0], [5.0, 7.0], [100.0, 100.0]]])
+        mask = torch.tensor([[True, True, False]])
+        loss = masked_action_flow_loss(prediction, target, mask)
+        loss.backward()
+
+        self.assertTrue(torch.allclose(loss, torch.tensor(21.0)))
+        self.assertEqual(float(prediction.grad[:, 2].abs().sum()), 0.0)
+        with self.assertRaisesRegex(ValueError, "no valid"):
+            masked_action_flow_loss(prediction.detach(), target, torch.zeros_like(mask))
+
     def test_mowa_first_batch_example_contract_covers_all_inputs(self):
         owner = SimpleNamespace(
             mowa_multiview_enabled=True,

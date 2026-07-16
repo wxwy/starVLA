@@ -43,6 +43,7 @@ from starVLA.model.framework.share_tools import merge_framework_config, populate
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import LayerwiseFlowmatchingActionHead, get_action_model
 from starVLA.model.modules.mowa import (
     CrossViewAttentionAdapter,
+    MultiViewDoneHead,
     MoWAFutureLatentPrior,
     MoWAFutureLatentPriorConfig,
     MoWAHLCGCI,
@@ -352,6 +353,12 @@ class Wan_PI(baseframework):
             int(getattr(action_fusion_cfg, "num_heads", 8)),
             int(getattr(action_fusion_cfg, "num_queries", 8)),
         )
+        done_cfg = getattr(mowa_cfg, "done_head", None)
+        self.mowa_done_head = MultiViewDoneHead(
+            wm_hidden,
+            int(getattr(done_cfg, "hidden_dim", 512)),
+        )
+        self.mowa_done_loss_weight = float(getattr(done_cfg, "loss_weight", 1.0))
         future_loss_cfg = getattr(mowa_cfg, "future_loss", None)
         self.mowa_future_main_weight = float(getattr(future_loss_cfg, "main_weight", 1.0))
         self.mowa_future_wrist_weight = float(getattr(future_loss_cfg, "wrist_weight", 1.0))
@@ -724,6 +731,47 @@ class Wan_PI(baseframework):
             "wrist_future_pred_norm": prediction_future[:, 1].float().norm().detach(),
         }
 
+    def _compute_multiview_done_loss(
+        self,
+        last_hidden: torch.Tensor,
+        context: dict,
+        examples: List[dict],
+    ) -> dict:
+        grid = context["grid"]
+        paired = unflatten_view_batch(last_hidden, grid.batch_size, grid.num_views)
+        temporal_hidden = paired.reshape(
+            grid.batch_size,
+            grid.num_views,
+            grid.time,
+            grid.spatial_tokens,
+            last_hidden.shape[-1],
+        )
+        future_start = context["future_token_start"] // grid.spatial_tokens
+        future_hidden = temporal_hidden[:, :, future_start:]
+        if future_hidden.shape[2] != context["future_steps"]:
+            raise ValueError(
+                "E003 done head requires one Wan temporal patch per latent timestep, "
+                f"got {future_hidden.shape[2]} patches for {context['future_steps']} future steps."
+            )
+        done_logits = self.mowa_done_head(future_hidden)
+        done_target = self._build_mowa_latent_batch(
+            examples, "mowa_future_done_target", device=done_logits.device, dtype=done_logits.dtype
+        )
+        if done_target is None or done_target.shape != done_logits.shape:
+            raise ValueError(
+                "E003 multi-view done target must be [B,T_future], "
+                f"got {None if done_target is None else tuple(done_target.shape)} for "
+                f"{tuple(done_logits.shape)} logits."
+            )
+        if not torch.all((done_target == 0) | (done_target == 1)):
+            raise ValueError("E003 multi-view done target must be binary.")
+        done_loss = torch.nn.functional.binary_cross_entropy_with_logits(done_logits, done_target)
+        return {
+            "loss_done": done_loss,
+            "done_logits": done_logits,
+            "done_target": done_target,
+        }
+
     def _validate_mowa_examples_once(self, examples: List[dict], *, phase: str) -> None:
         if not self.mowa_multiview_enabled:
             return
@@ -841,6 +889,8 @@ class Wan_PI(baseframework):
             "loss_future_main",
             "loss_future_wrist",
             "loss_future_total",
+            "loss_done",
+            "loss_multiview_total",
         )
         for key in required:
             value = output.get(key)
@@ -939,6 +989,9 @@ class Wan_PI(baseframework):
                     wm_outputs.sample,
                     multiview_context,
                 )
+                multiview_done_loss = self._compute_multiview_done_loss(
+                    captured_layers[-1], multiview_context, examples
+                )
 
             repeated_diffusion_steps = (
                 self.config.framework.action_model.get("repeated_diffusion_steps", 2)
@@ -1003,7 +1056,12 @@ class Wan_PI(baseframework):
         output = {"action_loss": action_loss, "mowa_state_conditioned": state is not None}
         if multiview_future_loss is not None:
             output.update(multiview_future_loss)
-            output["mowa_future_latent_prior_loss"] = multiview_future_loss["loss_future_total"]
+            output.update(multiview_done_loss)
+            output["loss_multiview_total"] = (
+                multiview_future_loss["loss_future_total"]
+                + self.mowa_done_loss_weight * multiview_done_loss["loss_done"]
+            )
+            output["mowa_future_latent_prior_loss"] = output["loss_multiview_total"]
             output["cross_view_gate_by_layer"] = {
                 layer: adapter.gate.detach() for layer, adapter in self.cross_view_adapters.items()
             }

@@ -14,6 +14,7 @@ from starVLA.model.framework.WM4A.WanPI import Wan_PI, _prepare_action_state, _r
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import MLP, masked_action_flow_loss
 from starVLA.model.modules.mowa.multiview_wan import (
     CrossViewAttentionAdapter,
+    MultiViewDoneHead,
     MultiViewFutureFusion,
     MultiViewPatchGrid,
     flatten_view_batch,
@@ -24,6 +25,20 @@ from starVLA.model.modules.mowa.multiview_wan import (
 
 
 class MultiViewWanTest(unittest.TestCase):
+    def test_done_head_fuses_views_per_timestep_and_backpropagates(self):
+        torch.manual_seed(11)
+        head = MultiViewDoneHead(hidden_dim=8, mlp_hidden_dim=4)
+        future_hidden = torch.randn(2, 2, 3, 5, 8, requires_grad=True)
+        logits = head(future_hidden)
+        target = torch.tensor([[0.0, 1.0, 1.0], [0.0, 0.0, 1.0]])
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(logits, target)
+        loss.backward()
+
+        self.assertEqual(tuple(logits.shape), (2, 3))
+        self.assertGreater(float(head.mlp[0].weight.grad.norm()), 0.0)
+        self.assertGreater(float(head.view_embeddings.weight.grad.norm()), 0.0)
+        self.assertGreater(float(future_hidden.grad.norm()), 0.0)
+
     def test_action_flow_loss_excludes_terminal_padding(self):
         prediction = torch.zeros(1, 3, 2, requires_grad=True)
         target = torch.tensor([[[1.0, 3.0], [5.0, 7.0], [100.0, 100.0]]])

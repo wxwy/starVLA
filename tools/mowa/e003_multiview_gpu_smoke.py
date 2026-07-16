@@ -153,7 +153,9 @@ def main() -> None:
             optimizer.zero_grad(set_to_none=True)
             output = model(samples)
             action_loss = output["action_loss"].mean()
-            future_loss = output["loss_future_total"]
+            future_loss = output["mowa_future_latent_prior_loss"]
+            latent_loss = output["loss_future_total"]
+            done_loss = output["loss_done"]
             loss = action_loss + future_loss
             if not torch.isfinite(loss):
                 raise FloatingPointError(f"Non-finite loss at step {step}: {loss}.")
@@ -162,7 +164,8 @@ def main() -> None:
             torch.cuda.synchronize()
             progress.set_postfix(
                 loss=f"{float(loss.detach()):.4f}",
-                future=f"{float(future_loss.detach()):.4f}",
+                latent=f"{float(latent_loss.detach()):.4f}",
+                done=f"{float(done_loss.detach()):.4f}",
                 action=f"{float(action_loss.detach()):.4f}",
                 step_s=f"{time.perf_counter() - step_start:.2f}",
                 peak_gib=f"{_memory_gib(torch.cuda.max_memory_allocated()):.2f}",

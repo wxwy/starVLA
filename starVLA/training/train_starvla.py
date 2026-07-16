@@ -1930,6 +1930,8 @@ class VLATrainer(TrainerUtils):
                         "loss_future_main",
                         "loss_future_wrist",
                         "loss_future_total",
+                        "loss_done",
+                        "loss_multiview_total",
                         "cross_view_gate_mean",
                         "cross_view_output_norm",
                         "main_future_pred_norm",
@@ -1939,7 +1941,6 @@ class VLATrainer(TrainerUtils):
                         if value is not None:
                             multiview_metrics[name] = float(value.detach().float().item())
                     multiview_metrics["loss_action"] = float(action_loss.detach().float().item())
-                    multiview_metrics["loss_total"] = float(total_loss.detach().float().item())
                     for layer, value in output_dict.get("cross_view_gate_by_layer", {}).items():
                         multiview_metrics[f"cross_view_gate/layer_{layer}"] = float(
                             value.detach().float().item()
@@ -1952,6 +1953,8 @@ class VLATrainer(TrainerUtils):
                         mowa_future_latent_prior_loss
                         * float(getattr(self.config.trainer.loss_scale, "mowa_future_latent_prior", 1.0))
                     )
+                if multiview_metrics:
+                    multiview_metrics["loss_total"] = float(total_loss.detach().float().item())
 
             action_loss_item = action_loss.item()
             if not hasattr(self, "_loss_accum"):

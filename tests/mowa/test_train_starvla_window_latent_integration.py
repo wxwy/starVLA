@@ -295,6 +295,7 @@ class TrainStarVLAWindowLatentIntegrationTest(unittest.TestCase):
             self.assertEqual(tuple(current.shape), (self._LATENT_DIM,))
             self.assertEqual(tuple(future.shape), (self._LATENT_DIM,))
             self.assertEqual(tuple(history.shape), (self._HISTORY_STEPS, self._LATENT_DIM))
+            self.assertNotIn("mowa_action_valid_mask", sample)
 
     def test_spatial_latent_store_returns_visual_latent(self):
         with tempfile.TemporaryDirectory() as tmpdir:

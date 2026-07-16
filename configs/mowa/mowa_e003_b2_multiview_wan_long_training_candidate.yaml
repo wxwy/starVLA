@@ -106,6 +106,8 @@ framework:
       view_embedding: true
       dynamic_wrist_pose_embedding: false
       debug_mode: normal
+      inference_future_steps: 8
+      inference_flow_steps: 4
     cross_view:
       enabled: true
       mode: per_timestep
@@ -127,6 +129,9 @@ framework:
       mode: learnable_queries
       num_queries: 8
       num_heads: 8
+    done_head:
+      hidden_dim: 512
+      loss_weight: 1.0
 
 datasets:
   vla_data:

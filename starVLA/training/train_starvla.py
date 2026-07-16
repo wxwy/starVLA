@@ -208,10 +208,14 @@ def _parse_shard_size_to_bytes(raw_size) -> int:
     raise ValueError(f"Unsupported checkpoint shard size: {raw_size}")
 
 
-def _iter_model_state_tensors(model):
+def _iter_model_state_tensors(model, *, save_frozen_backbone: bool):
     for name, param in model.named_parameters():
+        if not save_frozen_backbone and name.startswith("backbone."):
+            continue
         yield name, param
     for name, buffer in model.named_buffers():
+        if not save_frozen_backbone and name.startswith("backbone."):
+            continue
         yield name, buffer
 
 
@@ -219,7 +223,14 @@ def _tensor_num_bytes(tensor: torch.Tensor) -> int:
     return tensor.numel() * tensor.element_size()
 
 
-def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str, max_shard_size) -> None:
+def _streaming_save_model_shards(
+    model,
+    checkpoint_path: Path,
+    save_format: str,
+    max_shard_size,
+    *,
+    save_frozen_backbone: bool,
+) -> None:
     checkpoint_path.mkdir(parents=True, exist_ok=True)
     max_shard_bytes = _parse_shard_size_to_bytes(max_shard_size)
     shard_entries = []
@@ -261,7 +272,10 @@ def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str,
 
     index_name = None
     bare_model = model
-    for name, tensor in _iter_model_state_tensors(bare_model):
+    for name, tensor in _iter_model_state_tensors(
+        bare_model,
+        save_frozen_backbone=save_frozen_backbone,
+    ):
         cpu_tensor = tensor.detach().to("cpu", copy=True).contiguous()
         tensor_bytes = _tensor_num_bytes(cpu_tensor)
 
@@ -385,6 +399,18 @@ def _list_complete_checkpoint_entries(checkpoint_dir: Path):
     return checkpoint_entries
 
 
+def _should_auto_resume_latest_complete(
+    resume_policy: str | None,
+    is_resume: bool,
+    latest_checkpoint: str | Path | None,
+) -> bool:
+    return (
+        not is_resume
+        and str(resume_policy or "").strip().lower() == "resume_latest_complete_only"
+        and latest_checkpoint is not None
+    )
+
+
 def _copy_path_for_stage(src_path: Path, dst_path: Path):
     if src_path.is_dir():
         shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
@@ -422,6 +448,38 @@ def _prune_checkpoint_entries_for_stage(checkpoint_dir: Path, keep_count: int, e
     keep_names = {entry["path"].name for entry in complete_entries[-keep_count:]} if keep_count > 0 else set()
     keep_names.update(extra_keep_names)
     _remove_other_checkpoint_entries_for_stage(checkpoint_dir, keep_names)
+
+
+def _apply_checkpoint_retention_policy(
+    checkpoint_dir: Path,
+    *,
+    permanent_steps: set[int],
+    keep_latest_count: int,
+    strip_optimizer_from_non_latest: bool,
+):
+    """保留永久里程碑和最近 checkpoint，并可精简旧里程碑的 optimizer 状态。"""
+    complete_entries = _list_complete_checkpoint_entries(checkpoint_dir)
+    keep_latest_count = max(int(keep_latest_count), 0)
+    latest_names = {
+        entry["path"].name for entry in complete_entries[-keep_latest_count:]
+    } if keep_latest_count else set()
+    permanent_names = {
+        entry["path"].name for entry in complete_entries if entry["step"] in permanent_steps
+    }
+    keep_names = latest_names | permanent_names
+
+    for entry in complete_entries:
+        checkpoint_path = entry["path"]
+        if checkpoint_path.name not in keep_names:
+            shutil.rmtree(checkpoint_path, ignore_errors=True)
+            continue
+        if (
+            strip_optimizer_from_non_latest
+            and checkpoint_path.name in permanent_names
+            and checkpoint_path.name not in latest_names
+        ):
+            for optimizer_path in checkpoint_path.glob("optimizer_rank_*.pt"):
+                optimizer_path.unlink(missing_ok=True)
 
 
 def _copy_helper_artifacts_for_stage(src_dir: Path, dst_dir: Path, helper_artifact_names: tuple[str, ...]):
@@ -1219,7 +1277,17 @@ class VLATrainer(TrainerUtils):
         self.save_with_training_state = getattr(self.config.trainer, "save_with_training_state", False)
         self.save_checkpoint_as_directory = getattr(self.config.trainer, "save_checkpoint_as_directory", True)
         self.checkpoint_max_shard_size = getattr(self.config.trainer, "checkpoint_max_shard_size", "5GB")
+        self.save_frozen_backbone = bool(getattr(self.config.trainer, "save_frozen_backbone", False))
         self.local_checkpoint_keep_count = max(int(getattr(self.config.trainer, "local_checkpoint_keep_count", 1)), 1)
+        self.checkpoint_permanent_steps = {
+            int(step) for step in getattr(self.config.trainer, "checkpoint_permanent_steps", [])
+        }
+        self.checkpoint_keep_latest_count = max(
+            int(getattr(self.config.trainer, "checkpoint_keep_latest_count", 0)), 0
+        )
+        self.strip_optimizer_from_non_latest_checkpoints = bool(
+            getattr(self.config.trainer, "strip_optimizer_from_non_latest_checkpoints", False)
+        )
         self.save_universal_checkpoint = getattr(self.config.trainer, "save_universal_checkpoint", False)
         self.checkpoint_format = self._resolve_checkpoint_format()
 
@@ -1338,6 +1406,14 @@ class VLATrainer(TrainerUtils):
 
         pretrained_checkpoint = getattr(self.config.trainer, "pretrained_checkpoint", None)
         is_resume = getattr(self.config.trainer, "is_resume", False)
+        resume_policy = str(getattr(self.config.trainer, "resume_policy", "")).strip().lower()
+        latest_checkpoint, _ = self._get_latest_checkpoint(self.checkpoint_dir)
+        if _should_auto_resume_latest_complete(resume_policy, is_resume, latest_checkpoint):
+            is_resume = True
+            logger.info(
+                "resume_policy=resume_latest_complete_only 找到完整 checkpoint，"
+                f"自动恢复: {latest_checkpoint}"
+            )
         self.resume_from_checkpoint = pretrained_checkpoint
 
         if is_resume:
@@ -1672,6 +1748,13 @@ class VLATrainer(TrainerUtils):
         if self.accelerator.is_main_process:
             self._append_summary_entry({"steps": self.completed_steps})
             self._sync_accessed_config_snapshots()
+            if self.checkpoint_permanent_steps or self.checkpoint_keep_latest_count:
+                _apply_checkpoint_retention_policy(
+                    self.local_checkpoint_dir,
+                    permanent_steps=self.checkpoint_permanent_steps,
+                    keep_latest_count=self.checkpoint_keep_latest_count,
+                    strip_optimizer_from_non_latest=self.strip_optimizer_from_non_latest_checkpoints,
+                )
             self.accelerator.print(f"✅ Checkpoint saved at {checkpoint_path}")
             self._enqueue_checkpoint_sync(checkpoint_path)
 
@@ -1930,6 +2013,8 @@ class VLATrainer(TrainerUtils):
                         "loss_future_main",
                         "loss_future_wrist",
                         "loss_future_total",
+                        "loss_done",
+                        "loss_multiview_total",
                         "cross_view_gate_mean",
                         "cross_view_output_norm",
                         "main_future_pred_norm",
@@ -1939,7 +2024,6 @@ class VLATrainer(TrainerUtils):
                         if value is not None:
                             multiview_metrics[name] = float(value.detach().float().item())
                     multiview_metrics["loss_action"] = float(action_loss.detach().float().item())
-                    multiview_metrics["loss_total"] = float(total_loss.detach().float().item())
                     for layer, value in output_dict.get("cross_view_gate_by_layer", {}).items():
                         multiview_metrics[f"cross_view_gate/layer_{layer}"] = float(
                             value.detach().float().item()
@@ -1952,6 +2036,8 @@ class VLATrainer(TrainerUtils):
                         mowa_future_latent_prior_loss
                         * float(getattr(self.config.trainer.loss_scale, "mowa_future_latent_prior", 1.0))
                     )
+                if multiview_metrics:
+                    multiview_metrics["loss_total"] = float(total_loss.detach().float().item())
 
             action_loss_item = action_loss.item()
             if not hasattr(self, "_loss_accum"):
@@ -2193,7 +2279,13 @@ class VLATrainer(TrainerUtils):
         checkpoint_path.mkdir(parents=True, exist_ok=True)
         if self.accelerator.is_main_process:
             bare_model = self.accelerator.unwrap_model(self.model)
-            _streaming_save_model_shards(bare_model, checkpoint_path, save_format, self.checkpoint_max_shard_size)
+            _streaming_save_model_shards(
+                bare_model,
+                checkpoint_path,
+                save_format,
+                self.checkpoint_max_shard_size,
+                save_frozen_backbone=self.save_frozen_backbone,
+            )
             gc.collect()
 
             scheduler_state = self.lr_scheduler.state_dict()
@@ -2210,6 +2302,8 @@ class VLATrainer(TrainerUtils):
                 "checkpoint_type": "lightweight_training",
                 "optimizer_format": "rank_sharded",
                 "optimizer_world_size": self.accelerator.num_processes,
+                "save_frozen_backbone": self.save_frozen_backbone,
+                "omitted_model_state_prefixes": [] if self.save_frozen_backbone else ["backbone."],
             }
             with open(checkpoint_path / "trainer_state.json", "w", encoding="utf-8") as f:
                 json.dump(trainer_state, f, ensure_ascii=False, indent=2)

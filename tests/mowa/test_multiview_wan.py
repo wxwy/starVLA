@@ -11,9 +11,10 @@ import torch
 from omegaconf import OmegaConf
 
 from starVLA.model.framework.WM4A.WanPI import Wan_PI, _prepare_action_state, _require_finite_tensor
-from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import MLP
+from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import MLP, masked_action_flow_loss
 from starVLA.model.modules.mowa.multiview_wan import (
     CrossViewAttentionAdapter,
+    MultiViewDoneHead,
     MultiViewFutureFusion,
     MultiViewPatchGrid,
     flatten_view_batch,
@@ -24,6 +25,37 @@ from starVLA.model.modules.mowa.multiview_wan import (
 
 
 class MultiViewWanTest(unittest.TestCase):
+    def test_done_head_fuses_views_per_timestep_and_backpropagates(self):
+        torch.manual_seed(11)
+        head = MultiViewDoneHead(hidden_dim=8, mlp_hidden_dim=4)
+        future_hidden = torch.randn(2, 2, 3, 5, 8, requires_grad=True)
+        logits = head(future_hidden)
+        target = torch.tensor([[0.0, 1.0, 1.0], [0.0, 0.0, 1.0]])
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(logits, target)
+        loss.backward()
+
+        self.assertEqual(tuple(logits.shape), (2, 3))
+        self.assertGreater(float(head.mlp[0].weight.grad.norm()), 0.0)
+        self.assertGreater(float(head.view_embeddings.weight.grad.norm()), 0.0)
+        self.assertGreater(float(future_hidden.grad.norm()), 0.0)
+
+    def test_action_flow_loss_excludes_terminal_padding(self):
+        prediction = torch.zeros(1, 3, 2, requires_grad=True)
+        target = torch.tensor([[[1.0, 3.0], [5.0, 7.0], [100.0, 100.0]]])
+        mask = torch.tensor([[True, True, False]])
+        loss = masked_action_flow_loss(prediction, target, mask)
+        loss.backward()
+
+        self.assertTrue(torch.allclose(loss, torch.tensor(21.0)))
+        self.assertEqual(float(prediction.grad[:, 2].abs().sum()), 0.0)
+        terminal_prediction = prediction.detach().clone().requires_grad_(True)
+        terminal_loss = masked_action_flow_loss(
+            terminal_prediction, target, torch.zeros_like(mask)
+        )
+        terminal_loss.backward()
+        self.assertEqual(float(terminal_loss), 0.0)
+        self.assertEqual(float(terminal_prediction.grad.abs().sum()), 0.0)
+
     def test_mowa_first_batch_example_contract_covers_all_inputs(self):
         owner = SimpleNamespace(
             mowa_multiview_enabled=True,
@@ -298,6 +330,130 @@ class MultiViewWanTest(unittest.TestCase):
         self.assertEqual(tuple(output.shape), (3, 8, 16))
         self.assertGreater(float(fusion.queries.grad.norm()), 0.0)
         self.assertTrue(torch.equal(restored.queries, fusion.queries))
+
+    def test_predict_action_uses_dual_view_flow_without_future_targets(self):
+        class FakeBackbone:
+            def __init__(self, owner):
+                self.owner = owner
+                self.transformer = torch.nn.Linear(1, 1, bias=False)
+                self.transformer.config = SimpleNamespace(patch_size=(1, 1, 1))
+
+            def build_inputs(self, *, visual_latents, text_embeds, text_attention_mask, **kwargs):
+                batch_size, _, time, height, width = visual_latents.shape
+                return {
+                    "hidden_states": visual_latents,
+                    "timestep": torch.zeros(batch_size, time * height * width, dtype=torch.long),
+                    "encoder_hidden_states": text_embeds,
+                    "encoder_attention_mask": text_attention_mask,
+                }
+
+            def __call__(self, **kwargs):
+                hidden_states = kwargs["hidden_states"]
+                hidden = hidden_states.permute(0, 2, 3, 4, 1).reshape(
+                    hidden_states.shape[0], -1, hidden_states.shape[1]
+                )
+                self.owner._all_hidden_states[:] = [hidden]
+                return SimpleNamespace(sample=torch.zeros_like(hidden_states))
+
+        class FakeActionModel:
+            state_encoder = object()
+
+            @staticmethod
+            def predict_action(vl_embs_list, state):
+                return torch.zeros(vl_embs_list[-1].shape[0], 3, 2, device=vl_embs_list[-1].device)
+
+        class FakeFusion:
+            @staticmethod
+            def __call__(future_hidden):
+                return future_hidden.mean(dim=1)
+
+        model = Wan_PI.__new__(Wan_PI)
+        torch.nn.Module.__init__(model)
+        model.mowa_multiview_enabled = True
+        model.mowa_validate_data_flow = True
+        model.mowa_validation_steps = 2
+        model._mowa_predict_validation_count = 0
+        model._mowa_expected_num_blocks = 1
+        model._mowa_multiview_grid = None
+        model._all_hidden_states = []
+        model.mowa_multiview_debug_mode = "normal"
+        model.cross_view_adapters = torch.nn.ModuleDict()
+        model.wm_projector = torch.nn.Identity()
+        model.mowa_action_view_embeddings = torch.nn.Embedding(2, 4)
+        model.mowa_future_fusion = FakeFusion()
+        model.mowa_done_head = MultiViewDoneHead(4, mlp_hidden_dim=4)
+        model.action_model = FakeActionModel()
+        model.action_horizon = 3
+        model.config = SimpleNamespace(
+            framework=SimpleNamespace(
+                action_model=SimpleNamespace(action_dim=2, state_dim=3),
+                mowa=SimpleNamespace(
+                    multi_view=SimpleNamespace(inference_future_steps=2, inference_flow_steps=2)
+                ),
+            )
+        )
+        model.backbone = FakeBackbone(model)
+        examples = [{
+            "state": torch.zeros(1, 3),
+            "text_embeds": torch.zeros(3, 4),
+            "text_attention_mask": torch.ones(3),
+            "mowa_multi_view_history_latents": torch.zeros(2, 0, 4, 2, 2),
+            "mowa_multi_view_current_latents": torch.zeros(2, 4, 2, 2),
+        }]
+
+        output = model.predict_action(examples)
+
+        self.assertEqual(output["normalized_actions"].shape, (1, 3, 2))
+        self.assertEqual(tuple(output["mowa_predicted_future_latents"].shape), (1, 2, 4, 2, 2, 2))
+        self.assertEqual(tuple(output["mowa_future_done_logits"].shape), (1, 2))
+        self.assertEqual(model._mowa_predict_validation_count, 1)
+
+    def test_online_raw_views_convert_to_regular_multiview_latents(self):
+        class FakeBackbone:
+            def __init__(self):
+                self.vae_ready = False
+
+            def ensure_vae_for_inference(self):
+                self.vae_ready = True
+
+            @staticmethod
+            def _encode_images_vae(images, num_frames):
+                batch_size = len(images)
+                regular_steps = (num_frames - 1) // 4
+                values = torch.arange(regular_steps + 1, dtype=torch.float32)
+                return values[None, None, :, None, None].expand(batch_size, 4, -1, 2, 2).clone()
+
+        owner = SimpleNamespace(
+            config=SimpleNamespace(latent_cache=SimpleNamespace(history_window_steps=1)),
+            backbone=FakeBackbone(),
+        )
+        frames = [object() for _ in range(9)]
+        output = Wan_PI._populate_mowa_inference_visual_latents(
+            owner,
+            [{"mowa_multi_view_images": [frames, frames]}],
+        )
+
+        self.assertTrue(owner.backbone.vae_ready)
+        self.assertEqual(tuple(output[0]["mowa_multi_view_history_latents"].shape), (2, 1, 4, 2, 2))
+        self.assertEqual(tuple(output[0]["mowa_multi_view_current_latents"].shape), (2, 4, 2, 2))
+        self.assertTrue(torch.equal(output[0]["mowa_multi_view_history_latents"][:, 0], torch.ones(2, 4, 2, 2)))
+        self.assertTrue(torch.equal(output[0]["mowa_multi_view_current_latents"], torch.full((2, 4, 2, 2), 2.0)))
+
+    def test_strict_checkpoint_load_ignores_wan_runtime_buffers(self):
+        from starVLA.model.framework.share_tools import _filter_strict_key_mismatches
+
+        missing, unexpected = _filter_strict_key_mismatches(
+            {"cross_view_adapters.20.gate"},
+            {
+                "cross_view_adapters.20.gate",
+                "cross_view_adapters.20.last_output_norm",
+                "cross_view_adapters.20.last_grad_norm",
+                "backbone.transformer.rope.freqs_cos",
+                "backbone.transformer.rope.freqs_sin",
+            },
+        )
+        self.assertEqual(missing, [])
+        self.assertEqual(unexpected, [])
 
 
 if __name__ == "__main__":

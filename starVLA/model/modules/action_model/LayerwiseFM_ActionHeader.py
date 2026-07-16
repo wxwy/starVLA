@@ -58,6 +58,30 @@ class MLP(nn.Module):
         return self.layer2(F.relu(self.layer1(x)))
 
 
+def masked_action_flow_loss(
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    action_valid_mask: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """仅对有效原始动作 timestep 计算 flow-matching MSE。"""
+
+    per_timestep_loss = (prediction - target).square().mean(dim=-1)
+    if action_valid_mask is None:
+        return per_timestep_loss.mean()
+    if action_valid_mask.shape != per_timestep_loss.shape:
+        raise ValueError(
+            "action_valid_mask must have shape [B,action_horizon], "
+            f"got {tuple(action_valid_mask.shape)} for {tuple(per_timestep_loss.shape)}."
+        )
+    valid = action_valid_mask.to(device=prediction.device, dtype=per_timestep_loss.dtype)
+    valid_count = valid.sum()
+    if valid_count <= 0:
+        # terminal anchor 的 future action 可以全部是 padding；保留可反传的
+        # 零值，交由 future/done supervision 负责该样本的终止学习。
+        return prediction.sum() * 0.0
+    return (per_timestep_loss * valid).sum() / valid_count
+
+
 class ActionEncoder(nn.Module):
     def __init__(self, action_dim, hidden_size=1024):
         super().__init__()
@@ -291,6 +315,7 @@ class LayerwiseFlowmatchingActionHead(nn.Module):
         actions: torch.Tensor,
         state: torch.Tensor = None,
         encoder_attention_mask=None,
+        action_valid_mask: torch.Tensor | None = None,
     ):
         """
         vl_embs: list of torch.Tensor, each shape (B, seq_length, feature_dim)
@@ -347,7 +372,7 @@ class LayerwiseFlowmatchingActionHead(nn.Module):
         pred_actions = pred[:, -actions.shape[1] :]
 
         # Slice out only the action portion of pred and target.
-        loss = ((pred_actions - velocity) ** 2).mean()
+        loss = masked_action_flow_loss(pred_actions, velocity, action_valid_mask)
         return loss
 
     @torch.no_grad()

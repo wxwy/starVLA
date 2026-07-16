@@ -157,10 +157,42 @@ class MultiViewFutureFusion(nn.Module):
             )
         batch_size = future_hidden.shape[0]
         key_value = future_hidden.reshape(batch_size, -1, future_hidden.shape[-1])
-        key_value = self.norm(key_value.float()).to(dtype=future_hidden.dtype)
+        key_value = self.norm(key_value.to(dtype=self.norm.weight.dtype)).to(dtype=future_hidden.dtype)
         queries = self.queries.expand(batch_size, -1, -1).to(dtype=future_hidden.dtype)
         fused, _ = self.attention(queries, key_value, key_value, need_weights=False)
         return fused
+
+
+class MultiViewDoneHead(nn.Module):
+    """从同一未来 timestep 的主/腕视角 Wan hidden 预测共享终止概率。"""
+
+    def __init__(self, hidden_dim: int, mlp_hidden_dim: int = 512) -> None:
+        super().__init__()
+        self.view_embeddings = nn.Embedding(2, hidden_dim)
+        self.norm = nn.LayerNorm(hidden_dim * 2)
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_dim * 2, mlp_hidden_dim),
+            nn.GELU(),
+            nn.Linear(mlp_hidden_dim, 1),
+        )
+        nn.init.normal_(self.view_embeddings.weight, std=1e-3)
+
+    def forward(self, future_hidden: torch.Tensor) -> torch.Tensor:
+        """Args: future_hidden [B,V=2,T_future,S_patch,D]."""
+
+        if future_hidden.dim() != 5 or future_hidden.shape[1] != 2:
+            raise ValueError(
+                "future_hidden must be [B,V=2,T_future,S_patch,D], "
+                f"got {tuple(future_hidden.shape)}."
+            )
+        spatial_pooled = future_hidden.mean(dim=3)
+        view_ids = torch.arange(2, device=future_hidden.device)
+        view_features = spatial_pooled + self.view_embeddings(view_ids)[None, :, None, :].to(
+            dtype=future_hidden.dtype
+        )
+        fused = torch.cat((view_features[:, 0], view_features[:, 1]), dim=-1)
+        fused = self.norm(fused.to(dtype=self.norm.weight.dtype))
+        return self.mlp(fused).squeeze(-1)
 
 
 def masked_future_flow_loss(

@@ -45,6 +45,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--validate-data-flow", action="store_true")
     parser.add_argument("--validation-steps", type=int, default=2)
+    parser.add_argument(
+        "--run-inference",
+        action="store_true",
+        help="训练 smoke 后用同一批 history/current latent 执行一次双视角 future-flow 推理。",
+    )
+    parser.add_argument(
+        "--run-online-inference",
+        action="store_true",
+        help="以原始双视角帧历史触发在线 Wan VAE/text cache 推理。",
+    )
     return parser.parse_args()
 
 
@@ -91,6 +101,10 @@ def main() -> None:
     print(
         f"  steps: {args.steps} | batch_size: {args.batch_size} | "
         f"optimizer: {args.optimizer} | device: {args.device}",
+        flush=True,
+    )
+    print(
+        f"  run_inference: {args.run_inference} | run_online_inference: {args.run_online_inference}",
         flush=True,
     )
 
@@ -153,7 +167,9 @@ def main() -> None:
             optimizer.zero_grad(set_to_none=True)
             output = model(samples)
             action_loss = output["action_loss"].mean()
-            future_loss = output["loss_future_total"]
+            future_loss = output["mowa_future_latent_prior_loss"]
+            latent_loss = output["loss_future_total"]
+            done_loss = output["loss_done"]
             loss = action_loss + future_loss
             if not torch.isfinite(loss):
                 raise FloatingPointError(f"Non-finite loss at step {step}: {loss}.")
@@ -162,7 +178,8 @@ def main() -> None:
             torch.cuda.synchronize()
             progress.set_postfix(
                 loss=f"{float(loss.detach()):.4f}",
-                future=f"{float(future_loss.detach()):.4f}",
+                latent=f"{float(latent_loss.detach()):.4f}",
+                done=f"{float(done_loss.detach()):.4f}",
                 action=f"{float(action_loss.detach()):.4f}",
                 step_s=f"{time.perf_counter() - step_start:.2f}",
                 peak_gib=f"{_memory_gib(torch.cuda.max_memory_allocated()):.2f}",
@@ -181,6 +198,64 @@ def main() -> None:
         f"  peak_reserved: {_memory_gib(torch.cuda.max_memory_reserved()):.3f} GiB",
         flush=True,
     )
+    if args.run_inference:
+        # 明确删除训练专用 future GT/action, 验证 predict_action 不会静默读取它们。
+        inference_samples = [
+            {
+                key: value
+                for key, value in item.items()
+                if key not in {"mowa_multi_view_future_latents", "action", "mowa_future_done_target"}
+            }
+            for item in samples
+        ]
+        model.eval()
+        inference_start = time.perf_counter()
+        prediction = model.predict_action(inference_samples)
+        torch.cuda.synchronize()
+        print("[smoke] dual-view inference finished", flush=True)
+        print(
+            f"  actions: {tuple(prediction['normalized_actions'].shape)} | "
+            f"future_latents: {tuple(prediction['mowa_predicted_future_latents'].shape)} | "
+            f"done_logits: {tuple(prediction['mowa_future_done_logits'].shape)} | "
+            f"flow_steps: {prediction['mowa_future_flow_steps']} | "
+            f"elapsed: {time.perf_counter() - inference_start:.2f}s",
+            flush=True,
+        )
+    if args.run_online_inference:
+        if args.history_steps != 0:
+            raise ValueError("--run-online-inference currently requires --history-steps 0.")
+        online_samples = []
+        raw_frames = [np.zeros((256, 256, 3), dtype=np.uint8) for _ in range(5)]
+        for item in samples:
+            online_samples.append(
+                {
+                    key: value
+                    for key, value in item.items()
+                    if key
+                    not in {
+                        "mowa_multi_view_history_latents",
+                        "mowa_multi_view_current_latents",
+                        "mowa_multi_view_future_latents",
+                        "mowa_future_done_target",
+                        "text_embeds",
+                        "text_attention_mask",
+                        "action",
+                    }
+                }
+            )
+            online_samples[-1]["mowa_multi_view_images"] = [list(raw_frames), list(raw_frames)]
+        model.eval()
+        online_start = time.perf_counter()
+        prediction = model.predict_action(online_samples)
+        torch.cuda.synchronize()
+        print("[smoke] online dual-view inference finished", flush=True)
+        print(
+            f"  actions: {tuple(prediction['normalized_actions'].shape)} | "
+            f"future_latents: {tuple(prediction['mowa_predicted_future_latents'].shape)} | "
+            f"done_logits: {tuple(prediction['mowa_future_done_logits'].shape)} | "
+            f"elapsed: {time.perf_counter() - online_start:.2f}s",
+            flush=True,
+        )
 
 
 if __name__ == "__main__":

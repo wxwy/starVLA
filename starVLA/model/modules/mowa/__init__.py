@@ -27,6 +27,7 @@ from .hlcgci import (
 )
 from .multiview_wan import (
     CrossViewAttentionAdapter,
+    MultiViewDoneHead,
     MultiViewFutureFusion,
     MultiViewPatchGrid,
     flatten_view_batch,
@@ -92,6 +93,7 @@ __all__ = [
     "MoWAHLCGCIConfig",
     "MoWAHLCGCIOutput",
     "CrossViewAttentionAdapter",
+    "MultiViewDoneHead",
     "MultiViewFutureFusion",
     "MultiViewPatchGrid",
     "append_layerwise_bridge_tokens",

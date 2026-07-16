@@ -52,6 +52,7 @@ class PolicyWarper:
         adaptive_ensemble_alpha: float = 0.1,
         use_ddim: bool = True,
         num_ddim_steps: int = 10,
+        wan_history_frames: int = 5,
     ) -> None:
         self.client = WebsocketClientPolicy(host, port)
         self.unnorm_key = unnorm_key
@@ -59,8 +60,12 @@ class PolicyWarper:
         self.n_action_steps = n_action_steps
         self.use_ddim = use_ddim
         self.num_ddim_steps = num_ddim_steps
+        if wan_history_frames < 5 or (wan_history_frames - 1) % 4:
+            raise ValueError("wan_history_frames must be 1 + 4k and at least 5.")
+        self.wan_history_frames = wan_history_frames
 
         self.task_description = None
+        self._wan_view_histories = None
         self.action_ensemble = action_ensemble
         self.action_ensembler = (
             AdaptiveEnsembler(action_ensemble_horizon, adaptive_ensemble_alpha)
@@ -76,6 +81,7 @@ class PolicyWarper:
     # ------------------------------------------------------------------
     def reset(self, task_description) -> None:
         self.task_description = task_description
+        self._wan_view_histories = None
         if self.action_ensemble:
             self.action_ensembler.reset()
 
@@ -89,10 +95,31 @@ class PolicyWarper:
         if instructions[0] != self.task_description:
             self.reset(instructions[0])
 
-        # 2) image — the tabletop multi-view env returns (B, n_obs, H, W, 3); we use the
-        # left agentview (the same one used during training).
-        view = observations["video.robot0_agentview_left"]  # (B, 1, H, W, 3)
-        images = [[self._resize_image(img) for img in sample] for sample in view]
+        # 2) image — 保持与 E003 训练一致的 main/wrist 同步帧历史。
+        main_view = observations["video.robot0_agentview_left"]
+        wrist_view = observations["video.robot0_eye_in_hand"]
+        if len(main_view) != len(wrist_view):
+            raise ValueError("RoboCasa main/wrist batch sizes are not synchronized.")
+        if self._wan_view_histories is None or len(self._wan_view_histories) != len(main_view):
+            self._wan_view_histories = [
+                [deque(maxlen=self.wan_history_frames), deque(maxlen=self.wan_history_frames)]
+                for _ in range(len(main_view))
+            ]
+        online_views = []
+        for batch_index, (main_frames, wrist_frames) in enumerate(zip(main_view, wrist_view, strict=True)):
+            if len(main_frames) != len(wrist_frames):
+                raise ValueError("RoboCasa main/wrist frame counts are not synchronized.")
+            for main_frame, wrist_frame in zip(main_frames, wrist_frames, strict=True):
+                # Wan VAE 在 server 侧以统一的 256x256 预处理编码，不能先按 VLM 的 224 尺寸缩放。
+                self._wan_view_histories[batch_index][0].append(main_frame)
+                self._wan_view_histories[batch_index][1].append(wrist_frame)
+            per_view = []
+            for history in self._wan_view_histories[batch_index]:
+                if not history:
+                    raise ValueError("RoboCasa returned an empty camera observation.")
+                padded = [history[0]] * (self.wan_history_frames - len(history)) + list(history)
+                per_view.append(padded)
+            online_views.append(per_view)
 
         # 3) state — concatenate parts in the same order as in training
         state_parts = [observations[k] for k in STATE_KEY_ORDER]  # each (B, 1, d)
@@ -100,10 +127,10 @@ class PolicyWarper:
         input_state = self._sin_cos_state(input_state)
 
         examples = []
-        for b in range(len(images)):
+        for b in range(len(online_views)):
             examples.append(
                 {
-                    "image": images[b],
+                    "mowa_multi_view_images": online_views[b],
                     "lang": instructions[b] if b < len(instructions) else instructions[0],
                     "state": input_state[b],
                 }
@@ -142,5 +169,3 @@ class PolicyWarper:
     def _sin_cos_state(state: np.ndarray) -> np.ndarray:
         """Match training-time StateActionSinCosTransform on the state."""
         return np.concatenate([np.sin(state), np.cos(state)], axis=-1)
-
-

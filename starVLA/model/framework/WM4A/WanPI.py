@@ -43,6 +43,7 @@ from starVLA.model.framework.share_tools import merge_framework_config, populate
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import LayerwiseFlowmatchingActionHead, get_action_model
 from starVLA.model.modules.mowa import (
     CrossViewAttentionAdapter,
+    MultiViewDoneHead,
     MoWAFutureLatentPrior,
     MoWAFutureLatentPriorConfig,
     MoWAHLCGCI,
@@ -222,6 +223,7 @@ class Wan_PI(baseframework):
             raise ValueError("framework.mowa.validation_steps must be positive.")
         self._mowa_train_validation_count = 0
         self._mowa_predict_validation_count = 0
+        self._mowa_instruction_text_cache = None
 
         # Register hooks for ALL transformer blocks
         self._all_hidden_states = []
@@ -241,6 +243,7 @@ class Wan_PI(baseframework):
             "mowa_view_embeddings.",
             "mowa_action_view_embeddings.",
             "mowa_future_fusion.",
+            "mowa_done_head.",
         )
         non_multiview_missing = [
             key for key in result.missing_keys if not key.startswith(multiview_prefixes)
@@ -352,6 +355,12 @@ class Wan_PI(baseframework):
             int(getattr(action_fusion_cfg, "num_heads", 8)),
             int(getattr(action_fusion_cfg, "num_queries", 8)),
         )
+        done_cfg = getattr(mowa_cfg, "done_head", None)
+        self.mowa_done_head = MultiViewDoneHead(
+            wm_hidden,
+            int(getattr(done_cfg, "hidden_dim", 512)),
+        )
+        self.mowa_done_loss_weight = float(getattr(done_cfg, "loss_weight", 1.0))
         future_loss_cfg = getattr(mowa_cfg, "future_loss", None)
         self.mowa_future_main_weight = float(getattr(future_loss_cfg, "main_weight", 1.0))
         self.mowa_future_wrist_weight = float(getattr(future_loss_cfg, "wrist_weight", 1.0))
@@ -557,14 +566,8 @@ class Wan_PI(baseframework):
             "injection_policy": "append_history_tokens_to_each_layer_condition",
         }
 
-    def _build_wan_inputs(self, examples: List[dict]) -> dict:
-        """Prepare Wan2.2 build_inputs kwargs from examples.
-
-        Prefer cached text/visual latents when present; fall back to raw
-        instructions/images so the world model can encode on its own.
-        """
-        kwargs: dict = {}
-
+    def _build_wan_text_inputs(self, examples: List[dict]) -> dict:
+        """准备 Wan 文本条件, 供单视角与双视角路径复用。"""
         text_embeds = [example.get("text_embeds") for example in examples]
         text_attention_mask = [example.get("text_attention_mask") for example in examples]
         if all(t is not None for t in text_embeds) and all(m is not None for m in text_attention_mask):
@@ -577,10 +580,119 @@ class Wan_PI(baseframework):
                 text_embeds_tensor = text_embeds_tensor.squeeze(1)
             if text_attention_mask_tensor.dim() == 3 and text_attention_mask_tensor.shape[1] == 1:
                 text_attention_mask_tensor = text_attention_mask_tensor.squeeze(1)
-            kwargs["text_embeds"] = text_embeds_tensor
-            kwargs["text_attention_mask"] = text_attention_mask_tensor
+            return {
+                "text_embeds": text_embeds_tensor,
+                "text_attention_mask": text_attention_mask_tensor,
+            }
         else:
-            kwargs["instructions"] = [example["lang"] for example in examples]
+            return {"instructions": [example["lang"] for example in examples]}
+
+    def _populate_mowa_inference_text_cache(self, examples: List[dict]) -> List[dict]:
+        """在 Wan 使用 text cache 时，从预计算指令表补齐在线推理文本条件。"""
+        if all(
+            example.get("text_embeds") is not None and example.get("text_attention_mask") is not None
+            for example in examples
+        ):
+            return examples
+        if not getattr(self.backbone, "use_text_cache", False):
+            return examples
+        cache_path = getattr(getattr(self.config, "latent_cache", None), "instruction_text_latent", None)
+        if not cache_path:
+            raise ValueError(
+                "E003 online inference needs cached text embeddings but latent_cache.instruction_text_latent "
+                "is not configured."
+            )
+        if self._mowa_instruction_text_cache is None:
+            from starVLA.dataloader.mowa.instruction_text_latent_cache import MoWAInstructionTextLatentCache
+
+            self._mowa_instruction_text_cache = MoWAInstructionTextLatentCache(Path(cache_path))
+            logger.info(
+                "[E003 multi-view] loaded instruction text cache=%s entries=%d",
+                cache_path,
+                len(self._mowa_instruction_text_cache),
+            )
+        resolved = []
+        for index, example in enumerate(examples):
+            entry = self._mowa_instruction_text_cache.lookup(str(example.get("lang", "")))
+            if entry is None:
+                raise KeyError(
+                    "E003 online inference instruction is absent from the cached UMT5 table at "
+                    f"batch index {index}: {example.get('lang')!r}."
+                )
+            resolved.append(
+                {
+                    **example,
+                    "text_embeds": entry["text_embeds"],
+                    "text_attention_mask": entry["attention_mask"],
+                }
+            )
+        return resolved
+
+    def _populate_mowa_inference_visual_latents(self, examples: List[dict]) -> List[dict]:
+        """将在线双视角原始帧编码为与 episode cache 一致的 regular Wan latent。"""
+        if all(
+            example.get("mowa_multi_view_history_latents") is not None
+            and example.get("mowa_multi_view_current_latents") is not None
+            for example in examples
+        ):
+            return examples
+        raw_views = [example.get("mowa_multi_view_images") for example in examples]
+        if not all(raw_views):
+            raise ValueError(
+                "E003 multi-view inference requires cached history/current latents or "
+                "mowa_multi_view_images=[main_frames,wrist_frames]."
+            )
+        history_steps = int(getattr(getattr(self.config, "latent_cache", None), "history_window_steps", 0))
+        required_frames = 1 + 4 * (history_steps + 1)
+        for batch_index, views in enumerate(raw_views):
+            if not isinstance(views, (list, tuple)) or len(views) != 2:
+                raise ValueError(
+                    "mowa_multi_view_images must contain [main_frames,wrist_frames], got "
+                    f"batch index {batch_index}: {type(views).__name__}."
+                )
+            if any(not isinstance(frames, (list, tuple)) or len(frames) < required_frames for frames in views):
+                raise ValueError(
+                    f"E003 online inference needs at least {required_frames} synchronized raw frames per view "
+                    f"for history_steps={history_steps}."
+                )
+        if not hasattr(self.backbone, "ensure_vae_for_inference"):
+            raise RuntimeError("The configured Wan backbone does not support online VAE encoding.")
+        self.backbone.ensure_vae_for_inference()
+        encoded_by_view = []
+        for view_index in range(2):
+            view_batch = [list(views[view_index])[-required_frames:] for views in raw_views]
+            encoded = self.backbone._encode_images_vae(view_batch, num_frames=required_frames)
+            regular = encoded[:, :, 1:]
+            if regular.shape[2] != history_steps + 1:
+                raise ValueError(
+                    "Online Wan VAE output does not provide the required regular latent grid: "
+                    f"got {regular.shape[2]}, expected {history_steps + 1}."
+                )
+            encoded_by_view.append(regular)
+        paired = torch.stack(encoded_by_view, dim=1)
+        history = paired[:, :, :, :-1].permute(0, 1, 3, 2, 4, 5).cpu()
+        current = paired[:, :, :, -1].cpu()
+        return [
+            {
+                **example,
+                "mowa_multi_view_history_latents": history[index],
+                "mowa_multi_view_current_latents": current[index],
+            }
+            for index, example in enumerate(examples)
+        ]
+
+    def _prepare_mowa_multiview_inference_examples(self, examples: List[dict]) -> List[dict]:
+        """补齐在线可观测条件，不允许 future target/action 参与推理输入。"""
+        examples = self._populate_mowa_inference_visual_latents(examples)
+        return self._populate_mowa_inference_text_cache(examples)
+
+    def _build_wan_inputs(self, examples: List[dict]) -> dict:
+        """Prepare Wan2.2 build_inputs kwargs from examples.
+
+        Prefer cached text/visual latents when present; fall back to raw
+        instructions/images so the world model can encode on its own.
+        """
+        kwargs = self._build_wan_text_inputs(examples)
 
         visual_latents = [example.get("visual_latent") for example in examples]
         if all(v is not None for v in visual_latents):
@@ -641,7 +753,7 @@ class Wan_PI(baseframework):
         flow_target = torch.zeros_like(clean)
         flow_target[:, :, :, history_current_steps:] = noise - future
 
-        text_kwargs = self._build_wan_inputs(examples)
+        text_kwargs = self._build_wan_text_inputs(examples)
         text_embeds = text_kwargs.get("text_embeds")
         text_attention_mask = text_kwargs.get("text_attention_mask")
         if text_embeds is None or text_attention_mask is None:
@@ -688,6 +800,166 @@ class Wan_PI(baseframework):
             "future_token_start": future_token_start,
         }
 
+    def _build_multiview_inference_wan_inputs(
+        self,
+        examples: List[dict],
+        future_latents: torch.Tensor,
+        *,
+        flow_timestep: float,
+    ) -> tuple[dict, dict]:
+        """用已采样的双视角 future latent 构造一次 Wan 推理输入。
+
+        推理只消费 history/current 和当前 flow 状态, 绝不读取数据集的真实
+        future latent 或 future action。视角按 sample-major/view-minor 展平。
+        """
+        device = next(self.backbone.transformer.parameters()).device
+        history = self._build_mowa_latent_batch(
+            examples, "mowa_multi_view_history_latents", device=device, dtype=torch.bfloat16
+        )
+        current = self._build_mowa_latent_batch(
+            examples, "mowa_multi_view_current_latents", device=device, dtype=torch.bfloat16
+        )
+        if history is None or current is None:
+            raise ValueError("E003 multi-view inference requires synchronized history/current latent fields.")
+        if history.dim() != 6 or current.dim() != 5:
+            raise ValueError(
+                "Expected inference history [B,V,T,C,H,W] and current [B,V,C,H,W], got "
+                f"{tuple(history.shape)}, {tuple(current.shape)}."
+            )
+        if history.shape[:2] != current.shape[:2] or current.shape[1] != 2:
+            raise ValueError("Main/wrist inference batch pairing or view count mismatch.")
+        history = history.permute(0, 1, 3, 2, 4, 5)
+        current = current.unsqueeze(3)
+        if future_latents.shape[:3] != current.shape[:3] or future_latents.dim() != 6:
+            raise ValueError(
+                "Sampled future latents must be [B,V,C,T,H,W] and align with current, got "
+                f"{tuple(future_latents.shape)} for {tuple(current.shape)}."
+            )
+        if future_latents.shape[-2:] != current.shape[-2:]:
+            raise ValueError("Sampled future latent spatial shape does not match current latent.")
+        known = torch.cat((history, current), dim=3)
+        latent_input = torch.cat((known, future_latents), dim=3)
+        batch_size, num_views, _, total_time, height, width = latent_input.shape
+        p_t, p_h, p_w = self.backbone.transformer.config.patch_size
+        if total_time % p_t or height % p_h or width % p_w:
+            raise ValueError("E003 inference latent shape must be divisible by the Wan patch size.")
+        patch_grid = MultiViewPatchGrid(
+            batch_size=batch_size,
+            num_views=num_views,
+            time=total_time // p_t,
+            height=height // p_h,
+            width=width // p_w,
+        )
+        future_token_start = (known.shape[3] // p_t) * patch_grid.spatial_tokens
+        text_kwargs = self._build_wan_text_inputs(examples)
+        text_embeds = text_kwargs.get("text_embeds")
+        text_attention_mask = text_kwargs.get("text_attention_mask")
+        if text_embeds is None or text_attention_mask is None:
+            raise ValueError("E003 multi-view inference currently requires cached text embeddings.")
+        wm_inputs = self.backbone.build_inputs(
+            visual_latents=flatten_view_batch(latent_input),
+            visual_latents_normalized=True,
+            text_embeds=text_embeds.to(device=device).repeat_interleave(num_views, dim=0),
+            text_attention_mask=text_attention_mask.to(device=device).repeat_interleave(num_views, dim=0),
+        )
+        token_timestep = torch.zeros(
+            batch_size * num_views,
+            patch_grid.sequence_tokens,
+            device=device,
+            dtype=torch.long,
+        )
+        token_timestep[:, future_token_start:] = round(flow_timestep * 1000.0)
+        wm_inputs["timestep"] = token_timestep
+        return wm_inputs, {
+            "grid": patch_grid,
+            "history_current_steps": known.shape[3],
+            "future_steps": future_latents.shape[3],
+            "future_token_start": future_token_start,
+        }
+
+    def _project_wan_hidden_states(self, hidden_states: List[torch.Tensor]) -> List[torch.Tensor]:
+        """投影 Wan hidden，并兼容 fp32 训练与 bf16 服务加载。"""
+        projector_parameter = next(self.wm_projector.parameters(), None)
+        projector_dtype = projector_parameter.dtype if projector_parameter is not None else hidden_states[0].dtype
+        return [self.wm_projector(hidden.to(dtype=projector_dtype)) for hidden in hidden_states]
+
+    def _sample_multiview_future_latents(
+        self,
+        examples: List[dict],
+        *,
+        validate_data_flow: bool,
+    ) -> tuple[torch.Tensor, List[torch.Tensor], dict]:
+        """从独立双视角噪声反向积分 Wan flow, 并返回 clean future 条件。"""
+        multi_view_cfg = self.config.framework.mowa.multi_view
+        future_steps = int(getattr(multi_view_cfg, "inference_future_steps", 8))
+        flow_steps = int(getattr(multi_view_cfg, "inference_flow_steps", 4))
+        if future_steps <= 0 or flow_steps <= 0:
+            raise ValueError("E003 inference_future_steps and inference_flow_steps must be positive.")
+        device = next(self.backbone.transformer.parameters()).device
+        current = self._build_mowa_latent_batch(
+            examples, "mowa_multi_view_current_latents", device=device, dtype=torch.bfloat16
+        )
+        if current is None or current.dim() != 5 or current.shape[1] != 2:
+            raise ValueError("E003 multi-view inference requires current latents [B,V=2,C,H,W].")
+        future_latents = torch.randn(
+            current.shape[0], current.shape[1], current.shape[2], future_steps,
+            current.shape[3], current.shape[4], device=device, dtype=current.dtype,
+        )
+        last_context = None
+        for step_index in range(flow_steps, 0, -1):
+            flow_timestep = step_index / flow_steps
+            wm_inputs, context = self._build_multiview_inference_wan_inputs(
+                examples, future_latents, flow_timestep=flow_timestep
+            )
+            self._mowa_multiview_grid = context["grid"]
+            self._all_hidden_states.clear()
+            with torch.autocast("cuda", dtype=torch.bfloat16):
+                wm_outputs = self.backbone(**wm_inputs, output_hidden_states=True, return_dict=True)
+                captured_layers = list(self._all_hidden_states)
+            if validate_data_flow:
+                projected_layers = self._project_wan_hidden_states(captured_layers)
+                action_layers = self._fuse_multiview_layerwise(projected_layers, context)
+                self._validate_mowa_wan_flow_once(
+                    phase="predict",
+                    wm_inputs=wm_inputs,
+                    wm_outputs=wm_outputs,
+                    captured_layers=captured_layers,
+                    action_layers=action_layers,
+                    context=context,
+                )
+            velocity = unflatten_view_batch(
+                wm_outputs.sample, context["grid"].batch_size, context["grid"].num_views
+            )[:, :, :, context["history_current_steps"] :]
+            future_latents = future_latents - velocity / flow_steps
+            last_context = context
+
+        # 在 t=0 上再跑一次, 使 action/done 条件来自最终 clean future latent。
+        wm_inputs, context = self._build_multiview_inference_wan_inputs(
+            examples, future_latents, flow_timestep=0.0
+        )
+        self._mowa_multiview_grid = context["grid"]
+        self._all_hidden_states.clear()
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            wm_outputs = self.backbone(**wm_inputs, output_hidden_states=True, return_dict=True)
+            captured_layers = list(self._all_hidden_states)
+            projected_layers = self._project_wan_hidden_states(captured_layers)
+            action_layers = self._fuse_multiview_layerwise(projected_layers, context)
+        if validate_data_flow:
+            self._validate_mowa_wan_flow_once(
+                phase="predict",
+                wm_inputs=wm_inputs,
+                wm_outputs=wm_outputs,
+                captured_layers=captured_layers,
+                action_layers=action_layers,
+                context=context,
+            )
+        return future_latents, action_layers, {
+            **context,
+            "last_hidden": captured_layers[-1],
+            "flow_steps": flow_steps,
+            "last_context": last_context,
+        }
+
     def _fuse_multiview_layerwise(self, vl_embs_list: List[torch.Tensor], context: dict) -> List[torch.Tensor]:
         grid = context["grid"]
         future_token_start = context["future_token_start"]
@@ -722,6 +994,47 @@ class Wan_PI(baseframework):
             "loss_future_total": loss_total,
             "main_future_pred_norm": prediction_future[:, 0].float().norm().detach(),
             "wrist_future_pred_norm": prediction_future[:, 1].float().norm().detach(),
+        }
+
+    def _compute_multiview_done_loss(
+        self,
+        last_hidden: torch.Tensor,
+        context: dict,
+        examples: List[dict],
+    ) -> dict:
+        grid = context["grid"]
+        paired = unflatten_view_batch(last_hidden, grid.batch_size, grid.num_views)
+        temporal_hidden = paired.reshape(
+            grid.batch_size,
+            grid.num_views,
+            grid.time,
+            grid.spatial_tokens,
+            last_hidden.shape[-1],
+        )
+        future_start = context["future_token_start"] // grid.spatial_tokens
+        future_hidden = temporal_hidden[:, :, future_start:]
+        if future_hidden.shape[2] != context["future_steps"]:
+            raise ValueError(
+                "E003 done head requires one Wan temporal patch per latent timestep, "
+                f"got {future_hidden.shape[2]} patches for {context['future_steps']} future steps."
+            )
+        done_logits = self.mowa_done_head(future_hidden)
+        done_target = self._build_mowa_latent_batch(
+            examples, "mowa_future_done_target", device=done_logits.device, dtype=done_logits.dtype
+        )
+        if done_target is None or done_target.shape != done_logits.shape:
+            raise ValueError(
+                "E003 multi-view done target must be [B,T_future], "
+                f"got {None if done_target is None else tuple(done_target.shape)} for "
+                f"{tuple(done_logits.shape)} logits."
+            )
+        if not torch.all((done_target == 0) | (done_target == 1)):
+            raise ValueError("E003 multi-view done target must be binary.")
+        done_loss = torch.nn.functional.binary_cross_entropy_with_logits(done_logits, done_target)
+        return {
+            "loss_done": done_loss,
+            "done_logits": done_logits,
+            "done_target": done_target,
         }
 
     def _validate_mowa_examples_once(self, examples: List[dict], *, phase: str) -> None:
@@ -841,12 +1154,68 @@ class Wan_PI(baseframework):
             "loss_future_main",
             "loss_future_wrist",
             "loss_future_total",
+            "loss_done",
+            "loss_multiview_total",
         )
         for key in required:
             value = output.get(key)
             if value is None or value.numel() != 1:
                 raise ValueError(f"MoWA training output `{key}` must be a scalar tensor.")
             _require_finite_tensor(f"train.{key}", value)
+
+    def _validate_mowa_predict_examples_once(self, examples: List[dict]) -> None:
+        """校验双视角推理只依赖可观测的 history/current 条件。"""
+        if not examples:
+            raise ValueError("MoWA predict contract requires a non-empty batch.")
+        required = {
+            "state",
+            "text_embeds",
+            "text_attention_mask",
+            "mowa_multi_view_history_latents",
+            "mowa_multi_view_current_latents",
+        }
+        for batch_index, example in enumerate(examples):
+            missing = sorted(key for key in required if key not in example or example[key] is None)
+            if missing:
+                raise ValueError(
+                    f"MoWA predict contract sample {batch_index} is missing required fields: {missing}."
+                )
+            history = torch.as_tensor(example["mowa_multi_view_history_latents"])
+            current = torch.as_tensor(example["mowa_multi_view_current_latents"])
+            if (
+                history.ndim != 5
+                or current.ndim != 4
+                or history.shape[0] != 2
+                or current.shape[0] != 2
+            ):
+                raise ValueError(
+                    "MoWA predict latent shapes must be history [V=2,T,C,H,W] and "
+                    f"current [V=2,C,H,W], got {tuple(history.shape)}, {tuple(current.shape)}."
+                )
+            if history.shape[2:] != current.shape[1:]:
+                raise ValueError("MoWA predict main/wrist latent channel/spatial shapes are inconsistent.")
+            _require_finite_tensor(f"predict.history_latents[{batch_index}]", history)
+            _require_finite_tensor(f"predict.current_latents[{batch_index}]", current)
+
+    def _validate_mowa_predict_output_once(self, output: dict, *, batch_size: int) -> None:
+        actions = output.get("normalized_actions")
+        if not isinstance(actions, np.ndarray) or actions.shape != (
+            batch_size,
+            self.action_horizon,
+            int(self.config.framework.action_model.action_dim),
+        ):
+            raise ValueError(
+                "MoWA predict action shape mismatch: expected "
+                f"[{batch_size},{self.action_horizon},{self.config.framework.action_model.action_dim}], "
+                f"got {None if not isinstance(actions, np.ndarray) else actions.shape}."
+            )
+        if not np.isfinite(actions).all():
+            raise ValueError("MoWA predict normalized_actions contains NaN or Inf.")
+        for key in ("mowa_predicted_future_latents", "mowa_future_done_logits"):
+            value = output.get(key)
+            if value is None:
+                raise ValueError(f"MoWA predict output is missing `{key}`.")
+            _require_finite_tensor(f"predict.{key}", value)
 
     def forward(self, examples: List[dict] = None, **kwargs) -> Tuple:
         validate_data_flow = (
@@ -881,7 +1250,7 @@ class Wan_PI(baseframework):
                 return_dict=True,
             )
             captured_layers = list(self._all_hidden_states)
-            vl_embs_list = [self.wm_projector(h.to(dtype=torch.float32)) for h in captured_layers]
+            vl_embs_list = self._project_wan_hidden_states(captured_layers)
             if multiview_context is not None:
                 vl_embs_list = self._fuse_multiview_layerwise(vl_embs_list, multiview_context)
                 if validate_data_flow:
@@ -939,6 +1308,9 @@ class Wan_PI(baseframework):
                     wm_outputs.sample,
                     multiview_context,
                 )
+                multiview_done_loss = self._compute_multiview_done_loss(
+                    captured_layers[-1], multiview_context, examples
+                )
 
             repeated_diffusion_steps = (
                 self.config.framework.action_model.get("repeated_diffusion_steps", 2)
@@ -947,6 +1319,19 @@ class Wan_PI(baseframework):
             )
             actions_target_repeated = actions_target.repeat(repeated_diffusion_steps, 1, 1)
             vl_embs_list_repeated = [h.repeat(repeated_diffusion_steps, 1, 1) for h in vl_embs_list]
+            action_valid_mask = self._build_mowa_latent_batch(
+                examples, "mowa_action_valid_mask", device=base_hidden.device, dtype=torch.bool
+            )
+            if action_valid_mask is None:
+                action_valid_mask = torch.ones(
+                    actions_target.shape[:2], device=base_hidden.device, dtype=torch.bool
+                )
+            if action_valid_mask.shape != actions_target.shape[:2]:
+                raise ValueError(
+                    "MoWA action valid mask must match [B,action_horizon], "
+                    f"got {tuple(action_valid_mask.shape)} for {tuple(actions_target.shape[:2])}."
+                )
+            action_valid_mask_repeated = action_valid_mask.repeat(repeated_diffusion_steps, 1)
 
             state_repeated = None
             if validate_data_flow:
@@ -980,12 +1365,22 @@ class Wan_PI(baseframework):
                     )
                     self._mowa_state_debug_logged = True
 
-            action_loss = self.action_model(vl_embs_list_repeated, actions_target_repeated, state_repeated)
+            action_loss = self.action_model(
+                vl_embs_list_repeated,
+                actions_target_repeated,
+                state_repeated,
+                action_valid_mask=action_valid_mask_repeated,
+            )
 
         output = {"action_loss": action_loss, "mowa_state_conditioned": state is not None}
         if multiview_future_loss is not None:
             output.update(multiview_future_loss)
-            output["mowa_future_latent_prior_loss"] = multiview_future_loss["loss_future_total"]
+            output.update(multiview_done_loss)
+            output["loss_multiview_total"] = (
+                multiview_future_loss["loss_future_total"]
+                + self.mowa_done_loss_weight * multiview_done_loss["loss_done"]
+            )
+            output["mowa_future_latent_prior_loss"] = output["loss_multiview_total"]
             output["cross_view_gate_by_layer"] = {
                 layer: adapter.gate.detach() for layer, adapter in self.cross_view_adapters.items()
             }
@@ -1031,17 +1426,75 @@ class Wan_PI(baseframework):
         if type(examples) is not list:
             examples = [examples]
 
+        if self.mowa_multiview_enabled:
+            examples = self._prepare_mowa_multiview_inference_examples(examples)
+
         validate_data_flow = (
             self.mowa_multiview_enabled
             and self.mowa_validate_data_flow
             and self._mowa_predict_validation_count < self.mowa_validation_steps
         )
         if validate_data_flow:
-            raise RuntimeError(
-                "E003 multi-view inference data flow is not implemented: predict_action() currently "
-                "uses the legacy single-view Wan path and cannot validate dual-view future rollout. "
-                "Refusing silent single-view fallback."
+            self._validate_mowa_predict_examples_once(examples)
+
+        if self.mowa_multiview_enabled:
+            future_latents, vl_embs_list, multiview_context = self._sample_multiview_future_latents(
+                examples, validate_data_flow=validate_data_flow
             )
+            last_hidden = multiview_context["last_hidden"]
+            grid = multiview_context["grid"]
+            paired_hidden = unflatten_view_batch(last_hidden, grid.batch_size, grid.num_views).reshape(
+                grid.batch_size,
+                grid.num_views,
+                grid.time,
+                grid.spatial_tokens,
+                last_hidden.shape[-1],
+            )
+            future_start = multiview_context["future_token_start"] // grid.spatial_tokens
+            future_hidden = paired_hidden[:, :, future_start:]
+            done_logits = self.mowa_done_head(future_hidden)
+            if done_logits.shape[1] != multiview_context["future_steps"]:
+                raise ValueError(
+                    "E003 inference done logits must align with sampled future latent steps, got "
+                    f"{tuple(done_logits.shape)} for {multiview_context['future_steps']}."
+                )
+            if validate_data_flow:
+                state = _prepare_action_state(
+                    examples,
+                    required=self.action_model.state_encoder is not None,
+                    expected_dim=int(self.config.framework.action_model.state_dim),
+                    device=vl_embs_list[-1].device,
+                    dtype=vl_embs_list[-1].dtype,
+                )
+            else:
+                raw_state = [example["state"] for example in examples] if "state" in examples[0] else None
+                state = (
+                    torch.as_tensor(
+                        np.asarray(raw_state), device=vl_embs_list[-1].device, dtype=vl_embs_list[-1].dtype
+                    )
+                    if raw_state is not None
+                    else None
+                )
+            with torch.autocast("cuda", dtype=torch.float32):
+                pred_actions = self.action_model.predict_action(vl_embs_list, state)
+            normalized_actions = pred_actions.detach().cpu().numpy()
+            output = {
+                "normalized_actions": normalized_actions,
+                "mowa_state_conditioned": state is not None,
+                "mowa_predicted_future_latents": future_latents.detach(),
+                "mowa_future_done_logits": done_logits.detach(),
+                "mowa_future_done_probabilities": done_logits.sigmoid().detach(),
+                "mowa_future_flow_steps": multiview_context["flow_steps"],
+            }
+            if validate_data_flow:
+                self._validate_mowa_predict_output_once(output, batch_size=len(examples))
+                self._mowa_predict_validation_count += 1
+                logger.info(
+                    "[E003 contract] inference data flow validation %d/%d passed.",
+                    self._mowa_predict_validation_count,
+                    self.mowa_validation_steps,
+                )
+            return output
 
         # Apply obs resize only when using raw images, not cached visual latents.
         train_obs_image_size = getattr(self.config.datasets.vla_data, "obs_image_size", None)

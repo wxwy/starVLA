@@ -202,6 +202,11 @@ def _attach_mowa_latent_cache(sample: dict, dataset, trajectory_id: int, base_in
     future_mask = cache_sample.get("mowa_future_valid_mask")
     if future_mask is not None:
         sample["mowa_future_valid_mask"] = future_mask
+    action_mask = cache_sample.get("mowa_action_valid_mask")
+    # 旧非 Wan regular-grid manifest 合法地使用空 mask；此时不注入，
+    # 由 action head 将整个 action chunk 视为有效。
+    if action_mask is not None and int(action_mask.numel()) > 0:
+        sample["mowa_action_valid_mask"] = action_mask
     if "mowa_future_done_target" in cache_sample:
         sample["mowa_future_done_target"] = cache_sample["mowa_future_done_target"]
     for key in (

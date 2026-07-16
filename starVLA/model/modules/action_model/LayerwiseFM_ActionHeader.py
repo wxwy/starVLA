@@ -76,7 +76,9 @@ def masked_action_flow_loss(
     valid = action_valid_mask.to(device=prediction.device, dtype=per_timestep_loss.dtype)
     valid_count = valid.sum()
     if valid_count <= 0:
-        raise ValueError("action_valid_mask has no valid action timestep in this batch.")
+        # terminal anchor 的 future action 可以全部是 padding；保留可反传的
+        # 零值，交由 future/done supervision 负责该样本的终止学习。
+        return prediction.sum() * 0.0
     return (per_timestep_loss * valid).sum() / valid_count
 
 

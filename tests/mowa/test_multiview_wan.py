@@ -33,8 +33,13 @@ class MultiViewWanTest(unittest.TestCase):
 
         self.assertTrue(torch.allclose(loss, torch.tensor(21.0)))
         self.assertEqual(float(prediction.grad[:, 2].abs().sum()), 0.0)
-        with self.assertRaisesRegex(ValueError, "no valid"):
-            masked_action_flow_loss(prediction.detach(), target, torch.zeros_like(mask))
+        terminal_prediction = prediction.detach().clone().requires_grad_(True)
+        terminal_loss = masked_action_flow_loss(
+            terminal_prediction, target, torch.zeros_like(mask)
+        )
+        terminal_loss.backward()
+        self.assertEqual(float(terminal_loss), 0.0)
+        self.assertEqual(float(terminal_prediction.grad.abs().sum()), 0.0)
 
     def test_mowa_first_batch_example_contract_covers_all_inputs(self):
         owner = SimpleNamespace(

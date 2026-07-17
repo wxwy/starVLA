@@ -219,6 +219,8 @@ def eval_libero(args: Args) -> None:
 
             logging.info(f"Starting episode {task_episodes + 1}...")
             step = 0
+            model_calls = 0
+            total_infer_elapsed = 0.0
 
             # full_actions = np.load("./debug/action.npy")
             try:
@@ -268,6 +270,8 @@ def eval_libero(args: Args) -> None:
                     infer_start = time.perf_counter()
                     response = client_model.step(example=example_dict, step=step)
                     infer_elapsed = time.perf_counter() - infer_start
+                    model_calls += 1
+                    total_infer_elapsed += infer_elapsed
 
                     raw_action = response["raw_action"]
                     response_timings = response.get("timings", {})
@@ -352,6 +356,9 @@ def eval_libero(args: Args) -> None:
                     "failure_category": infer_failure_category(success=bool(done), runtime_error=runtime_error),
                     "runtime_error": runtime_error,
                     "steps_executed": step,
+                    "model_calls": model_calls,
+                    "total_infer_elapsed_sec": round(total_infer_elapsed, 4),
+                    "avg_infer_elapsed_sec": round(total_infer_elapsed / model_calls, 4) if model_calls else 0.0,
                     "video_path": str(video_path) if video_path is not None else None,
                     "chunk_timings": chunk_timings,
                 }

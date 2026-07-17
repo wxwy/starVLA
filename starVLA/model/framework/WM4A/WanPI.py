@@ -1035,6 +1035,9 @@ class Wan_PI(baseframework):
             "loss_done": done_loss,
             "done_logits": done_logits,
             "done_target": done_target,
+            "done_positive_ratio": done_target.detach().float().mean(),
+            "done_logit_mean": done_logits.detach().float().mean(),
+            "done_probability_mean": done_logits.detach().float().sigmoid().mean(),
         }
 
     def _validate_mowa_examples_once(self, examples: List[dict], *, phase: str) -> None:
@@ -1384,6 +1387,9 @@ class Wan_PI(baseframework):
             output["cross_view_gate_by_layer"] = {
                 layer: adapter.gate.detach() for layer, adapter in self.cross_view_adapters.items()
             }
+            output["cross_view_residual_ratio_by_layer"] = {
+                layer: adapter.last_residual_ratio for layer, adapter in self.cross_view_adapters.items()
+            }
             if self.cross_view_adapters:
                 output["cross_view_gate_mean"] = torch.stack(
                     [adapter.gate.float() for adapter in self.cross_view_adapters.values()]
@@ -1393,6 +1399,9 @@ class Wan_PI(baseframework):
                 ).mean()
                 output["cross_view_grad_norm"] = torch.stack(
                     [adapter.last_grad_norm for adapter in self.cross_view_adapters.values()]
+                ).mean()
+                output["cross_view_residual_ratio"] = torch.stack(
+                    [adapter.last_residual_ratio for adapter in self.cross_view_adapters.values()]
                 ).mean()
         if mowa_future_latent_prior is not None:
             output["mowa_future_latent_prior_available"] = mowa_future_latent_prior["supervision_available"]

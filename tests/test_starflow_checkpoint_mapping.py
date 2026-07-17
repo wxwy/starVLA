@@ -293,6 +293,32 @@ class WanLoraOptimizerTest(unittest.TestCase):
         self.assertFalse(torch.equal(before, model.backbone.transformer.lora_A))
 
 
+class WanLoraDiagnosticsTest(unittest.TestCase):
+    def test_reports_gradients_and_parameter_delta_by_attention_type(self):
+        model = torch.nn.Module()
+        model.backbone = torch.nn.Module()
+        model.backbone.transformer = torch.nn.Module()
+        model.backbone.transformer.attn1 = torch.nn.Module()
+        model.backbone.transformer.attn2 = torch.nn.Module()
+        model.backbone.transformer.attn1.register_parameter("lora_A", torch.nn.Parameter(torch.ones(2, 1)))
+        model.backbone.transformer.attn2.register_parameter("lora_B", torch.nn.Parameter(torch.ones(1, 2)))
+        trainer = VLATrainer.__new__(VLATrainer)
+        trainer.model = model
+        trainer.accelerator = SimpleNamespace(is_main_process=False)
+        trainer._capture_wan_lora_initial_state()
+
+        (model.backbone.transformer.attn1.lora_A.sum() + model.backbone.transformer.attn2.lora_B.sum()).backward()
+        grad_metrics = trainer._collect_wan_lora_metrics(include_grad=True)
+        with torch.no_grad():
+            model.backbone.transformer.attn2.lora_B.add_(1.0)
+        param_metrics = trainer._collect_wan_lora_metrics(include_grad=False)
+
+        self.assertGreater(grad_metrics["wan_lora/self_attention_grad_norm"], 0.0)
+        self.assertGreater(grad_metrics["wan_lora/cross_attention_grad_norm"], 0.0)
+        self.assertGreater(param_metrics["wan_lora/cross_attention_delta_norm"], 0.0)
+        self.assertEqual(param_metrics["wan_lora/self_attention_delta_norm"], 0.0)
+
+
 class StarFlowLightweightCheckpointArtifactTest(unittest.TestCase):
     def test_lightweight_checkpoint_saves_scaler_placeholder_and_metadata(self):
         with tempfile.TemporaryDirectory() as tmpdir:

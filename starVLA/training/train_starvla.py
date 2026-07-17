@@ -1358,6 +1358,7 @@ class VLATrainer(TrainerUtils):
         elif self.resume_requires_lightweight_state and self.resume_from_checkpoint:
             self._load_lightweight_training_state(self.resume_from_checkpoint)
 
+        self._capture_wan_lora_initial_state()
         self._init_wandb()
 
     def _calculate_total_batch_size(self):
@@ -1367,6 +1368,62 @@ class VLATrainer(TrainerUtils):
             * self.accelerator.num_processes
             * self.accelerator.gradient_accumulation_steps
         )
+
+    def _iter_wan_lora_parameters(self):
+        for name, parameter in self.model.named_parameters():
+            if "backbone.transformer." in name and "lora_" in name:
+                yield name, parameter
+
+    def _capture_wan_lora_initial_state(self):
+        """保存当前训练会话的 Wan LoRA 基线，仅用于诊断日志。"""
+        self._wan_lora_initial_params = {
+            id(parameter): parameter.detach().clone()
+            for _, parameter in self._iter_wan_lora_parameters()
+        }
+        if self._wan_lora_initial_params and self.accelerator.is_main_process:
+            logger.info("Captured %d Wan LoRA tensors for update diagnostics.", len(self._wan_lora_initial_params))
+
+    def _collect_wan_lora_metrics(self, *, include_grad: bool) -> dict:
+        totals = {
+            "all": {"param_sq": 0.0, "delta_sq": 0.0, "grad_sq": 0.0},
+            "self_attention": {"param_sq": 0.0, "delta_sq": 0.0, "grad_sq": 0.0},
+            "cross_attention": {"param_sq": 0.0, "delta_sq": 0.0, "grad_sq": 0.0},
+        }
+        found = False
+        for name, parameter in self._iter_wan_lora_parameters():
+            found = True
+            group = "self_attention" if ".attn1." in name else "cross_attention" if ".attn2." in name else None
+            values = [totals["all"]]
+            if group is not None:
+                values.append(totals[group])
+            param_sq = float(parameter.detach().float().pow(2).sum().item())
+            initial = getattr(self, "_wan_lora_initial_params", {}).get(id(parameter))
+            delta_sq = (
+                float((parameter.detach().float() - initial.float()).pow(2).sum().item())
+                if initial is not None
+                else 0.0
+            )
+            grad_sq = (
+                float(parameter.grad.detach().float().pow(2).sum().item())
+                if include_grad and parameter.grad is not None
+                else 0.0
+            )
+            for value in values:
+                value["param_sq"] += param_sq
+                value["delta_sq"] += delta_sq
+                value["grad_sq"] += grad_sq
+
+        if not found:
+            return {}
+
+        metrics = {}
+        for group, values in totals.items():
+            prefix = "wan_lora" if group == "all" else f"wan_lora/{group}"
+            metrics[f"{prefix}_param_norm"] = values["param_sq"] ** 0.5
+            metrics[f"{prefix}_delta_norm"] = values["delta_sq"] ** 0.5
+            if include_grad:
+                metrics[f"{prefix}_grad_norm"] = values["grad_sq"] ** 0.5
+        return metrics
 
     def _init_wandb(self):
         """Initialize Weights & Biases."""
@@ -2036,8 +2093,12 @@ class VLATrainer(TrainerUtils):
                         "loss_multiview_total",
                         "cross_view_gate_mean",
                         "cross_view_output_norm",
+                        "cross_view_residual_ratio",
                         "main_future_pred_norm",
                         "wrist_future_pred_norm",
+                        "done_positive_ratio",
+                        "done_logit_mean",
+                        "done_probability_mean",
                     ):
                         value = output_dict.get(name)
                         if value is not None:
@@ -2063,6 +2124,10 @@ class VLATrainer(TrainerUtils):
                     )
                     for layer, value in output_dict.get("cross_view_gate_by_layer", {}).items():
                         multiview_metrics[f"cross_view_gate/layer_{layer}"] = float(
+                            value.detach().float().item()
+                        )
+                    for layer, value in output_dict.get("cross_view_residual_ratio_by_layer", {}).items():
+                        multiview_metrics[f"cross_view_residual_ratio/layer_{layer}"] = float(
                             value.detach().float().item()
                         )
                 if (
@@ -2100,6 +2165,8 @@ class VLATrainer(TrainerUtils):
                 )
                 if cross_view_grad_sq > 0:
                     multiview_metrics["cross_view_grad_norm"] = cross_view_grad_sq**0.5
+            if self.accelerator.sync_gradients:
+                multiview_metrics.update(self._collect_wan_lora_metrics(include_grad=True))
 
             if self.accelerator.sync_gradients and self.config.trainer.gradient_clipping is not None:
                 self.accelerator.clip_grad_norm_(self.model.parameters(), self.config.trainer.gradient_clipping)
@@ -2112,6 +2179,7 @@ class VLATrainer(TrainerUtils):
             # at min_lr well before max_train_steps is reached.
             if self.accelerator.sync_gradients:
                 self.lr_scheduler.step()
+                multiview_metrics.update(self._collect_wan_lora_metrics(include_grad=False))
                 self.optimizer.zero_grad()
 
             if self.accelerator.sync_gradients:

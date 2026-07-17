@@ -1,6 +1,7 @@
 # MoWA 会话状态
 
 ## 当前阶段
+- 2026-07-17 E003-B1 诊断日志：为下一次启动补充 cross-view 每层/均值 residual ratio、done 正样本比例/平均 logit/平均概率，以及 Wan LoRA self-attention/cross-attention 的梯度范数、参数范数和相对当前会话初始值的 delta 范数。日志不改变 loss、梯度、optimizer 或 checkpoint；LoRA 基线在恢复 checkpoint 后采集，因此 resume 的 delta 从恢复点开始计量。
 - 2026-07-17 E003-B1 cross-view 初始化统一：经确认，action-only 与 LoRA 两份正式候选均保留 `zero_init_output=true`（输出投影标准差为 `1e-5`），并把 `gate_init` 从 `0.001` 统一改为 `1.0`。这样仅保留一种近零初始化，避免 cross-view attention 在训练早期被双重缩小梯度；两组实验间仍只有 Wan LoRA 开关的差异。此前约500 step 的 action-only run 仅作工程 smoke，不作正式对照。
 - 2026-07-17 E003-B1 LoRA optimizer 修正：确认 `freeze_modules: backbone` 曾在 optimizer 创建阶段把 Wan LoRA 一并排除，后续仅设置 `requires_grad=True` 不能使其参与更新。`build_param_lr_groups()` 现冻结基座参数但保留 `backbone.transformer.*lora_*`，并建立独立 `wan_lora` 参数组；LoRA YAML 显式设定 `trainer.learning_rate.wan_lora=1.0e-5`。新增回归覆盖 LoRA 属于 optimizer、基座不属于 optimizer，且 `optimizer.step()` 后 LoRA 权重实际变化。
 - 2026-07-17 E003-B1 LoRA 实验：已拆分 action-only 与 LoRA 两份独立 YAML。action-only 保持 `mowa_e003_future_latent_prior_long_training_launch_candidate.yaml`（LoRA关闭）；LoRA 使用 `mowa_e003_future_latent_prior_lora_long_training_launch_candidate.yaml`，启用 Wan DiT LoRA 的 cross-attention 与 self-attention（rank=8、alpha=16、全30层、MLP关闭）。实现使用 Diffusers 原生 PEFT adapter，不改动 VAE、UMT5 或 DiT 基座权重。

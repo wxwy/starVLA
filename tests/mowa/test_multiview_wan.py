@@ -330,9 +330,11 @@ class MultiViewWanTest(unittest.TestCase):
 
         output = adapter(hidden, grid)
         delta = (output - hidden).abs().max()
+        expected_ratio = (output - hidden).detach().float().norm() / hidden.detach().float().norm()
         output.square().mean().backward()
 
         self.assertLess(float(delta), 1e-5)
+        self.assertTrue(torch.allclose(adapter.last_residual_ratio, expected_ratio))
         self.assertGreater(float(adapter.gate.grad.abs()), 0.0)
         self.assertGreater(float(adapter.attention.in_proj_weight.grad.norm()), 0.0)
         self.assertGreater(float(adapter.output_projection.weight.grad.norm()), 0.0)

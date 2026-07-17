@@ -89,6 +89,7 @@ class CrossViewAttentionAdapter(nn.Module):
         self.gate = nn.Parameter(torch.tensor(float(gate_init)))
         self.register_buffer("last_output_norm", torch.tensor(0.0), persistent=False)
         self.register_buffer("last_grad_norm", torch.tensor(0.0), persistent=False)
+        self.register_buffer("last_residual_ratio", torch.tensor(0.0), persistent=False)
         if zero_init_output:
             # 极小初始化兼顾近似恒等起点与首个 backward 的可观测梯度。
             nn.init.normal_(self.output_projection.weight, std=1e-5)
@@ -130,7 +131,11 @@ class CrossViewAttentionAdapter(nn.Module):
             hidden.shape[-1],
         ).permute(0, 2, 1, 3, 4)
         restored = restored.reshape_as(paired).reshape_as(unflatten_view_batch(hidden, grid.batch_size, grid.num_views))
-        return hidden + self.gate.to(dtype=hidden.dtype) * flatten_view_batch_hidden(restored)
+        residual = self.gate.to(dtype=hidden.dtype) * flatten_view_batch_hidden(restored)
+        self.last_residual_ratio.copy_(
+            residual.detach().float().norm() / hidden.detach().float().norm().clamp_min(1e-8)
+        )
+        return hidden + residual
 
 
 def flatten_view_batch_hidden(hidden: torch.Tensor) -> torch.Tensor:

@@ -123,7 +123,6 @@ def _get_mowa_latent_cache_dataset(dataset) -> MoWALatentCacheDataset:
         raise ValueError("mowa_latent_cache.cache_root is required when latent cache is enabled.")
     cache_root = _resolve_mowa_cache_root(dataset, cache_cfg, Path(configured_cache_root))
     manifest_path = cache_cfg.get("manifest_path", None)
-    instruction_text_latent = cache_cfg.get("instruction_text_latent", None)
     future_steps = cache_cfg.get("future_window_steps", None)
     action_chunk_steps = cache_cfg.get("action_chunk_steps", None)
     if action_chunk_steps is None and future_steps is not None:
@@ -131,7 +130,9 @@ def _get_mowa_latent_cache_dataset(dataset) -> MoWALatentCacheDataset:
     cache_dataset = MoWALatentCacheDataset(
         cache_root=cache_root,
         manifest_path=manifest_path,
-        instruction_text_latent=instruction_text_latent,
+        # Keep large UMT5 tensors out of worker-to-rank shared-memory batches.
+        # WanPI resolves them from the same cache in each training rank.
+        instruction_text_latent=None,
         history_steps=cache_cfg.get("history_window_steps", None),
         future_steps=future_steps,
         action_chunk_steps=action_chunk_steps,

@@ -1221,6 +1221,8 @@ class Wan_PI(baseframework):
             _require_finite_tensor(f"predict.{key}", value)
 
     def forward(self, examples: List[dict] = None, **kwargs) -> Tuple:
+        if self.mowa_multiview_enabled:
+            examples = self._populate_mowa_inference_text_cache(examples)
         validate_data_flow = (
             self.mowa_multiview_enabled
             and self.mowa_validate_data_flow

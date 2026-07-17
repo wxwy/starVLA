@@ -6,7 +6,7 @@ launch_guard:
   human_confirmed: true
   reason: formal long-training launch for E-003 future latent prior without history and with Wan DiT LoRA
 
-run_id: MoWA-E-003_future_latent_prior_wo_history_lora_260717_1200
+run_id: MoWA-E-003_future_latent_prior_wo_history_lora_260717_1837
 run_root_dir: playground/mowa_ckpt/
 experiment_id: E-003
 experiment_role: mowa_future_latent_prior_wo_history_lora
@@ -151,7 +151,7 @@ datasets:
     dataset_py: lerobot_datasets
     include_state: true
     data_root_dir: playground/Datasets/robocasa365
-    data_mix: robocasa365_open_drawer_target_human
+    data_mix: robocasa365_atomic_target_human_all
     action_type: delta_ee
     sequential_step_sampling: false
     per_device_batch_size: 2

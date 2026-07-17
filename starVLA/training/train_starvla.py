@@ -1386,18 +1386,22 @@ class VLATrainer(TrainerUtils):
                 ("future_main", future_main[index], future_mask[index]),
                 ("future_wrist", future_wrist[index], future_mask[index]),
             ):
-                metrics[f"{name}_loss_sum"] += float((loss * mask).sum())
+                metrics[f"{name}_loss_sum"] += float((loss * mask.to(device=loss.device)).sum())
                 metrics[f"{name}_loss_count"] += float(mask.sum())
             split = action_loss.shape[1] // 2
             for label, start, end in (("near", 0, split), ("far", split, action_loss.shape[1])):
                 mask = action_mask[index, start:end]
-                metrics[f"action_{label}_sum"] += float((action_loss[index, start:end] * mask).sum())
+                metrics[f"action_{label}_sum"] += float(
+                    (action_loss[index, start:end] * mask.to(device=action_loss.device)).sum()
+                )
                 metrics[f"action_{label}_count"] += float(mask.sum())
             split = future_main.shape[1] // 2
             for label, start, end in (("near", 0, split), ("far", split, future_main.shape[1])):
                 mask = future_mask[index, start:end]
                 for name, loss in (("future_main", future_main[index]), ("future_wrist", future_wrist[index])):
-                    metrics[f"{name}_{label}_sum"] += float((loss[start:end] * mask).sum())
+                    metrics[f"{name}_{label}_sum"] += float(
+                        (loss[start:end] * mask.to(device=loss.device)).sum()
+                    )
                     metrics[f"{name}_{label}_count"] += float(mask.sum())
 
     def _flush_mowa_padding_metrics(self) -> dict:

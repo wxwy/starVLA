@@ -209,6 +209,16 @@ class FrozenBackboneCheckpointTest(unittest.TestCase):
             self.assertTrue(torch.equal(target.backbone.lora_A, source.backbone.lora_A))
             self.assertTrue(torch.equal(target.backbone.lora_B, source.backbone.lora_B))
 
+    def test_partial_checkpoint_omits_nonpersistent_diagnostic_buffers(self):
+        model = self._model()
+        model.diagnostics = torch.nn.Module()
+        model.diagnostics.register_buffer("last_residual_ratio", torch.tensor(1.0), persistent=False)
+        saved_names = {
+            name
+            for name, _ in _iter_model_state_tensors(model, save_frozen_backbone=False)
+        }
+        self.assertNotIn("diagnostics.last_residual_ratio", saved_names)
+
     def test_saves_wan_lora_as_standalone_adapter(self):
         from diffusers import WanTransformer3DModel
         from peft import LoraConfig

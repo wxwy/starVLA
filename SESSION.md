@@ -1,6 +1,7 @@
 # MoWA 会话状态
 
 ## 当前阶段
+- 2026-07-17 E003-B1 checkpoint 恢复兼容：lightweight 保存改为跳过 `persistent=False` 的 runtime buffer，避免未来 checkpoint 再写入诊断状态；恢复兼容仅忽略已知 `*.last_residual_ratio`，仍严格拒绝其他 unexpected key。新增回归覆盖该 buffer 不保存、旧 checkpoint 含该 key 可加载、任意错误 key 仍报错。
 - 2026-07-17 E003-B1 诊断日志：为下一次启动补充 cross-view 每层/均值 residual ratio、done 正样本比例/平均 logit/平均概率，以及 Wan LoRA self-attention/cross-attention 的梯度范数、参数范数和相对当前会话初始值的 delta 范数。日志不改变 loss、梯度、optimizer 或 checkpoint；LoRA 基线在恢复 checkpoint 后采集，因此 resume 的 delta 从恢复点开始计量。
 - 2026-07-17 E003-B1 cross-view 初始化统一：经确认，action-only 与 LoRA 两份正式候选均保留 `zero_init_output=true`（输出投影标准差为 `1e-5`），并把 `gate_init` 从 `0.001` 统一改为 `1.0`。这样仅保留一种近零初始化，避免 cross-view attention 在训练早期被双重缩小梯度；两组实验间仍只有 Wan LoRA 开关的差异。此前约500 step 的 action-only run 仅作工程 smoke，不作正式对照。
 - 2026-07-17 E003-B1 LoRA optimizer 修正：确认 `freeze_modules: backbone` 曾在 optimizer 创建阶段把 Wan LoRA 一并排除，后续仅设置 `requires_grad=True` 不能使其参与更新。`build_param_lr_groups()` 现冻结基座参数但保留 `backbone.transformer.*lora_*`，并建立独立 `wan_lora` 参数组；LoRA YAML 显式设定 `trainer.learning_rate.wan_lora=1.0e-5`。新增回归覆盖 LoRA 属于 optimizer、基座不属于 optimizer，且 `optimizer.step()` 后 LoRA 权重实际变化。

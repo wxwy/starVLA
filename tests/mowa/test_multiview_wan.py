@@ -483,6 +483,7 @@ class MultiViewWanTest(unittest.TestCase):
                 "cross_view_adapters.20.gate",
                 "cross_view_adapters.20.last_output_norm",
                 "cross_view_adapters.20.last_grad_norm",
+                "cross_view_adapters.20.last_residual_ratio",
                 "backbone.transformer.rope.freqs_cos",
                 "backbone.transformer.rope.freqs_sin",
             },

@@ -308,6 +308,7 @@ def _filter_strict_key_mismatches(model_keys: set[str], checkpoint_keys: set[str
         and not key.endswith(".rope.freqs_sin")
         and not key.endswith(".last_output_norm")
         and not key.endswith(".last_grad_norm")
+        and not key.endswith(".last_residual_ratio")
     }
 
     return sorted(missing_keys), sorted(unexpected_keys)

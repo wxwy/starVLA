@@ -208,6 +208,18 @@ def _parse_shard_size_to_bytes(raw_size) -> int:
     raise ValueError(f"Unsupported checkpoint shard size: {raw_size}")
 
 
+def _is_persistent_buffer(model, name: str) -> bool:
+    """Check if a buffer is persistent (should be saved to checkpoint)."""
+    module = model
+    parts = name.split(".")
+    for part in parts[:-1]:
+        if not hasattr(module, part):
+            return True  # defensive: if we can't resolve, save it
+        module = getattr(module, part)
+    local_name = parts[-1]
+    return local_name not in getattr(module, "_non_persistent_buffers_set", set())
+
+
 def _iter_model_state_tensors(model, *, save_frozen_backbone: bool):
     for name, param in model.named_parameters():
         if (
@@ -223,6 +235,11 @@ def _iter_model_state_tensors(model, *, save_frozen_backbone: bool):
             and name.startswith("backbone.")
             and "lora_" not in name
         ):
+            continue
+        # Non-persistent buffers are transient diagnostic state and should not be
+        # serialized.  PyTorch state_dict() already excludes them, so saving them
+        # creates a mismatch on resume.
+        if not _is_persistent_buffer(model, name):
             continue
         yield name, buffer
 

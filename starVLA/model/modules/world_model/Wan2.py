@@ -43,6 +43,56 @@ from starVLA.model.modules.world_model.wan_vae_utils import (
 logger = initialize_overwatch(__name__)
 
 
+_WAN_LORA_TARGET_GROUPS = {
+    "cross_attention": ".attn2.",
+    "self_attention": ".attn1.",
+    "mlp": ".ffn.",
+}
+
+
+def resolve_wan_lora_target_modules(
+    transformer: nn.Module,
+    *,
+    target_groups: list[str],
+    start_layer: int = 0,
+    end_layer: int | None = None,
+) -> list[str]:
+    """解析 Wan DiT 中指定层范围内可注入 LoRA 的线性投影。"""
+    unknown_groups = sorted(set(target_groups).difference(_WAN_LORA_TARGET_GROUPS))
+    if unknown_groups:
+        raise ValueError(
+            "Wan LoRA target_groups only supports "
+            f"{sorted(_WAN_LORA_TARGET_GROUPS)}, got {unknown_groups}."
+        )
+    if not target_groups:
+        raise ValueError("Wan LoRA target_groups must not be empty when LoRA is enabled.")
+    if start_layer < 0 or (end_layer is not None and end_layer < start_layer):
+        raise ValueError(
+            f"Invalid Wan LoRA layer range: start_layer={start_layer}, end_layer={end_layer}."
+        )
+
+    target_markers = tuple(_WAN_LORA_TARGET_GROUPS[group] for group in target_groups)
+    target_modules = []
+    for name, module in transformer.named_modules():
+        if not isinstance(module, nn.Linear) or not name.startswith("blocks."):
+            continue
+        parts = name.split(".")
+        if len(parts) < 3 or not parts[1].isdigit():
+            continue
+        layer_index = int(parts[1])
+        if layer_index < start_layer or (end_layer is not None and layer_index > end_layer):
+            continue
+        if any(marker in f".{name}" for marker in target_markers):
+            target_modules.append(name)
+
+    if not target_modules:
+        raise ValueError(
+            "Wan LoRA target selection matched no linear modules: "
+            f"target_groups={target_groups}, start_layer={start_layer}, end_layer={end_layer}."
+        )
+    return target_modules
+
+
 class _Wan2_Interface(nn.Module):
     """
     World model wrapper for Wan2.2-TI2V-5B-Diffusers.
@@ -101,6 +151,7 @@ class _Wan2_Interface(nn.Module):
         self.transformer = WanTransformer3DModel.from_pretrained(
             model_name, subfolder="transformer", torch_dtype=torch.bfloat16
         )
+        self._configure_lora(wm_cfg.get("lora", {}))
         if bool(wm_cfg.get("gradient_checkpointing", False)):
             self.transformer.enable_gradient_checkpointing()
             logger.info("Wan transformer gradient checkpointing enabled.")
@@ -147,6 +198,71 @@ class _Wan2_Interface(nn.Module):
         extract_layers = wm_cfg.get("extract_layers", [-1])
         self._extract_layers = extract_layers
         self._register_hooks()
+
+    def _configure_lora(self, lora_cfg) -> None:
+        """按配置向 Wan DiT 注入 Diffusers/PEFT LoRA 适配器。"""
+        self.lora_enabled = bool(lora_cfg.get("enabled", False))
+        self.lora_adapter_name = None
+        self.lora_target_modules = ()
+        if not self.lora_enabled:
+            return
+
+        try:
+            from peft import LoraConfig
+        except ImportError as error:
+            raise ImportError(
+                "Wan LoRA is enabled but `peft` is unavailable. Install `peft>=0.17.0` in this environment."
+            ) from error
+
+        rank = int(lora_cfg.get("rank", 8))
+        alpha = int(lora_cfg.get("alpha", 16))
+        dropout = float(lora_cfg.get("dropout", 0.0))
+        target_groups = list(lora_cfg.get("target_groups", ["cross_attention", "self_attention"]))
+        start_layer = int(lora_cfg.get("start_layer", 0))
+        raw_end_layer = lora_cfg.get("end_layer", None)
+        end_layer = None if raw_end_layer is None else int(raw_end_layer)
+        if rank <= 0 or alpha <= 0 or not 0.0 <= dropout < 1.0:
+            raise ValueError(
+                f"Invalid Wan LoRA settings: rank={rank}, alpha={alpha}, dropout={dropout}."
+            )
+
+        target_modules = resolve_wan_lora_target_modules(
+            self.transformer,
+            target_groups=target_groups,
+            start_layer=start_layer,
+            end_layer=end_layer,
+        )
+        self.lora_adapter_name = "mowa_wan"
+        self.transformer.add_adapter(
+            LoraConfig(
+                r=rank,
+                lora_alpha=alpha,
+                lora_dropout=dropout,
+                target_modules=target_modules,
+                bias="none",
+            ),
+            adapter_name=self.lora_adapter_name,
+        )
+        self.transformer.set_adapter(self.lora_adapter_name)
+        self.lora_target_modules = tuple(target_modules)
+        lora_param_count = sum(
+            parameter.numel()
+            for name, parameter in self.transformer.named_parameters()
+            if "lora_" in name
+        )
+        logger.info(
+            "Wan LoRA enabled: adapter=%s, groups=%s, layers=%s:%s, rank=%d, alpha=%d, "
+            "dropout=%.3f, targets=%d, params=%d",
+            self.lora_adapter_name,
+            target_groups,
+            start_layer,
+            end_layer if end_layer is not None else "last",
+            rank,
+            alpha,
+            dropout,
+            len(target_modules),
+            lora_param_count,
+        )
 
     def _load_vae_weights(self) -> None:
         """按需加载 Wan VAE，避免 visual cache 训练路径占用额外显存。"""

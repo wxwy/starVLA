@@ -4,12 +4,12 @@ launch_guard:
   requires_human_confirmation: true
   policy_confirmed: true
   human_confirmed: true
-  reason: formal long-training launch for E-003 future latent prior without history; confirmed for execution
+  reason: formal long-training launch for E-003 future latent prior without history and with Wan DiT LoRA
 
-run_id: MoWA-E-003_future_latent_prior_wo_history_action_only_260717_1120
+run_id: MoWA-E-003_future_latent_prior_wo_history_lora_260717_1200
 run_root_dir: playground/mowa_ckpt/
 experiment_id: E-003
-experiment_role: mowa_future_latent_prior_wo_history
+experiment_role: mowa_future_latent_prior_wo_history_lora
 seed: 42
 wandb_entity: silencewx-harbin-institute-of-technology
 wandb_project: MoWA
@@ -26,7 +26,7 @@ latent_cache:
   encoder_model_path: playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
   instruction_text_latent: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/instruction_text_latents.pt
   latent_dim: 1024
-  episode_indices: null  # use all episodes; set to a small list for smoke runs
+  episode_indices: null
   anchor_mode: production
   current_window_steps: 1
   future_window_steps: 8
@@ -89,7 +89,7 @@ framework:
     extract_layers:
       - -1
     lora:
-      enabled: false
+      enabled: true
       rank: 8
       alpha: 16
       dropout: 0.0
@@ -203,7 +203,7 @@ trainer:
   gradient_checkpointing: true
   checkpoint_format: lightweight
   resume_policy: resume_latest_complete_only
-  is_resume: true
+  is_resume: false
   enable_local_checkpoint_staging: false
   save_format: safetensors
   save_checkpoint_as_directory: true

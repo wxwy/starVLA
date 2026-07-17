@@ -12,6 +12,7 @@ from omegaconf import OmegaConf
 
 from starVLA.model.framework.WM4A.WanPI import Wan_PI, _prepare_action_state, _require_finite_tensor
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import MLP, masked_action_flow_loss
+from starVLA.model.modules.world_model.Wan2 import resolve_wan_lora_target_modules
 from starVLA.model.modules.mowa.multiview_wan import (
     CrossViewAttentionAdapter,
     MultiViewDoneHead,
@@ -25,6 +26,38 @@ from starVLA.model.modules.mowa.multiview_wan import (
 
 
 class MultiViewWanTest(unittest.TestCase):
+    def test_wan_lora_targets_are_group_and_layer_configurable(self):
+        class _Attention(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.to_q = torch.nn.Linear(4, 4)
+                self.to_k = torch.nn.Linear(4, 4)
+                self.to_v = torch.nn.Linear(4, 4)
+                self.to_out = torch.nn.ModuleList([torch.nn.Linear(4, 4), torch.nn.Dropout(0.0)])
+
+        class _Block(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.attn1 = _Attention()
+                self.attn2 = _Attention()
+                self.ffn = torch.nn.Sequential(torch.nn.Linear(4, 8), torch.nn.GELU(), torch.nn.Linear(8, 4))
+
+        transformer = torch.nn.Module()
+        transformer.blocks = torch.nn.ModuleList([_Block(), _Block(), _Block()])
+        attention_targets = resolve_wan_lora_target_modules(
+            transformer,
+            target_groups=["cross_attention", "self_attention"],
+            start_layer=1,
+            end_layer=2,
+        )
+        mlp_targets = resolve_wan_lora_target_modules(transformer, target_groups=["mlp"])
+
+        self.assertEqual(len(attention_targets), 16)
+        self.assertTrue(all(name.startswith(("blocks.1.", "blocks.2.")) for name in attention_targets))
+        self.assertTrue(all(".attn1." in name or ".attn2." in name for name in attention_targets))
+        self.assertEqual(len(mlp_targets), 6)
+        self.assertTrue(all(".ffn." in name for name in mlp_targets))
+
     def test_done_head_fuses_views_per_timestep_and_backpropagates(self):
         torch.manual_seed(11)
         head = MultiViewDoneHead(hidden_dim=8, mlp_hidden_dim=4)

@@ -229,9 +229,9 @@ class TrainerUtils:
                 try:
                     for attr in attrs:
                         module = getattr(module, attr)
-                    # if the module is successfully get, freeze it and its all submodule parameters
-                    for param in module.parameters():
-                        param.requires_grad = False
+                    # 冻结基座权重，但保留已注入 PEFT LoRA 的可训练矩阵。
+                    for name, param in module.named_parameters():
+                        param.requires_grad = "lora_" in name
                     frozen.append(path)
                 except AttributeError:
                     # if the attribute does not exist, skip and print warning

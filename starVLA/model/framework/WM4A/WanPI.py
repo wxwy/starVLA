@@ -51,6 +51,7 @@ from starVLA.model.modules.mowa import (
     MultiViewFutureFusion,
     MultiViewPatchGrid,
     flatten_view_batch,
+    masked_done_bce_loss,
     masked_future_flow_loss,
     resolve_cross_view_layer_indices,
     unflatten_view_batch,
@@ -994,6 +995,12 @@ class Wan_PI(baseframework):
             "loss_future_total": loss_total,
             "loss_future_main_per_sample": per_view[:, 0],
             "loss_future_wrist_per_sample": per_view[:, 1],
+            "loss_future_main_per_timestep": (
+                prediction_future[:, 0].float() - target_future[:, 0].float()
+            ).pow(2).mean(dim=(1, 3, 4)),
+            "loss_future_wrist_per_timestep": (
+                prediction_future[:, 1].float() - target_future[:, 1].float()
+            ).pow(2).mean(dim=(1, 3, 4)),
             "main_future_pred_norm": prediction_future[:, 0].float().norm().detach(),
             "wrist_future_pred_norm": prediction_future[:, 1].float().norm().detach(),
         }
@@ -1032,19 +1039,27 @@ class Wan_PI(baseframework):
             )
         if not torch.all((done_target == 0) | (done_target == 1)):
             raise ValueError("E003 multi-view done target must be binary.")
-        done_loss_per_timestep = torch.nn.functional.binary_cross_entropy_with_logits(
+        done_valid_mask = context["future_valid_mask"][:, 0]
+        done_loss, done_loss_per_sample, done_loss_per_timestep = masked_done_bce_loss(
             done_logits,
             done_target,
-            reduction="none",
+            done_valid_mask,
         )
-        done_loss = done_loss_per_timestep.mean()
         return {
             "loss_done": done_loss,
-            "loss_done_per_sample": done_loss_per_timestep.mean(dim=1),
+            "loss_done_per_sample": done_loss_per_sample,
+            "loss_done_per_timestep": done_loss_per_timestep,
             "done_logits": done_logits,
             "done_target": done_target,
-            "done_positive_ratio": done_target.detach().float().mean(),
-            "done_positive_ratio_per_sample": done_target.detach().float().mean(dim=1),
+            "done_valid_mask": done_valid_mask,
+            "done_positive_ratio": (
+                (done_target.detach().float() * done_valid_mask).sum()
+                / done_valid_mask.sum().clamp_min(1)
+            ),
+            "done_positive_ratio_per_sample": (
+                (done_target.detach().float() * done_valid_mask).sum(dim=1)
+                / done_valid_mask.sum(dim=1).clamp_min(1)
+            ),
             "done_logit_mean": done_logits.detach().float().mean(),
             "done_probability_mean": done_logits.detach().float().sigmoid().mean(),
         }
@@ -1379,7 +1394,7 @@ class Wan_PI(baseframework):
                     )
                     self._mowa_state_debug_logged = True
 
-            action_loss, action_loss_per_sample = self.action_model(
+            action_loss, action_loss_per_sample, action_loss_per_timestep = self.action_model(
                 vl_embs_list_repeated,
                 actions_target_repeated,
                 state_repeated,
@@ -1390,10 +1405,16 @@ class Wan_PI(baseframework):
                 repeated_diffusion_steps,
                 actions_target.shape[0],
             ).mean(dim=0)
+            action_loss_per_timestep = action_loss_per_timestep.reshape(
+                repeated_diffusion_steps,
+                actions_target.shape[0],
+                actions_target.shape[1],
+            ).mean(dim=0)
 
         output = {
             "action_loss": action_loss,
             "action_loss_per_sample": action_loss_per_sample,
+            "action_loss_per_timestep": action_loss_per_timestep,
             "action_loss_valid_per_sample": action_valid_mask.any(dim=1),
             "mowa_state_conditioned": state is not None,
         }

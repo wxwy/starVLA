@@ -1337,6 +1337,111 @@ class VLATrainer(TrainerUtils):
         self.save_universal_checkpoint = getattr(self.config.trainer, "save_universal_checkpoint", False)
         self.checkpoint_format = self._resolve_checkpoint_format()
         self._mowa_task_metric_window = defaultdict(lambda: defaultdict(float))
+        self._mowa_padding_metric_window = defaultdict(lambda: defaultdict(float))
+
+    @staticmethod
+    def _mowa_example_mask(examples: list[dict], key: str, width: int) -> torch.Tensor:
+        values = [example.get(key) for example in examples]
+        if all(value is None for value in values):
+            return torch.ones(len(examples), width, dtype=torch.bool)
+        if any(value is None for value in values):
+            raise ValueError(f"MoWA batch mixes present and missing {key}.")
+        mask = torch.stack([torch.as_tensor(value, dtype=torch.bool) for value in values])
+        if mask.shape != (len(examples), width):
+            raise ValueError(f"MoWA {key} must be [B,{width}], got {tuple(mask.shape)}.")
+        return mask
+
+    def _accumulate_mowa_padding_metrics(self, examples: list[dict], output_dict: dict) -> None:
+        required = (
+            "action_loss_per_timestep",
+            "loss_future_main_per_timestep",
+            "loss_future_wrist_per_timestep",
+        )
+        if any(output_dict.get(key) is None for key in required):
+            return
+        action_loss = output_dict["action_loss_per_timestep"].detach().float().cpu()
+        future_main = output_dict["loss_future_main_per_timestep"].detach().float().cpu()
+        future_wrist = output_dict["loss_future_wrist_per_timestep"].detach().float().cpu()
+        if action_loss.ndim != 2 or future_main.ndim != 2 or future_wrist.shape != future_main.shape:
+            raise ValueError("MoWA padding diagnostics require [B,T] action and future loss tensors.")
+        action_mask = self._mowa_example_mask(examples, "mowa_action_valid_mask", action_loss.shape[1])
+        future_mask = self._mowa_example_mask(examples, "mowa_future_valid_mask", future_main.shape[1])
+        history_mask = self._mowa_example_mask(examples, "mowa_history_valid_mask", 0)
+
+        for index in range(len(examples)):
+            front_padded = history_mask.shape[1] > 0 and not bool(history_mask[index].all())
+            back_padded = not bool(action_mask[index].all()) or not bool(future_mask[index].all())
+            category = "both_pad" if front_padded and back_padded else "front_pad" if front_padded else "back_pad" if back_padded else "no_pad"
+            metrics = self._mowa_padding_metric_window[category]
+            metrics["sample_count"] += 1.0
+            metrics["action_valid_count"] += float(action_mask[index].sum())
+            metrics["action_token_count"] += float(action_mask.shape[1])
+            metrics["future_valid_count"] += float(future_mask[index].sum())
+            metrics["future_token_count"] += float(future_mask.shape[1])
+            if history_mask.shape[1] > 0:
+                metrics["history_real_count"] += float(history_mask[index].sum())
+                metrics["history_token_count"] += float(history_mask.shape[1])
+            for name, loss, mask in (
+                ("action", action_loss[index], action_mask[index]),
+                ("future_main", future_main[index], future_mask[index]),
+                ("future_wrist", future_wrist[index], future_mask[index]),
+            ):
+                metrics[f"{name}_loss_sum"] += float((loss * mask).sum())
+                metrics[f"{name}_loss_count"] += float(mask.sum())
+            split = action_loss.shape[1] // 2
+            for label, start, end in (("near", 0, split), ("far", split, action_loss.shape[1])):
+                mask = action_mask[index, start:end]
+                metrics[f"action_{label}_sum"] += float((action_loss[index, start:end] * mask).sum())
+                metrics[f"action_{label}_count"] += float(mask.sum())
+            split = future_main.shape[1] // 2
+            for label, start, end in (("near", 0, split), ("far", split, future_main.shape[1])):
+                mask = future_mask[index, start:end]
+                for name, loss in (("future_main", future_main[index]), ("future_wrist", future_wrist[index])):
+                    metrics[f"{name}_{label}_sum"] += float((loss[start:end] * mask).sum())
+                    metrics[f"{name}_{label}_count"] += float(mask.sum())
+
+    def _flush_mowa_padding_metrics(self) -> dict:
+        local = {category: dict(values) for category, values in self._mowa_padding_metric_window.items()}
+        self._mowa_padding_metric_window.clear()
+        if dist.is_initialized():
+            gathered = [None] * dist.get_world_size()
+            dist.all_gather_object(gathered, local)
+        else:
+            gathered = [local]
+        if not self.accelerator.is_main_process:
+            return {}
+        merged = defaultdict(lambda: defaultdict(float))
+        for window in gathered:
+            for category, values in window.items():
+                for key, value in values.items():
+                    merged[category][key] += float(value)
+        metrics, total = {}, defaultdict(float)
+        for category, values in merged.items():
+            for key, value in values.items():
+                total[key] += value
+            count = values["sample_count"]
+            if count <= 0:
+                continue
+            metrics[f"supervision/sample_count/{category}"] = count
+            for name in ("action", "future"):
+                metrics[f"supervision/{name}_valid_ratio/{category}"] = values[f"{name}_valid_count"] / values[f"{name}_token_count"]
+            for name in ("action", "future_main", "future_wrist"):
+                if values[f"{name}_loss_count"] > 0:
+                    metrics[f"loss_{name}/{category}"] = values[f"{name}_loss_sum"] / values[f"{name}_loss_count"]
+        if total["sample_count"] > 0:
+            for category in ("front_pad", "back_pad", "both_pad"):
+                metrics[f"supervision/padding_ratio/{category}"] = merged[category]["sample_count"] / total["sample_count"]
+            for name in ("action", "future"):
+                metrics[f"supervision/{name}_valid_ratio"] = total[f"{name}_valid_count"] / total[f"{name}_token_count"]
+            if total["history_token_count"] > 0:
+                metrics["supervision/history_real_ratio"] = total["history_real_count"] / total["history_token_count"]
+            for name in ("action", "future_main", "future_wrist"):
+                for label in ("near", "far"):
+                    if total[f"{name}_{label}_count"] > 0:
+                        prefix = "loss_action_horizon" if name == "action" else "loss_future_horizon"
+                        suffix = label if name != "future_wrist" else f"wrist_{label}"
+                        metrics[f"{prefix}/{suffix}"] = total[f"{name}_{label}_sum"] / total[f"{name}_{label}_count"]
+        return metrics
 
     def _accumulate_mowa_task_metrics(self, examples: list[dict], output_dict: dict) -> None:
         """Accumulate detached per-sample MoWA metrics for the next W&B log window."""
@@ -2251,6 +2356,7 @@ class VLATrainer(TrainerUtils):
 
             action_loss_item = action_loss.item()
             self._accumulate_mowa_task_metrics(batch_vla, output_dict)
+            self._accumulate_mowa_padding_metrics(batch_vla, output_dict)
             if not hasattr(self, "_loss_accum"):
                 self._loss_accum = {
                     "action_dit_loss": 0.0,
@@ -2305,6 +2411,7 @@ class VLATrainer(TrainerUtils):
                 next_completed_step = self.completed_steps + 1
                 if next_completed_step % self.config.trainer.logging_frequency == 0:
                     metrics.update(self._flush_mowa_task_metrics())
+                    metrics.update(self._flush_mowa_padding_metrics())
                 self._loss_accum = {
                     "action_dit_loss": 0.0,
                     "mowa_future_supervision_loss": 0.0,

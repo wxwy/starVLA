@@ -6,6 +6,7 @@ import math
 from dataclasses import dataclass
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 
@@ -218,3 +219,21 @@ def masked_future_flow_loss(
     token_loss = (prediction.float() - target.float()).pow(2).mean(dim=(2, 4, 5))
     weights = valid_mask.to(dtype=token_loss.dtype)
     return (token_loss * weights).sum(dim=-1) / weights.sum(dim=-1).clamp(min=1)
+
+
+def masked_done_bce_loss(
+    logits: torch.Tensor,
+    target: torch.Tensor,
+    valid_mask: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Return masked BCE, per-sample BCE and per-timestep BCE for done supervision."""
+    if logits.shape != target.shape or logits.shape != valid_mask.shape:
+        raise ValueError(
+            "done logits, target and valid_mask must have the same [B,T] shape, "
+            f"got {tuple(logits.shape)}, {tuple(target.shape)}, {tuple(valid_mask.shape)}."
+        )
+    per_timestep = F.binary_cross_entropy_with_logits(logits, target, reduction="none")
+    weights = valid_mask.to(dtype=per_timestep.dtype)
+    per_sample = (per_timestep * weights).sum(dim=1) / weights.sum(dim=1).clamp_min(1)
+    loss = (per_timestep * weights).sum() / weights.sum().clamp_min(1)
+    return loss, per_sample, per_timestep

@@ -391,7 +391,7 @@ class LayerwiseFlowmatchingActionHead(nn.Module):
                 velocity,
                 action_valid_mask,
                 return_per_sample=True,
-            )
+            ), (pred_actions - velocity).square().mean(dim=-1)
         return loss
 
     @torch.no_grad()

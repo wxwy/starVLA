@@ -19,6 +19,7 @@ from starVLA.model.modules.mowa.multiview_wan import (
     MultiViewFutureFusion,
     MultiViewPatchGrid,
     flatten_view_batch,
+    masked_done_bce_loss,
     masked_future_flow_loss,
     resolve_cross_view_layer_indices,
     unflatten_view_batch,
@@ -401,6 +402,19 @@ class MultiViewWanTest(unittest.TestCase):
         self.assertTrue(torch.allclose(per_view, torch.tensor([[5.0, 4.0]])))
         self.assertEqual(float(prediction.grad[0, 0, 0, 2]), 0.0)
         self.assertEqual(float(prediction.grad[0, 1].abs().sum()), 0.0)
+
+    def test_done_loss_excludes_padded_future_steps(self):
+        logits = torch.zeros(1, 3, requires_grad=True)
+        target = torch.tensor([[0.0, 1.0, 1.0]])
+        valid_mask = torch.tensor([[True, True, False]])
+
+        loss, per_sample, per_timestep = masked_done_bce_loss(logits, target, valid_mask)
+        loss.backward()
+
+        self.assertTrue(torch.allclose(loss, torch.log(torch.tensor(2.0))))
+        self.assertTrue(torch.allclose(per_sample, torch.log(torch.tensor([2.0]))))
+        self.assertEqual(float(logits.grad[0, 2]), 0.0)
+        self.assertGreater(float(per_timestep[0, 2]), 0.0)
 
     def test_fusion_restores_original_batch_and_checkpoint(self):
         torch.manual_seed(2)

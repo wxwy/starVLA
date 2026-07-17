@@ -136,6 +136,7 @@ def _get_mowa_latent_cache_dataset(dataset) -> MoWALatentCacheDataset:
         future_steps=future_steps,
         action_chunk_steps=action_chunk_steps,
         video_keys=tuple(cache_cfg.get("video_keys", ())) or None,
+        raw_episode_cache_size=int(cache_cfg.get("raw_episode_cache_size", 2)),
     )
     dataset._mowa_latent_cache_dataset = cache_dataset
     return cache_dataset

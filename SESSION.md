@@ -1,6 +1,7 @@
 # MoWA 会话状态
 
 ## 当前阶段
+- 2026-07-17 E003-B1 全量混合 DataLoader 内存修复：`MoWAWindowLatentSampleDataset` 的 `_raw_episode_cache` 原本按 episode parquet 路径无界累积；persistent worker 在全量 18-task 随机采样时会不断保留原始 episode DataFrame。现改为默认容量 2 的 LRU，可通过 `mowa_latent_cache.raw_episode_cache_size` 覆盖；回归覆盖命中与淘汰，episode-level latent cache 测试 22 项通过。此前单任务 run `1200` 已运行至 step 2000，而全量 run 在 `prefetch=2` 时分别于 74/167/298 step 耗尽 10GiB `/dev/shm`，`prefetch=1` 仍在 step 283 报错，下一轮须从新 run ID 启动并监控共享内存。
 - 2026-07-17 E003-B1 全 atomic 数据 loader 修正：4 卡每 rank `num_workers=48` 且默认 `prefetch_factor=2` 导致最多 384 个预取 batch，占满 10GiB `/dev/shm`，在 step 74 触发 DataLoader bus error。16 workers、`prefetch_factor=2` 仍在 step 167 耗尽共享内存，8 workers、`prefetch_factor=2` 仍在 step 298 耗尽共享内存；候选配置改为每 rank 8 workers、`prefetch_factor=1`，理论预取上限降至 32 个 batch，重启后需观察 `/dev/shm`。
 - 2026-07-17 E003-B1 下一轮 LoRA 正式候选：`mowa_e003_future_latent_prior_lora_long_training_launch_candidate.yaml` 已切换至 `run_id=MoWA-E-003_future_latent_prior_wo_history_lora_260717_1953`，训练 data mix 为 `robocasa365_atomic_target_human_all`（18 个 atomic target-human 任务），并设 `trainer.is_resume=false`，保证从零开始记录新增诊断指标。
 - 2026-07-17 E003-B1 checkpoint 恢复兼容：lightweight 保存改为跳过 `persistent=False` 的 runtime buffer，避免未来 checkpoint 再写入诊断状态；恢复兼容仅忽略已知 `*.last_residual_ratio`，仍严格拒绝其他 unexpected key。新增回归覆盖该 buffer 不保存、旧 checkpoint 含该 key 可加载、任意错误 key 仍报错。

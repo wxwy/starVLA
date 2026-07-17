@@ -6,6 +6,7 @@ latent store.  Performs index validation and leakage checks.
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -76,6 +77,7 @@ class MoWAWindowLatentSampleDataset:
         action_chunk_steps: int | None = None,
         episode_latent_path_prefix: Path | str | None = None,
         video_keys: tuple[str, ...] | None = None,
+        raw_episode_cache_size: int = 2,
     ) -> None:
         self.manifest_path = Path(manifest_path)
         if action_chunk_steps is None and future_steps is not None:
@@ -84,6 +86,9 @@ class MoWAWindowLatentSampleDataset:
             Path(label_sidecar_root) if label_sidecar_root is not None else None
         )
         self.video_keys = tuple(video_keys or ())
+        if raw_episode_cache_size < 0:
+            raise ValueError("raw_episode_cache_size must be non-negative.")
+        self._raw_episode_cache_size = int(raw_episode_cache_size)
         self._instruction_table: MoWAInstructionTextLatentCache | None = None
         if instruction_text_latent is not None:
             if isinstance(instruction_text_latent, MoWAInstructionTextLatentCache):
@@ -100,7 +105,7 @@ class MoWAWindowLatentSampleDataset:
             episode_latent_path_prefix=episode_latent_path_prefix,
         )
         self._store_cache: dict[str, MoWAEpisodeLatentStore] = {}
-        self._raw_episode_cache: dict[str, Any] = {}
+        self._raw_episode_cache: OrderedDict[str, Any] = OrderedDict()
 
     def __len__(self) -> int:
         return len(self._entries)
@@ -195,8 +200,9 @@ class MoWAWindowLatentSampleDataset:
         raw_episode_path = entry.source_episode_path
         if not raw_episode_path:
             return None
-        cached = self._raw_episode_cache.get(raw_episode_path)
+        cached = self._raw_episode_cache.pop(raw_episode_path, None)
         if cached is not None:
+            self._raw_episode_cache[raw_episode_path] = cached
             return cached
         path = Path(raw_episode_path)
         if not path.is_file():
@@ -205,7 +211,10 @@ class MoWAWindowLatentSampleDataset:
             raw_episode = pd.read_parquet(path)
         except Exception:  # noqa: BLE001
             return None
-        self._raw_episode_cache[raw_episode_path] = raw_episode
+        if self._raw_episode_cache_size > 0:
+            self._raw_episode_cache[raw_episode_path] = raw_episode
+            while len(self._raw_episode_cache) > self._raw_episode_cache_size:
+                self._raw_episode_cache.popitem(last=False)
         return raw_episode
 
     def _load_raw_sequence(

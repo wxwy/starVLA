@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 import json
 import tempfile
 import unittest
@@ -44,6 +45,33 @@ from starVLA.dataloader.mowa.sampler import _manifest_anchor_category
 
 
 class EpisodeLevelLatentCacheTest(unittest.TestCase):
+    def test_raw_episode_cache_is_bounded_lru(self):
+        dataset = object.__new__(MoWAWindowLatentSampleDataset)
+        dataset._raw_episode_cache_size = 2
+        dataset._raw_episode_cache = OrderedDict()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            paths = [Path(temp_dir) / f"episode_{index}.parquet" for index in range(3)]
+            for path in paths:
+                path.touch()
+            entries = [SimpleNamespace(source_episode_path=str(path)) for path in paths]
+            payloads = [object() for _ in paths]
+
+            with patch(
+                "starVLA.dataloader.mowa.window_latent_sample.pd.read_parquet",
+                side_effect=payloads,
+            ) as read_parquet:
+                self.assertIs(dataset._get_raw_episode_data(entries[0]), payloads[0])
+                self.assertIs(dataset._get_raw_episode_data(entries[1]), payloads[1])
+                self.assertIs(dataset._get_raw_episode_data(entries[0]), payloads[0])
+                self.assertIs(dataset._get_raw_episode_data(entries[2]), payloads[2])
+
+            self.assertEqual(read_parquet.call_count, 3)
+            self.assertEqual(
+                list(dataset._raw_episode_cache),
+                [str(paths[0]), str(paths[2])],
+            )
+
     def test_manifest_table_parses_entries_lazily(self):
         entry = MoWAWindowManifestEntry(
             sample_id="sample", episode_id="ep_000000", episode_latent_path="ep_000000.h5",

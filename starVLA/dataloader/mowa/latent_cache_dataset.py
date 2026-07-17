@@ -65,6 +65,7 @@ class _MoWAEpisodeLevelLatentCacheDataset:
         future_steps: int | None = None,
         action_chunk_steps: int | None = None,
         video_keys: tuple[str, ...] | None = None,
+        raw_episode_cache_size: int = 2,
     ) -> None:
         self.cache_root = Path(cache_root)
         self.manifest_path = (
@@ -85,6 +86,7 @@ class _MoWAEpisodeLevelLatentCacheDataset:
             action_chunk_steps=action_chunk_steps,
             episode_latent_path_prefix=self.cache_root,
             video_keys=video_keys,
+            raw_episode_cache_size=raw_episode_cache_size,
         )
         self._sample_keys = tuple(sorted(set(self._window_dataset.sample_keys())))
         self._key_to_index = {
@@ -248,6 +250,7 @@ class MoWALatentCacheDataset:
         future_steps: int | None = None,
         action_chunk_steps: int | None = None,
         video_keys: tuple[str, ...] | None = None,
+        raw_episode_cache_size: int = 2,
     ) -> None:
         self.cache_root = Path(cache_root)
         self.manifest_path = (
@@ -265,6 +268,7 @@ class MoWALatentCacheDataset:
                     future_steps=future_steps,
                     action_chunk_steps=action_chunk_steps,
                     video_keys=video_keys,
+                    raw_episode_cache_size=raw_episode_cache_size,
                 )
             )
         else:

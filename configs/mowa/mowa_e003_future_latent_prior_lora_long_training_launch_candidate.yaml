@@ -130,7 +130,7 @@ framework:
       num_heads: 8
       bottleneck_dim: 512
       zero_init_output: true
-      gate_init: 0.001
+      gate_init: 1.0
     future_loss:
       main_weight: 1.0
       wrist_weight: 1.0

@@ -129,13 +129,33 @@ def build_param_lr_groups(model, cfg):
         try:
             for attr in freeze_path.split("."):
                 module = getattr(module, attr)
-            frozen_params.update(id(p) for p in module.parameters())
+            # 冻结基座时保留已注入的 PEFT LoRA 参数，后续单独加入 optimizer。
+            frozen_params.update(
+                id(param)
+                for name, param in module.named_parameters()
+                if "lora_" not in name
+            )
         except AttributeError:
             print(f"⚠️ freeze module path does not exist: {freeze_path}")
             continue
 
+    wan_lora_params = [
+        param
+        for name, param in model.named_parameters()
+        if name.startswith("backbone.transformer.") and "lora_" in name
+    ]
+    if wan_lora_params:
+        param_groups.append(
+            {
+                "params": wan_lora_params,
+                "lr": lr_cfg.get("wan_lora", base_lr),
+                "name": "wan_lora",
+            }
+        )
+        used_params.update(id(param) for param in wan_lora_params)
+
     for module_name, lr in lr_cfg.items():
-        if module_name == "base":
+        if module_name in {"base", "wan_lora"}:
             continue
         # try to find the module under vla by module_name (support nested paths)
         module = model

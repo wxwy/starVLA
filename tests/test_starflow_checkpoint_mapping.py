@@ -15,6 +15,7 @@ from starVLA.model.modules.starflow_vla.mapping import save_starflow_checkpoint_
 from starVLA.model.framework.share_tools import _validate_partial_frozen_backbone_load, load_model_weights
 from starVLA.training.train_starvla import _iter_model_state_tensors, _streaming_save_model_shards
 from starVLA.training.trainer_utils.trainer_tools import (
+    build_param_lr_groups,
     load_lightweight_scaler_state,
     save_lightweight_checkpoint_metadata,
     save_lightweight_scaler_state,
@@ -246,6 +247,50 @@ class FrozenBackboneCheckpointTest(unittest.TestCase):
         self.assertTrue(all("lora_" in name for name in adapter_state))
         self.assertEqual(metadata["adapter_name"], "mowa_wan")
         self.assertEqual(metadata["target_modules"], ["blocks.0.attn2.to_q"])
+
+
+class WanLoraOptimizerTest(unittest.TestCase):
+    def test_frozen_backbone_keeps_wan_lora_in_optimizer_and_updates_it(self):
+        model = torch.nn.Module()
+        model.backbone = torch.nn.Module()
+        model.backbone.transformer = torch.nn.Module()
+        model.backbone.transformer.register_parameter("base_weight", torch.nn.Parameter(torch.ones(2, 2)))
+        model.backbone.transformer.register_parameter("lora_A", torch.nn.Parameter(torch.ones(2, 1)))
+        model.backbone.transformer.register_parameter("lora_B", torch.nn.Parameter(torch.ones(1, 2)))
+        model.action_model = torch.nn.Linear(2, 2)
+
+        cfg = OmegaConf.create(
+            {
+                "trainer": {
+                    "freeze_modules": "backbone",
+                    "learning_rate": {
+                        "base": 2.5e-5,
+                        "action_model": 1.0e-4,
+                        "wan_lora": 1.0e-5,
+                    },
+                }
+            }
+        )
+        param_groups = build_param_lr_groups(model, cfg)
+        lora_group = next(group for group in param_groups if group["name"] == "wan_lora")
+        optimizer_param_ids = {
+            id(param)
+            for group in param_groups
+            for param in group["params"]
+        }
+
+        self.assertEqual(lora_group["lr"], 1.0e-5)
+        self.assertEqual({id(param) for param in lora_group["params"]}, {
+            id(model.backbone.transformer.lora_A),
+            id(model.backbone.transformer.lora_B),
+        })
+        self.assertNotIn(id(model.backbone.transformer.base_weight), optimizer_param_ids)
+
+        optimizer = torch.optim.AdamW(param_groups)
+        before = model.backbone.transformer.lora_A.detach().clone()
+        (model.backbone.transformer.lora_A.sum() + model.backbone.transformer.lora_B.sum()).backward()
+        optimizer.step()
+        self.assertFalse(torch.equal(before, model.backbone.transformer.lora_A))
 
 
 class StarFlowLightweightCheckpointArtifactTest(unittest.TestCase):

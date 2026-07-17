@@ -186,6 +186,7 @@ trainer:
     base: 2.5e-05
     qwen_vl_interface: 1.0e-05
     action_model: 1.0e-04
+    wan_lora: 1.0e-05
   lr_scheduler_type: cosine_with_min_lr
   scheduler_specific_kwargs:
     min_lr: 1.0e-06

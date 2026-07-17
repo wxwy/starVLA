@@ -4,7 +4,7 @@
 > **状态**: ✅ 评估完成  
 > **run_id**: `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021`  
 > **启动时间**: 2026-07-16 13:02 CST  
-> **当前更新**: 2026-07-17 12:05 CST  
+> **当前更新**: 2026-07-17 12:08 CST  
 > **tmux 会话**: `test`  
 > **配置来源**: `configs/starflow_vla/state/continuous_head.yaml`  
 > **评测输出**: `playground/starflow_eval_result`
@@ -31,7 +31,7 @@
 
 ## 评估进度
 
-> 最后更新：2026-07-17 12:05 CST
+> 最后更新：2026-07-17 12:08 CST
 
 | ckpt | 状态 | 总 eps | 总 successes | 总 SR |
 |------|------|--------|--------------|-------|
@@ -313,6 +313,134 @@
 | steps_60000 | 11.1 | 26.2 | 13.7 | 10.5 | 14.9 |
 | steps_70000 | 11.1 | 25.4 | 13.5 | 10.4 | 14.7 |
 | steps_80000 | 11.0 | 25.9 | 13.6 | 10.4 | 14.9 |
+
+## 每个 suite 的 per-task 成功率矩阵
+
+### libero_goal
+
+| task_id | 任务描述 |
+|---------|----------|
+| 0 | open the middle drawer of the cabinet |
+| 1 | open the top drawer and put the bowl inside |
+| 2 | push the plate to the front of the stove |
+| 3 | put the bowl on the plate |
+| 4 | put the bowl on the stove |
+| 5 | put the bowl on top of the cabinet |
+| 6 | put the cream cheese in the bowl |
+| 7 | put the wine bottle on the rack |
+| 8 | put the wine bottle on top of the cabinet |
+| 9 | turn on the stove |
+
+| ckpt | task_0 | task_1 | task_2 | task_3 | task_4 | task_5 | task_6 | task_7 | task_8 | task_9 |
+|------|------|------|------|------|------|------|------|------|------|------|
+| steps_5000 | 38% | 2% | 94% | 92% | 94% | 84% | 66% | 0% | 72% | 100% |
+| steps_10000 | 60% | 56% | 18% | 100% | 96% | 86% | 58% | 54% | 98% | 80% |
+| steps_20000 | 100% | 90% | 18% | 100% | 98% | 96% | 96% | 62% | 94% | 100% |
+| steps_30000 | 94% | 76% | 90% | 100% | 98% | 96% | 88% | 66% | 94% | 100% |
+| steps_40000 | 98% | 84% | 92% | 100% | 96% | 98% | 98% | 86% | 98% | 100% |
+| steps_50000 | 92% | 94% | 94% | 100% | 98% | 98% | 92% | 66% | 98% | 100% |
+| steps_60000 | 92% | 84% | 96% | 100% | 100% | 96% | 96% | 82% | 100% | 100% |
+| steps_70000 | 98% | 90% | 92% | 98% | 98% | 96% | 96% | 86% | 100% | 100% |
+| steps_80000 | 98% | 86% | 92% | 96% | 100% | 98% | 98% | 76% | 100% | 100% |
+
+### libero_10
+
+| task_id | 任务描述 |
+|---------|----------|
+| 0 | pick up the book and place it in the back compartment of the caddy |
+| 1 | put both moka pots on the stove |
+| 2 | put both the alphabet soup and the cream cheese box in the basket |
+| 3 | put both the alphabet soup and the tomato sauce in the basket |
+| 4 | put both the cream cheese box and the butter in the basket |
+| 5 | put the black bowl in the bottom drawer of the cabinet and close it |
+| 6 | put the white mug on the left plate and put the yellow and white mug on the right plate |
+| 7 | put the white mug on the plate and put the chocolate pudding to the right of the plate |
+| 8 | put the yellow and white mug in the microwave and close it |
+| 9 | turn on the stove and put the moka pot on it |
+
+| ckpt | task_0 | task_1 | task_2 | task_3 | task_4 | task_5 | task_6 | task_7 | task_8 | task_9 |
+|------|------|------|------|------|------|------|------|------|------|------|
+| steps_5000 | 12% | 0% | 14% | 0% | 38% | 8% | 0% | 0% | 22% | 94% |
+| steps_10000 | 72% | 0% | 26% | 26% | 28% | 8% | 60% | 58% | 12% | 34% |
+| steps_20000 | 80% | 32% | 78% | 70% | 82% | 74% | 46% | 76% | 0% | 64% |
+| steps_30000 | 78% | 2% | 76% | 66% | 92% | 68% | 28% | 44% | 0% | 76% |
+| steps_40000 | 98% | 12% | 94% | 76% | 96% | 72% | 74% | 66% | 34% | 96% |
+| steps_50000 | 94% | 42% | 96% | 78% | 100% | 60% | 50% | 62% | 64% | 98% |
+| steps_60000 | 92% | 44% | 92% | 72% | 88% | 82% | 72% | 70% | 74% | 94% |
+| steps_70000 | 94% | 42% | 96% | 62% | 96% | 74% | 90% | 74% | 80% | 90% |
+| steps_80000 | 98% | 74% | 100% | 70% | 100% | 82% | 82% | 74% | 88% | 86% |
+
+### libero_object
+
+| task_id | 任务描述 |
+|---------|----------|
+| 0 | pick up the alphabet soup and place it in the basket |
+| 1 | pick up the bbq sauce and place it in the basket |
+| 2 | pick up the butter and place it in the basket |
+| 3 | pick up the chocolate pudding and place it in the basket |
+| 4 | pick up the cream cheese and place it in the basket |
+| 5 | pick up the ketchup and place it in the basket |
+| 6 | pick up the milk and place it in the basket |
+| 7 | pick up the orange juice and place it in the basket |
+| 8 | pick up the salad dressing and place it in the basket |
+| 9 | pick up the tomato sauce and place it in the basket |
+
+| ckpt | task_0 | task_1 | task_2 | task_3 | task_4 | task_5 | task_6 | task_7 | task_8 | task_9 |
+|------|------|------|------|------|------|------|------|------|------|------|
+| steps_5000 | 26% | 70% | 90% | 74% | 80% | 50% | 68% | 40% | 84% | 58% |
+| steps_10000 | 70% | 96% | 100% | 78% | 66% | 98% | 98% | 98% | 98% | 90% |
+| steps_20000 | 96% | 90% | 100% | 98% | 98% | 100% | 98% | 98% | 100% | 98% |
+| steps_30000 | 94% | 82% | 100% | 100% | 100% | 100% | 98% | 92% | 94% | 92% |
+| steps_40000 | 98% | 100% | 98% | 92% | 100% | 100% | 98% | 94% | 100% | 94% |
+| steps_50000 | 100% | 94% | 100% | 94% | 96% | 100% | 100% | 86% | 100% | 90% |
+| steps_60000 | 98% | 90% | 100% | 100% | 100% | 100% | 100% | 98% | 98% | 96% |
+| steps_70000 | 98% | 96% | 100% | 100% | 100% | 100% | 100% | 96% | 98% | 92% |
+| steps_80000 | 100% | 98% | 100% | 100% | 100% | 100% | 100% | 96% | 98% | 90% |
+
+### libero_spatial
+
+| task_id | 任务描述 |
+|---------|----------|
+| 0 | pick up the black bowl between the plate and the ramekin and place it on the plate |
+| 1 | pick up the black bowl from table center and place it on the plate |
+| 2 | pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate |
+| 3 | pick up the black bowl next to the cookie box and place it on the plate |
+| 4 | pick up the black bowl next to the plate and place it on the plate |
+| 5 | pick up the black bowl next to the ramekin and place it on the plate |
+| 6 | pick up the black bowl on the cookie box and place it on the plate |
+| 7 | pick up the black bowl on the ramekin and place it on the plate |
+| 8 | pick up the black bowl on the stove and place it on the plate |
+| 9 | pick up the black bowl on the wooden cabinet and place it on the plate |
+
+| ckpt | task_0 | task_1 | task_2 | task_3 | task_4 | task_5 | task_6 | task_7 | task_8 | task_9 |
+|------|------|------|------|------|------|------|------|------|------|------|
+| steps_5000 | 100% | 90% | 48% | 86% | 92% | 12% | 94% | 64% | 88% | 22% |
+| steps_10000 | 90% | 100% | 88% | 100% | 94% | 98% | 96% | 96% | 88% | 82% |
+| steps_20000 | 100% | 88% | 74% | 100% | 96% | 100% | 100% | 72% | 88% | 96% |
+| steps_30000 | 98% | 96% | 94% | 96% | 84% | 96% | 96% | 92% | 98% | 84% |
+| steps_40000 | 98% | 100% | 94% | 94% | 96% | 100% | 98% | 98% | 92% | 98% |
+| steps_50000 | 98% | 100% | 94% | 96% | 92% | 96% | 98% | 94% | 96% | 100% |
+| steps_60000 | 98% | 100% | 90% | 96% | 96% | 98% | 96% | 90% | 90% | 100% |
+| steps_70000 | 100% | 96% | 100% | 98% | 100% | 100% | 100% | 96% | 90% | 98% |
+| steps_80000 | 100% | 100% | 88% | 100% | 98% | 98% | 94% | 96% | 98% | 100% |
+
+---
+
+## 每个 ckpt 成功 episode 的平均完成部署步数 / 时长
+
+> `steps_executed` 为成功 episode 中实际执行的 env step 数；按 LIBERO 10Hz 控制频率换算为秒。仅统计 `success=true` 的 episode。
+
+| ckpt | goal_steps | goal_sec | 10_steps | 10_sec | object_steps | object_sec | spatial_steps | spatial_sec | overall_steps | overall_sec |
+|------|------------|----------|----------|--------|--------------|------------|---------------|-------------|---------------|-------------|
+| steps_5000 | 106.5 | 10.7 | 307.6 | 30.8 | 152.5 | 15.3 | 107.0 | 10.7 | 137.7 | 13.8 |
+| steps_10000 | 115.7 | 11.6 | 282.7 | 28.3 | 137.2 | 13.7 | 114.4 | 11.4 | 141.0 | 14.1 |
+| steps_20000 | 111.3 | 11.1 | 263.4 | 26.3 | 136.7 | 13.7 | 105.0 | 10.5 | 144.4 | 14.4 |
+| steps_30000 | 113.7 | 11.4 | 270.8 | 27.1 | 142.4 | 14.2 | 105.6 | 10.6 | 144.8 | 14.5 |
+| steps_40000 | 110.2 | 11.0 | 258.4 | 25.8 | 141.4 | 14.1 | 103.3 | 10.3 | 146.2 | 14.6 |
+| steps_50000 | 111.6 | 11.2 | 262.0 | 26.2 | 141.8 | 14.2 | 103.9 | 10.4 | 148.7 | 14.9 |
+| steps_60000 | 110.0 | 11.0 | 261.4 | 26.1 | 136.5 | 13.6 | 104.5 | 10.4 | 147.9 | 14.8 |
+| steps_70000 | 110.2 | 11.0 | 253.4 | 25.3 | 134.3 | 13.4 | 103.3 | 10.3 | 145.5 | 14.6 |
+| steps_80000 | 108.7 | 10.9 | 258.3 | 25.8 | 134.5 | 13.5 | 102.7 | 10.3 | 147.9 | 14.8 |
 
 ## 每个 suite 的 per-task 成功率矩阵
 

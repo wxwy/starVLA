@@ -51,7 +51,6 @@ from starVLA.model.modules.mowa import (
     MultiViewFutureFusion,
     MultiViewPatchGrid,
     flatten_view_batch,
-    masked_done_bce_loss,
     masked_future_flow_loss,
     resolve_cross_view_layer_indices,
     unflatten_view_batch,
@@ -1039,27 +1038,20 @@ class Wan_PI(baseframework):
             )
         if not torch.all((done_target == 0) | (done_target == 1)):
             raise ValueError("E003 multi-view done target must be binary.")
-        done_valid_mask = context["future_valid_mask"][:, 0]
-        done_loss, done_loss_per_sample, done_loss_per_timestep = masked_done_bce_loss(
+        done_loss_per_timestep = torch.nn.functional.binary_cross_entropy_with_logits(
             done_logits,
             done_target,
-            done_valid_mask,
+            reduction="none",
         )
+        done_loss = done_loss_per_timestep.mean()
         return {
             "loss_done": done_loss,
-            "loss_done_per_sample": done_loss_per_sample,
+            "loss_done_per_sample": done_loss_per_timestep.mean(dim=1),
             "loss_done_per_timestep": done_loss_per_timestep,
             "done_logits": done_logits,
             "done_target": done_target,
-            "done_valid_mask": done_valid_mask,
-            "done_positive_ratio": (
-                (done_target.detach().float() * done_valid_mask).sum()
-                / done_valid_mask.sum().clamp_min(1)
-            ),
-            "done_positive_ratio_per_sample": (
-                (done_target.detach().float() * done_valid_mask).sum(dim=1)
-                / done_valid_mask.sum(dim=1).clamp_min(1)
-            ),
+            "done_positive_ratio": done_target.detach().float().mean(),
+            "done_positive_ratio_per_sample": done_target.detach().float().mean(dim=1),
             "done_logit_mean": done_logits.detach().float().mean(),
             "done_probability_mean": done_logits.detach().float().sigmoid().mean(),
         }

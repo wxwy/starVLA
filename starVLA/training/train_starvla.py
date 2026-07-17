@@ -210,11 +210,19 @@ def _parse_shard_size_to_bytes(raw_size) -> int:
 
 def _iter_model_state_tensors(model, *, save_frozen_backbone: bool):
     for name, param in model.named_parameters():
-        if not save_frozen_backbone and name.startswith("backbone."):
+        if (
+            not save_frozen_backbone
+            and name.startswith("backbone.")
+            and "lora_" not in name
+        ):
             continue
         yield name, param
     for name, buffer in model.named_buffers():
-        if not save_frozen_backbone and name.startswith("backbone."):
+        if (
+            not save_frozen_backbone
+            and name.startswith("backbone.")
+            and "lora_" not in name
+        ):
             continue
         yield name, buffer
 
@@ -2009,6 +2017,17 @@ class VLATrainer(TrainerUtils):
 
                 multiview_metrics = {}
                 if output_dict.get("loss_future_main") is not None:
+                    mowa_cfg = getattr(self.config.framework, "mowa", None)
+                    future_loss_cfg = getattr(mowa_cfg, "future_loss", None)
+                    done_head_cfg = getattr(mowa_cfg, "done_head", None)
+                    prior_scale = float(
+                        getattr(self.config.trainer.loss_scale, "mowa_future_latent_prior", 1.0)
+                    )
+                    if not bool(getattr(self.config.trainer, "enable_mowa_future_latent_prior_loss", False)):
+                        prior_scale = 0.0
+                    main_weight = float(getattr(future_loss_cfg, "main_weight", 1.0))
+                    wrist_weight = float(getattr(future_loss_cfg, "wrist_weight", 1.0))
+                    done_weight = float(getattr(done_head_cfg, "loss_weight", 1.0))
                     for name in (
                         "loss_future_main",
                         "loss_future_wrist",
@@ -2024,6 +2043,24 @@ class VLATrainer(TrainerUtils):
                         if value is not None:
                             multiview_metrics[name] = float(value.detach().float().item())
                     multiview_metrics["loss_action"] = float(action_loss.detach().float().item())
+                    weighted_future_main = prior_scale * main_weight * output_dict["loss_future_main"]
+                    weighted_future_wrist = prior_scale * wrist_weight * output_dict["loss_future_wrist"]
+                    weighted_done = prior_scale * done_weight * output_dict["loss_done"]
+                    weighted_future_total = weighted_future_main + weighted_future_wrist + weighted_done
+                    multiview_metrics["weighted_future_main"] = float(
+                        weighted_future_main.detach().float().item()
+                    )
+                    multiview_metrics["weighted_future_wrist"] = float(
+                        weighted_future_wrist.detach().float().item()
+                    )
+                    multiview_metrics["weighted_done"] = float(weighted_done.detach().float().item())
+                    multiview_metrics["weighted_future_total"] = float(
+                        weighted_future_total.detach().float().item()
+                    )
+                    multiview_metrics["aux_to_action_ratio"] = float(
+                        (weighted_future_total.detach().float() / action_loss.detach().float().clamp_min(1e-8))
+                        .item()
+                    )
                     for layer, value in output_dict.get("cross_view_gate_by_layer", {}).items():
                         multiview_metrics[f"cross_view_gate/layer_{layer}"] = float(
                             value.detach().float().item()
@@ -2286,6 +2323,7 @@ class VLATrainer(TrainerUtils):
                 self.checkpoint_max_shard_size,
                 save_frozen_backbone=self.save_frozen_backbone,
             )
+            self._save_wan_lora_adapter(bare_model, checkpoint_path)
             gc.collect()
 
             scheduler_state = self.lr_scheduler.state_dict()
@@ -2324,6 +2362,53 @@ class VLATrainer(TrainerUtils):
         self._save_lightweight_rng_state(checkpoint_path)
 
         self.accelerator.wait_for_everyone()
+
+    @staticmethod
+    def _save_wan_lora_adapter(bare_model, checkpoint_path: Path) -> None:
+        """额外导出独立的 Wan PEFT LoRA adapter，便于轻量分发和复用。"""
+        backbone = getattr(bare_model, "backbone", None)
+        if not bool(getattr(backbone, "lora_enabled", False)):
+            return
+
+        transformer = getattr(backbone, "transformer", None)
+        adapter_name = getattr(backbone, "lora_adapter_name", None)
+        if transformer is None or not adapter_name:
+            raise RuntimeError("Wan LoRA is enabled but its transformer or adapter name is unavailable.")
+
+        try:
+            from peft.utils import get_peft_model_state_dict
+            from safetensors.torch import save_file
+        except ImportError as error:
+            raise ImportError(
+                "Saving a Wan LoRA adapter requires `peft` and `safetensors`."
+            ) from error
+
+        adapter_state = get_peft_model_state_dict(transformer, adapter_name=adapter_name)
+        if not adapter_state:
+            raise RuntimeError(f"Wan LoRA adapter `{adapter_name}` has no parameters to save.")
+        adapter_state = {
+            name: tensor.detach().to("cpu", copy=True).contiguous()
+            for name, tensor in adapter_state.items()
+        }
+        adapter_path = checkpoint_path / "wan_lora.safetensors"
+        save_file(adapter_state, str(adapter_path))
+
+        peft_config = getattr(transformer, "peft_config", {}).get(adapter_name)
+        if peft_config is None:
+            raise RuntimeError(f"Wan LoRA adapter `{adapter_name}` has no PEFT config.")
+        adapter_metadata = {
+            "adapter_name": adapter_name,
+            "base_model": getattr(backbone, "model_name", None),
+            "target_modules": list(getattr(backbone, "lora_target_modules", ())),
+            "peft_config": peft_config.to_dict(),
+        }
+        with open(checkpoint_path / "wan_lora_config.json", "w", encoding="utf-8") as file:
+            json.dump(adapter_metadata, file, ensure_ascii=False, indent=2, default=str)
+        logger.info(
+            "Saved Wan LoRA adapter: tensors=%d, path=%s",
+            len(adapter_state),
+            adapter_path,
+        )
 
     def _save_lightweight_checkpoint_metadata(self, checkpoint_path: Path):
         save_lightweight_checkpoint_metadata(

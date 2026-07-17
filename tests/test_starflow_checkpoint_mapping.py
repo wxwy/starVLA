@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import torch
 from accelerate.utils import SCALER_NAME
@@ -12,7 +13,7 @@ from omegaconf import OmegaConf
 
 from starVLA.model.modules.starflow_vla.mapping import save_starflow_checkpoint_mapping
 from starVLA.model.framework.share_tools import _validate_partial_frozen_backbone_load, load_model_weights
-from starVLA.training.train_starvla import _streaming_save_model_shards
+from starVLA.training.train_starvla import _iter_model_state_tensors, _streaming_save_model_shards
 from starVLA.training.trainer_utils.trainer_tools import (
     load_lightweight_scaler_state,
     save_lightweight_checkpoint_metadata,
@@ -21,6 +22,7 @@ from starVLA.training.trainer_utils.trainer_tools import (
 from starVLA.training.train_starvla import (
     _apply_checkpoint_retention_policy,
     _should_auto_resume_latest_complete,
+    VLATrainer,
 )
 
 
@@ -172,6 +174,78 @@ class FrozenBackboneCheckpointTest(unittest.TestCase):
             load_model_weights(target, checkpoint_dir, strict=False)
             self.assertTrue(torch.equal(target.head.weight, source.head.weight))
             self.assertTrue(torch.equal(target.backbone.weight, target_backbone))
+
+    def test_partial_checkpoint_keeps_backbone_lora_parameters(self):
+        source = self._model()
+        source.backbone.register_parameter("lora_A", torch.nn.Parameter(torch.full((2, 3), 1.5)))
+        source.backbone.register_parameter("lora_B", torch.nn.Parameter(torch.full((4, 2), 2.5)))
+        saved_names = {
+            name
+            for name, _ in _iter_model_state_tensors(source, save_frozen_backbone=False)
+        }
+        self.assertEqual(
+            saved_names,
+            {"backbone.lora_A", "backbone.lora_B", "head.weight", "head.bias"},
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checkpoint_dir = Path(tmpdir)
+            _streaming_save_model_shards(
+                source,
+                checkpoint_dir,
+                "safetensors",
+                "1GB",
+                save_frozen_backbone=False,
+            )
+            (checkpoint_dir / "trainer_state.json").write_text(
+                json.dumps({"omitted_model_state_prefixes": ["backbone."]}),
+                encoding="utf-8",
+            )
+            target = self._model()
+            target.backbone.register_parameter("lora_A", torch.nn.Parameter(torch.zeros(2, 3)))
+            target.backbone.register_parameter("lora_B", torch.nn.Parameter(torch.zeros(4, 2)))
+            load_model_weights(target, checkpoint_dir, strict=False)
+            self.assertTrue(torch.equal(target.backbone.lora_A, source.backbone.lora_A))
+            self.assertTrue(torch.equal(target.backbone.lora_B, source.backbone.lora_B))
+
+    def test_saves_wan_lora_as_standalone_adapter(self):
+        from diffusers import WanTransformer3DModel
+        from peft import LoraConfig
+        from safetensors.torch import load_file
+
+        transformer = WanTransformer3DModel(
+            num_attention_heads=2,
+            attention_head_dim=4,
+            in_channels=4,
+            out_channels=4,
+            text_dim=8,
+            freq_dim=8,
+            ffn_dim=16,
+            num_layers=1,
+        )
+        transformer.add_adapter(
+            LoraConfig(r=2, lora_alpha=4, target_modules=["blocks.0.attn2.to_q"]),
+            adapter_name="mowa_wan",
+        )
+        model = torch.nn.Module()
+        model.backbone = torch.nn.Module()
+        model.backbone.lora_enabled = True
+        model.backbone.lora_adapter_name = "mowa_wan"
+        model.backbone.lora_target_modules = ("blocks.0.attn2.to_q",)
+        model.backbone.model_name = "test-wan"
+        model.backbone.transformer = transformer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checkpoint_dir = Path(tmpdir)
+            with patch("starVLA.training.train_starvla.logger"):
+                VLATrainer._save_wan_lora_adapter(model, checkpoint_dir)
+            adapter_state = load_file(checkpoint_dir / "wan_lora.safetensors")
+            metadata = json.loads((checkpoint_dir / "wan_lora_config.json").read_text(encoding="utf-8"))
+
+        self.assertTrue(adapter_state)
+        self.assertTrue(all("lora_" in name for name in adapter_state))
+        self.assertEqual(metadata["adapter_name"], "mowa_wan")
+        self.assertEqual(metadata["target_modules"], ["blocks.0.attn2.to_q"])
 
 
 class StarFlowLightweightCheckpointArtifactTest(unittest.TestCase):

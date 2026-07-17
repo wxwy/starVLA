@@ -265,6 +265,11 @@ class LayerwiseFlowmatchingActionHead(nn.Module):
 
         self.input_embedding_dim = diffusion_model_cfg_kwargs["input_embedding_dim"]
         self.model = DiT(**diffusion_model_cfg_kwargs)  # TODO: ideally copy LLM init from VLM
+        # LayerwiseFM 直接迭代 transformer_blocks 并使用 action_decoder，不使用 DiT 封装输出层。
+        for parameter in self.model.proj_out_1.parameters():
+            parameter.requires_grad_(False)
+        for parameter in self.model.proj_out_2.parameters():
+            parameter.requires_grad_(False)
         self.dit_out_hidden_size = self.input_embedding_dim
         self.action_dim = action_config.action_dim
         # `action_horizon` is the canonical chunk length.  Legacy YAMLs are

@@ -4,7 +4,7 @@
 > **状态**: ✅ 评估全部完成
 > **run_id**: `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848`
 > **启动时间**: 2026-07-16 11:48 CST
-> **当前更新**: 2026-07-17 10:41 CST
+> **当前更新**: 2026-07-17 12:05 CST
 > **完成时间**: 2026-07-17 03:30 CST
 > **tmux 会话**: `test`
 > **配置来源**: `configs/starflow_vla/ablations/future_tokens_32.yaml`
@@ -32,7 +32,7 @@
 
 ## 评估进度
 
-> 最后更新：2026-07-17 10:41 CST
+> 最后更新：2026-07-17 12:05 CST
 
 | ckpt | 状态 | 总 eps | 总 successes | 总 SR |
 |------|------|--------|--------------|-------|
@@ -265,6 +265,134 @@
 | steps_60000 | 12.6 | 30.3 | 14.4 | 11.0 | 17.1 |
 | steps_70000 | 12.7 | 30.6 | 14.7 | 10.9 | 17.2 |
 | steps_80000 | 12.3 | 30.0 | 14.0 | 11.0 | 16.8 |
+
+## 每个 suite 的 per-task 成功率矩阵
+
+### libero_goal
+
+| task_id | 任务描述 |
+|---------|----------|
+| 0 | open the middle drawer of the cabinet |
+| 1 | open the top drawer and put the bowl inside |
+| 2 | push the plate to the front of the stove |
+| 3 | put the bowl on the plate |
+| 4 | put the bowl on the stove |
+| 5 | put the bowl on top of the cabinet |
+| 6 | put the cream cheese in the bowl |
+| 7 | put the wine bottle on the rack |
+| 8 | put the wine bottle on top of the cabinet |
+| 9 | turn on the stove |
+
+| ckpt | task_0 | task_1 | task_2 | task_3 | task_4 | task_5 | task_6 | task_7 | task_8 | task_9 |
+|------|------|------|------|------|------|------|------|------|------|------|
+| steps_5000 | 10% | 8% | 90% | 92% | 94% | 94% | 86% | 4% | 88% | 100% |
+| steps_10000 | 10% | 74% | 24% | 96% | 96% | 88% | 56% | 84% | 84% | 100% |
+| steps_20000 | 100% | 86% | 52% | 100% | 98% | 98% | 98% | 64% | 96% | 100% |
+| steps_30000 | 88% | 32% | 90% | 98% | 100% | 96% | 100% | 74% | 98% | 100% |
+| steps_40000 | 94% | 76% | 74% | 100% | 100% | 98% | 94% | 36% | 98% | 100% |
+| steps_50000 | 94% | 84% | 96% | 100% | 100% | 98% | 100% | 74% | 98% | 100% |
+| steps_60000 | 84% | 84% | 94% | 100% | 100% | 100% | 94% | 80% | 100% | 100% |
+| steps_70000 | 92% | 92% | 90% | 100% | 96% | 94% | 96% | 70% | 100% | 100% |
+| steps_80000 | 90% | 90% | 98% | 100% | 100% | 98% | 94% | 68% | 100% | 100% |
+
+### libero_10
+
+| task_id | 任务描述 |
+|---------|----------|
+| 0 | pick up the book and place it in the back compartment of the caddy |
+| 1 | put both moka pots on the stove |
+| 2 | put both the alphabet soup and the cream cheese box in the basket |
+| 3 | put both the alphabet soup and the tomato sauce in the basket |
+| 4 | put both the cream cheese box and the butter in the basket |
+| 5 | put the black bowl in the bottom drawer of the cabinet and close it |
+| 6 | put the white mug on the left plate and put the yellow and white mug on the right plate |
+| 7 | put the white mug on the plate and put the chocolate pudding to the right of the plate |
+| 8 | put the yellow and white mug in the microwave and close it |
+| 9 | turn on the stove and put the moka pot on it |
+
+| ckpt | task_0 | task_1 | task_2 | task_3 | task_4 | task_5 | task_6 | task_7 | task_8 | task_9 |
+|------|------|------|------|------|------|------|------|------|------|------|
+| steps_5000 | 8% | 0% | 18% | 0% | 22% | 0% | 0% | 2% | 4% | 70% |
+| steps_10000 | 22% | 0% | 22% | 20% | 38% | 28% | 44% | 32% | 6% | 36% |
+| steps_20000 | 84% | 14% | 76% | 70% | 96% | 90% | 12% | 52% | 6% | 64% |
+| steps_30000 | 88% | 6% | 20% | 36% | 90% | 76% | 44% | 56% | 6% | 74% |
+| steps_40000 | 86% | 22% | 82% | 70% | 98% | 64% | 66% | 76% | 72% | 80% |
+| steps_50000 | 90% | 60% | 90% | 78% | 94% | 88% | 78% | 80% | 82% | 80% |
+| steps_60000 | 94% | 52% | 94% | 70% | 94% | 100% | 92% | 76% | 82% | 84% |
+| steps_70000 | 96% | 60% | 80% | 82% | 100% | 98% | 88% | 72% | 80% | 86% |
+| steps_80000 | 94% | 56% | 92% | 82% | 96% | 90% | 74% | 82% | 82% | 96% |
+
+### libero_object
+
+| task_id | 任务描述 |
+|---------|----------|
+| 0 | pick up the alphabet soup and place it in the basket |
+| 1 | pick up the bbq sauce and place it in the basket |
+| 2 | pick up the butter and place it in the basket |
+| 3 | pick up the chocolate pudding and place it in the basket |
+| 4 | pick up the cream cheese and place it in the basket |
+| 5 | pick up the ketchup and place it in the basket |
+| 6 | pick up the milk and place it in the basket |
+| 7 | pick up the orange juice and place it in the basket |
+| 8 | pick up the salad dressing and place it in the basket |
+| 9 | pick up the tomato sauce and place it in the basket |
+
+| ckpt | task_0 | task_1 | task_2 | task_3 | task_4 | task_5 | task_6 | task_7 | task_8 | task_9 |
+|------|------|------|------|------|------|------|------|------|------|------|
+| steps_5000 | 34% | 38% | 84% | 70% | 100% | 38% | 16% | 66% | 78% | 62% |
+| steps_10000 | 76% | 80% | 100% | 100% | 88% | 100% | 98% | 98% | 98% | 74% |
+| steps_20000 | 94% | 100% | 98% | 100% | 98% | 96% | 100% | 98% | 98% | 98% |
+| steps_30000 | 100% | 98% | 100% | 96% | 98% | 94% | 84% | 84% | 100% | 86% |
+| steps_40000 | 94% | 96% | 96% | 90% | 94% | 100% | 100% | 96% | 100% | 94% |
+| steps_50000 | 96% | 90% | 94% | 90% | 98% | 100% | 100% | 80% | 100% | 86% |
+| steps_60000 | 100% | 100% | 98% | 94% | 100% | 98% | 98% | 90% | 100% | 98% |
+| steps_70000 | 100% | 98% | 92% | 92% | 96% | 96% | 100% | 96% | 98% | 90% |
+| steps_80000 | 100% | 98% | 98% | 96% | 100% | 100% | 98% | 100% | 100% | 100% |
+
+### libero_spatial
+
+| task_id | 任务描述 |
+|---------|----------|
+| 0 | pick up the black bowl between the plate and the ramekin and place it on the plate |
+| 1 | pick up the black bowl from table center and place it on the plate |
+| 2 | pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate |
+| 3 | pick up the black bowl next to the cookie box and place it on the plate |
+| 4 | pick up the black bowl next to the plate and place it on the plate |
+| 5 | pick up the black bowl next to the ramekin and place it on the plate |
+| 6 | pick up the black bowl on the cookie box and place it on the plate |
+| 7 | pick up the black bowl on the ramekin and place it on the plate |
+| 8 | pick up the black bowl on the stove and place it on the plate |
+| 9 | pick up the black bowl on the wooden cabinet and place it on the plate |
+
+| ckpt | task_0 | task_1 | task_2 | task_3 | task_4 | task_5 | task_6 | task_7 | task_8 | task_9 |
+|------|------|------|------|------|------|------|------|------|------|------|
+| steps_5000 | 96% | 90% | 2% | 62% | 34% | 18% | 84% | 40% | 64% | 0% |
+| steps_10000 | 92% | 90% | 76% | 94% | 88% | 92% | 98% | 52% | 90% | 80% |
+| steps_20000 | 98% | 82% | 86% | 98% | 98% | 100% | 96% | 74% | 94% | 94% |
+| steps_30000 | 98% | 98% | 84% | 100% | 90% | 98% | 96% | 90% | 96% | 88% |
+| steps_40000 | 100% | 98% | 90% | 96% | 92% | 98% | 98% | 94% | 90% | 98% |
+| steps_50000 | 98% | 98% | 100% | 96% | 90% | 98% | 96% | 98% | 96% | 100% |
+| steps_60000 | 98% | 100% | 96% | 100% | 90% | 96% | 100% | 96% | 98% | 96% |
+| steps_70000 | 100% | 98% | 100% | 98% | 94% | 96% | 94% | 94% | 100% | 98% |
+| steps_80000 | 100% | 100% | 94% | 100% | 90% | 96% | 96% | 88% | 96% | 94% |
+
+---
+
+## 每个 ckpt 的成功 episode 平均完成时长
+
+> 单位：秒。仅统计 `success=true` 的 episode，基于 `video_duration_sec` 计算。
+
+| ckpt | libero_goal | libero_10 | libero_object | libero_spatial | 总体平均 |
+|------|-------------|-----------|---------------|----------------|----------|
+| steps_5000 | 10.6 | 26.8 | 15.7 | 9.8 | 13.1 |
+| steps_10000 | 12.2 | 30.0 | 14.5 | 11.3 | 14.3 |
+| steps_20000 | 11.0 | 26.0 | 13.5 | 10.6 | 14.2 |
+| steps_30000 | 10.8 | 25.8 | 14.3 | 10.4 | 14.0 |
+| steps_40000 | 11.2 | 25.8 | 14.3 | 10.8 | 14.9 |
+| steps_50000 | 11.3 | 26.3 | 15.0 | 10.6 | 15.4 |
+| steps_60000 | 11.5 | 26.1 | 14.0 | 10.7 | 15.2 |
+| steps_70000 | 11.3 | 26.6 | 14.1 | 10.6 | 15.3 |
+| steps_80000 | 11.1 | 25.9 | 13.8 | 10.4 | 15.0 |
 
 ## 每个 suite 的 per-task 成功率矩阵
 

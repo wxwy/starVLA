@@ -6,7 +6,7 @@ launch_guard:
   human_confirmed: true
   reason: formal long-training launch for E-003 future latent prior without history and with Wan DiT LoRA
 
-run_id: MoWA-E-003_future_latent_prior_wo_history_lora_260717_1953
+run_id: MoWA-E-003_future_latent_prior_wo_history_lora_260717_2030
 run_root_dir: playground/mowa_ckpt/
 experiment_id: E-003
 experiment_role: mowa_future_latent_prior_wo_history_lora
@@ -155,8 +155,8 @@ datasets:
     action_type: delta_ee
     sequential_step_sampling: false
     per_device_batch_size: 2
-    num_workers: 8
-    prefetch_factor: 1
+    num_workers: 16
+    prefetch_factor: 2
     load_all_data_for_training: false
     obs_image_size: [256, 256]
     delete_pause_frame: false

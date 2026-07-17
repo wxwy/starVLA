@@ -992,6 +992,8 @@ class Wan_PI(baseframework):
             "loss_future_main": loss_main,
             "loss_future_wrist": loss_wrist,
             "loss_future_total": loss_total,
+            "loss_future_main_per_sample": per_view[:, 0],
+            "loss_future_wrist_per_sample": per_view[:, 1],
             "main_future_pred_norm": prediction_future[:, 0].float().norm().detach(),
             "wrist_future_pred_norm": prediction_future[:, 1].float().norm().detach(),
         }
@@ -1030,12 +1032,19 @@ class Wan_PI(baseframework):
             )
         if not torch.all((done_target == 0) | (done_target == 1)):
             raise ValueError("E003 multi-view done target must be binary.")
-        done_loss = torch.nn.functional.binary_cross_entropy_with_logits(done_logits, done_target)
+        done_loss_per_timestep = torch.nn.functional.binary_cross_entropy_with_logits(
+            done_logits,
+            done_target,
+            reduction="none",
+        )
+        done_loss = done_loss_per_timestep.mean()
         return {
             "loss_done": done_loss,
+            "loss_done_per_sample": done_loss_per_timestep.mean(dim=1),
             "done_logits": done_logits,
             "done_target": done_target,
             "done_positive_ratio": done_target.detach().float().mean(),
+            "done_positive_ratio_per_sample": done_target.detach().float().mean(dim=1),
             "done_logit_mean": done_logits.detach().float().mean(),
             "done_probability_mean": done_logits.detach().float().sigmoid().mean(),
         }
@@ -1370,14 +1379,24 @@ class Wan_PI(baseframework):
                     )
                     self._mowa_state_debug_logged = True
 
-            action_loss = self.action_model(
+            action_loss, action_loss_per_sample = self.action_model(
                 vl_embs_list_repeated,
                 actions_target_repeated,
                 state_repeated,
                 action_valid_mask=action_valid_mask_repeated,
+                return_per_sample_loss=True,
             )
+            action_loss_per_sample = action_loss_per_sample.reshape(
+                repeated_diffusion_steps,
+                actions_target.shape[0],
+            ).mean(dim=0)
 
-        output = {"action_loss": action_loss, "mowa_state_conditioned": state is not None}
+        output = {
+            "action_loss": action_loss,
+            "action_loss_per_sample": action_loss_per_sample,
+            "action_loss_valid_per_sample": action_valid_mask.any(dim=1),
+            "mowa_state_conditioned": state is not None,
+        }
         if multiview_future_loss is not None:
             output.update(multiview_future_loss)
             output.update(multiview_done_loss)

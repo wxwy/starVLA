@@ -61,6 +61,7 @@ from starVLA.mowa_constants import (
 from starVLA.dataloader.mowa.atomic_task_label_builder import (
     get_builder_for_dataset_path,
     get_builder_for_task,
+    get_task_name_from_dataset_path,
 )
 from starVLA.dataloader.mowa.label_cache import (
     label_cache_available,
@@ -237,6 +238,9 @@ def _attach_mowa_latent_cache(sample: dict, dataset, trajectory_id: int, base_in
         sample["text_attention_mask"] = cache_sample["text_attention_mask"]
     if "lang" in cache_sample:
         sample["lang"] = cache_sample["lang"]
+    task_name = get_task_name_from_dataset_path(dataset.dataset_path)
+    if task_name is not None:
+        sample["mowa_task_name"] = task_name
     return sample
 
 

@@ -62,12 +62,14 @@ def masked_action_flow_loss(
     prediction: torch.Tensor,
     target: torch.Tensor,
     action_valid_mask: torch.Tensor | None = None,
+    return_per_sample: bool = False,
 ) -> torch.Tensor:
     """仅对有效原始动作 timestep 计算 flow-matching MSE。"""
 
     per_timestep_loss = (prediction - target).square().mean(dim=-1)
     if action_valid_mask is None:
-        return per_timestep_loss.mean()
+        per_sample_loss = per_timestep_loss.mean(dim=1)
+        return per_sample_loss if return_per_sample else per_sample_loss.mean()
     if action_valid_mask.shape != per_timestep_loss.shape:
         raise ValueError(
             "action_valid_mask must have shape [B,action_horizon], "
@@ -78,7 +80,11 @@ def masked_action_flow_loss(
     if valid_count <= 0:
         # terminal anchor 的 future action 可以全部是 padding；保留可反传的
         # 零值，交由 future/done supervision 负责该样本的终止学习。
-        return prediction.sum() * 0.0
+        zero = prediction.sum() * 0.0
+        return zero.expand(prediction.shape[0]) if return_per_sample else zero
+    if return_per_sample:
+        valid_per_sample = valid.sum(dim=1)
+        return (per_timestep_loss * valid).sum(dim=1) / valid_per_sample.clamp_min(1)
     return (per_timestep_loss * valid).sum() / valid_count
 
 
@@ -321,6 +327,7 @@ class LayerwiseFlowmatchingActionHead(nn.Module):
         state: torch.Tensor = None,
         encoder_attention_mask=None,
         action_valid_mask: torch.Tensor | None = None,
+        return_per_sample_loss: bool = False,
     ):
         """
         vl_embs: list of torch.Tensor, each shape (B, seq_length, feature_dim)
@@ -378,6 +385,13 @@ class LayerwiseFlowmatchingActionHead(nn.Module):
 
         # Slice out only the action portion of pred and target.
         loss = masked_action_flow_loss(pred_actions, velocity, action_valid_mask)
+        if return_per_sample_loss:
+            return loss, masked_action_flow_loss(
+                pred_actions,
+                velocity,
+                action_valid_mask,
+                return_per_sample=True,
+            )
         return loss
 
     @torch.no_grad()

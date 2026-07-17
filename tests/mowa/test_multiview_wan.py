@@ -89,6 +89,45 @@ class MultiViewWanTest(unittest.TestCase):
         self.assertEqual(float(terminal_loss), 0.0)
         self.assertEqual(float(terminal_prediction.grad.abs().sum()), 0.0)
 
+    def test_action_flow_loss_returns_per_sample_metrics(self):
+        prediction = torch.zeros(2, 2, 1)
+        target = torch.tensor([[[1.0], [3.0]], [[5.0], [7.0]]])
+        mask = torch.tensor([[True, False], [True, True]])
+
+        per_sample = masked_action_flow_loss(
+            prediction,
+            target,
+            mask,
+            return_per_sample=True,
+        )
+
+        self.assertTrue(torch.allclose(per_sample, torch.tensor([1.0, 37.0])))
+
+    def test_task_metric_windows_merge_across_ranks(self):
+        from starVLA.training.train_starvla import _merge_mowa_task_metric_accumulators
+
+        merged = _merge_mowa_task_metric_accumulators([
+            {
+                "OpenDrawer": {
+                    "sample_count": 2,
+                    "action_loss_sum": 3,
+                    "action_loss_count": 2,
+                    "future_main_sum": 4,
+                    "future_wrist_sum": 5,
+                    "done_positive_sum": 0.5,
+                },
+            },
+            {
+                "OpenDrawer": {"sample_count": 1, "future_main_sum": 2},
+                "OpenCabinet": {"sample_count": 1, "done_positive_sum": 1},
+            },
+        ])
+
+        self.assertEqual(merged["OpenDrawer"]["sample_count"], 3.0)
+        self.assertEqual(merged["OpenDrawer"]["action_loss_sum"], 3.0)
+        self.assertEqual(merged["OpenDrawer"]["future_main_sum"], 6.0)
+        self.assertEqual(merged["OpenCabinet"]["done_positive_sum"], 1.0)
+
     def test_mowa_first_batch_example_contract_covers_all_inputs(self):
         owner = SimpleNamespace(
             mowa_multiview_enabled=True,
@@ -259,7 +298,7 @@ class MultiViewWanTest(unittest.TestCase):
             tuple(range(8)),
         )
 
-    def test_e003_and_b2_share_multiview_config_except_history(self):
+    def test_e003_and_b2_share_multiview_topology(self):
         e003 = OmegaConf.load(
             "configs/mowa/mowa_e003_future_latent_prior_long_training_launch_candidate.yaml"
         )
@@ -269,15 +308,26 @@ class MultiViewWanTest(unittest.TestCase):
         self.assertEqual(e003.latent_cache.history_window_steps, 0)
         self.assertEqual(b2.latent_cache.history_window_steps, 10)
         self.assertEqual(e003.interface.batch_size_smoke, 4)
-        self.assertEqual(e003.datasets.vla_data.per_device_batch_size, 4)
-        self.assertEqual(e003.training.per_device_batch_size, 4)
-        self.assertEqual(e003.training.gradient_accumulation_steps, 8)
+        self.assertEqual(e003.datasets.vla_data.per_device_batch_size, 2)
+        self.assertEqual(e003.training.per_device_batch_size, 2)
+        self.assertEqual(e003.training.gradient_accumulation_steps, 4)
         self.assertEqual(e003.training.effective_batch_size, 32)
-        self.assertEqual(e003.trainer.gradient_accumulation_steps, 8)
+        self.assertEqual(e003.trainer.gradient_accumulation_steps, 4)
         self.assertEqual(
-            OmegaConf.to_container(e003.framework, resolve=True),
-            OmegaConf.to_container(b2.framework, resolve=True),
+            OmegaConf.to_container(e003.framework.mowa.multi_view, resolve=True),
+            OmegaConf.to_container(b2.framework.mowa.multi_view, resolve=True),
         )
+        for key in (
+            "enabled",
+            "mode",
+            "bidirectional",
+            "num_layers",
+            "start_layer_ratio",
+            "num_heads",
+            "bottleneck_dim",
+            "zero_init_output",
+        ):
+            self.assertEqual(e003.framework.mowa.cross_view[key], b2.framework.mowa.cross_view[key])
         self.assertEqual(tuple(e003.latent_cache.video_keys), tuple(b2.latent_cache.video_keys))
         self.assertFalse(bool(e003.framework.mowa.get("validate_data_flow", False)))
         self.assertEqual(int(e003.framework.mowa.get("validation_steps", 2)), 2)

@@ -12,6 +12,7 @@ Conventions:
 
 # Standard Library
 import argparse
+from collections import defaultdict
 import gc
 import json
 import math
@@ -120,6 +121,26 @@ def _resolve_wandb_mode(cfg) -> str:
 def _wandb_mode_disables_logging(cfg) -> bool:
     mode = _resolve_wandb_mode(cfg)
     return mode == "offline" or mode.startswith("disabled")
+
+
+_MOWA_TASK_METRIC_KEYS = (
+    "sample_count",
+    "action_loss_sum",
+    "action_loss_count",
+    "future_main_sum",
+    "future_wrist_sum",
+    "done_positive_sum",
+)
+
+
+def _merge_mowa_task_metric_accumulators(accumulators: list[dict]) -> dict:
+    """Merge rank-local task metric windows without assuming a fixed task registry."""
+    merged = defaultdict(lambda: defaultdict(float))
+    for accumulator in accumulators:
+        for task_name, values in accumulator.items():
+            for key in _MOWA_TASK_METRIC_KEYS:
+                merged[task_name][key] += float(values.get(key, 0.0))
+    return merged
 
 
 def _touch_training_audit_config(cfg) -> None:
@@ -1315,6 +1336,76 @@ class VLATrainer(TrainerUtils):
         )
         self.save_universal_checkpoint = getattr(self.config.trainer, "save_universal_checkpoint", False)
         self.checkpoint_format = self._resolve_checkpoint_format()
+        self._mowa_task_metric_window = defaultdict(lambda: defaultdict(float))
+
+    def _accumulate_mowa_task_metrics(self, examples: list[dict], output_dict: dict) -> None:
+        """Accumulate detached per-sample MoWA metrics for the next W&B log window."""
+        task_names = [example.get("mowa_task_name") for example in examples]
+        if not task_names or any(task_name is None for task_name in task_names):
+            return
+
+        required = (
+            "action_loss_per_sample",
+            "action_loss_valid_per_sample",
+            "loss_future_main_per_sample",
+            "loss_future_wrist_per_sample",
+            "done_positive_ratio_per_sample",
+        )
+        if any(output_dict.get(key) is None for key in required):
+            return
+
+        values = {
+            key: output_dict[key].detach().float().cpu().reshape(-1).tolist()
+            for key in required
+        }
+        batch_size = len(task_names)
+        if any(len(value) != batch_size for value in values.values()):
+            raise ValueError(
+                "MoWA per-task metrics must have one value per batch sample, "
+                f"got batch={batch_size}, lengths={{{', '.join(f'{key}: {len(value)}' for key, value in values.items())}}}."
+            )
+
+        for index, task_name in enumerate(task_names):
+            metrics = self._mowa_task_metric_window[str(task_name)]
+            metrics["sample_count"] += 1.0
+            metrics["future_main_sum"] += values["loss_future_main_per_sample"][index]
+            metrics["future_wrist_sum"] += values["loss_future_wrist_per_sample"][index]
+            metrics["done_positive_sum"] += values["done_positive_ratio_per_sample"][index]
+            if bool(values["action_loss_valid_per_sample"][index]):
+                metrics["action_loss_sum"] += values["action_loss_per_sample"][index]
+                metrics["action_loss_count"] += 1.0
+
+    def _flush_mowa_task_metrics(self) -> dict:
+        """All-gather and emit task metrics from one completed logging window."""
+        local_window = {
+            task_name: dict(values)
+            for task_name, values in self._mowa_task_metric_window.items()
+        }
+        self._mowa_task_metric_window.clear()
+
+        if dist.is_initialized():
+            gathered_windows = [None] * dist.get_world_size()
+            dist.all_gather_object(gathered_windows, local_window)
+        else:
+            gathered_windows = [local_window]
+        if not self.accelerator.is_main_process:
+            return {}
+
+        merged = _merge_mowa_task_metric_accumulators(gathered_windows)
+        metrics = {}
+        for task_name, values in sorted(merged.items()):
+            sample_count = values["sample_count"]
+            if sample_count <= 0:
+                continue
+            metrics[f"sample_count/task/{task_name}"] = sample_count
+            metrics[f"loss_future_main/task/{task_name}"] = values["future_main_sum"] / sample_count
+            metrics[f"loss_future_wrist/task/{task_name}"] = values["future_wrist_sum"] / sample_count
+            metrics[f"done_positive_ratio/task/{task_name}"] = values["done_positive_sum"] / sample_count
+            if values["action_loss_count"] > 0:
+                metrics[f"loss_action/task/{task_name}"] = (
+                    values["action_loss_sum"] / values["action_loss_count"]
+                )
+        return metrics
 
     def _resolve_checkpoint_format(self) -> str:
         raw_format = getattr(self.config.trainer, "checkpoint_format", None)
@@ -2159,6 +2250,7 @@ class VLATrainer(TrainerUtils):
                     multiview_metrics["loss_total"] = float(total_loss.detach().float().item())
 
             action_loss_item = action_loss.item()
+            self._accumulate_mowa_task_metrics(batch_vla, output_dict)
             if not hasattr(self, "_loss_accum"):
                 self._loss_accum = {
                     "action_dit_loss": 0.0,
@@ -2210,6 +2302,9 @@ class VLATrainer(TrainerUtils):
                     "train_accumulation_micro_steps": self._loss_accum["count"],
                 }
                 metrics.update(multiview_metrics)
+                next_completed_step = self.completed_steps + 1
+                if next_completed_step % self.config.trainer.logging_frequency == 0:
+                    metrics.update(self._flush_mowa_task_metrics())
                 self._loss_accum = {
                     "action_dit_loss": 0.0,
                     "mowa_future_supervision_loss": 0.0,

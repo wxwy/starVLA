@@ -6,7 +6,7 @@ launch_guard:
   human_confirmed: true
   reason: formal long-training launch for E-003 future latent prior without history and with Wan DiT LoRA
 
-run_id: MoWA-E-003_future_latent_prior_wo_history_lora_260718_0027
+run_id: MoWA-E-003_future_latent_prior_wo_history_lora_260718_0039
 run_root_dir: playground/mowa_ckpt/
 experiment_id: E-003
 experiment_role: mowa_future_latent_prior_wo_history_lora

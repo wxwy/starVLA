@@ -62,6 +62,7 @@ from transformers import AutoProcessor, get_scheduler
 
 # Local Modules
 from starVLA.dataloader import build_dataloader
+from starVLA.dataloader.mowa.atomic_task_label_builder import get_task_name_from_dataset_path
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.model.framework.share_tools import apply_config_compat
 from starVLA.training.checkpoints import (
@@ -1337,7 +1338,29 @@ class VLATrainer(TrainerUtils):
         self.save_universal_checkpoint = getattr(self.config.trainer, "save_universal_checkpoint", False)
         self.checkpoint_format = self._resolve_checkpoint_format()
         self._mowa_task_metric_window = defaultdict(lambda: defaultdict(float))
+        self._mowa_task_metric_cumulative = defaultdict(float)
+        self._mowa_target_sampling_probabilities = self._resolve_mowa_target_sampling_probabilities()
         self._mowa_padding_metric_window = defaultdict(lambda: defaultdict(float))
+
+    def _resolve_mowa_target_sampling_probabilities(self) -> dict[str, float]:
+        """Return the normalized task sampling probabilities used by the mixture dataset."""
+        dataset = getattr(self.vla_train_dataloader, "dataset", None)
+        datasets = getattr(dataset, "datasets", None)
+        weights = getattr(dataset, "dataset_sampling_weights", None)
+        if datasets is None or weights is None or len(datasets) != len(weights):
+            return {}
+
+        probabilities = defaultdict(float)
+        for single_dataset, weight in zip(datasets, weights):
+            task_name = get_task_name_from_dataset_path(single_dataset.dataset_path)
+            if task_name is not None:
+                probabilities[str(task_name)] += float(weight)
+        total = sum(probabilities.values())
+        return {
+            task_name: probability / total
+            for task_name, probability in probabilities.items()
+            if probability > 0
+        } if total > 0 else {}
 
     @staticmethod
     def _mowa_example_mask(examples: list[dict], key: str, width: int) -> torch.Tensor:
@@ -1502,6 +1525,10 @@ class VLATrainer(TrainerUtils):
 
         merged = _merge_mowa_task_metric_accumulators(gathered_windows)
         metrics = {}
+        total_sample_count = sum(values["sample_count"] for values in merged.values())
+        for task_name, values in merged.items():
+            self._mowa_task_metric_cumulative[task_name] += values["sample_count"]
+        cumulative_sample_count = sum(self._mowa_task_metric_cumulative.values())
         for task_name, values in sorted(merged.items()):
             sample_count = values["sample_count"]
             if sample_count <= 0:
@@ -1514,6 +1541,26 @@ class VLATrainer(TrainerUtils):
                 metrics[f"loss_action/task/{task_name}"] = (
                     values["action_loss_sum"] / values["action_loss_count"]
                 )
+        for task_name, target_probability in sorted(self._mowa_target_sampling_probabilities.items()):
+            observed_probability = (
+                merged[task_name]["sample_count"] / total_sample_count
+                if total_sample_count > 0
+                else 0.0
+            )
+            cumulative_probability = (
+                self._mowa_task_metric_cumulative[task_name] / cumulative_sample_count
+                if cumulative_sample_count > 0
+                else 0.0
+            )
+            metrics[f"sampling/target_prob/task/{task_name}"] = target_probability
+            metrics[f"sampling/observed_prob/task/{task_name}"] = observed_probability
+            metrics[f"sampling/observed_to_target_ratio/task/{task_name}"] = (
+                observed_probability / target_probability
+            )
+            metrics[f"sampling/observed_prob_cumulative/task/{task_name}"] = cumulative_probability
+            metrics[f"sampling/observed_to_target_ratio_cumulative/task/{task_name}"] = (
+                cumulative_probability / target_probability
+            )
         return metrics
 
     def _resolve_checkpoint_format(self) -> str:

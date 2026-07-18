@@ -1,6 +1,7 @@
 # MoWA 会话状态
 
 ## 当前阶段
+- 2026-07-18 E003-B1 任务采样诊断：训练器现从实际 `LeRobotMixtureDataset.dataset_sampling_weights` 读取归一化后的目标任务概率，并在每个 logging window 的四卡汇总后记录 `sampling/target_prob/task/*`、窗口 `observed_prob/observed_to_target_ratio` 与本次启动以来的累计 observed probability/ratio。该改动只诊断采样结果，不改变采样、loss、梯度或 checkpoint；`test_multiview_wan.py` 21 项通过。
 - 2026-07-18 E003-B1 padding 日志设备修复：新 run `260718_0027` 在首个 forward 后报错，根因是 padding 诊断将 valid mask 放在 CPU、逐 timestep loss 在各 rank GPU 上，乘法触发 device mismatch；训练尚未完成任何 optimizer step。日志计算现将每个 mask 显式移动到对应 loss 的 device，训练语义不变；专项多视角测试 21 项通过。可用同一 run ID 且 `is_resume=false` 重启。
 - 2026-07-17 E003-B1 padding 监督诊断：确认正式 H0 配置 `history_window_steps=0`，因此前 padding/history 诊断在本实验不适用；实际边界问题是 episode 尾部的后 padding。`mowa_future_done_target` 有意将 terminal 后的 padding 视为吸收终止状态（done=1）并参与 done BCE，`future_valid_mask` 只屏蔽 future flow 重建。新增按 `no_pad/front_pad/back_pad/both_pad` 的 sample 数、action/future 有效覆盖率、masked action/main/wrist loss，以及 action/future near/far horizon 的四卡窗口聚合日志；H0 中 front/both 比例如实为零、history ratio 不记录。未新增任何 padding 专用训练 loss；专项多视角测试通过。
 - 2026-07-17 E003-B1 per-task 训练指标：MoWA latent-cache 样本现携带 atomic task 名称；WanPI 保留仅供日志使用的逐样本 action flow、main/wrist future flow、done 正样本比例。训练器按 `logging_frequency` 窗口汇总所有 gradient-accumulation microbatch，并通过 DDP `all_gather_object` 合并四卡结果后仅由主 rank 写入 W&B：`sample_count/task/*`、`loss_action/task/*`、`loss_future_main/task/*`、`loss_future_wrist/task/*`、`done_positive_ratio/task/*`。不改变训练 loss、反向传播、采样或 checkpoint；当前已启动 `2119` 不会动态获得新指标，下次从零启动生效。专项多视角测试 21 项通过。

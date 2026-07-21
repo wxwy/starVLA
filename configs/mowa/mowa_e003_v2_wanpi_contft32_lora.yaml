@@ -45,7 +45,7 @@ framework:
   state_mode: continuous_head
   qwenvl:
     base_vlm: /disk/rl/starVLA/playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
-    attn_implementation: sdpa
+    attn_implementation: flash_attention_2
     vl_hidden_dim: 3072
     num_vl_layers: 30
   action_model:
@@ -90,7 +90,7 @@ framework:
       end_layer: null
   mowa:
     enable_future_supervision_loss: false
-    enable_future_latent_prior_loss: false
+    enable_future_latent_prior_loss: true
     enable_layerwise_bridge_token_coupling: false
     multi_view:
       enabled: true
@@ -99,6 +99,10 @@ framework:
       shared_wan_backbone: true
       view_embedding: true
       dynamic_wrist_pose_embedding: false
+    cross_view:
+      gate_init: 1.0
+    done_head:
+      loss_weight: 0.1
 
 datasets:
   vla_data:
@@ -144,9 +148,11 @@ trainer:
   freeze_modules: backbone
   pretrained_checkpoint: /disk/rl/models/mowa_init_candidates/WM4A-Wan2d2-OFT-LIBERO-4in1/checkpoints/steps_60000_pytorch_model.pt
   reload_modules: backbone
+  enable_mowa_future_latent_prior_loss: true
   loss_scale:
     vla: 1.0
     vlm: 0.0
+    mowa_future_latent_prior: 0.05
   max_grad_norm: 1.0
   weight_decay: 1.0e-8
   logging_frequency: 50

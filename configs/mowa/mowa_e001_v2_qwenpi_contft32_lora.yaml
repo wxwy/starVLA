@@ -13,7 +13,7 @@ experiment_role: mowa_qwenpi_bridge_contft32_lora
 seed: 42
 wandb_entity: silencewx-harbin-institute-of-technology
 wandb_project: MoWA
-wandb_mode: disabled
+wandb_mode: online
 is_debug: false
 version_id: "0.21"
 

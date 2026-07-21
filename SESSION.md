@@ -1,6 +1,7 @@
 # MoWA 会话状态
 
 ## 当前阶段
+- 2026-07-21 E-001 main W&B 监控已打开：`configs/mowa/mowa_e001_v2_qwenpi_contft32_lora.yaml` 的 `wandb_mode` 从 `disabled` 改为 `online`，与 E-003-B1 对齐；项目/实体保持 `MoWA` / `silencewx-harbin-institute-of-technology`，既有训练指标代码不变。
 - 2026-07-21 用户明确放行 E-001 main 与 E-003-B1：两份 v2 正式 YAML 的 launch guard 已设为 `launch_ready=true`、`policy_confirmed=true`、`human_confirmed=true`；`training_started=false` 保持不变，等待 8 卡实际启动。当前正式口径为每卡 bs2、GA2、num_workers32，全局有效 batch32。
 - 2026-07-21 按后续 8 卡机器口径调整 E-001/E-003 v2 正式 YAML：每卡 `per_device_batch_size=2`、`gradient_accumulation_steps=2`、`num_workers=32`，全局有效 batch 为 `2×2×8=32`。当前单卡不再用该口径做显存结论，需在 8 卡环境做分布式启动与首步验证。
 - 2026-07-21 根据 bs4+GA8 复测结果，E-001/E-003 v2 正式 YAML 已调整为 `per_device_batch_size=2 + gradient_accumulation_steps=16`，有效 batch 仍为32；E-001 bs4 已在第2步 OOM，E-003 bs4 虽完成10步但显存余量不足。bs2+GA16 尚未在最终配置下完成10步复测，正式启动前需先做该口径验证。

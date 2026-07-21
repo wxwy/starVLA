@@ -48,6 +48,8 @@ def main(args) -> None:
         port=args.port,
         idle_timeout=args.idle_timeout,
         metadata=wrapper.metadata,
+        max_batch_size=args.max_batch_size,
+        batch_timeout_ms=args.batch_timeout_ms,
     )
     logging.info(
         "server_policy.main: WebsocketPolicyServer init finished in %.2fs",
@@ -67,6 +69,18 @@ def build_argparser():
     parser.add_argument("--port", type=int, default=10093)
     parser.add_argument("--use_bf16", action="store_true")
     parser.add_argument("--idle_timeout", type=int, default=1800, help="Idle timeout in seconds, -1 means never close")
+    parser.add_argument(
+        "--max_batch_size",
+        type=int,
+        default=8,
+        help="Maximum number of infer requests to batch together.",
+    )
+    parser.add_argument(
+        "--batch_timeout_ms",
+        type=float,
+        default=30.0,
+        help="How long (ms) to wait for additional requests before running a batch.",
+    )
     parser.add_argument(
         "--config_override",
         action="append",

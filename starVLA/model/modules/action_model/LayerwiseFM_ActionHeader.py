@@ -9,6 +9,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.distributions import Beta
+from torch.utils.checkpoint import checkpoint
 from transformers import PretrainedConfig
 from transformers.feature_extraction_utils import BatchFeature
 
@@ -283,6 +284,9 @@ class LayerwiseFlowmatchingActionHead(nn.Module):
         # head never reads `future_action_window_size`.
         self.action_horizon = int(action_config.action_horizon)
         self.num_inference_timesteps = action_config.num_inference_timesteps
+        self.gradient_checkpointing = bool(
+            diffusion_model_cfg_kwargs.get("gradient_checkpointing", False)
+        )
 
         self.state_encoder = (
             MLP(
@@ -371,13 +375,34 @@ class LayerwiseFlowmatchingActionHead(nn.Module):
 
         # Layerwise cross-attention with vl_embs
         model_output = sa_embs
+        use_gradient_checkpointing = (
+            self.gradient_checkpointing and self.training and torch.is_grad_enabled()
+        )
         for layer_idx, layer in enumerate(self.model.transformer_blocks):
-            model_output = layer(
-                hidden_states=model_output,
-                encoder_hidden_states=vl_embs_list[layer_idx],  # Use layer-specific vl_embs
-                encoder_attention_mask=encoder_attention_mask,
-                temb=temb,
-            )
+            layer_encoder_hidden_states = vl_embs_list[layer_idx]
+            if use_gradient_checkpointing:
+                def layer_forward(
+                    hidden_states,
+                    layer=layer,
+                    layer_encoder_hidden_states=layer_encoder_hidden_states,
+                    encoder_attention_mask=encoder_attention_mask,
+                    temb=temb,
+                ):
+                    return layer(
+                        hidden_states=hidden_states,
+                        encoder_hidden_states=layer_encoder_hidden_states,
+                        encoder_attention_mask=encoder_attention_mask,
+                        temb=temb,
+                    )
+
+                model_output = checkpoint(layer_forward, model_output, use_reentrant=False)
+            else:
+                model_output = layer(
+                    hidden_states=model_output,
+                    encoder_hidden_states=layer_encoder_hidden_states,  # Use layer-specific vl_embs
+                    encoder_attention_mask=encoder_attention_mask,
+                    temb=temb,
+                )
 
         # TODO miss self att and _process_output, but work well
         pred = self.action_decoder(model_output)

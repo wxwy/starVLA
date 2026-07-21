@@ -79,7 +79,15 @@ class PandaOmronRoboCasa365DataConfig:
             StateActionToTensor(apply_to=self.action_keys),
             StateActionTransform(
                 apply_to=self.action_keys,
-                normalization_modes={key: "min_max" for key in self.action_keys},
+                normalization_modes={
+                    "action.end_effector_position": "min_max",
+                    "action.end_effector_rotation": "min_max",
+                    # RoboCasa gripper_close is a two-state command (-1/+1);
+                    # keep it discrete instead of fitting a continuous target.
+                    "action.gripper_close": "binary",
+                    "action.base_motion": "min_max",
+                    "action.control_mode": "min_max",
+                },
             ),
         ])
 

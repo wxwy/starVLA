@@ -26,6 +26,8 @@ MoWA（Mobile World Action Model，面向移动操作的世界动作模型）是
 | `09_future_label_builder_design.md` | future label coverage 与 label/mask builder 设计草案。 |
 | `10_future_latent_cache_manifest_design.md` | future latent cache manifest 设计草案。 |
 | `12_experiment_launch_readiness_matrix.md` | 所有实验的统一启动前状态说明与 matrix 生成入口。 |
+| `13_sim_zero_offline_diagnosis.md` | 仿真 0% 根因定位报告与离线动作一致性检查方法（训练/评测效果定位必读）。 |
+| `14_ext_b1_groot_n15_external_baseline_design.md` | EXT-B1 外部正对照（官方 GR00T N1.5 checkpoint 接入 StarVLA 评测框架）设计方案 v2（合并 codex/claude 评审修订）。 |
 | `prompts/*.md` | 可独立复制给 Codex / Claude 的阶段 prompt。 |
 
 ## Codex / Claude 必读文件
@@ -39,6 +41,8 @@ MoWA（Mobile World Action Model，面向移动操作的世界动作模型）是
 5. `docs_zh/mowa/07_implementation_log.md`
 
 若第 3 项对应文件在当前 checkout 缺失，必须改读 `03_agent_implementation_plan.md`、`04_task_breakdown.md`、`05_experiment_registry.md`、`06_data_gate_report.md`、`09_future_label_builder_design.md`、`10_future_latent_cache_manifest_design.md` 作为派生执行依据；这些派生文档不能替代核心 SOT。旧 `09_p0_*` / `10_p1_*` 文件仅保留兼容留档，不再作为主路径入口。
+
+凡任务涉及**训练效果定位、仿真成功率评测、训练↔推理一致性排查**（例如"训了 N 步仿真还是 0%"），还必须先读 `13_sim_zero_offline_diagnosis.md`：其中记录了已实证排除的链路环节（勿重复排查）、离线动作检查工具（`tools/mowa/e003_offline_action_check.py` 等）与标准排查 SOP。
 
 ## Source-of-Truth
 

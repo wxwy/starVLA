@@ -192,6 +192,27 @@ class PolicyServerWrapper:
         framework_start = time.perf_counter()
         out = self._framework.predict_action(examples=examples, **kwargs)
         framework_done = time.perf_counter()
+
+        # Diagnostic log: helps verify GPU is being used and how long each request takes.
+        try:
+            device = next(self._framework.parameters()).device
+        except Exception:
+            device = "unknown"
+        try:
+            backbone_device = next(
+                getattr(self._framework, "backbone", self._framework).parameters()
+            ).device
+        except Exception:
+            backbone_device = "unknown"
+        logging.info(
+            "predict_action: batch=%d device=%s backbone_device=%s framework=%.3fs total=%.3fs",
+            len(examples),
+            device,
+            backbone_device,
+            framework_done - framework_start,
+            time.perf_counter() - overall_start,
+        )
+
         normalized = np.asarray(out["normalized_actions"])  # (B, T, D)
 
         unnorm_start = time.perf_counter()

@@ -1,11 +1,11 @@
 # MoWA-E-003: Future Latent Prior without History（robocasa365_open_drawer_target_human）
 
 > **实验代号**: E-003 / `mowa_future_latent_prior_wo_history`
-> **状态**: 🟢 训练运行中
+> **状态**: ⏹️ 已停止（2026-07-17 上午，由 4 卡 run `MoWA-E-003_future_latent_prior_wo_history_260717_1120` 取代，见对应日志）
 > **run_id**: `MoWA-E-003_future_latent_prior_wo_history`
-> **启动时间**: 2026-07-16 16:01 CST
-> **当前更新**: 2026-07-16 20:08 CST
-> **tmux 会话**: `e003b1`（Pane PID 140322，训练子进程 PID 1176892）
+> **启动时间**: 2026-07-17 00:21 CST
+> **当前更新**: 2026-07-17 08:30 CST
+> **tmux 会话**: `train`（Pane PID 2231154，训练主进程 PID 2262306）
 > **配置来源**: `configs/mowa/mowa_e003_future_latent_prior_long_training_launch_candidate.yaml`
 
 ---
@@ -31,11 +31,18 @@ Batch size 配置：bs32（per_device_batch_size=4 × gradient_accumulation_step
 | 时间 (CST) | 事件 |
 |------------|------|
 | 2026-07-16 16:01 | 首次启动，从 scratch 开始训练 |
-| 2026-07-16 17:35 | 首次记录，step ~134 |
-| 2026-07-16 ~19:14 | 训练继续至 step ~780 后中断（`KeyboardInterrupt`） |
-| 2026-07-16 20:01 | **重新启动**，自动从 `steps_500` checkpoint 恢复 |
+| 2026-07-16 ~19:14 | 训练中断（`KeyboardInterrupt`）|
+| 2026-07-16 20:01 | 第一次重新启动，从 `steps_500` checkpoint 恢复 |
+| 2026-07-17 00:14 | 第二次重新启动尝试，创建了空目录 `MoWA-E-003_future_latent_prior_wo_history/`，但未成功保存 checkpoint |
+| 2026-07-17 00:21 | **本次实际重新启动**，无可用 checkpoint，从 scratch 开始训练；实际运行目录为 `MoWA-E-003_future_latent_prior_wo_history_260717_0020` |
+| 2026-07-17 ~11:20 | 本单卡 run 停止；实验切换为 4 卡训练（run_id `MoWA-E-003_future_latent_prior_wo_history_260717_1120`），配置亦有调整（关闭 future supervision / bridge token coupling，latent prior loss_scale 1.0→0.05），详见新日志 |
 
-> 注：重新启动后 WandB 出现警告：`Tried to log to step 520 that is less than the current step 781. Steps must be monotonically increasing`。原因是 WandB 云端/本地已记录到 step 781，而恢复点回到 step 500。后续 WandB step 520–780 的数据可能不会被接受，需关注是否影响可视化。
+> 注：
+> - 前一次运行最终保存的 checkpoint 位于 `playground/mowa_ckpt/tmp_MoWA-E-003_future_latent_prior_wo_history/MoWA-E-003_future_latent_prior_wo_history/checkpoints/steps_1000.eval`，本次未加载。
+> - 本次启动日志显示：`No checkpoints found in playground/mowa_ckpt/MoWA-E-003_future_latent_prior_wo_history/checkpoints`。`is_resume=False`，`resume_from_checkpoint=None`。
+> - 由于原目录已存在，训练脚本自动将本次运行的 `run_id` 修正为 `MoWA-E-003_future_latent_prior_wo_history_260717_0020`，输出目录同步更新。
+> - WandB 仍显示 `Resuming run MoWA-E-003_future_latent_prior_wo_history`，但本地模型权重为随机初始化。
+> - 启动后 WandB 出现上传警告：`Fatal error while uploading data. Some run data will not be synced, but it will still be written to disk. Use wandb sync`。
 
 ---
 
@@ -45,7 +52,8 @@ Batch size 配置：bs32（per_device_batch_size=4 × gradient_accumulation_step
 
 | 参数 | 值 |
 |------|-----|
-| `run_id` | `MoWA-E-003_future_latent_prior_wo_history` |
+| `run_id` | `MoWA-E-003_future_latent_prior_wo_history_260717_0020`（实际） |
+| `original_run_id` | `MoWA-E-003_future_latent_prior_wo_history`（配置中） |
 | `CONFIG_YAML` | `configs/mowa/mowa_e003_future_latent_prior_long_training_launch_candidate.yaml` |
 | `DATA_MIX` | `robocasa365_open_drawer_target_human` |
 | `MAX_TRAIN_STEPS` | 80000 |
@@ -60,7 +68,8 @@ Batch size 配置：bs32（per_device_batch_size=4 × gradient_accumulation_step
 | `DATA_ROOT` | `playground/Datasets/robocasa365` |
 | `WANDB_PROJECT` | `MoWA` |
 | `WANDB_ENTITY` | `silencewx-harbin-institute-of-technology` |
-| `is_resume` | **`False`**（配置项，但实际因 `resume_policy=resume_latest_complete_only` 自动从 `steps_500` 恢复） |
+| `is_resume` | `False` |
+| `resume_policy` | `resume_latest_complete_only` |
 | 设备 | NVIDIA GeForce RTX 4090（24564 MiB） |
 
 ### 模型 / 优化器参数
@@ -135,64 +144,46 @@ Batch size 配置：bs32（per_device_batch_size=4 × gradient_accumulation_step
 
 ## 训练进度
 
-> 最后更新：2026-07-16 20:08 CST
-> 本次重启后运行约 7 分钟；自首次启动累计约 3 小时 40 分钟
+> 最后更新：2026-07-17 08:30 CST
+> 本次启动后运行约 8 小时 9 分钟
 
 | 指标 | 值 |
 |------|-----|
-| **当前 Step** | ~532 / 80000 |
-| **完成比例** | 0.66% |
-| **单步耗时** | ~14.70 s/it |
-| **model_time** | ~1.82 s |
-| **data_time** | ~0.003 s |
-| **本次重启后运行时间** | ~7 分钟 |
-| **预计剩余时间** | ~325 小时 |
-| **最新 checkpoint** | `steps_500` |
-| **最新 eval** | 尚未执行 |
+| **当前 Step** | ~2015 / 80000 |
+| **完成比例** | 2.52% |
+| **单步耗时** | ~14.54 s/it |
+| **model_time** | ~1.81 s |
+| **data_time** | ~0.002 s |
+| **本次启动后运行时间** | ~8 小时 9 分钟 |
+| **预计剩余时间** | ~315 小时 |
+| **最新 checkpoint** | `steps_2000`（同时触发 eval） |
+| **最新 eval** | Step 2000：mse_score=0.0116，eval_num_samples=1536 |
 
 ### Loss 记录
 
 | Step | action_dit_loss | mowa_future_latent_prior_loss | loss_multiview_total | loss_total | 备注 |
 |------|-----------------|-------------------------------|----------------------|------------|------|
-| 120 | 0.4596 | 2.1309 | 2.6866 | 3.0857 | 首个 logging 点 |
-| 200 | 0.2867 | 1.9087 | 2.6615 | 2.9654 |  |
-| 220 | 0.3234 | 1.8615 | 1.1413 | 1.5724 |  |
-| 240 | 0.2515 | 1.6479 | 2.0664 | 2.2919 |  |
-| 260 | 0.2787 | 1.7525 | 2.2490 | 2.4527 |  |
-| 280 | 0.2045 | 1.5630 | 0.9558 | 1.1457 |  |
-| 300 | 0.4300 | 2.0620 | 1.9388 | 2.4378 |  |
-| 320 | 0.3105 | 1.7825 | 2.3631 | 2.5987 |  |
-| 340 | 0.2847 | 1.8401 | 1.5031 | 1.8958 |  |
-| 360 | 0.3071 | 1.3212 | 1.6255 | 2.0003 |  |
-| 380 | 0.3015 | 1.2829 | 1.0824 | 1.5590 |  |
-| 660 | 0.3030 | 0.9382 | 0.6334 | 0.8296 | 中断前 |
-| 680 | 0.3289 | 0.7961 | 0.5178 | 0.6365 | 中断前 |
-| 700 | 0.2421 | 0.9130 | 0.9677 | 1.1669 | 中断前 |
-| 720 | 0.1541 | 0.9120 | 0.4763 | 0.7237 | 中断前 |
-| 740 | 0.1583 | 0.9088 | 0.7745 | 0.9013 | 中断前 |
-| 760 | 0.2370 | 0.8044 | 0.9905 | 1.3465 | 中断前 |
-| 780 | 0.1572 | 0.9259 | 1.2553 | 1.3872 | 中断前 |
-| 520 | 0.2577 | 1.1669 | 1.1935 | 0.2439 | 重启后恢复点 |
+| 2000 | 0.1428 | 2.6095 | 3.7219 | 0.0801 | 同时触发 eval：mse_score=0.0116，eval_num_samples=1536 |
 
 > 注：
-> - `mowa_future_supervision_loss` 在各 logging step 仍为 0.0。
-> - 重启后 step 520 的 `loss_total` 仅为 0.2439，与 `loss_action` 相等，可能 resume 后首个 logging step 的 future latent prior loss 未计入总 loss；后续需继续观察是否恢复一致。
-> - 中断前 step 720/780 `action_dit_loss` 已降至 0.15 左右，较早期有明显下降。
+> - `mowa_future_supervision_loss` 在 step 2000 仍为 0.0。
+> - `loss_total`（0.0801）等于 `loss_action`，与 `action_dit_loss`（0.1428）不同；`action_dit_loss_last_micro` 为 0.0801，说明 total loss 取的是最后一个 micro-step 的 action loss。
+> - 当前 tmux pane 缓冲区仅保留到 step 2000 的完整 loss dict，中间 logging step 的历史记录未保留。
 
 ---
 
 ## 系统资源占用
 
-> 最后更新：2026-07-16 20:08 CST
+> 最后更新：2026-07-17 08:30 CST
 
 ### GPU（NVIDIA GeForce RTX 4090）
 
 | 指标 | 值 |
 |------|-----|
 | **GPU 利用率** | 100% |
-| **显存使用** | 24028 MiB / 24564 MiB (98%) |
-| **功耗** | 417.68 W |
-| **温度** | 69°C |
+| **显存使用** | 24030 MiB / 24564 MiB (98%) |
+| **功耗** | 408.54 W |
+| **温度** | 63°C |
 
 ### 系统内存
 
@@ -214,15 +205,24 @@ Batch size 配置：bs32（per_device_batch_size=4 × gradient_accumulation_step
 ## 输出目录
 
 ```
-playground/mowa_ckpt/MoWA-E-003_future_latent_prior_wo_history/
-└── MoWA-E-003_future_latent_prior_wo_history/
+playground/mowa_ckpt/MoWA-E-003_future_latent_prior_wo_history_260717_0020/
+└── MoWA-E-003_future_latent_prior_wo_history_260717_0020/
     ├── checkpoints/
-    │   └── steps_500/               ✅ 自动保存的第一个 checkpoint
+    │   ├── steps_1000/              ✅
+    │   ├── steps_1500/              ✅
+    │   └── steps_2000/              ✅（同时触发 eval）
     ├── config.full.yaml             ✅
     ├── config.yaml                  ✅
     ├── dataset_statistics.json      ✅
+    ├── summary.jsonl                ✅
     └── wandb/                       ✅
 ```
+
+> 历史/未使用输出目录：
+> ```
+> playground/mowa_ckpt/MoWA-E-003_future_latent_prior_wo_history/     # 00:14 创建，无 checkpoint
+> playground/mowa_ckpt/tmp_MoWA-E-003_future_latent_prior_wo_history/ # 早期运行，steps_1000.eval
+> ```
 
 ---
 
@@ -249,12 +249,14 @@ CUDA_VISIBLE_DEVICES=0 .venv/bin/python starVLA/training/train_starvla.py \
 - 本实验为 MoWA 项目 **E-003** 的正式长训启动，探索在 **无历史帧** 条件下，利用 Wan2.2-TI2V 的未来 latent prior 监督 VLA 动作生成。
 - 与 E-001 的核心差异：使用 **WanPI 框架**（WorldModel→Action）替代 StarFlowVLA；输入为 Wan VAE latent 而非原始像素；新增 `future_latent_prior_loss` 监督未来视频 latent 重建。
 - 双视角输入：`observation.images.robot0_agentview_left`（main）与 `observation.images.robot0_eye_in_hand`（wrist），通过 shared Wan backbone + view embedding 编码。
-- `per_device_batch_size=4`，`grad_accum=8`，`num_processes=1`，`num_workers=8`。单卡 RTX 4090 满载，显存占用约 96%。
-- 训练已重新启动并从 `steps_500` 恢复。当前 step ~532，仍在 warmup 末尾（`num_warmup_steps=500`，已结束）。
-- 中断前训练已推进到 step ~780，`action_dit_loss` 在 step 720/780 降至 ~0.15，较早期 ~0.46 明显下降。
-- WandB 因恢复点 step 500 小于云端 step 781 产生单调性警告，后续需关注是否影响曲线。
-- 下一次自动 save/eval 预计在 step 1000。
-- 训练在 tmux 会话 `e003b1` 中运行，断开会话不会中断训练。
+- `per_device_batch_size=4`，`grad_accum=8`，`num_processes=1`，`num_workers=8`。单卡 RTX 4090 满载，显存占用约 98%。
+- 训练已于 2026-07-17 00:21 重新启动，当前 step ~2015，已过 warmup 阶段。
+- 本次启动未找到本地 checkpoint，模型从 scratch 开始训练；WandB run 使用同名恢复。
+- 由于原目录已存在，实际 `run_id` 自动修正为 `MoWA-E-003_future_latent_prior_wo_history_260717_0020`。
+- WandB 启动时出现上传错误警告，后续需关注数据同步情况，必要时可手动执行 `wandb sync`。
+- 已保存 checkpoint：steps_1000、steps_1500、steps_2000；step 2000 同时触发 eval（mse_score=0.0116）。
+- 下一次自动 save/eval 预计在 step 2500。
+- 训练在 tmux 会话 `train` 中运行，断开会话不会中断训练。
 
 ---
 

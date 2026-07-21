@@ -11,6 +11,7 @@ from transformers import AutoProcessor, Qwen3VLForConditionalGeneration
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
 logger = initialize_overwatch(__name__)
+from starVLA.model.modules.lora_utils import load_pretrained_lora_compatible
 
 IGNORE_INDEX = -100
 IMAGE_TOKEN_INDEX = 151655
@@ -92,6 +93,10 @@ class _QWen3_VL_Interface(nn.Module):
             )
 
         return outputs
+
+    def load_pretrained_state_dict(self, state_dict):
+        """兼容 LoRA 注入前导出的 Qwen backbone checkpoint。"""
+        return load_pretrained_lora_compatible(self, state_dict)
 
     def generate(
         self,

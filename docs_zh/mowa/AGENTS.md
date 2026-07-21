@@ -2,6 +2,8 @@
 
 本文件适用于 Codex / Claude 在 MoWA（Mobile World Action Model，面向移动操作的世界动作模型）项目中的所有执行任务。执行前必须先阅读 `README.md`、三份核心 Source-of-Truth 文档、当前任务卡和 `07_implementation_log.md`。
 
+涉及训练效果 / 仿真成功率 / 训练↔推理一致性定位的任务，另需先读 `13_sim_zero_offline_diagnosis.md`（仿真 0% 根因定位报告与离线检查 SOP），避免重复排查已排除的环节。
+
 若未来 `00_project_proposal.md`、`01_technical_survey.md`、`02_detailed_design.md` 再次缺失，Agent 必须把该缺口视为 readiness 风险：不得临时补写或局部改写核心 SOT，只能读取 `03` 至 `10` 的派生执行文档、记录未解决项，并保持正式训练 launch gate 关闭。
 
 ## 语言规则

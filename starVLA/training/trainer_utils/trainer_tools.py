@@ -338,7 +338,11 @@ class TrainerUtils:
                     prefix = path + "."
                     sub_state_dict = {k[len(prefix) :]: v for k, v in checkpoint.items() if k.startswith(prefix)}
                     if sub_state_dict:
-                        module.load_state_dict(sub_state_dict, strict=True)
+                        loader = getattr(module, "load_pretrained_state_dict", None)
+                        if callable(loader):
+                            loader(sub_state_dict)
+                        else:
+                            module.load_state_dict(sub_state_dict, strict=True)
                         if (not dist.is_initialized()) or dist.get_rank() == 0:
                             print(f"✅ parameters loaded to module '{path}'")
                         loaded_modules.append(path)

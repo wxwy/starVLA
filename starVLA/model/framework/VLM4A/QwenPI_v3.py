@@ -187,6 +187,7 @@ class Qwen_PI_v3(baseframework):
         # Merge framework defaults with YAML config (YAML wins on conflicts).
         self.config = merge_framework_config(QwenPI_v3DefaultConfig, config)
         self.qwen_vl_interface = get_vlm_model(config=self.config)
+        self._configure_qwen_lora()
 
         # Read the actual hidden size and layer count from the loaded VLM.
         # `output_hidden_states=True` returns (num_hidden_layers + 1) tensors
@@ -262,6 +263,57 @@ class Qwen_PI_v3(baseframework):
             raise ValueError("framework.mowa.validation_steps must be positive.")
         self._starflow_train_validation_count = 0
         self._starflow_predict_validation_count = 0
+
+    def _configure_qwen_lora(self) -> None:
+        """在 Qwen VLM 上注入可控 LoRA，原始 backbone 参数保持冻结。"""
+        lora_cfg = self.config.framework.qwenvl.get("lora", {})
+        if not bool(lora_cfg.get("enabled", False)):
+            return
+
+        try:
+            from peft import LoraConfig, TaskType, get_peft_model
+        except ImportError as error:
+            raise ImportError(
+                "Qwen LoRA is enabled but `peft` is unavailable. "
+                "Install peft>=0.17.0 in the active environment."
+            ) from error
+
+        rank = int(lora_cfg.get("rank", 32))
+        alpha = int(lora_cfg.get("alpha", rank * 2))
+        dropout = float(lora_cfg.get("dropout", 0.0))
+        target_modules = list(
+            lora_cfg.get("target_modules", ["q_proj", "k_proj", "v_proj", "o_proj"])
+        )
+        if rank <= 0 or alpha <= 0 or not 0.0 <= dropout < 1.0 or not target_modules:
+            raise ValueError(
+                "Invalid Qwen LoRA settings: "
+                f"rank={rank}, alpha={alpha}, dropout={dropout}, targets={target_modules}."
+            )
+
+        self.qwen_vl_interface.model = get_peft_model(
+            self.qwen_vl_interface.model,
+            LoraConfig(
+                task_type=TaskType.FEATURE_EXTRACTION,
+                r=rank,
+                lora_alpha=alpha,
+                lora_dropout=dropout,
+                target_modules=target_modules,
+                bias="none",
+            ),
+        )
+        lora_params = sum(
+            parameter.numel()
+            for name, parameter in self.qwen_vl_interface.model.named_parameters()
+            if "lora_" in name
+        )
+        logger.info(
+            "Qwen LoRA enabled: rank=%d, alpha=%d, dropout=%.3f, targets=%s, params=%d",
+            rank,
+            alpha,
+            dropout,
+            target_modules,
+            lora_params,
+        )
 
     def _starflow_should_validate(self, phase: str) -> bool:
         count = (
@@ -1162,11 +1214,16 @@ class Qwen_PI_v3(baseframework):
         instructions: List[str],
         state: Optional[List[np.ndarray]],
     ) -> Tuple[List[str], Optional[List[np.ndarray]]]:
-        """Default QwenPI_v3 state path: encode state into instruction tokens."""
+        """Prepare state for either the language path or the action-head path."""
         if state is None:
             return instructions, None
-        instructions = self.add_discretized_state_to_instruction(instructions, state)
-        return instructions, None
+        state_mode = str(getattr(self.config.framework, "state_mode", "discretized_instruction"))
+        if state_mode == "continuous_head":
+            return instructions, state
+        if state_mode == "discretized_instruction":
+            instructions = self.add_discretized_state_to_instruction(instructions, state)
+            return instructions, None
+        raise ValueError(f"Unsupported QwenPI_v3 state_mode: {state_mode}")
 
     def state2str_transform(self, state: np.ndarray) -> str:
         """Quantise a state vector into 256 uniform bins and return it as a space-separated token string.

@@ -587,6 +587,40 @@ class Wan_PI(baseframework):
         else:
             return {"instructions": [example["lang"] for example in examples]}
 
+    def _ensure_mowa_text_fallback_encoder(self):
+        """Lazily load UMT5-XXL on CPU for encoding instructions missing from cache."""
+        if getattr(self, "_mowa_text_fallback_encoder", None) is not None:
+            return self._mowa_text_fallback_encoder
+
+        from starVLA.dataloader.mowa.instruction_text_latent_cache import MoWAUmt5TextEncoderAdapter
+
+        model_name = getattr(self.backbone, "model_name", None)
+        if not model_name:
+            raise RuntimeError(
+                "Cannot fall back to on-the-fly UMT5 encoding: backbone model_name is not available."
+            )
+        encoder = MoWAUmt5TextEncoderAdapter(model_path=model_name)
+        encoder._ensure_loaded()
+        # Keep the encoder on CPU to avoid competing with the diffusion backbone for VRAM.
+        encoder._text_encoder = encoder._text_encoder.to("cpu")
+        self._mowa_text_fallback_encoder = encoder
+        logger.info(
+            "[E003 multi-view] UMT5 fallback encoder loaded on CPU for missing instructions."
+        )
+        return encoder
+
+    def _encode_instruction_on_cpu(self, instruction: str) -> dict:
+        """Encode a single instruction with the CPU fallback encoder and cache it."""
+        encoder = self._ensure_mowa_text_fallback_encoder()
+        dtype = getattr(self._mowa_instruction_text_cache, "metadata", {}).get("dtype", "float32")
+        storage_dtype = getattr(torch, dtype)
+        encoded = encoder.encode_instruction(instruction)
+        return {
+            "text_embeds": encoded["text_embeds"].to(dtype=storage_dtype),
+            "attention_mask": encoded["attention_mask"],
+            "pooled_text_hidden": encoded["pooled_text_hidden"].to(dtype=storage_dtype),
+        }
+
     def _populate_mowa_inference_text_cache(self, examples: List[dict]) -> List[dict]:
         """在 Wan 使用 text cache 时，从预计算指令表补齐在线推理文本条件。"""
         if all(
@@ -613,12 +647,16 @@ class Wan_PI(baseframework):
             )
         resolved = []
         for index, example in enumerate(examples):
-            entry = self._mowa_instruction_text_cache.lookup(str(example.get("lang", "")))
+            instruction = str(example.get("lang", ""))
+            entry = self._mowa_instruction_text_cache.lookup(instruction)
             if entry is None:
-                raise KeyError(
-                    "E003 online inference instruction is absent from the cached UMT5 table at "
-                    f"batch index {index}: {example.get('lang')!r}."
+                logger.warning(
+                    "[E003 multi-view] instruction not in cache, falling back to CPU UMT5: %r",
+                    instruction,
                 )
+                entry = self._encode_instruction_on_cpu(instruction)
+                # Persist in memory so later requests for the same instruction are fast.
+                self._mowa_instruction_text_cache._table[instruction] = entry
             resolved.append(
                 {
                     **example,

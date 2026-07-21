@@ -1,0 +1,116 @@
+launch_guard:
+  launch_ready: true
+  training_started: false
+  requires_human_confirmation: true
+  policy_confirmed: true
+  human_confirmed: true
+  reason: E-001 main approved for 8-GPU launch after bf16/action-head checkpointing/data-contract smokes
+
+run_id: MoWA-E-001-v2_QwenPI-Bridge_contft32_lora-r32
+run_root_dir: playground/mowa_ckpt
+experiment_id: E-001-v2
+experiment_role: mowa_qwenpi_bridge_contft32_lora
+seed: 42
+wandb_entity: silencewx-harbin-institute-of-technology
+wandb_project: MoWA
+wandb_mode: disabled
+is_debug: false
+version_id: "0.21"
+
+framework:
+  name: StarFlowVLA
+  starflow_ft_variant: ft0
+  state_mode: continuous_head
+  qwenvl:
+    base_vlm: /disk/rl/starVLA/playground/Pretrained_models/Qwen3-VL-4B-Instruct
+    attn_implementation: sdpa
+    vl_hidden_dim: 2560
+    num_vl_layers: 36
+    lora:
+      enabled: true
+      rank: 32
+      alpha: 64
+      dropout: 0.0
+      target_modules: [q_proj, k_proj, v_proj, o_proj]
+  action_model:
+    action_model_type: LayerwiseFM
+    action_dim: 12
+    state_dim: 32
+    action_horizon: 32
+    future_action_window_size: 31
+    past_action_window_size: 0
+    repeated_diffusion_steps: 1
+    num_inference_timesteps: 4
+    add_pos_embed: true
+    max_seq_len: 1024
+    num_target_vision_tokens: 0
+    noise_beta_alpha: 1.5
+    noise_beta_beta: 1.0
+    noise_s: 0.999
+    num_timestep_buckets: 1000
+    diffusion_model_cfg:
+      action_dit_hidden_dim: 1024
+      gradient_checkpointing: true
+      dropout: 0.2
+      final_dropout: true
+      interleave_self_attention: true
+      norm_type: ada_norm
+      positional_embeddings: null
+      attention_head_dim: 64
+  mowa:
+    enable_future_supervision_loss: false
+    enable_layerwise_bridge_token_coupling: false
+
+datasets:
+  vla_data:
+    dataset_py: lerobot_datasets
+    include_state: true
+    data_root_dir: playground/Datasets/robocasa365
+    data_mix: robocasa365_open_drawer_target_human
+    action_type: delta_ee
+    sequential_step_sampling: false
+    per_device_batch_size: 2
+    num_workers: 32
+    load_all_data_for_training: false
+    action_chunk_steps: 32
+    obs_image_size: [224, 224]
+    delete_pause_frame: false
+    video_backend: torchvision_av
+    enable_mowa_future_labels: false
+
+trainer:
+  max_train_steps: 40000
+  mixed_precision: bf16
+  num_warmup_steps: 2000
+  save_interval: 2000
+  eval_interval: 2000
+  learning_rate:
+    base: 2.5e-5
+    qwen_vl_interface: 1.0e-5
+    action_model: 1.0e-4
+  lr_scheduler_type: cosine_with_min_lr
+  scheduler_specific_kwargs:
+    min_lr: 1.0e-6
+  freeze_modules: qwen_vl_interface
+  pretrained_checkpoint: /disk/rl/models/mowa_init_candidates/Qwen3VL-PI_v3-Bridge-RT_1/checkpoints/steps_50000_pytorch_model.pt
+  reload_modules: qwen_vl_interface
+  loss_scale:
+    vla: 1.0
+    vlm: 0.0
+  max_grad_norm: 1.0
+  weight_decay: 1.0e-8
+  logging_frequency: 50
+  gradient_clipping: 1.0
+  gradient_accumulation_steps: 2
+  checkpoint_format: lightweight
+  is_resume: false
+  enable_local_checkpoint_staging: false
+  save_format: safetensors
+  save_checkpoint_as_directory: true
+  save_with_training_state: false
+  checkpoint_max_shard_size: 4GB
+  optimizer:
+    name: AdamW
+    betas: [0.9, 0.95]
+    eps: 1.0e-8
+    weight_decay: 1.0e-8

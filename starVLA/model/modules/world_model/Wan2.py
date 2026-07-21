@@ -39,6 +39,7 @@ from starVLA.model.modules.world_model.wan_vae_utils import (
     prepare_wan_vae_video_tensor,
     wan_padded_frame_count,
 )
+from starVLA.model.modules.lora_utils import load_pretrained_lora_compatible
 
 logger = initialize_overwatch(__name__)
 
@@ -281,6 +282,14 @@ class _Wan2_Interface(nn.Module):
         device = next(self.transformer.parameters()).device
         self.vae.to(device=device)
         self.vae.eval()
+
+    def load_pretrained_state_dict(self, state_dict):
+        """兼容 LoRA 注入前导出的 Wan backbone checkpoint。"""
+        return load_pretrained_lora_compatible(
+            self,
+            state_dict,
+            optional_prefixes=("text_encoder.", "vae."),
+        )
 
     @property
     def model(self):

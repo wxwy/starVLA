@@ -1,0 +1,147 @@
+{
+  "stage": "hlc_gci",
+  "task_id": "M4-001",
+  "experiment_id": "E-004",
+  "training_started": false,
+  "launch_ready": true,
+  "checks": {
+    "config_created": true,
+    "launch_guard_open": true,
+    "launch_guard_human_confirmed": true,
+    "launch_guard_policy_confirmed": true,
+    "preview_passed": true,
+    "interface_passed": true,
+    "synthetic_train_passed": true
+  },
+  "config_path": "configs/mowa/mowa_e004_hlc_gci_launch_candidate.yaml",
+  "reports": {
+    "config_preview": {
+      "stage": "hlc_gci",
+      "task_id": "M4-001",
+      "experiment_id": "E-004",
+      "config_role": "hlcgci_candidate",
+      "launch_ready": false,
+      "config_path": "configs/mowa/mowa_e004_hlc_gci_candidate.yaml",
+      "resolved_final_values": {
+        "project_short_name": "MoWA",
+        "stage": "hlc_gci",
+        "experiment_id": "E-004",
+        "config_role": "hlcgci_candidate",
+        "launch_ready": false,
+        "requires_human_confirmation": true,
+        "human_confirmed": false,
+        "policy_confirmed": false,
+        "history_latent_dim": 1024,
+        "condition_hidden_dim": 1024,
+        "history_steps": 10,
+        "compressed_history_dim": 512,
+        "gate_hidden_dim": 256,
+        "batch_size_smoke": 2,
+        "condition_token_count": 4,
+        "injection_policy": "condition_path_only",
+        "sampling_policy": "train_inference_consistent_window_sampling",
+        "history_source": "robot_history_latent_only",
+        "future_action_policy": "target_only",
+        "leakage_guard": "future_action_not_input",
+        "history_sampling_status": "Data Gate",
+        "gate_init_status": "Data Gate",
+        "shape_status": "Data Gate",
+        "reference_count": 4
+      },
+      "checks": {
+        "config_created": true,
+        "launch_guard_closed": true,
+        "injection_policy_condition_path_only": true,
+        "history_source_robot_only": true,
+        "future_action_policy_target_only": true,
+        "leakage_guard_future_action_not_input": true,
+        "history_sampling_status_data_gate": true,
+        "gate_init_status_data_gate": true,
+        "shape_status_data_gate": true,
+        "references_present": true
+      },
+      "unresolved_items": [
+        "This preview validates E-004 interface shape and history contract only.",
+        "Shuffled-robot metrics and framework injection still require a meaningful checkpoint."
+      ],
+      "go_no_go": "TBD: E-004 config preview passed; rollout remains gated"
+    },
+    "interface_smoke": {
+      "stage": "hlc_gci",
+      "task_id": "M4-001",
+      "experiment_id": "E-004",
+      "training_started": false,
+      "checks": {
+        "config_exists": true,
+        "compressed_history_shape_expected": true,
+        "gate_shape_expected": true,
+        "gated_condition_shape_expected": true,
+        "gate_values_in_unit_interval": true,
+        "injection_policy_condition_path_only": true,
+        "history_sampling_status_data_gate": true,
+        "gate_init_status_data_gate": true,
+        "shape_status_data_gate": true
+      },
+      "config": "configs/mowa/mowa_hlc_gci_interface.yaml",
+      "observed": {
+        "compressed_history_shape": [
+          2,
+          512
+        ],
+        "gate_shape": [
+          2,
+          1024
+        ],
+        "gated_condition_shape": [
+          2,
+          4,
+          1024
+        ],
+        "gate_min": 0.453229159116745,
+        "gate_max": 0.5454368591308594
+      },
+      "unresolved_items": [
+        "This smoke validates interface shape and gate range only.",
+        "History sampling policy and actual training gain remain separately gated.",
+        "No StarVLA framework integration is enabled by this interface smoke."
+      ],
+      "go_no_go": "TBD: HLC-GCI interface smoke passed; framework integration remains gated"
+    },
+    "synthetic_train_smoke": {
+      "go_no_go": "TBD: E-004 synthetic train smoke passed; rollout remains gated",
+      "checks": {
+        "model_forward_succeeds": true,
+        "loss_is_finite": true,
+        "optimizer_step_succeeds": true
+      },
+      "observed": {
+        "compressed_history_shape": [
+          2,
+          512
+        ],
+        "gate_shape": [
+          2,
+          1024
+        ],
+        "gated_condition_shape": [
+          2,
+          4,
+          1024
+        ],
+        "loss": 0.531420111656189
+      }
+    }
+  },
+  "observed": {
+    "history_latent_dim": 1024,
+    "condition_hidden_dim": 1024,
+    "history_steps": 10,
+    "compressed_history_dim": 512,
+    "gate_hidden_dim": 256
+  },
+  "unresolved_items": [
+    "This launch smoke validates the interface, preview, and a synthetic optimization loop.",
+    "Real shuffled-robot rollout still requires a meaningful checkpoint and checkpoint-backed policy path."
+  ],
+  "go_no_go": "TBD: E-004 launch smoke passed; rollout remains gated"
+}

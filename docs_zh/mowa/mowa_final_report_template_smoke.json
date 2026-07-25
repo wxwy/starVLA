@@ -1,0 +1,19 @@
+{
+  "stage": "M6",
+  "task_id": "M6-002",
+  "training_started": false,
+  "checks": {
+    "template_exists": true,
+    "all_required_headings_present": true
+  },
+  "template": "docs_zh/mowa/11_final_report_known_limitations_template.md",
+  "observed": {
+    "required_heading_count": 6,
+    "present_heading_count": 6
+  },
+  "unresolved_items": [
+    "This smoke checks template structure only.",
+    "Final report content still depends on future measured experiments."
+  ],
+  "go_no_go": "TBD: final report template smoke passed"
+}

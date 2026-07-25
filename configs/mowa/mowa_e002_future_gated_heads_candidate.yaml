@@ -1,0 +1,29 @@
+launch_guard:
+  launch_ready: true
+  requires_human_confirmation: true
+  human_confirmed: true
+  policy_confirmed: true
+  reason: E-002 single FullHeads vs GatedHeads comparison entry is approved for long-training launch
+
+run_id: MoWA-E-002_future_gated_heads_candidate
+run_root_dir: playground/mowa_ckpt
+experiment_id: E-002
+
+inherits:
+  baseline_launch_candidate: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml
+  comparison_scope: single_fullheads_control_only
+
+framework:
+  mowa:
+    gated_heads:
+      enabled: true
+      comparison_scope: single_fullheads_control_only
+      allow_per_head_sweep: false
+      init_gate_value: 0.5
+      gate_logging_target: future_gated_heads_summary
+      fullheads_control_config: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml
+
+notes:
+  - This candidate exists for the single E-002 FullHeads vs GatedHeads comparison only.
+  - Per-head, leave-one-out, or selected-head sweeps remain forbidden.
+  - Runtime integration exists in QwenPI_v3/StarFlowVLA, but training remains gated; this config is not executable training evidence.

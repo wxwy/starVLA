@@ -14,8 +14,10 @@
 # limitations under the License.
 
 import os
+import re
 import uuid
 from pathlib import Path
+from typing import Optional, Sequence
 
 import av
 import gymnasium as gym
@@ -173,6 +175,18 @@ class VideoRecorder:
 
 
 class VideoRecordingWrapper(gym.Wrapper):
+    """Record episodes to video, optionally concatenating multiple camera views."""
+
+    # Friendly aliases -> raw RoboSuite camera names used by RoboCasa.
+    VIEW_NAME_MAP = {
+        "agentview_left": "robot0_agentview_left",
+        "main_left": "robot0_agentview_left",
+        "agentview_right": "robot0_agentview_right",
+        "main_right": "robot0_agentview_right",
+        "eye_in_hand": "robot0_eye_in_hand",
+        "wrist": "robot0_eye_in_hand",
+    }
+
     def __init__(
         self,
         env,
@@ -180,10 +194,26 @@ class VideoRecordingWrapper(gym.Wrapper):
         mode="rgb_array",
         video_dir: Path | None = None,
         steps_per_render=1,
+        task_description: Optional[str] = None,
+        env_idx: int = 0,
+        record_views: Sequence[str] = ("agentview_left", "eye_in_hand"),
         **kwargs,
     ):
         """
         When file_path is None, don't record.
+
+        Args:
+            task_description: Optional human-readable task description used in the
+                video filename. If not provided, the wrapper will try to extract it
+                from the observation dict returned by ``reset()`` (e.g.
+                ``annotation.human.task_description`` for RoboCasa environments).
+            env_idx: Environment index, included in the filename when no task
+                description is available.
+            record_views: Ordered list of camera views to concatenate horizontally.
+                Supported aliases: ``agentview_left``/``main_left``,
+                ``agentview_right``/``main_right``, ``eye_in_hand``/``wrist``.
+                Raw RoboSuite camera names are also accepted. Default is
+                ``("agentview_left", "eye_in_hand")``.
         """
         super().__init__(env)
 
@@ -201,8 +231,113 @@ class VideoRecordingWrapper(gym.Wrapper):
 
         self.is_success = False
 
+        self.task_description = task_description
+        self.env_idx = env_idx
+        self.episode_idx = 0
+        self.record_views = tuple(record_views)
+
+    @staticmethod
+    def _sanitize_filename(s: str) -> str:
+        """Replace spaces/special characters with underscores for safe filenames."""
+        # Keep word chars and CJK chars, collapse everything else to a single underscore.
+        sanitized = re.sub(r"[^\w一-鿿]+", "_", s.strip())
+        return sanitized.strip("_")
+
+    def _build_filename(self) -> str:
+        if self.task_description:
+            task_part = self._sanitize_filename(self.task_description)
+        else:
+            task_part = f"env{self.env_idx}"
+        filename = f"{task_part}_episode{self.episode_idx:03d}.mp4"
+        return filename
+
+    def _find_base_env(self):
+        """Traverse wrappers to reach the base RoboCasa/RoboSuite env."""
+        env = self.env
+        while isinstance(env, gym.Wrapper):
+            env = env.env
+        return env
+
+    @staticmethod
+    def _match_shape(img: np.ndarray, target_shape: tuple) -> np.ndarray:
+        """Crop or pad ``img`` to ``target_shape`` (H, W, C)."""
+        if img.shape == target_shape:
+            return img
+        h, w = target_shape[:2]
+        ih, iw = img.shape[:2]
+        # Crop if larger.
+        y0 = max(0, (ih - h) // 2)
+        x0 = max(0, (iw - w) // 2)
+        img = img[y0 : y0 + min(h, ih), x0 : x0 + min(w, iw)]
+        # Pad if smaller.
+        ph = max(0, h - img.shape[0])
+        pw = max(0, w - img.shape[1])
+        if ph or pw:
+            img = np.pad(
+                img,
+                ((0, ph), (0, pw), (0, 0)),
+                mode="constant",
+                constant_values=0,
+            )
+        return img
+
+    def _render_view(self, view_name: str, raw_obs: Optional[dict] = None) -> np.ndarray | None:
+        """Render a single camera view, matching the orientation of ``env.render()``.
+
+        Prefer frames that are already present in the environment's last observation
+        dict (cheap), otherwise fall back to an explicit render call.
+        """
+        camera_name = self.VIEW_NAME_MAP.get(view_name, view_name)
+
+        # 1) Try to reuse the already-computed frame from the env observation.
+        video_key = f"video.{camera_name}"
+        if isinstance(raw_obs, dict) and video_key in raw_obs:
+            frame = raw_obs[video_key]
+            if isinstance(frame, np.ndarray) and frame.ndim == 3 and frame.shape[-1] == 3:
+                return np.ascontiguousarray(frame).astype(np.uint8)
+
+        # 2) Fall back to explicit rendering.
+        base = self._find_base_env()
+        if base is None or not hasattr(base, "camera_names"):
+            return None
+
+        if camera_name not in base.camera_names:
+            return None
+
+        # The default env.render() already returns the first camera, vertically flipped.
+        render_obs_key = getattr(base, "render_obs_key", None)
+        if render_obs_key == f"{camera_name}_image":
+            return self.env.render()
+
+        width = getattr(base, "camera_widths", None)
+        height = getattr(base, "camera_heights", None)
+        if isinstance(width, (list, tuple, np.ndarray)):
+            idx = base.camera_names.index(camera_name)
+            width = width[idx]
+            height = height[idx]
+        elif width is None:
+            # Fallback to the render() frame size if dimensions are unknown.
+            ref = self.env.render()
+            height, width = ref.shape[:2]
+
+        if not hasattr(base, "env"):
+            return None
+        try:
+            frame = base.env.sim.render(int(height), int(width), camera_name=camera_name)
+        except Exception:
+            return None
+
+        if frame is None:
+            return None
+
+        # RoboCasa wrapper flips images vertically before exposing them; do the same.
+        return np.ascontiguousarray(frame[::-1, :, :]).astype(np.uint8)
+
     def reset(self, **kwargs):
         result = super().reset(**kwargs)
+        # Gymnasium reset returns (obs, info); older APIs may return just obs.
+        obs = result[0] if isinstance(result, tuple) else result
+
         self.frames = list()
         self.step_count = 1
         self.video_recorder.stop()
@@ -214,22 +349,58 @@ class VideoRecordingWrapper(gym.Wrapper):
             new_file_path = self.video_dir / f"{new_filestem}.mp4"
             os.rename(self.file_path, new_file_path)
 
+        # Auto-extract task description from observation dict (e.g. RoboCasa).
+        # Update on every reset so that episodes with varying language instructions
+        # (e.g. "Open the left drawer" vs "Open the right drawer") get correct filenames.
+        if isinstance(obs, dict):
+            for key in (
+                "annotation.human.task_description",
+                "task_description",
+                "language_instruction",
+            ):
+                if key in obs:
+                    self.task_description = obs[key]
+                    break
+
         self.is_success = False
         if self.video_dir is not None:
-            self.file_path = self.video_dir / f"{uuid.uuid4()}.mp4"
+            self.file_path = self.video_dir / self._build_filename()
+            self.episode_idx += 1
         return result
 
     def step(self, action):
         result = super().step(action)
         self.step_count += 1
+        # Track episode-level success: OR over all steps so the filename suffix
+        # matches the success recorded in eval_report.json (which uses any-step success).
+        self.is_success |= bool(result[-1]["success"])
         if self.file_path is not None and ((self.step_count % self.steps_per_render) == 0):
             if not self.video_recorder.is_ready():
                 self.video_recorder.start(self.file_path)
 
-            frame = self.env.render()
+            # Reuse the raw observation dict returned by the wrapped env.
+            # MultiStepWrapper stacks historical frames, but the inner env still returns
+            # the current raw dict as result[0]; it already contains all camera views.
+            raw_obs = result[0] if isinstance(result, tuple) else result
+            if not isinstance(raw_obs, dict):
+                raw_obs = None
+
+            frames = []
+            for view_name in self.record_views:
+                frame = self._render_view(view_name, raw_obs=raw_obs)
+                if frame is not None:
+                    frames.append(frame)
+
+            if not frames:
+                # Fallback to the default render if none of the configured views exist.
+                frames = [self.env.render()]
+
+            # Normalize heights before horizontal concatenation.
+            target_shape = frames[0].shape
+            frames = [self._match_shape(f, target_shape) for f in frames]
+            frame = np.concatenate(frames, axis=1)
             assert frame.dtype == np.uint8
             self.video_recorder.write_frame(frame)
-            self.is_success = result[-1]["success"]
         return result
 
     def render(self, mode="rgb_array", **kwargs):

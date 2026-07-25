@@ -17,9 +17,13 @@ Notes:
 
 import argparse
 import logging
+from pathlib import Path
 
 import numpy as np
+from PIL import Image
 from tools.websocket_policy_client import WebsocketClientPolicy
+
+REPO_ROOT = Path("/gemini/code/starVLA")
 
 
 def _build_argparser() -> argparse.ArgumentParser:
@@ -42,46 +46,34 @@ def _main():
     client = WebsocketClientPolicy(host=args.host, port=args.port, api_key=(args.api_key or None))
     logging.info("Connected. Server metadata: %s", client.get_server_metadata())
 
-    # 1) device initialization
-    init_ret = client.init_device(args.device)  # here to set some things on the server
-    logging.info("Init device resp: %s", init_ret)
-
-    # 2) optional: try one simple inference
+    # 1) optional: try one simple inference
     if args.test == "infer":
         try:
-            # build observation aligned with model API
             H, W = 224, 224
-            img = np.random.randint(0, 256, (H, W, 3), dtype=np.uint8)
-            wrist_img = np.random.randint(0, 256, (H, W, 3), dtype=np.uint8)
-            state = np.zeros((7,), dtype=np.float32)  # [x,y,z, ax,ay,az, gripper]
-
-            observation = {  # key to align with model API
-                "request_id": "smoke-test",
-                "observation.primary": np.expand_dims(img, axis=0),  # (1,H,W,C), uint8 0-255
-                "observation.wrist_image": np.expand_dims(wrist_img, axis=0),  # (1,H,W,C)
-                "observation.state": np.expand_dims(state, axis=0),  # (1,7), float32
-                "instruction": ["debug: pick up the red block"],  # single element list
-            }
-
-            image_path = "assets/table.jpeg"
-            # read image as PIL
-            from PIL import Image
-
-            image_primary = Image.open(image_path).convert("RGB")
-            # Convert PIL -> numpy uint8 (H,W,3)
-            image_primary_np = np.asarray(image_primary, dtype=np.uint8)
+            image_primary_np = np.random.randint(0, 256, (H, W, 3), dtype=np.uint8)
 
             instruction_lang = "pick up the red block"
+            state = np.zeros((1, 8), dtype=np.float32)
+
             obs = {
+                "type": "infer",
                 "request_id": "smoke-test",
-                "batch_images": [[image_primary_np]],
-                "instructions": [instruction_lang],  # assume batch task description
+                "payload": {
+                    "examples": [
+                        {
+                            "image": [image_primary_np],
+                            "lang": instruction_lang,
+                            "state": state,
+                        }
+                    ],
+                    "unnorm_key": "franka",
+                },
             }
 
-            infer_ret = client.infer(obs)
+            infer_ret = client.predict_action(obs)
             logging.info("Infer resp: %s", infer_ret)
         except Exception as e:
-            logging.error("Infer error (this still proves transport OK): %s", e)
+            logging.error("Infer error: %s", e, exc_info=True)
 
     client.close()
     logging.info("Smoke test done.")

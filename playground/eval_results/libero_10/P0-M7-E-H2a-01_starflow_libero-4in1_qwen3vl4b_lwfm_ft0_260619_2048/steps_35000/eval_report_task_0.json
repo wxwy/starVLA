@@ -1,0 +1,149 @@
+{
+  "task_suite_name": "libero_10",
+  "num_trials_per_task": 10,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048/checkpoints/steps_35000",
+  "checkpoint_step": "steps_35000",
+  "checkpoint_hash": "0d834a42f0f4524f88ea6f32cc5d94184add4dc67b54e1885a0650f5c5e6618b",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048/checkpoints/steps_35000/config.yaml",
+  "config_hash": "3e13a77d3bf315488789d52b0a5f765d5692212305a5d87d96f5f116826aed2f",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "LayerwiseFM",
+    "state_mode": "discretized_instruction",
+    "state_enters_instruction": true,
+    "state_enters_action_head": false,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 0,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "model": {
+    "framework_name": "StarFlowVLA",
+    "vlm": "Qwen3-VL-4B-Instruct",
+    "action_head": "LayerwiseFM"
+  },
+  "total_episodes": 3,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "timeout_no_success": 3
+  },
+  "tasks": [
+    {
+      "task_description": "put both the alphabet soup and the tomato sauce in the basket",
+      "episodes": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "timeout_no_success": 3
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 0,
+      "task_description": "put both the alphabet soup and the tomato sauce in the basket",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 520,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_10/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048/steps_35000/rollout_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket_episode0_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 512,
+        "replan_interval": 8,
+        "resize_sec": 0.0016788500361144543,
+        "client_pack_and_queue_sec": 8.598994463682175e-05,
+        "client_server_roundtrip_sec": 1.768695262959227,
+        "client_unpack_sec": 0.00010680500417947769,
+        "client_total_call_sec": 1.7688927799463272,
+        "server_total_sec": 0.1959391669370234,
+        "server_framework_sec": 0.19561259006150067,
+        "server_unnorm_sec": 0.0003240220248699188,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 0,
+      "task_description": "put both the alphabet soup and the tomato sauce in the basket",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 520,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_10/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048/steps_35000/rollout_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket_episode1_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 512,
+        "replan_interval": 8,
+        "resize_sec": 0.0015916689299046993,
+        "client_pack_and_queue_sec": 0.00010502501390874386,
+        "client_server_roundtrip_sec": 1.7907695029862225,
+        "client_unpack_sec": 7.570278830826283e-05,
+        "client_total_call_sec": 1.7909549798350781,
+        "server_total_sec": 0.20060016703791916,
+        "server_framework_sec": 0.20016605406999588,
+        "server_unnorm_sec": 0.00043074809946119785,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 0,
+      "task_description": "put both the alphabet soup and the tomato sauce in the basket",
+      "episode_idx": 2,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 520,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_10/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260619_2048/steps_35000/rollout_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket_episode2_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 512,
+        "replan_interval": 8,
+        "resize_sec": 0.0018334980122745037,
+        "client_pack_and_queue_sec": 0.00021394598297774792,
+        "client_server_roundtrip_sec": 1.8040169610176235,
+        "client_unpack_sec": 0.00011815805919468403,
+        "client_total_call_sec": 1.804353249957785,
+        "server_total_sec": 0.20019584009423852,
+        "server_framework_sec": 0.1998424450866878,
+        "server_unnorm_sec": 0.0003507840447127819,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    }
+  ]
+}

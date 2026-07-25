@@ -1,0 +1,61 @@
+{
+  "episode_store": "playground/Datasets/libero_wan2.2_latent/libero_object_no_noops_1.0.0_lerobot/ep_000006.h5",
+  "video_path": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA/libero_object_no_noops_1.0.0_lerobot/videos/chunk-000/observation.images.image/episode_000006.mp4",
+  "video_key": "observation.images.image",
+  "source_endpoints": [
+    4,
+    8,
+    12,
+    16,
+    20,
+    24,
+    28,
+    32,
+    36,
+    40
+  ],
+  "shape": [
+    10,
+    48,
+    16,
+    16
+  ],
+  "per_step_mse": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "per_step_max_abs": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "per_step_cosine": [
+    1.000000091830653,
+    0.9999999999999999,
+    0.9999999999999999,
+    1.0000000722782905,
+    0.9999999999999999,
+    0.999999932141093,
+    0.9999999308404687,
+    1.0000000705755399,
+    0.9999999999999999,
+    1.0000000696514737
+  ],
+  "max_mse": 0.0,
+  "min_cosine": 0.9999999308404687
+}

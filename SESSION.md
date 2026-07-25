@@ -1,246 +1,436 @@
-# Session Log
+# MoWA 会话状态
 
-## 2026-05-24 — LIBERO eval 适配 checkpoints 目录下单文件 pt
+## 2026-07-25 Wan VAE 输入模式隔离
+- WanPI 默认配置及全部现有 WanPI YAML 已显式固定为 `world_model.legacy_vae_input: false`；WanOFT 默认和 Stage1 YAML 显式为 `true`。官方 WanOFT checkpoint 的 `480×832 / 无 4n+1 / sample()` 与 WanPI/MoWA 的 `256² / 4n+1 / mode()` 不再依赖共享默认值。
+- 新增回归检查两框架默认值相反、所有 WanPI YAML 均声明该字段；后续新增 Wan 配方必须明确写入对应模式。
 
-- 确认早期 checkpoint 不是目录，而是直接位于 `playground/trained_model/starVLA_QwenGR00T_libero4in1_qwen3_dit/checkpoints/` 下的单文件：
-  - `steps_1000_pytorch_model.pt`
-  - `steps_2000_pytorch_model.pt`
-  - `steps_5000_pytorch_model.pt`
-  - `steps_10000_pytorch_model.pt`
-  - `steps_15000_pytorch_model.pt`
-- 已对 `examples/LIBERO/eval_files/run_policy_server.sh` 和 `examples/LIBERO/eval_files/eval_libero.sh` 做最小适配：
-  - 当未显式传入 `CKPT` 时，优先选择 `checkpoints/steps_<step>_pytorch_model.pt`
-  - 其次回退到旧式 DeepSpeed `checkpoints/steps_<step>/pytorch_model/mp_rank_00_model_states.pt`
-  - 最后再回退到 `checkpoints/steps_<step>` 目录
-- `eval_libero.sh` 同时补充了这类单文件 checkpoint 的结果目录命名逻辑，输出目录会稳定落到 `playground/eval_results/<task_suite>/steps_<step>`
-- 两个脚本都已通过 `bash -n` 语法检查
+## 2026-07-23 功能保持双视角 WanOFT
+- 已在 `WanOFT.py` 增加默认关闭的 `multi_view_residual`：主路径保留官方 `[main,wrist]` 两帧联合编码，新增 wrist 独立编码残差；共享同一 Wan backbone。`fusion 6144→3072` 使用 `[I,0]`、bias=0 初始化，默认 WanOFT 行为不变。
+- Stage1 配置为 `configs/mowa/mowa_e003_wanoft_multiview_residual_stage1.yaml`：完整加载并冻结官方 60k 的 `backbone + action_query_proj + action_model`，只训练 18,877,440 参数的 fusion；launch 仍由单 batch 过拟合门禁阻止。
+- 真实 checkpoint 等价检查加载 key 数 1264+2+16，同一 LIBERO 专家观测 action `[1,8,7]` 的 `max_abs_diff=0`，报告为 `docs_zh/mowa/wanoft_multiview_equivalence.json`。
+- 零训练闭环使用 `libero_goal` 前3任务×3次、`replan_interval=1`，取得 9/9；报告和9个视频在 `playground/eval_results/libero_goal/E003_WanOFT_multiview_residual_zero_init_3tasks3eps/`。说明新框架已保留原生策略能力，下一门禁是固定 batch 过拟合和训练/预测/server 三路一致性。
+- 回归：`tests/mowa/test_multiview_wan.py` 27/27 通过，相关 Python `py_compile` 与目标文件 `git diff --check` 通过。
 
-## 2026-05-24 — LIBERO `libero_goal` 早期阶段评测结果补齐
+## 2026-07-23 E003-B1 v2 后续优化验收入口
+- 已把此前讨论的训练/推理对齐、严格加载、LoRA、state/夹爪、功能保持双视角 WanOFT、分阶段解冻、future residual、memory/空间理解、训练工程与 Go/No-Go 条件整理到 `docs_zh/mowa/TODO.md` 的“2026-07-23 E003-B1 v2 优化与逐项验收清单”。
+- 清单使用 `[x]/[~]/[ ]` 区分“已有直接证据 / 已实现但待闭环 / 尚未实施”；后续逐项执行时必须补验证命令、结果路径和结论，不能仅按代码存在勾选。
 
-- 已基于 `playground/eval_results/libero_goal/steps_1000`、`steps_2000`、`steps_5000`、`steps_10000`、`steps_15000`、`steps_20000_pytorch_model_mp_rank_00_model_states.pt`、`starVLA_QwenGR00T_libero4in1_qwen3_dit_steps_40000` 目录中的 rollout 视频文件名，按 `success/failure` 统计各阶段整体和分任务成功率
-- 已将 `steps_2000`、`steps_5000`、`steps_10000`、`steps_15000` 的整体结果、分任务表格和阶段分析补入 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md`
-- 当前 `libero_goal` overall success rate 时间线：
-  - `steps_1000`: `0.0%`
-  - `steps_2000`: `1.0%`
-  - `steps_5000`: `4.4%`
-  - `steps_10000`: `33.4%`
-  - `steps_15000`: `36.4%`
-  - `steps_20000`: `46.0%`
-  - `steps_40000`: `36.8%`
-- 已在训练日志中补充阶段趋势总结：第一次明显跃迁出现在 `steps_10000`，当前已统计阶段 overall 最优 checkpoint 是 `steps_20000`
+## 2026-07-23 WanPI 在线 VAE 流式编码对齐
+- 已将 WanPI 在线视觉编码从“每次取滑动 5 帧并重置 VAE cache”改为按 episode、按视角独立维护 Wan causal VAE `feature_cache`：首帧初始化，之后每收到连续 4 个真实新帧生成 1 个 regular latent；main/wrist 使用独立 stream id，策略请求只发送尚未编码的新帧。
+- LIBERO warmup 调整为 12 个真实环境步，首轮编码覆盖 frame 0..12；RoboCasa 首帧初始化后先执行 8 步零动作取得真实帧，首轮覆盖 frame 0..8，后续每次执行 8 个 action 后编码新增 8 帧（2 个 latent）。旧调用方未提供 stream id 时仍保留原 5 帧兼容路径。
+- 新增 `tools/mowa/wan_vae_streaming_alignment_check.py`，使用真实 LIBERO episode 视频、训练缓存和实际 Wan VAE 做逐元素对照。main/wrist 在 endpoint 4,8,...,40 的 latent shape 均为 `[10,48,16,16]`，MSE=0、max_abs=0；报告为 `docs_zh/mowa/mowa_wan_vae_streaming_alignment_main.json` 与 `docs_zh/mowa/mowa_wan_vae_streaming_alignment_wrist.json`。
+- 回归：`tests/mowa/test_multiview_wan.py` 24/24 通过；相关 Python 文件 `py_compile` 通过；`git diff --check` 通过。
+- 本阶段仅完成用户要求的 1–4；下一阶段再依次评测 LIBERO4in1 origWan steps_6500、RoboCasa365 multitask steps_18000、TurnOnElectricKettle steps_4000 checkpoint。
 
-## 2026-05-25 — LIBERO `libero_goal` 补测 `steps_70000/80000`
+## 2026-07-22 E003-v2 B1 训练审计
+- 已完成既有 run `MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260721_2150` 的完整 checklist，记录在 `docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260721_2150_checklist.md`。结论为不通过、不可直接与基线比较：设计100k步而日志止于2350、最后完整checkpoint为2000；尚无闭环评估。代码审计已确认 H10 文件名只是最大容量 manifest，`history_window_steps=0` 会裁切为无 history，旧 run data-flow `T=9=0+1+8` 证明实际为H0。LoRA r32 adapter 已实际更新（1000→2000共480/480 tensors变化），checkpoint训练状态组件齐全但尚未执行加载/续训smoke。
+- 新 run `MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024` 的训练前 checklist 已建立于 `docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024_checklist.md`；静态配置可从 scratch 启动。注意其 `data_mix=robocasa365_atomic_target_human_all`，与旧 run 的单任务 OpenDrawer 不同。
+- LIBERO4in1 run `MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1727` 在 step266 因 `/dev/shm` 满而 DataLoader bus error 退出。根因是工作区未提交改动把 `instruction_text_latent` 重新交给 worker cache，导致 UMT5 text embedding 再次跨 worker/rank 传输。已在 `starVLA/dataloader/gr00t_lerobot/datasets.py` 恢复 `instruction_text_latent=None`，保留 LIBERO configurable anchor key；MoWA 数据路径集成测试5/5通过。记录：`docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1727.md`。
 
-- 已基于以下结果目录统计 `steps_70000/80000` 的整体和分任务成功率：
-  - `playground/eval_results/libero_goal/starVLA_QwenGR00T_libero4in1_qwen3_dit_checkpoints_steps_70000`
-  - `playground/eval_results/libero_goal/starVLA_QwenGR00T_libero4in1_qwen3_dit_checkpoints_steps_80000`
-- 统计结果：
-  - `steps_70000`: `370/500 = 74.0%`
-  - `steps_80000`: `357/500 = 71.4%`
-- 关键结论：
-  - `steps_70000` 是当前 `libero_goal` overall 最优 checkpoint
-  - `steps_80000` 虽然 overall 略低，但在 `open_the_middle_drawer_of_the_cabinet`、`put_the_cream_cheese_in_the_bowl`、`put_the_wine_bottle_on_the_rack` 等长尾任务上优于 `steps_70000`
-- 已将 `steps_70000`、`steps_80000` 的表格、分析，以及 `70000 vs 80000` 对比和更新后的阶段趋势总结补入 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md`
+## 2026-07-22 LIBERO4in1 训练（双实验并行）
 
-## 2026-05-25 — 仿真评测记录按训练联动框架重构
+### origWan (1917) — 原始 Wan2.2 基线 ✅ 已完成
+- run `MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1917` 于 19:18 启动，~23:39 被 KeyboardInterrupt 手动停止
+- 最终 step：6650（6.65%），历次 eval mse_score ≈ 0.014-0.023，稳定收敛
+- 完整 checkpoints 保存：steps_500 → steps_6500（各 ~34 GiB）
+- 训练日志：`docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1917.md`
 
-- 已重写 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md` 中的“仿真评测记录”部分，不再按 checkpoint 逐段叙述
-- 新结构改为：
-  - `评测设置`
-  - `训练阶段与恢复连续性`
-  - `Checkpoint 总览`
-  - `关键结论`
-  - `任务演化总表`
-  - `训练-测评联动分析`
-  - `任务类型分析`
-  - `Checkpoint 选择建议`
-  - `附录：各 checkpoint 详细结果`
-- 新框架已显式纳入：
-  - 单卡到 2 卡训练切换
-  - batch size / effective batch 变化
-  - warmup / cosine scheduler 区间
-  - 2 卡切换时 optimizer 丢失导致的恢复不连续风险
-  - `steps_40000/70000/80000` 的 `rank_sharded` optimizer 恢复稳定阶段
-- 当前仿真分析的核心判断已调整为：
-  - `steps_20000 -> steps_40000` 的变化不能只按 step 增长解释
-  - `steps_70000` 是 overall 最优 checkpoint
-  - `steps_80000` 是长尾任务对照 checkpoint
+### OFT (2345) — OFT backbone 加速实验 🟢 运行中
+- run `MoWA-E-003-v2_WanPI-LIBERO4in1_OFT_contft32_lora-r32_20260722_2345` 于 23:46 启动
+- 配置：`configs/mowa/mowa_e003_v2_wanpi_libero4in1_oft_contft32_lora.yaml`
+- 使用预训练 OFT backbone（WM4A-Wan2d2-OFT-LIBERO-4in1，steps_60000）
+- 当前进度：10000/100000（10%），已运行约 9h，预计完成 ~7月25日
+- wrist_far: 0.668（突破 0.68 平台下行），mse_score: 0.012-0.020
+- 训练日志：`docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO4in1_OFT_contft32_lora-r32_20260722_2345.md`
 
-## 2026-05-25 — 实验概况与训练过程更新到 `80000 step`
+## 当前阶段
+- 2026-07-21 E-003-B1 future latent prior 开关对齐：`framework.mowa.enable_future_latent_prior_loss` 已改为 `true`，与 `trainer.enable_mowa_future_latent_prior_loss=true` 及 loss scale `0.05` 一致；当前双视角 future/done 辅助监督和旧 prior 配置语义统一。
+- 2026-07-21 E-001 main W&B 监控已打开：`configs/mowa/mowa_e001_v2_qwenpi_contft32_lora.yaml` 的 `wandb_mode` 从 `disabled` 改为 `online`，与 E-003-B1 对齐；项目/实体保持 `MoWA` / `silencewx-harbin-institute-of-technology`，既有训练指标代码不变。
+- 2026-07-21 用户明确放行 E-001 main 与 E-003-B1：两份 v2 正式 YAML 的 launch guard 已设为 `launch_ready=true`、`policy_confirmed=true`、`human_confirmed=true`；`training_started=false` 保持不变，等待 8 卡实际启动。当前正式口径为每卡 bs2、GA2、num_workers32，全局有效 batch32。
+- 2026-07-21 按后续 8 卡机器口径调整 E-001/E-003 v2 正式 YAML：每卡 `per_device_batch_size=2`、`gradient_accumulation_steps=2`、`num_workers=32`，全局有效 batch 为 `2×2×8=32`。当前单卡不再用该口径做显存结论，需在 8 卡环境做分布式启动与首步验证。
+- 2026-07-21 根据 bs4+GA8 复测结果，E-001/E-003 v2 正式 YAML 已调整为 `per_device_batch_size=2 + gradient_accumulation_steps=16`，有效 batch 仍为32；E-001 bs4 已在第2步 OOM，E-003 bs4 虽完成10步但显存余量不足。bs2+GA16 尚未在最终配置下完成10步复测，正式启动前需先做该口径验证。
+- 2026-07-21 `per_device_batch_size=4 + gradient_accumulation_steps=8` 10-step 复测：E-001 在第1个 optimizer step 完成后，第2步反向 OOM（23.48 GiB 已用，尝试再分配 66 MiB）；E-003 连续10步完成、无 OOM，约25.9 s/optimizer step，峰值 allocated/reserved=21.83/22.97 GiB。结论：两条线不能共用 bs4；正式配置仍保持 `per_device_batch_size=1 + GA32`，E-003 的 bs4 仅作为已验证上限，不改正式 YAML。
+- 2026-07-21 正式资源口径修正：E-001 fp32 首次长训在第1个 optimizer step 因 23.5GiB 显存 OOM；新增并真正启用 LayerwiseFM action-DiT 的 gradient checkpointing。E-001/E-003 的 `bf16 + batch1 + GA32` 真实 smoke 均通过（contract 1/1、无 OOM），最终有效 batch 恢复为32。GA32 单步耗时约23s（E-001）/37s（E-003），按40k optimizer steps估算单卡约10.6/17.1天；正式长训尚未重启，需确认该资源周期后再启动。
+- 2026-07-21 E-001/E-003 v2 最终数据配方收口：确认仅将 RoboCasa `action.gripper_close` 从连续 `min_max` 改为 `binary`；已验证的 32D sin/cos state、连续 state 注入和 1024D action-head 接口保持不变，未经验证的 state 位置归一化与 rotation-6D 不混入本轮唯一训练配方。E-001/E-003 各完成一轮真实 forward/backward smoke，contract validation 1/1 通过；生成的 `dataset_statistics.json` action mask 第7维为 `false`，证明 gripper 走二值路径。正式长训仍需单独确认 launch guard。
+- 2026-07-18 E003-B1 任务采样诊断：训练器现从实际 `LeRobotMixtureDataset.dataset_sampling_weights` 读取归一化后的目标任务概率，并在每个 logging window 的四卡汇总后记录 `sampling/target_prob/task/*`、窗口 `observed_prob/observed_to_target_ratio` 与本次启动以来的累计 observed probability/ratio。该改动只诊断采样结果，不改变采样、loss、梯度或 checkpoint；`test_multiview_wan.py` 21 项通过。
+- 2026-07-18 E003-B1 padding 日志设备修复：新 run `260718_0027` 在首个 forward 后报错，根因是 padding 诊断将 valid mask 放在 CPU、逐 timestep loss 在各 rank GPU 上，乘法触发 device mismatch；训练尚未完成任何 optimizer step。日志计算现将每个 mask 显式移动到对应 loss 的 device，训练语义不变；专项多视角测试 21 项通过。可用同一 run ID 且 `is_resume=false` 重启。
+- 2026-07-17 E003-B1 padding 监督诊断：确认正式 H0 配置 `history_window_steps=0`，因此前 padding/history 诊断在本实验不适用；实际边界问题是 episode 尾部的后 padding。`mowa_future_done_target` 有意将 terminal 后的 padding 视为吸收终止状态（done=1）并参与 done BCE，`future_valid_mask` 只屏蔽 future flow 重建。新增按 `no_pad/front_pad/back_pad/both_pad` 的 sample 数、action/future 有效覆盖率、masked action/main/wrist loss，以及 action/future near/far horizon 的四卡窗口聚合日志；H0 中 front/both 比例如实为零、history ratio 不记录。未新增任何 padding 专用训练 loss；专项多视角测试通过。
+- 2026-07-17 E003-B1 per-task 训练指标：MoWA latent-cache 样本现携带 atomic task 名称；WanPI 保留仅供日志使用的逐样本 action flow、main/wrist future flow、done 正样本比例。训练器按 `logging_frequency` 窗口汇总所有 gradient-accumulation microbatch，并通过 DDP `all_gather_object` 合并四卡结果后仅由主 rank 写入 W&B：`sample_count/task/*`、`loss_action/task/*`、`loss_future_main/task/*`、`loss_future_wrist/task/*`、`done_positive_ratio/task/*`。不改变训练 loss、反向传播、采样或 checkpoint；当前已启动 `2119` 不会动态获得新指标，下次从零启动生效。专项多视角测试 21 项通过。
+- 2026-07-17 E003-B1 `/dev/shm` 根因定位：内核 `smaps` 显示 DataLoader worker 持有大量 `/dev/shm/torch_<worker_pid>_*` 映射，每段固定 4MiB；它对应 UMT5 `text_embeds` 的 `[1,512,4096]` 缓存 tensor。此前每个 persistent worker 都加载 instruction cache，并将该 tensor 随每个 sample 跨进程发送。现 worker 仅返回 `lang`，WanPI 训练 `forward()` 在每个 rank 内调用已有的 instruction cache 补齐逻辑；停止了 step 32 的旧 `2030` run，重启必须使用新 run ID 并观察 shm 是否稳定。
+- 2026-07-17 E003-B1 全量混合 DataLoader 内存修复：`MoWAWindowLatentSampleDataset` 的 `_raw_episode_cache` 原本按 episode parquet 路径无界累积；persistent worker 在全量 18-task 随机采样时会不断保留原始 episode DataFrame。现改为默认容量 2 的 LRU，可通过 `mowa_latent_cache.raw_episode_cache_size` 覆盖；回归覆盖命中与淘汰，episode-level latent cache 测试 22 项通过。此前单任务 run `1200` 已运行至 step 2000，而全量 run 在 `prefetch=2` 时分别于 74/167/298 step 耗尽 10GiB `/dev/shm`，`prefetch=1` 仍在 step 283 报错，下一轮须从新 run ID 启动并监控共享内存。
+- 2026-07-17 E003-B1 全 atomic 数据 loader 修正：4 卡每 rank `num_workers=48` 且默认 `prefetch_factor=2` 导致最多 384 个预取 batch，占满 10GiB `/dev/shm`，在 step 74 触发 DataLoader bus error。16 workers、`prefetch_factor=2` 仍在 step 167 耗尽共享内存，8 workers、`prefetch_factor=2` 仍在 step 298 耗尽共享内存；无界 raw episode cache 修复后，候选配置恢复每 rank 16 workers、`prefetch_factor=2`，须从新 run 观察 `/dev/shm`。
+- 2026-07-18 E003-B1 下一轮 LoRA 正式候选：`mowa_e003_future_latent_prior_lora_long_training_launch_candidate.yaml` 已切换至 `run_id=MoWA-E-003_future_latent_prior_wo_history_lora_260718_0039`，训练 data mix 为 `robocasa365_atomic_target_human_all`（18 个 atomic target-human 任务），并设 `trainer.is_resume=false`，保证从零开始记录新增诊断指标。
+- 2026-07-17 E003-B1 checkpoint 恢复兼容：lightweight 保存改为跳过 `persistent=False` 的 runtime buffer，避免未来 checkpoint 再写入诊断状态；恢复兼容仅忽略已知 `*.last_residual_ratio`，仍严格拒绝其他 unexpected key。新增回归覆盖该 buffer 不保存、旧 checkpoint 含该 key 可加载、任意错误 key 仍报错。
+- 2026-07-17 E003-B1 诊断日志：为下一次启动补充 cross-view 每层/均值 residual ratio、done 正样本比例/平均 logit/平均概率，以及 Wan LoRA self-attention/cross-attention 的梯度范数、参数范数和相对当前会话初始值的 delta 范数。日志不改变 loss、梯度、optimizer 或 checkpoint；LoRA 基线在恢复 checkpoint 后采集，因此 resume 的 delta 从恢复点开始计量。
+- 2026-07-17 E003-B1 cross-view 初始化统一：经确认，action-only 与 LoRA 两份正式候选均保留 `zero_init_output=true`（输出投影标准差为 `1e-5`），并把 `gate_init` 从 `0.001` 统一改为 `1.0`。这样仅保留一种近零初始化，避免 cross-view attention 在训练早期被双重缩小梯度；两组实验间仍只有 Wan LoRA 开关的差异。此前约500 step 的 action-only run 仅作工程 smoke，不作正式对照。
+- 2026-07-17 E003-B1 LoRA optimizer 修正：确认 `freeze_modules: backbone` 曾在 optimizer 创建阶段把 Wan LoRA 一并排除，后续仅设置 `requires_grad=True` 不能使其参与更新。`build_param_lr_groups()` 现冻结基座参数但保留 `backbone.transformer.*lora_*`，并建立独立 `wan_lora` 参数组；LoRA YAML 显式设定 `trainer.learning_rate.wan_lora=1.0e-5`。新增回归覆盖 LoRA 属于 optimizer、基座不属于 optimizer，且 `optimizer.step()` 后 LoRA 权重实际变化。
+- 2026-07-17 E003-B1 LoRA 实验：已拆分 action-only 与 LoRA 两份独立 YAML。action-only 保持 `mowa_e003_future_latent_prior_long_training_launch_candidate.yaml`（LoRA关闭）；LoRA 使用 `mowa_e003_future_latent_prior_lora_long_training_launch_candidate.yaml`，启用 Wan DiT LoRA 的 cross-attention 与 self-attention（rank=8、alpha=16、全30层、MLP关闭）。实现使用 Diffusers 原生 PEFT adapter，不改动 VAE、UMT5 或 DiT 基座权重。
+- 2026-07-17 LoRA checkpoint：lightweight checkpoint 在保留完整训练恢复所需模型分片与 rank-sharded optimizer state 的同时，额外写出仅含 Wan PEFT adapter 的 `wan_lora.safetensors` 和 `wan_lora_config.json`。即使 `save_frozen_backbone=false`，LoRA 参数仍会保留在模型分片中以支持 resume；独立 adapter 用于轻量分发/复用。5项冻结主干 checkpoint 回归通过。
+- 2026-07-17 E003-B1 四卡RTX4090 OOM修正：DDP 每卡持有完整模型/优化器状态，不能汇聚96GB；原每卡BS4、GA2在反向达到23.23/23.52GiB，且训练器因未配置 `trainer.mixed_precision` 实际以 `no` 运行。正式候选现关闭P1不需要的 layerwise bridge/future supervision，设置 `trainer.mixed_precision=bf16`，并改为每卡BS2、GA4，保持全局batch32；重启日志必须显示 `Mixed precision type: bf16`。
+- 2026-07-17 E003-B1 4卡DDP在第2个iteration报错：P0 future supervision/layerwise bridge 均关闭后，索引426-429仍无梯度。单卡加载模型精确映射为LayerwiseFM DiT的 `proj_out_1/2`；现有训练和推理直接迭代 transformer blocks 并用 action decoder，不调用这些封装输出层。已将其冻结，保持前向数值不变并移出DDP/optimizer；保留trainer bf16、双视角 future latent prior、done和action训练。重启后应先完成2轮数据流检查并观察至少2个optimizer step。
+- 2026-07-17 E003-B1 正式训练资源口径为4卡RTX4090：当前每卡batch size=2、gradient accumulation=4、全局有效batch=32；实际启动须通过 `accelerate launch --num_processes 4` 启用4个进程，YAML不包含独立的设备数量生效字段。
+- 2026-07-17 已修正 E003-B1 正式候选的损失开关与权重：关闭未接入 WanPI 的 future supervision（trainer scale=0），开启 multi-view future latent prior，外层权重设为0.05、done BCE 内层权重设为0.25；训练器新增实际加权的 main/wrist/done/total 及 aux-to-action ratio 日志。当前2k+ checkpoint 仍为 action-only 对照，后续 smoke 与干净重训由用户手动执行。
+- 2026-07-16 已将 `tools/mowa/e003_b1_checkpoint_inference.py` 正式化为兼容工具：默认多步训练 smoke 不变；新增可选 `--checkpoint`、`--inference-only`、`--output`。checkpoint 推理模式用真实 cache 样本、删除 future latent/action/done GT 后执行双视角 `predict_action()`，并落盘 action/future/done shape、有限值、flow steps、耗时和显存的 JSON 报告；用于检查 E003-B1 `steps_1000` 的 shared Wan/cross-view/LayerwiseFM 动作推理链路。待用户执行。
+- 2026-07-16 已新增正式闭环入口 `tools/mowa/e003_b1_robocasa_rollout.sh`：`server` 使用训练环境与 `steps_1000` 启动 bf16 policy server，`client` 使用 `.robocase`、EGL 和同步双视角在线 Wan VAE 流程执行 RoboCasa OpenDrawer rollout；默认单 episode，结果写入 `steps_1000.eval/robocasa_OpenDrawer.json`、视频写入同目录 `videos/`。离线 checkpoint 推理工具仅作为该 rollout 的预检。
+- 2026-07-16 已完成 E003-B1（H0）正式配置的 100 optimizer-step 临时训练：启动命令显式开启前2轮数据流检查、BS4、gradient accumulation 8、W&B disabled，运行根目录为 `playground/tmp_e003_b1_100step_20260716/`。`checkpoints/steps_100` 已完整写出模型3分片、index、optimizer、scheduler、RNG、trainer state 和配置；训练入口正常结束后还写出同内容的 `final_model`，临时目录合计约30GiB。该 run 只验证短训稳定性与 checkpoint 可用性，不构成收敛或策略收益结论。
+- 2026-07-16 已修正 RoboCasa online temporal sampling：`MultiStepWrapper` 每次 policy 调用虽执行8个原始控制步，但内部会缓存每一个原始 observation；旧 `video_delta_indices=[0]` 错误地只把最后一帧交给在线 VAE，导致5帧 history 跨越8个控制步。`simulation_env.py` 现按 `wan_history_frames` 设置连续原始帧索引，E003 H0 默认 `[-4,-3,-2,-1,0]`，E003-B2 可显式 `--args.wan-history-frames 45` 取 `[-44,...,0]`；`run_eval.sh` 同步暴露 `WAN_HISTORY_FRAMES`。这保证每次输入 VAE 的帧序列在 wrapper 内连续，但相邻 policy 调用仍相隔 `n_action_steps=8` 原始步，属于 action receding-horizon 策略频率而非伪造的帧率。编译、shell语法、17项双视角回归与 diff 检查通过。
+- 2026-07-16 已将 E003 在线双视角输入接到 RoboCasa policy adapter：`PolicyWarper` 同步维护 `agentview_left` 与 `eye_in_hand` 的原始帧环形历史（E003 H0 默认5帧，E003-B2 H10 需45帧），发送 `mowa_multi_view_images=[main_frames,wrist_frames]`。WanPI 在无 cache latent 时惰性加载 Wan VAE、按 `1+4k` 帧编码并丢弃 causal `z0`，得到 regular history/current latent；无 text tensor 时从现有213条 UMT5 instruction cache 精确查表。训练配置仍保持 `use_visual_cache=true`，不会为训练预加载 VAE。真实 RTX4090 H0/BS1 online smoke 删除所有 latent/text/action 字段后通过，action `(1,32,12)`、future `(1,2,48,8,16,16)`、done `(1,8)`，端到端在线分支1.95秒。在线帧源必须与训练的20Hz语义对齐；当前 RoboCasa wrapper 每次 `step()` 可用帧率仍需在真实 rollout 中测量确认。
+- 2026-07-16 已实现 E003/E003-B2 双视角 `predict_action()`：只读取同步 history/current latent、cached text 和 state，从 main/wrist 独立 Gaussian future latent 出发，以共享 flow timestep 反向 Euler 积分（默认8个 future latent、4个 flow step）；每一步按 `[B,V] -> [2B]` 经过同一 Wan/LoRA、最后10层 cross-view，终点 `t=0` 的双视角 future hidden 经现有 fusion queries 形成一套 LayerwiseFM 条件。done head 同时读取同一时刻的两路终点 hidden（view embedding + 有序拼接），输出共享 `[B,8]` logits；推理不读取 future GT、future done target 或 action。真实 RTX4090 H0/BS1 smoke 在删除这些训练字段后仍通过推理数据流检查，输出 action `(1,32,12)`、future latent `(1,2,48,8,16,16)`、done logits `(1,8)`，推理耗时0.78s。正式部署调用仍需上游提供双视角 history/current Wan latent 与 cached text；原始相机帧的在线 VAE/history 缓存适配尚未接入 policy server。
+- 2026-07-16 已用真实 RoboCasa OpenDrawer cache 和 `train_starvla.py` 完成 E003 双视角 2-step dataloader 数据流验证：显式传入 `--validate-data-flow --validation-steps 2`，并为排除多 worker 首批加载影响临时设 `datasets.vla_data.num_workers=0`。两轮均通过 WanPI 契约检查；首轮真实输入为 `[B=1,V=2,C=48,T=9,H=16,W=16]`，Wan patch grid `(9,8,8)`，按时刻 cross-view 重组为 `[B*T=9,V*S=128,D]`，LayerwiseFM condition 为 `(1,8,1024)`，state 为真实 `[1,1,32]`（norm≈4.00）。2 step 完整训练结束、无 checkpoint（显式跳过），耗时约2秒；这验证了真实数据的双视角/低维/action/future-done 数据链路，但不等同于长训收敛或双视角推理已实现。
+- 2026-07-16 已为 E003/E003-B2 双视角路径补齐共享 done head：取最后一层已 cross-view 融合的 Wan hidden，按每个 future timestep 分别对 main/wrist 空间 token mean-pool，加入独立 view embedding 后按固定视角顺序拼接，使用 `LayerNorm(2D) -> Linear(2D,512) -> GELU -> Linear(512,1)` 得到 `[B,T_future]` done logits；以 manifest 的 episode-boundary `mowa_future_done_target` 做 BCE，默认 `loss_weight=1.0` 并与双路 future flow loss 合成 `mowa_future_latent_prior_loss`。训练日志新增 `loss_done` / `loss_multiview_total`，GPU smoke 同时显示 latent/done/action，并确保实际优化组合 loss。真实 RTX4090 H0/BS1/SGD/1-step、数据流检查通过：latent≈1.44、done≈0.75、action≈1.21，peak allocated/reserved=14.107/14.375GiB；39项单测、编译、diff检查通过。
+- 2026-07-16 已修复 E003/E003-B2 terminal action padding 被错误纳入 LayerwiseFM loss 的问题：episode cache 的非空 `mowa_action_valid_mask` 现透传给 WanPI，随后按 repeated diffusion batch 同步展开并传入 LayerwiseFM；action head 改为先按 action dim 求每 timestep MSE，再只对有效 timestep 归一化。terminal 右填充的 delta action 对 loss/梯度均为零；若 current 已是 episode 最后一个 chunk、future action mask 全空，则返回可反传的零 action loss，不报错，等待后续 done supervision 提供终止学习。旧非 Wan regular-grid manifest 合法的空 mask 不再注入，保持原有“全 action 有效”兼容行为。新增 mask/梯度与 dataloader 兼容回归，14项专项测试与 diff 检查通过。
+- 2026-07-16 已将可选数据流契约检查同步到 StarFlowVLA，并保持 facade 继续继承 QwenPI_v3、不复制 forward/predict_action。仍复用训练入口的 `--validate-data-flow` 与 `--validation-steps`（默认2），默认关闭且仅在 `framework.name=StarFlowVLA` 时激活，训练/推理独立计数。检查覆盖 image/lang/action/state、离散state是否实际写入instruction或连续state是否进入action head、future targets/masks、VLM raw hidden、全部投影层hidden、attention mask、MoWA bridge是否真正condition action head、future supervision loss、action loss和推理action shape/有限值。新增默认关闭、两轮停止、坏输入、hidden NaN和输出契约回归；StarFlow+E003相关37项测试、编译与diff检查通过，未跑真实4B GPU smoke。
+- 2026-07-16 已为 E003/E003-B2 增加可选的端到端数据流契约检查：默认 `framework.mowa.validate_data_flow=false`，仅通过 `train_starvla.py` 或真实 GPU smoke 的 `--validate-data-flow` 显式开启，`--validation-steps` 默认检查前2轮，训练与推理独立计数，达到轮数后停止完整检查。检查覆盖 action/state、双视角 history/current/future latent、future mask、text hidden/mask、B×V 条件展开、Wan 输入/30层 hidden/输出、恢复为B的 LayerwiseFM condition、双路 future loss 与 action loss的 shape/有限值；state 同时强制 `[B,1,state_dim]`。未开启时保持原运行路径与开销。开启推理检查时会明确拒绝当前仍走旧单视角路径的 E003 `predict_action()`，避免伪装成双视角推理成功。专项13项测试、编译、CLI help与 `git diff --check` 通过；未跑真实5B GPU校验。
+- 2026-07-15 已按确认将 E003-B1 正式长训和当前真实 GPU smoke 默认口径提升到 BS4：正式 YAML 的 `interface.batch_size_smoke`、dataset/training `per_device_batch_size` 均为4，training/trainer `gradient_accumulation_steps` 均为8，effective batch保持32；`e003_multiview_gpu_smoke.py` 默认 `--batch-size=4`。E003-B2 H10未改。OmegaConf 实测 `4×8=32`，专项10项测试、编译和 `git diff --check` 通过；BS4尚未执行真实100步，当前真实证据仍是H0/BS2/AdamW 100步稳定。
+- 2026-07-15 已将 E003-B1 正式长训 YAML 的4090口径更新为 dataset/training `per_device_batch_size=2`、training/trainer `gradient_accumulation_steps=16`、`effective_batch_size=32`；E003-B2及其他实验未修改。OmegaConf 实测 `2×16=32`，E003/E003-B2 双视角专项10项测试与 `git diff --check` 通过。
+- 2026-07-15 已扩展真实 GPU smoke 支持 `--batch-size`，并修正 smoke state 构造为真实 dataloader 约定的单样本 `[T_state=1,D=32]`（原 `[D]` 在BS1下被掩盖、BS2会导致 LayerwiseFM batch mismatch）。随后在 RTX4090 上完成 E003-B1 H0/BS2/AdamW 连续10步：Wan 输入 `[B=2,V=2,C=48,T=9,H=16,W=16]`、flat batch4、cross-view `[B*T=18,V*S=128,D]`、action condition `(2,8,1024)`；首步1.39s、后续约0.92–1.08s，GPU多次采样89–100%，`nvidia-smi`显存20,702MiB，PyTorch peak allocated/reserved=19.587/19.742GiB，10步所有future/action/total loss finite并正常结束，无OOM。
+- 2026-07-15 新增可手动运行的 `tools/mowa/e003_multiview_gpu_smoke.py`：默认以真实 Wan2.2 5B、双视角 cache、H1/F8/A32、batch1、SGD 连续执行100个 forward/loss/backward/optimizer step；后台每秒调用 `nvidia-smi` 打印 GPU 利用率和进程显存，tqdm 每步显示 total/future/action loss、step耗时及 PyTorch peak allocated，结束打印 peak allocated/reserved。支持 runtime history/steps/optimizer/device override，正式 E003 H0/B2 H10 YAML 不被修改。脚本编译、`--help` 与 `git diff --check` 通过。
+- 2026-07-15 已重新执行 H1 真实 GPU smoke 并同时用 1 秒间隔 `nvidia-smi` 与 PyTorch allocator 监控 RTX 4090：模型 ready allocated/reserved=11.197/11.213GiB；forward 后=12.286/12.479GiB，forward peak allocated=12.384GiB；backward/optimizer 后=13.598/14.393GiB，完整峰值 allocated/reserved=14.172/14.393GiB。`nvidia-smi` 观测进程总显存峰值约15,224MiB（含 CUDA context/非 PyTorch 分配），训练步 loss finite 且成功结束。因 forward/backward 均短于1秒，1秒采样的 GPU utilization 不能代表 kernel 瞬时峰值。
+- 2026-07-15 已用运行时 override 对 E003 双视角路径完成真实 `history_steps=1` 训练 smoke，未改正式 E003 H0/B2 H10 配置。真实 cache shape 为 history/current/future=`(2,1,48,16,16)/(2,48,16,16)/(2,8,48,16,16)`；Wan 输入 `[B=1,V=2,C=48,T=10,H=16,W=16]`，patch grid `(10,8,8)`，future action condition `(1,8,1024)`。forward 0.66s、backward 0.36s，main/wrist/future/action/total loss 均 finite，cross-view 110 个参数张量有梯度（总 norm 0.00208）、view embedding grad norm 0.12439，SGD optimizer step 成功，总耗时15.64s。
+- 2026-07-15 已优化 55.9 万窗口 global manifest 的训练消费路径：新增列式 `MoWAWindowManifestTable`，window dataset 启动时只保留 Arrow table，单个 entry 在 `__getitem__` 时解析并按 E003/E003-B2 请求裁切；原 `load_mowa_window_manifest()` 完整 tuple 接口继续兼容构建/校验工具。cache key 仅从 episode/anchor/view 三列建立，不再实例化全部窗口 dataclass；分层 anchor sampler 改用列式表，并以 65,536 行 batch 流式展开分类所需列。真实 `wan2.2_h10_f8_train.parquet`（558,946 行）基准：列式打开 0.716s、单行解析 0.001s、含 896MB text cache 的 dataset 构造 4.113s、首个双视角样本 0.107s，峰值内存约 4.85GB（原约 112s/34GB）；sampler 全量分类为 35.72s/约2.76GB。新增惰性解析回归，相关 36 项测试、编译和 `git diff --check` 通过。
+- 2026-07-15 已将 E003/E003-B2 的 cross-view adapter 从完整 3072 维注意力改为配置化瓶颈：`LayerNorm(3072) -> Linear(3072,512) -> MHA(512) -> zero-init Linear(512,3072)`，仍只在相同 latent timestep 内交换双视角 token，默认最后 10 个 Wan block、gate/残差语义不变。每层参数由 47,207,424 降为 4,206,081，10 层合计 42,060,810，减少约 91.1%；两份配置均显式设置 `cross_view.bottleneck_dim: 512`，其他任务因 `multi_view.enabled=false/缺省` 不受影响。同时修复双视角首 batch shape 日志中缺失的 `C=%d` 占位符。新增瓶颈 shape/精确参数量回归，相关 35 项测试、编译与 `git diff --check` 通过。
+- 2026-07-15 已将 E-003 正式长训候选的 action head 配置同步为原始动作频率的 32 步：仅显式保留 `action_horizon=32`，旧的 `future_action_window_size` 已从 YAML 删除并由 compatibility 层自动解析为 31，严格校验通过。真实 OpenDrawer cache 从 H10/F8 global manifest 读取后，按 E-003 请求得到 `H/F/A=0/8/32`、`current=(48,16,16)`、`future=(8,48,16,16)`、`action=(32,12)`。同时修复 Wan manifest 的索引语义校验：`anchor_index` 是原始 state/action 索引、`current_index` 是 Wan regular latent 索引，两者不应强制相等；并让 global parquet 在读取时按当前 task cache 路径下推过滤，而不是为每个 worker 展开 55.9 万行后再过滤。25 项 episode-level/integration 回归及编译检查通过。当前 E-003 **不具备按 32 步 action 监督的长训条件**：RoboCasa data registry 的常规 `action_indices` 仍固定为 8，WanPI forward 读取的是 sample 的 `action` 而不是 manifest 的 32-step `action_chunk`；把 model horizon 改为 32 不会自动提供 32 步且同一归一化口径的 target。下一步需要把 manifest `action_chunk` 接入 sample/action target，并复用现有 action transform/normalization 后做真实 batch shape + loss smoke。
+- 2026-07-15 已删除经确认冗余的 `wan2.2_h0_f8_train.parquet`，仅保留全量 `wan2.2_h10_f8_train.parquet`。episode-level dataloader 现在可按训练配置从最大 manifest 裁切：history 取紧邻 current 的末尾，future/action 取 current 后的开头；未显式设置 action horizon 时按 `future_steps × 4` 裁切。sampler 的 early/terminal 分类也基于裁切后的 mask，故 E-003 的 H=0 不会再被 H10 的早期填充误归类。自动发现会搜索 `cache_root/window_manifests/` 并选择满足请求 H/F 的最小容量 manifest；实测 E-003 H0/F8 自动选择 H10/F8。针对 atomic 总 cache 根，LeRobot dataset 会按源数据相对路径映射到当前 task/date 的 episode cache，避免跨 task 的相同 episode id 混用。25 项 episode-level/integration 回归与编译检查均通过。
+- 2026-07-15 已为 manifest builder 增加 tqdm 进度：启动时打印 cache/output、anchor view、H/F、解析后的 action horizon、递归 store 数；进度条显示当前 episode、累计/本集新增 window、边界跳过与缺失 cache 数。19 项 episode-level 回归通过。
+- 2026-07-15 已取消 manifest 的硬编码 `wam_hz=4`：未显式传 `--wam-hz` 时，构建器优先从源数据 `meta/info.json` 读取原始 `fps`，回退到 parquet timestamp 间隔，再按 Wan temporal compression factor 自动计算 `fps / factor`；RoboCasa 的 `20 / 4` 实测写为 `wam_hz=5.0`、`future_steps=8 -> future_seconds=1.6`。显式 `--wam-hz` 仍可覆盖。真实 CloseBlenderLid ep_000123 manifest 验证输出为 5.0，22 项回归通过。
+- 2026-07-15 已将 `MoWAWindowConfig.action_chunk_steps` 改为可选：Wan manifest 未显式指定时自动解析为 `future_steps × 4` 个原始 action，显式值仍可为实验覆盖；CLI 的 `--action-chunk-steps` 现在默认省略即可。新增默认 `future_steps=8 -> 32` 回归，22 项 episode cache/smoke 回归通过。
+- 2026-07-15 已将 manifest 的机器人状态索引拆为 `history_state_indices`、`current_state_index`、`future_state_indices`，并保留独立的 `history_state_valid_mask` / `future_state_valid_mask`，以便未来 state 改为原始频率时无需改 schema。当前 Wan regular grid 下 state 使用对应 latent 的 source-frame endpoint，两个 state mask 的值与视觉 mask 相同；history 严格过去、current 为 `s_k`、future 在 terminal 右填充。episode-level sample 已可读取 `current_robot_state` / `future_robot_states`，但主训练 batch 暂不注入 future state，避免未启用 state head 时泄漏。旧 manifest 读入仍兼容原 `robot_state_indices`。21 项 episode cache/smoke 回归通过。
+- 2026-07-15 已将 window manifest 重构为视角无关的 `(episode, anchor)` 目录：一行不再因相机数重复，`anchor_video_key`（默认 `agentview_left`）只用于确定共享 Wan 时间网格；state/action/text/mask 每个 anchor 仅保留一份。构建 CLI 新增 `--anchor-video-key` 与 `--recursive-cache-search`，可从 atomic cache 总根递归生成统一 parquet；global manifest 的 sample_id 含相对 cache 路径以避免跨 task 的 `ep_000000` 冲突。episode-level dataloader 会按当前 cache_root 过滤 global manifest，避免跨数据集样本串用。保留 `MoWAWindowManifestConfig.video_keys` 仅作旧 Python 调用的兼容回退，新的 CLI 不再暴露它。18 项 episode cache、8 项训练集成/smoke 回归通过。
+- 2026-07-15 已新增原始时序对齐校验：`starVLA/dataloader/mowa/temporal_alignment.py` 提供可复用的 episode 级视频/state/action 帧数校验，`tools/mowa/validate_episode_temporal_alignment.py` 可独立运行。它以 parquet 行数（state/action 共同时间轴）为基准，逐个检查配置的视频视角；缺失视频、无法读取、或帧数不一致都会以 episode/key 明确报错。已在真实 `CloseBlenderLid/20250822/lerobot` 的 `ep_000123` 上确认三路相机均为 375 帧并通过，新增 3 项单测通过。该工具尚未强制接入 VAE 缓存构建，供构建前独立 gate 或其他调用方复用。
+- 2026-07-14 已收口 `configs/mowa`：E-003/E-004 的 preview、launch、checkpoint、rollout 与 WanPI smoke 配置统一移动至 `configs/mowa/smoke/`，正式 long-training 入口保留在根目录；删除两份无运行时代码引用的旧 long-training command wrapper。相关工具、测试和 smoke 配置内路径已同步更新，未改写历史报告中的原路径记录。
+- 2026-07-14 已为单 GPU VAE 编码加入 CPU 解码线程池：`decode_workers`（CLI/全 atomic driver 默认 4）并发解码同一 episode 的多路视频，GPU VAE 仍严格单进程；tqdm postfix 显示 `frames_chunks=原帧->latent chunks`、`load`、`vae`、跳过/失败，便于分辨数据读取与推理瓶颈。全 atomic driver 已同步 FP16/FP32 存储限制。编译、episode-level 回归 17 项和 diff 检查通过。
+- 2026-07-14 已修复 episode latent writer：`--dtype float16` 现在真正将 Wan latent 转为 HDF5 FP16；此前 writer 只记录 attr、实际写 FP32。HDF5 存储已限制为 `float16|float32`，不再接受兼容性不可靠的 BF16；builder 每个 episode 现在打印完成数、写入/跳过/失败数、ep/s 与 ETA。现运行中的旧进程未加载此修复，已生成的 v2 文件实际为 FP32 且不可与新 FP16 cache 混用；17 项 episode-level 回归通过。
+- 2026-07-14 已为 episode-level latent cache builder 增加安全的确定性分片：`shard_index/num_shards` 按 `episode_index % num_shards` 分配，一集只由一个 worker 写入；CLI 默认仍为单 worker（`0/1`），可选设置 `--cuda-visible-devices`。每集继续以 `.tmp` 原子 rename 落盘，失败时会清理遗留 tmp。分片配置 smoke、编译和 episode-level 回归 17 项通过。
+- 2026-07-14 已将 current-only E-003 的 manifest sampler 配额改为 `regular=0.80`、`terminal=0.20`、`early=0.00`；H=0 没有 history padding，因此不存在 early anchor。OmegaConf 校验比例和 history 参数通过。
+- 2026-07-14 已让 episode-level window contract 支持 `history_steps=0`：空 history/window mask 是合法 current-only 样本，E-003 WanPI candidate 已设为 `history_window_steps: 0`；E-003-b2 才会启用正数 history。旧 E-003 manifest 的 history=8 语义不能复用，正式训练前必须依新参数重建。
+- 2026-07-14 已统一当前 WanPI E-003/E-004 smoke candidate 的 action-head 口径为 `starflow_ft_variant: ft0` 与 `state_mode: continuous_head`；E-003 原本已符合，E-004 的旧 `discretized_instruction` 已修正。E-004 long-training candidate 原本也是 continuous ft0，无需修改。
+- 2026-07-14 已完成 manifest 驱动的 epoch sampler：manifest 保持全部候选目录，训练可显式启用 `task_uniform_episode_uniform_anchor`，按 task→episode→anchor 均匀抽样；默认每 episode 每 epoch 1 个样本，`regular/terminal/early` 配额为 `0.80/0.15/0.05`，强制和为 1。terminal 由 future/action mask 判定，early 由 history/history-action mask 判定；`replacement=false` 时无重复，类别候选不足自动回退到其他可用候选。sampler 使用 `seed+epoch`，训练循环的 `set_epoch()` 可复现恢复。已接到 DataLoader，E-003/E-004 WanPI candidate 配置已启用；手工确定性/无重复检查及 22 项相关回归通过。
+- 2026-07-14 已将 Wan2.2 episode cache 的 window contract 重构为 regular latent grid：物理 VAE 输出仍完整保留，但 manifest 检测到 `temporal_compression_factor=4` 与 endpoint 映射后会排除因果单帧 `z_0`，只以 `z_1...z_N` 建窗。early history 用 `z_1` 左填充、terminal future 用 `z_N` 右填充；`history/future/action/history_action_valid_mask` 透传至窗口样本和统一 latent dataset。state/label 使用每个 regular latent 的源帧 endpoint；history/future action 均按独立的原始 action 频率连续取值（history 默认 `history_steps×4`，future 使用 `action_chunk_steps`）。absolute action 边界重复首/末有效值，delta action 边界补零，且所有填充位均由 mask 排除监督。旧逐帧/fake cache 保持旧 manifest 行为兼容。新增回归覆盖 z0 排除、首尾填充、原始 action 对齐、absolute/delta 补齐和 mask；episode-level、训练集成与 cache-builder 相关 31 项通过。
+- 2026-07-14 已将 Wan2.2 VAE 前处理与确定性编码提取为 `wan_vae_utils.py`，由 episode 持久化缓存、future-window cache builder、以及无 visual-cache 的 Wan2 世界模型路径共同调用：连续 `[B,C,T,H,W]`、尾帧补齐至 `4n+1`、非 256×256 先中心裁正方形再 resize 到 256×256、取 posterior mean 并按 `latents_mean/std` 标准化一次。新 episode HDF5 记录 temporal latent 到源帧的 causal endpoint 映射与 `vae_latents_normalized=true`；WanPI 据此跳过重复标准化，旧未标记缓存仍走兼容标准化路径。未覆盖原有 `robocasa365_wan2.2_latent`（约 309GB）缓存，也未启动全量重编码；30 项相关回归及真实 OpenDrawer 5 帧编码均通过，真实输出为 `[2,48,16,16]`、映射 `[0,4]`。
+- 2026-07-09 已将 P1（E-003/E-004）长训候选的 checkpoint 根目录从共享 `playground/mowa_ckpt` 挪到专用 `playground/mowa_ckpt/p1_long_training`，避免把 smoke/test 的 checkpoint 与正式长训输出混在一起；其余 smoke 和历史 run 目录保持不动。
+- 2026-07-09 已重新核对 P1（WanPI）链路：`starVLA/model/framework/WM4A/WanPI.py` 已把 future latent prior / HLC-GCI 训练与推理路径接通，`train_starvla.py` 也已能消费 `mowa_current_latent` / `mowa_future_latent_target` / `mowa_history_latent`；最新针对 P1 相关测试共 95 项通过。当前新增的 `docs_zh/mowa/e006_policy_rollout/` 目录只是 rollout 报告落盘，其中 baseline/zero 等干预已真实执行到 server/client，但 `success_rate` 仍为 0.00，说明问题不在入口未接通，而在结果本身尚无收益。
+- 2026-07-09 已在 A100 上启动 E-001 的 MoWA formal long-training candidate：`.venv/bin/python starVLA/training/train_starvla.py --config_yaml configs/mowa/mowa_e001_starflow_ft0_long_training_candidate.yaml`，当前 run_id 为 `MoWA-E-001_starflow_ft0_mowa_4090_long_260706_1740`，训练已进入循环，W&B 选择离线模式，checkpoint 继续写入 `playground/mowa_ckpt`。接下来先观察首个 checkpoint 与 step 统计是否稳定，再决定是否补 baseline 对照或继续扩量。
+- 2026-07-09 已把 MoWA 活跃训练实验的工程启动口径收口到矩阵：修复 episode-level window manifest 的 label sidecar 协议（当前生产 writer 为 `episode_*.parquet`，loader 保留旧 jsonl fallback）；`latest_complete` resolver 现在扫描真实 `checkpoints/steps_*`，已解析到 `MoWA-E-001_starflow_ft0_baseline_4090_long_260706_1730/checkpoints/steps_66000`；E-002 single GatedHeads comparison 已 launch-approved；新增 E-007 proxy-alpha candidate/readiness smoke 与 E-010 eval tracking plan/smoke；E-005 checkpoint preflight、E-006 eval-load/synthetic intervention/rollout preflight 已刷新。`docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json` 当前显示 `all_training_experiments_ready=true`，ready training experiments 为 E-001 至 E-007，E-009 conditional 未触发不阻断，E-010 eval-only tracking ready。后台全 target atomic `vae_spatial` cache 构建仍在运行，E-003/E-004 WanPI full-path dry-run 文档 evidence 仍待 cache 空闲后补跑。
+- 2026-07-07 已按训练链路重新审计 E-003 / E-004 的 formal long-training readiness，并确认之前“可开启长训”的口径不成立：`tools/mowa/e003_future_latent_prior_long_training_launch_smoke.py` 与 `tools/mowa/e004_hlc_gci_long_training_launch_smoke.py` 现在会显式检查 `train_starvla/framework/datasets` 是否真正引用 `MoWAFutureLatentPrior` / `MoWAHLCGCI`、是否消费 latent/history batch 字段、是否接入对应 loss；当前这些检查均为 false，因此两条 long-training launch smoke 都已回落为 `No-Go: ... not training-integrated`，`docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json` 也随之把 E-003 / E-004 从 `launchable_now` 收回到未 ready。
+- 2026-07-07 已把 E-003 / E-004 的 formal long-training launch 入口真正接通：新增了 long-training launch candidate / command candidate / launch smoke，且两条 smoke 都已通过；E-003 继续沿用已验证的 Wan2.2 cache 口径作为 launch 审计证据，E-004 则沿用当前 HLC-GCI interface/history contract 作为 launch 审计证据。`docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json` 也已刷新到新证据。
+- 2026-07-07 已把 E-003 / E-004 都推进到 launchable smoke：E-003 新增 launch smoke 与 launch candidate，真实 Wan2.2 cache smoke + fake-cache dry-run 双链路都已通过；E-004 新增 synthetic HLC-GCI launch smoke，config preview + interface smoke + 最小优化步也已通过。随后又补了 E-004 checkpoint-backed preflight smoke，并用 `MoWA-E-001_starflow_ft0_bs4_candidate/checkpoints/steps_1000` 跑通，当前矩阵里 E-003 / E-004 均已显示 `launchable_now`；E-005 后续再补了 shuffled-robot rollout smoke，matrix 也已接回，并已跑过执行版 rollout。
+- 2026-07-07 已把 E-003 real Wan2.2 smoke 扩到三 episode 真实写盘，并收成可复跑口径：`tools/mowa/e003_wan2_2_latent_cache_smoke.py --execute --episode-index 0 --episode-index 1 --episode-index 4` 现在会在 execute 模式下对专用 cache_root 自动覆盖重写，重复运行仍能稳定写出 9 个 latent artifact 并通过 `validate_mowa_latent_cache()`；当前只剩一个 `AutoencoderKLWan` 的 `clip_output` 配置警告，不影响写盘结果。
+- 2026-07-07 已把剩下两个 task builder 的默认值口径也统一：`RewardBasedTaskBuilder` 和 `ObjectPoseTaskBuilder` 现在都把 `readiness_progress_delta` / `readiness_distance_threshold` 变成可选 override，新增回归确认无 override 时仍按默认阈值工作，显式 override 仍覆盖。`AtomicTaskLabelBuilder` 抽象签名也已同步到可选 override 口径。
+- 2026-07-07 已把 `MoWAWanVaeLatentEncoderAdapter` 的 `video_backend` 从显式校验推进到真实后端分支：`decord` 现在走仓库现成的视频 helper，`opencv` 继续保留旧路径，未知值仍然报 `NotImplementedError`。新增回归确认 decord helper 会被调用，未知 backend 会被拒绝。
+- 2026-07-07 已把 `_single_dof.py` 的另一个重复默认值也收口：`readiness_progress_delta` 现在同样是“schema 默认、显式 override 可选”，并补了 progress-imminence 路径回归，确认无 override 时 schema 值生效、显式 override 仍覆盖。`AtomicTaskLabelBuilder` 抽象签名也已同步，避免接口层继续保留旧默认值。
+- 2026-07-07 已继续收口两个 review 点：`MoWAWanVaeLatentEncoderAdapter` 现在会显式检查 `video_backend`，并把 `decord` 接到仓库现成 helper，`opencv` 继续保留旧路径；`SingleDofTaskBuilder.build_cache_for_episode()` 也已改成“不传时读 schema、显式传参时 override”，并补了无需 `mujoco` 的回归确认 schema 阈值能真正生效。
+- 2026-07-07 已给 `MoWALatentCacheDataset` 加上进程内 payload 缓存，`get_sample()` 连续读取同一 sample 时不再重复 `torch.load`；新增回归确认重复访问的 load 次数降到每个 artifact 一次，旧的 fake/partial/skip 回归仍通过。
+- 2026-07-07 已把 `allow_partial_windows` 真正接入 latent cache builder：`anchor_mode=all` 现在会在开启该选项时允许边界锚点继续产出裁剪窗口，`_frame_indices_for_window()` 也会对 future/history 做最小裁剪而不是无条件跳过；新增回归确认短 episode 在 strict / partial 两种模式下行为分离，且 cache validate 仍通过。
+- 2026-07-07 已按 review 继续收紧 Wan latent cache 热路径：`build_mowa_latent_cache()` 现在会在 `cache_path.exists() && !overwrite` 时直接跳过 encoder.encode，`source_policy` 会随 `encoder_kind` 动态回显，`_sha256_for_source()` 改为分块读文件，且 real Wan latent encode 里的 no-op seed 抖动已删除。新增回归确认已有 cache 复跑不会再次触发 encode，真实 E-003 smoke 的配置回显也已切到 `source_policy=wan2.2-vae`。
+- 2026-07-07 已把 `Wan-AI/Wan2.2-TI2V-5B-Diffusers` 软链接接到 `playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers`，并完成 E-003 real Wan2.2 smoke、最小写盘和独立验证：`tools/mowa/e003_wan2_2_latent_cache_smoke.py` 在默认路径下已能走真实 `encoder_kind=wan2.2-vae` 编码，`build_mowa_latent_cache(..., dry_run=False)` 也已成功写出 3 个 latent artifact，`validate_mowa_latent_cache()` 复验通过。顺手修正了 builder 的 `go_no_go` 口径，让实际写盘不再回显“planned”。
+- 2026-07-07 已继续补齐 E-004 HLC-GCI config preview 闭环：新增 `configs/mowa/mowa_e004_hlc_gci_candidate.yaml`、`tools/mowa/e004_hlc_gci_config_preview.py`，并生成 `docs_zh/mowa/mowa_e004_hlc_gci_config_preview.json`；`docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json` 也已重刷，E-004 现在能同时读取 config preview、interface smoke 和 history sampling consistency 三份证据。当前仍不触发 rollout 或训练，仅做接口与注入策略审计。
+- 2026-07-07 已继续补出 E-003 real Wan2.2 latent cache smoke 入口：`tools/mowa/e003_wan2_2_latent_cache_smoke.py` 可在模型目录存在时直接走 `MoWALatentCacheBuildConfig(encoder_kind=\"wan2.2-vae\")` 的真实编码路径，模型缺失时则优雅返回 No-Go。对应回归已确认 smoke wrapper 能正确传入 `encoder_kind` / `encoder_model_path`，等待 `Wan-AI/Wan2.2-TI2V-5B-Diffusers` 下载完成后即可直接实跑。
+- 2026-07-07 已继续把 P1 latent cache builder 推进到可选 real Wan adapter scaffold：`starVLA/dataloader/mowa/latent_cache_builder.py` 现在支持 `encoder_kind=fake|wan2.2-vae`，并新增基于 `Wan2.2-TI2V-5B-Diffusers` 的 VAE 编码适配器骨架；`tools/mowa/build_future_latent_cache.py` 与 E-003 dry-run 也同步接入 `encoder_kind/encoder_model_path`。默认路径仍是 fake encoder，real 分支需要显式本地模型目录，当前不会改变既有训练主干。
+- 2026-07-07 在新的 4090 机器上复跑了 E-003 相关回归：`tests.mowa.test_mowa_future_heads.MoWAFutureHeadsTest.test_future_latent_prior_interface_smoke_passes`、`test_e003_future_latent_prior_config_preview_passes`、`test_e003_future_latent_prior_train_dry_run_passes_with_fake_cache`、`test_experiment_launch_readiness_matrix_reports_suite_not_ready` 以及 `tests.mowa.test_mowa_latent_cache_builder` 全部通过，E-003 的 fake-cache 预览 / dry-run / readiness 证据链保持有效。
+- 2026-07-07 已继续补齐 E-003 config preview / train dry-run 闭环：新增 `configs/mowa/mowa_e003_future_latent_prior_candidate.yaml`、`tools/mowa/e003_future_latent_prior_config_preview.py`、`tools/mowa/e003_future_latent_prior_train_dry_run.py`，并生成 `docs_zh/mowa/mowa_e003_future_latent_prior_config_preview.json`、`docs_zh/mowa/mowa_e003_future_latent_prior_train_dry_run.json` 与刷新后的 `docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json`。当前 E-003 已能在 fake-encoder latent cache 上完成 config preview、cache build/validate、dataset load、future latent prior forward 和 history_latent 拒绝检查，但真实 Wan encoder/VAE 仍未接入，训练仍保持 gated。
+- 2026-07-07 已开始并完成 P1 fake-encoder latent cache 闭环的首版代码：新增 `starVLA/dataloader/mowa/latent_cache_builder.py`、`starVLA/dataloader/mowa/latent_cache_dataset.py`、`tools/mowa/build_future_latent_cache.py`、`tools/mowa/validate_future_latent_cache.py`，实现 deterministic fake encoder、cache writer、manifest、validator、loader 和 CPU-only 单测；当前仅是离线闭环，不接真实 Wan encoder/VAE，也不触发训练。
+- 2026-07-07 已继续收口 P1 执行侧交接：`docs_zh/mowa/prompts/codex_m3_p1_b0_latent_prior.md` 和 `docs_zh/mowa/prompts/codex_m4_p1_b1_hlc_gci.md` 现已对齐到新的 P1 实现框架，明确推进顺序是 fake-encoder latent cache writer/validator/loader 闭环 → E-003 config preview / train dry-run → E-004 HLC-GCI 接口与 history cache，不得把 plan-only smoke 直接放大成正式训练。`tools/mowa/experiment_launch_readiness_matrix.py` 与 `docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json` 也已同步把 E-003/E-004/E-005 blocker 改成这一收口口径。
+- 2026-07-07 已补齐 P1 实现详细框架：`docs_zh/mowa/10_future_latent_cache_manifest_design.md` 现在明确区分 latent cache builder、P1-b0 future latent prior、P1-b1 HLC-GCI 三条链路，并给出后续代码实现需要的文件职责、batch contract、cache artifact schema、encoder adapter 边界、manifest/resume 策略、Data Gate、防泄漏单测和最小实现顺序。该阶段只做实现框架交接，不启动训练、不执行 Wan encoder/VAE、不声明真实 latent cache ready。
+- 2026-07-07 已把 E-001 主实验 long-training 配置中的两处 head 列表收回到当前可构造的两个 head：`task_progress` 与 `action_outcome_class`。同时把 long-training 预览的 main 启动判定同步改成与 `MOWA_FUTURE_CONSTRUCTIBLE_HEADS` 对齐，避免主实验继续被尚未准备好的 5 个 future head 卡住；baseline 草案保持不变。
+- 2026-07-06 已完成 OpenDrawer 三 head 标签预计算与 production dataloader 接入：新增 `starVLA/dataloader/mowa/opendrawer_label_cache.py` 与 `tools/mowa/precompute_opendrawer_future_labels.py`，离线解析 `extras/states.npz` + `ep_meta.json` + `model.xml.gz`，生成 `<dataset>/mowa_future_labels/opendrawer/episode_XXXXXX.parquet` sidecar；`datasets.py:_attach_mowa_future_labels` 与 `full_head_label_builder.py` 已支持自动读取 sidecar 并更新 mask。全量 514 个 OpenDrawer episode 已生成缓存，`subgoal_positive_count=10287`、`readiness_positive_count=11392`、`failure_risk_labeled_count=5140` 但全负类仍保持 mask。同步更新 `09_future_label_builder_design.md`、`06_data_gate_report.md`，新增 `tests/mowa/test_opendrawer_label_cache.py`，相关单测 61 项全部通过。
+- 2026-07-06 已继续把 `subgoal_feasibility` / `manipulation_readiness` 的 OpenDrawer sidecar 收成 report-level schema contract：`future_label_audit.py` 现在在 report 和 episode 两层都显式携带 `schema_contract`，把 `subgoal_schema_version`、`readiness_schema_version`、`subgoal_completion_threshold`、`threshold_version`、`ready_predicate` 等元数据固定下来，避免这些 head 只剩 step-level 裸字段。
+- 2026-07-06 已继续推进 `subgoal_feasibility` 与 `manipulation_readiness` 的 audit 口径：`future_label_audit.py` 现在把 OpenDrawer sidecar 里的这两项显式写成任务级 schema，补上 `subgoal_schema_version` / `readiness_schema_version` / `subgoal_completion_threshold` / `threshold_version` 等元数据，不再只是裸数值 proxy；对应单测也同步断言这些 schema 字段存在。
+- 2026-07-06 已将正式 long-training 草案的 4090 batch profile 纠正回你确认的 `per_device_batch_size=2` / `gradient_accumulation_steps=16`；两份 E-001 long-training candidate 以及 `tools/mowa/e001_long_training_config_preview.py`、对应单测的 4090 预览检查已同步回这个口径，确保 baseline 与 MoWA 主实验都按同一单卡 profile 预览与启动。
+- 2026-07-06 已完成 `OpenDrawer/open_drawer` 单-subgoal 的 root-cause audit 收口：原先把 episode 0 的 `drawer` joint index 固定套到全量 514 个 episode，才造成 `state_success_episode_count=6` / `mismatched_episode_count=508` 的假失配；改成按每个 episode 自己的 `ep_meta.json` / `model.xml.gz` 解析后，`OpenDrawer/open_drawer` 变成 514/514 `aligned_success`，anchor 正类比例回到约 `0.201883`。这说明单 subgoal 的 drawer-progress predicate 本身是可用的，问题出在固定 index 的 root cause，而不是任务定义或 reward 语义。sidecar 仍然是 audit-only，不直接接训练。
+- 2026-07-06 已补出 `OpenDrawer` 审计型 future-label sidecar smoke：新增 `tools/mowa/opendrawer_future_label_sidecar_smoke.py` 与 `build_mowa_opendrawer_future_label_sidecar_smoke()`，在不接训练主链的前提下，把 `failure_risk`、`subgoal_feasibility(open_drawer)`、`manipulation_readiness(open proxy)` 三个 head 的 per-step 弱标签统一写成 sidecar 结构，并显式附带 `predicates / labels / masks / debug`。真实首集 smoke 报告 `docs_zh/mowa/g0_atomic_core_smoke/mowa_opendrawer_future_label_sidecar_smoke.json` 显示：`step_count=334`，`failure_risk_labeled_count=10` 且仍全为负类，`subgoal_positive_count=20`，`manipulation_readiness_positive_count=30`，`alignment_mismatch_episode_count=0`。结论是：最小 sidecar 闭环已打通，但当前只适合继续做 audit / sidecar 检查，不可直接当成 training-ready 标签链。
+- 2026-07-06 已完成 `OpenDrawer/open_drawer` 单-subgoal 的 data gate smoke：新增 `tools/mowa/opendrawer_subgoal_data_gate_smoke.py`，按 `H_subgoal=20` 扫描全量 514 个 episode 的 anchor 标签分布和 episode 对齐。结果显示这条链虽然可计算，但当前不能接 builder：`anchor_positive_rate≈0.00153`，`state_success_episode_count=6`，而 `terminal_success_episode_count=514`，`mismatched_episode_count=508`。也就是绝大多数 episode 在 parquet 里都是 `reward=1, done=true` 成功结束，但 `states[:,25]` 的 drawer progress 根本没有到 success 阈值，说明存在严重的 state-vs-terminal 对齐问题；因此 `OpenDrawer` 的单 subgoal 试点仍保持 gated。
+- 2026-07-06 已把 `OpenDrawer` 的 `subgoal_feasibility` 方案从泛化示例收口到单-task 真实 schema 草案：`09_future_label_builder_design.md` 现明确 `ep_meta.fixture_refs.drawer -> {fixture_ref}_slidejoint -> states[:,25]` 的 completion predicate 链，只把 `open_drawer` 认定为当前可冻结 subgoal；`approach_drawer` 和 `grasp_handle` 由于缺 handle pose / contact / EEF-to-handle 距离，继续 blocked。结论从“OpenDrawer 可能可做 schema”收口为“只能先做单 subgoal 试点，仍不能解全局 mask”。
+- 2026-07-06 已完成 `OpenDrawer` 的 simulator-state 映射审计：新增 `tools/mowa/opendrawer_state_mapping_audit.py`，确认 `extras/states.npz` 的 210 维向量满足 `1 + nq + nv = 210`，可视为 `[time | qpos | qvel]` flatten sim-state；`ep_meta.fixture_refs.drawer=stack_1_left_group_4` 能稳定映射到 XML joint `stack_1_left_group_4_slidejoint`，其 raw drawer qpos 位于 `states[:, 25]`，qvel 位于 `states[:, 131]`。这已经足以为 OpenDrawer 的 `subgoal_feasibility` 起草真实 drawer-progress completion predicate；但 `manipulation_readiness` 仍未解锁，因为当前链路只补到了 drawer joint，不含 handle 接近/接触等 readiness 信号。
+- 2026-07-06 已完成 `failure_risk` 的下一层 data gate smoke：新增 `tools/mowa/failure_risk_data_gate_smoke.py`，对 10 个 atomic core 任务全量 parquet 扫描 `H=10` 窗口的 `done/reward` proxy。结果显示 sampled reward 仍是稀疏 `[0.0, 1.0]`，但 10/10 任务都只有单类标签：`positive_count=0`、`negative_count≈5000`，`both_classes_task_count=0`，且 8/10 任务覆盖率低于 5%。结论已从“可进入 data gate”收口为“当前 proxy 仍 gated，不得解 mask”；根因不是字段缺失，而是 target-only atomic 数据几乎全是成功终止，缺少非成功终止样本。
+- 2026-07-06 已推进三项 future label 的 source audit：新增 `starVLA/dataloader/mowa/future_label_audit.py` 与 `tools/mowa/future_label_source_audit.py`，生成 `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_future_label_source_audit.json`。真实 10 个 atomic core 任务均显示 `next.reward` / `next.done` 为 sampled 稀疏 `[0.0, 1.0]`，`failure_risk` 可进入下一步 data gate smoke；`subgoal_feasibility` 和 `manipulation_readiness` 仍 blocked，原因是 parquet state 只有 base / EEF / gripper，缺 object pose、fixture joint/contact，但 sampled extras 均有 `states.npz`、`ep_meta.json`、`model.xml.gz`，可作为后续 MuJoCo state mapping 的入口。已新增单测覆盖 audit blocker 口径。
+- 2026-07-06 已根据外部审查意见继续加严三项 proxy 标签方案：`09_future_label_builder_design.md` 新增 proxy 解 mask 验收标准、`task_progress` 时间进度口径、`failure_risk` 伪代码/reward 分布假设/覆盖率和独立性检查、`subgoal_feasibility` 的 OpenDrawer 示例 schema 与三层阻塞链、`manipulation_readiness` 的 state 物理量前置验证、head 间一致性约束、coverage 口径说明和不推荐事项。结论保持不变：当前只定方案，三项尚未接入 dataloader / loss。
+- 2026-07-06 已把 `failure_risk`、`subgoal_feasibility`、`manipulation_readiness` 从泛泛 proxy 草案收口成标签构造方案草案：`failure_risk` 固定为 `H_risk=10` 的窗口内可观测终止 proxy，只在窗口内出现 `done` 时打 0/1，窗口内无终止则 mask；`subgoal_feasibility` 明确依赖 per-task subgoal schema 与 completion predicate，当前字段不足时保持 mask；`manipulation_readiness` 明确依赖 state 维度语义、task-specific readiness predicate 与 `H_ready=5` 的 manipulation onset 校验，当前未冻结 state schema 前保持 mask。该阶段只定标签语义，不接入 dataloader / loss。
+- 2026-07-06 已补充 future label builder 的 proxy 构建草案：在不碰 `next_best_view_score` / `object_visibility_future` 的前提下，先把 `failure_risk`、`subgoal_feasibility`、`manipulation_readiness` 的构造思路写入 `docs_zh/mowa/09_future_label_builder_design.md`，其中前两项优先走 `next.reward` / `next.done` 的未来窗口 proxy，后一项依赖 `observation.state` / `action` 的 task-specific readiness 阈值。它们目前都只是 proxy，不是冻结真标签。
+- 2026-07-06 已把 E-001 主实验正式长训从 2 个可构造 head 扩展到 7 个 full heads：`layerwise_bridge_active_heads` 与 `future_supervision_active_heads` 现在都回显完整 `MOWA_FUTURE_FULL_HEADS`；同时保持 `Data Gate` 的 5 个头继续由 mask 遮罩，不伪造标签。长训草案仍维持你确认的 4090 口径 `per_device_batch_size=2`、`gradient_accumulation_steps=16`，预览工具已显式打印这两个 head 列表和最终 batch 参数。
+- 2026-07-06 已把正式长训两份草案的 `data_mix` 从 `robocasa365_open_drawer_target_human` 调整为 `robocasa365_atomic_target_human_all`，baseline 与 mowa main 现在先对齐到 10 个 atomic core 任务，而不是直接放大到全量 `target_human_all`。
+- 2026-07-06 已修复 `train_starvla.py` 的 accumulation 初始化时机问题：`Accelerator` 之前在模块导入阶段就按默认值创建，导致不传 `ACCELERATE_GRADIENT_ACCUMULATION_STEPS` 时总是落到 1。现在改为在 `main(cfg)` 里按 YAML 中的 `trainer.gradient_accumulation_steps` 创建 `Accelerator`，并新增回归测试确认 32 会真正生效。
+- 2026-07-06 已把 long-training 预览改成按实验角色判定：`mowa_main` 继续要求 future supervision 链路全开，`mowa_baseline` 则按“链路关闭但其余 4090 长训参数正确”判定 launch approved。现在两份正式长训草案的预览都返回 `launch approved`，不会再把 baseline 的刻意降配误判成 No-Go。
+- 2026-07-06 已把正式长训链路收口到 `wandb_mode` 并去掉 `trainer.disable_wandb` 兼容分支：训练入口现在只看顶层 `wandb_mode`，默认在线；long-training 草案写 `wandb_mode: online`，其余短训/烟雾配置也改成显式 `wandb_mode`，不再依赖 `trainer.disable_wandb`。
+- 2026-07-06 已把 baseline / MoWA 两份 long-training 草案的 W&B entity 改成 `silencewx-harbin-institute-of-technology`，与当前登录账号/团队实体对齐。现在两份长训草案都会以在线模式向 `MoWA` 项目上报 run，并可通过预览工具回显 `wandb_entity`、`wandb_project` 与 `wandb_mode=online`。
+- 2026-07-06 已将 baseline / MoWA 两份 long-training 草案的 W&B 设为在线：`wandb_project=MoWA`、`wandb_mode=online`。这意味着正式长训启动后会直接向 W&B 上报 run，项目名统一为 `MoWA`，不再沿用旧的 `mowa` 口径。
+- 2026-07-06 已把 baseline / MoWA 两份 long-training 草案的 `launch_guard` 打开，并把 run_id 定成最终可启动命名：baseline 为 `MoWA-E-001_starflow_ft0_baseline_4090_long`，MoWA 主实验为 `MoWA-E-001_starflow_ft0_mowa_4090_long`。两份配置现在都处于 launch approved 状态，差异只在 MoWA bridge/future supervision 是否开启。
+- 2026-07-06 已补齐 baseline 侧的独立 long-training 草案配置 `[configs/mowa/mowa_e001_starflow_ft0_baseline_long_training_candidate.yaml](/disk/rl/starVLA/configs/mowa/mowa_e001_starflow_ft0_baseline_long_training_candidate.yaml)`，并把 long-training 预览工具改成可切换 `--config-yaml`。现在 baseline 与 MoWA 主实验共享同一 4090 长训口径：`per_device_batch_size=2`、`gradient_accumulation_steps=16`、`num_warmup_steps=500`、`max_train_steps=80000`、`freeze_modules=qwen_vl_interface`、`run_root_dir=playground/mowa_ckpt`；区别在于 baseline 明确关闭 `enable_future_supervision_loss`、`enable_layerwise_bridge_token_coupling`、`enable_mowa_future_labels`，且 `experiment_role=mowa_baseline`。
+- 2026-07-06 已把 `E-001` long-training 草案明确标记为 `experiment_role=mowa_main`，避免与 `mowa_e001_starflow_ft0_baseline_candidate.yaml` 混淆。当前 long-training 草案仍保持你确认的 4090 经验口径：`per_device_batch_size=2`、`gradient_accumulation_steps=16`、`num_warmup_steps=500`、`max_train_steps=80000`，且 `tools/mowa/e001_long_training_config_preview.py` 会打印该角色字段和其他最终值。
+- 2026-07-06 已补齐 E-001 独立 long-training 草案配置与预览入口，且按你确认的 4090 经验把关键训练参数定为 `per_device_batch_size=2`、`gradient_accumulation_steps=16`、`num_warmup_steps=500`、`max_train_steps=80000`。新草案仍保持 `freeze_modules=qwen_vl_interface`、`run_root_dir=playground/mowa_ckpt`、MoWA bridge/future supervision 链路不变；`tools/mowa/e001_long_training_config_preview.py` 会打印解析后的最终值，确认不会被脚本默认值覆盖。当前仍未单独落地正式 long-training command entrypoint，因此 launch 仍保持 gated。
+- 2026-07-06 已修正仓库级 `.gitignore` 对 `docs_zh/mowa/*.md` 的误伤：新增精确放行规则后，`docs_zh/mowa/02_detailed_design.md`、`00_project_proposal.md`、`01_technical_survey.md` 以及同目录下其余 MoWA 文档都不再显示为 `!!` ignored，而是回到正常的未跟踪状态，便于后续统一纳入版本控制。仅对 `docs_zh/mowa` 放行，不影响其它 Markdown 忽略策略。
+- 2026-07-06 已修复一组由命名迁移引入的 future supervision 死代码。`QwenOFT.forward()` 原本应同时输出 `mowa_p0_supervision_*` 与 `mowa_future_supervision_*` 做兼容，但被替换成了对同一 `mowa_future_*` key 的重复赋值；现已恢复双命名输出，并为 `loss/losses` 同步补回旧 `mowa_p0_*` 键。`VLATrainer._train_step()` 也已恢复从 `mowa_p0_supervision_loss` 回退到 `mowa_future_supervision_loss` 的旧键兼容；`train_starvla` full-path dry-run summary 与 `e001_train_starvla_full_path_dry_run_smoke.py` 里同类的自引用 fallback / 重复键也一起修掉。
+- 同次新增了定点回归测试，保证 `_train_step()` 在只收到旧 `mowa_p0_supervision_loss` 键时仍会把监督损失纳入 backward；相关 `QwenOFT` / dry-run smoke 测试也通过。当前结论是：这轮命名迁移在 future supervision 这条链路上的兼容性死角已收口，剩余 `p0/p1/p2` 仅限核心 SOT、旧 checkpoint/YAML 兼容字段和历史报告留档。
+- 2026-07-06 已继续清理主入口文档里的说明性 `P0/P1/P2` 表述，但不碰兼容代码字段和历史 JSON。`docs_zh/mowa/README.md` 现已把项目路线改写为 `full_heads`、`future_latent_prior`、`frozen_decoder_diagnostic` 等当前真实语义；执行门禁也从“不得跳过 G0 进入 P0/P1”收敛为“不得跳过 G0 进入 `full_heads` / `future_latent_prior` 主训练”。`docs_zh/mowa/AGENTS.md` 同步把非必要的阶段名换成当前链路命名，例如 `P2` -> `frozen decoder diagnostic`、`P0 head` -> `future supervision head`、`P0/P1/P2 相关实现` -> `G0/full_heads/future_latent_prior/frozen_decoder_diagnostic` 相关实现。
+- 同次还继续收口了派生设计文档的说明性旧名：`09_p0_label_builder_design.md` / `10_p1_latent_cache_manifest_design.md` 的标题已分别改成 `Legacy Label Builder` / `Legacy Future Latent Cache Manifest`，并把正文里的 `P0/P1-b0` 等残留描述改成 `future` 语义；`09_future_label_builder_design.md` / `10_future_latent_cache_manifest_design.md` 也修掉了“当前 checkout 缺核心 SOT”的过时表述。当前保留下来的 `p0/p1/p2` 只剩三类：1）核心 SOT 文件内部原始术语；2）旧 checkpoint / 旧 YAML 兼容字段；3）历史 smoke JSON / 历史日志留档。
+- 2026-07-06 已继续清理旧 `p0/p1` 命名的非阻塞工程债，但不删除历史文件：`docs_zh/mowa/09_p0_label_builder_design.md` 与 `10_p1_latent_cache_manifest_design.md` 顶部已明确标为“兼容留档入口”，并说明主路径分别改读 `09_future_label_builder_design.md`、`10_future_latent_cache_manifest_design.md`；同时修掉了两份旧文档里已经过时的“核心 SOT 缺失”措辞。`docs_zh/mowa/AGENTS.md` 也新增规则，明确 `09_p0_*`、`10_p1_*`、`mowa_p0_*` 等旧命名产物仅作兼容留档，不再作为新的 readiness / launch / 实现主入口。
+- `docs_zh/mowa/TODO.md` 已同步切到当前真实剩余事项：不再保留已经完成的 `steps_1000` baseline/MoWA 成对诊断条目，而是把待办收敛为三件阻塞性工作准备项：`E-001` long-training candidate 与治理参数草案、`class_mapping_status` 从 `Data Gate` 到确认态的收口条件、以及使用更强 checkpoint 重新执行 `E-006` rollout。当前结论是：非阻塞的 legacy 文案收口已基本完成，剩下需要讨论的是正式长训练与实验治理本身。
+- 2026-07-06 已把命名迁移的“主路径是否仍命中 legacy fallback”显式化：`tools/mowa/e001_readiness_smoke.py` 新增 `resolved_reports`、`legacy_fallback_reports`、`resolved_derived_design_docs`、`legacy_fallback_derived_design_docs` 字段；重刷后的 `docs_zh/mowa/mowa_e001_readiness_smoke.json` 已确认当前活跃 `E-001` readiness 主路径直接消费 `mowa_full_heads_constructible_train_smoke.json`、`09_future_label_builder_design.md`、`10_future_latent_cache_manifest_design.md`，`legacy_fallback_reports={}` 且 `legacy_fallback_derived_design_docs={}`。这意味着旧 `mowa_p0_constructible_heads_train_smoke.json`、`09_p0_*`、`10_p1_*` 现在只剩兼容留档角色，不再是活跃入口。
+- 同次还把 `docs_zh/mowa/README.md` 的入口口径改正：不再保留“核心 SOT 缺失”的过时描述，文档表与必读入口统一切到 `09_future_*` / `10_future_*`，并明确旧 `09_p0_*` / `10_p1_*` 仅作兼容留档。相关单测已新增并通过，覆盖“核心 SOT 缺失时的 readiness 行为”和“新命名产物存在时不命中 legacy fallback”两条路径。
+- 2026-07-06 已补齐两份新命名派生设计索引文件：`docs_zh/mowa/09_future_label_builder_design.md` 与 `docs_zh/mowa/10_future_latent_cache_manifest_design.md`。这一步的目标不是删旧文件，而是让 `e001_readiness_smoke.py` 的新命名入口真正对应到仓库内实际文件；重刷后的 `mowa_e001_readiness_smoke.json` 已确认 `available_derived_design_docs` 直接包含这两份新文件，`missing_derived_design_docs=[]`。当前旧 `09_p0_*` / `10_p1_*` 文件主要只剩 legacy 留档意义，不再是主路径必须依赖的文档入口。
+- 2026-07-06 已继续完成命名迁移的活跃产物收口：使用 `tools/mowa/full_heads_constructible_train_smoke.py` 新生成 `[docs_zh/mowa/mowa_full_heads_constructible_train_smoke.json](/disk/rl/starVLA/docs_zh/mowa/mowa_full_heads_constructible_train_smoke.json)`，不再只依赖旧的 `mowa_p0_constructible_heads_train_smoke.json` 作为 readiness 输入；随后重刷 `docs_zh/mowa/mowa_e001_readiness_smoke.json` 与 `docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json`，确认 `full_heads` 新产物已被主路径直接消费，`mowa_e001_readiness_smoke.json` 的 `checks` 中已无旧 `p0/p1/p2` key。
+- 2026-07-06 已完成一轮 `P0/P1/P2 -> future/full_heads/future_latent_prior/frozen_decoder_diagnostic` 命名迁移回归修复。重点不是继续大规模改名，而是补回被重命名误删的兼容层：1）`QwenPI_v3` 与 `QwenOFT` 恢复对旧 `p0_supervision_*` / `enable_p0_supervision_*` 配置字段的 fallback；2）`QwenPI_v3._rewrite_mowa_checkpoint_state_dict_keys_for_compatibility()` 与 `share_tools._filter_strict_key_mismatches()` 重新兼容更早期的 `mowa_layerwise_bridge_p0_heads.*` checkpoint key；3）`tools/mowa/e001_readiness_smoke.py` 改为优先使用新命名、同时接受旧版 `mowa_p0_constructible_heads_train_smoke.json`、`09_p0_label_builder_design.md`、`10_p1_latent_cache_manifest_design.md` 作为 legacy artifact。对应重刷后，`docs_zh/mowa/mowa_e001_readiness_smoke.json` 中 `stage=full_heads`，且 `available_derived_design_docs` 已统一显示新命名，`missing_derived_design_docs=[]`。
+- 同次验证已完成：`python -m unittest tests.mowa.test_mowa_future_heads -v` 72 项通过，`python -m unittest tests.test_starflow_vla_reuse -v` 22 项通过；另外新增 3 条定点回归测试，专门覆盖旧 `p0_heads` checkpoint key 和旧 `p0_supervision_*` 配置字段 fallback。当前结论是：这轮命名迁移主路径可用，但如果不补这层兼容，会对旧 checkpoint / 旧 YAML 形成静默回归；现已修复。
+- 2026-07-06 已完成 `E-001` 正式长训练启动前 checklist 实查，当前结论是“工程链路可执行，但正式长训练配置尚未定版”。已核对 `configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml`、`configs/mowa/mowa_e001_training_command_candidate.yaml`、`configs/mowa/mowa_e001_runtime_policy_draft.yaml`、`playground/mowa_ckpt` 磁盘与现有 run 占用，确认以下事实：1）当前 launch candidate 仍是 bounded smoke 级参数，`max_train_steps=1000`、`save_interval=1000`、`per_device_batch_size=4`、`gradient_accumulation_steps=1`；2）launch/runtime policy 已被翻到 `launch_ready=true/policy_confirmed=true/human_confirmed=true`，但 `runtime_policy_draft` 自己仍明确写着 `max_train_steps_note=short_smoke_training_only_not_full_long_training` 与 `Batch size 4 is only a short-smoke candidate; long-training VRAM/runtime stability is not confirmed.`；3）checkpoint 输出路径已统一在 `playground/mowa_ckpt`，且可用磁盘空间充足（`/disk/rl` 剩余约 `147T`），但目录下已存在多个 31G/64G/96G 级旧 smoke run，正式长训练前需要先明确保留策略，避免继续堆叠历史产物。
+- 同次检查还确认：正式长训练现在缺的不是“代码能不能跑”，而是“正式长训练参数与治理口径还没切到长期训练模式”。最关键的三个缺口是：1）没有独立于 `steps_1000 bounded smoke` 的正式长训练 config；2）没有单独定版 long-run `max_train_steps / save_interval / eval cadence / checkpoint keep-count`；3）current readiness / runtime policy 仍把 `E-001` 定义为 bounded approved state，而不是 full long-training approved state。因此下一步若要真正起长训练，应该是新建或确认一份 long-training candidate config，而不是直接把当前 `bs4_candidate` 当长期训练模板继续放大。
+- 2026-07-06 已完成 `steps_1000` baseline/MoWA 成对 rollout 收口。先修复了 `tools/mowa/e006_policy_rollout_smoke.py` 的 artifact 目录冲突问题：旧实现只精确到秒，baseline 与 MoWA 同秒启动时会共用同一个 `artifact_dir`；现改为微秒级时间戳，并通过 `--checkpoint` CLI override 串行重跑两份独立报告。新的 baseline rollout 报告为 `docs_zh/mowa/mowa_e001_baseline_policy_rollout_smoke.json`，对应 artifact `docs_zh/mowa/e006_policy_rollout/20260706_093723_800424`；新的 MoWA rollout 报告为 `docs_zh/mowa/mowa_e006_policy_rollout_smoke.json`，对应 artifact `docs_zh/mowa/e006_policy_rollout/20260706_094353_009764`。两者 4 个 intervention 的 `success_rate` 均为 `0.0`，但这轮口径明确收敛为 bounded executable smoke，不做 action-gain 负结论。
+- 同日已用两份独立 rollout 报告重刷 `tools/mowa/e001_steps_1000_offline_diagnostic.py`。新的 `docs_zh/mowa/mowa_e001_steps_1000_offline_diagnostic.json` 现在显式记录 baseline checkpoint，诊断结论从单边的 `bridge_is_wired_but_checkpoint_has_no_action_gain` 收敛为成对口径 `baseline_and_mowa_both_zero_success`：forward 侧仍保留 `observable_effect`（max abs action-loss delta≈0.0598），但 rollout 层面 `mowa_minus_baseline_max_success_rate=0.0`。这意味着当前应把问题归入“1000-step bounded smoke 训练量不足/策略未成形”，而不是继续争论 bridge plumbing。
+- 2026-07-06 已完成恢复后 SOT 的实现偏差复核：对照 `docs_zh/mowa/00_project_proposal.md`、`01_technical_survey.md`、`02_detailed_design.md` 与当前代码/配置/报告抽查，未发现主路线偏到 planner/FSM、future action 输入 WAM、重写 `LayerwiseFM_ActionHeader.py`、P2 进入主训练闭环或 E-002 扩成 per-head sweep。当前真正与设计相关的风险不是“缺文档导致做偏”，而是 `steps_1000` checkpoint 仍未形成 action gain，readiness 也仍保持 `all_training_experiments_ready=false`。
+- 同日补了两处诊断工具问题并完成 `steps_1000` 离线诊断闭环：`tools/mowa/e006_eval_load_smoke.py` 不再把 `trainer_state.completed_steps==2` 写死，改为从 checkpoint 路径推导预期 step；`tools/mowa/e001_steps_1000_offline_diagnostic.py` 支持直接脚本运行，并在不重跑 forward 时优先复用现有 `mowa_e006_checkpoint_intervention_forward_smoke.json`。重新生成的 `docs_zh/mowa/mowa_e001_steps_1000_offline_diagnostic.json` 结论为 `bridge_is_wired_but_checkpoint_has_no_action_gain`：`steps_1000` 的 forward intervention 对 action loss 有可观测影响（max abs delta≈0.0598），但 E-006 rollout 四个干预的 success rate 仍全为 0.0。
+- 2026-07-06 已完成一轮 SOT 恢复后的治理回填审计：对照恢复的 `docs_zh/mowa/00_project_proposal.md`、`01_technical_survey.md`、`02_detailed_design.md` 检查当前 MoWA 实现，没有发现主干算法因缺失 SOT 而偏离既定路线；偏差主要在 readiness / matrix 报告仍残留旧的 “core SOT docs missing” 口径。现已重生成 `docs_zh/mowa/mowa_e001_readiness_smoke.json`、`docs_zh/mowa/mowa_e001_launch_draft_smoke.json`、`docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json`，并对 `tools/mowa/e001_readiness_smoke.py` 做最小语义修正：`sot.note` 在核心 SOT 已恢复时改为正向说明，同时新增 `observed.launch_scope_status=bounded_approved_state_only`，明确当前 `launch_ready=true` 只代表 E-001 的 bounded approved state，不代表 full-scale launch 已放行。当前真正 blocker 已收敛为 `class_mapping_status=Data Gate`、runtime/launch 需继续同步、bounded smoke 不是长期训练证据，以及 E-006 仍缺 action-gain 证据。
+- 2026-07-05 已把 `launch_draft` 治理口径修正同步到报告产物层：重新生成了 `docs_zh/mowa/mowa_e001_launch_draft_smoke.json`、`docs_zh/mowa/mowa_e001_readiness_smoke.json` 和 `docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json`。这样当前 checkout 中配置文件、smoke JSON 和 readiness matrix 对 `human_confirmed=true` 的描述已一致；matrix 结论仍保持 `all_training_experiments_ready=false`，说明这次只是清理治理口径，不改变 `E-001/E-006` 当前仍缺有效 action-gain 证据的事实。
+- 2026-07-05 已完成一轮代码质量与治理口径收口：`/opt/conda/bin/ruff check tools/mowa starVLA/dataloader/mowa starVLA/model/modules/mowa tests/mowa --select E,W,F` 现已 `All checks passed`。本轮修掉了 `hlcgci.py` 的未使用 import、`tests/mowa/test_mowa_data_gate.py` 的重复测试名、`tests/mowa/test_mowa_p0_heads.py` 的重复/未使用 import 与长行，以及多处 smoke/report 工具的长行问题。同时把 `configs/mowa/mowa_e001_launch_draft.yaml` 和 `tools/mowa/e001_launch_draft_smoke.py` 中残留的旧口径 `executable training command candidate exists but is not human-confirmed` 改为 `... exists and is human-confirmed`，与当前 `launch_candidate` / `training_command_candidate` 的 `human_confirmed=true` 保持一致。
+- 2026-07-05 已新增统一实验启动状态汇总：`tools/mowa/experiment_launch_readiness_matrix.py` 会从现有 smoke/readiness/rollout JSON 生成 `docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json`，把 `G0` 与 `E-001` 到 `E-010` 的 `can_start_now/status/blocking_items` 统一收口。当前 matrix 结论是 `all_training_experiments_ready=false`、`ready_training_experiments=[]`：`E-001` 为 `bounded_executable_but_full_launch_blocked`，`E-002` 为 `runtime_integrated_but_training_gated`，`E-003/E-004/E-005` 仍停在 interface/plan 级，`E-006` 为 `rollout_executed_with_noninformative_checkpoint`，`E-007/E-009/E-010` 尚未形成 readiness 证据。
+- 2026-07-05 已把 `M2-003 / E-002 gated heads` 的报告层与口径补齐：`tools/mowa/e001_starflow_ft0_full_path_dry_run_smoke.py` 现在会显式校验 `mowa_future_gated_heads_enabled` 是否进入 full-path dry-run framework summary，并在 gated 开启时要求 `mowa_layerwise_bridge_gated_heads_summary` 具备 `single_fullheads_control_only` / `allow_per_head_sweep=false` 结构；`tools/mowa/e002_future_gated_heads_comparison_smoke.py` 与 `configs/mowa/mowa_e002_future_gated_heads_candidate.yaml` 的文案已改为“runtime integration exists but training remains gated”，不再沿用“framework integration remains gated”的旧口径。对应单测已补齐，当前 E-002 的状态是：运行时接入与可观测性已收口，但训练/正式对比仍受单次 FullHeads 对照和 launch gate 约束。
+- 2026-07-05 已把 `M2-003 / E-002 gated heads` 从接口级推进到 `QwenPI_v3/StarFlowVLA` 框架级实接：`QwenPI_v3` 新增 `_build_mowa_future_head_module()` / `_mowa_gated_heads_enabled()`，在 `layerwise bridge` 与 `future supervision` 两条路径都可按 `framework.mowa.gated_heads.enabled=true` 切到 `MoWAFutureGatedHeads`；forward 输出新增 `mowa_future_gated_heads_enabled`、`mowa_layerwise_bridge_gated_heads_summary`、`mowa_future_supervision_gated_heads_summary` 观测字段，`train_starvla` full-path dry-run summary 也同步记录这些字段。对应新增 `StarFlowVLA` 框架集成单测，确认 bridge/supervision 两条路径都实际实例化 gated heads 并输出结构化 gate summary。当前仍未放开 E-002 训练，只完成 runtime integration + observability。
+- 2026-07-05 已继续补齐 P1 后续最小接口闭环：新增 `configs/mowa/mowa_p1_b0_latent_cache_builder_design.yaml` 与 `tools/mowa/p1_latent_cache_builder_design_smoke.py`，对 `dataset_path/cache_root/encoder_name/cache_key/future_action_input_status` 做结构化 builder design smoke；该工具只复用现有 latent cache contract 规划，不执行真实 Wan encoder/VAE/cache writer，`go_no_go=TBD: latent cache builder design smoke passed; real builder remains gated`。
+- 同日新增 `starVLA/model/modules/mowa/hlcgci.py`、`configs/mowa/mowa_p1_b1_hlcgci_interface.yaml`、`tools/mowa/p1_b1_hlcgci_interface_smoke.py`，把 P1-b1 的 `history_latent -> compressed_history/gate_values/gated_condition_tokens` 最小接口钉住。当前只验证 shape 和 gate 值域 `[0,1]`，不接训练主干、不接 StarVLA framework condition path。
+- 同日继续新增 `configs/mowa/mowa_p1_b1_shuffled_robot_sanity_plan.yaml` 与 `tools/mowa/p1_b1_shuffled_robot_sanity_plan_smoke.py`，并在 `sampler.py` 暴露 `build_mowa_shuffled_episode_pairs()`，用于构造 P1-b1 / E-005 的 deterministic non-self history shuffle 对。当前只验证 plan 约束和 pair construction，不执行 rollout。
+- 同日新增 `docs_zh/mowa/11_final_report_known_limitations_template.md` 与 `tools/mowa/final_report_template_smoke.py`，把 M6-002 的 final report / known limitations 模板固定下来；当前 smoke 只检查模板章节存在，不产生实验结论。
+- 2026-07-05 对 Claude 新补的 `M2-003 / M6-001` 做了接口完整性修正：`starVLA/model/modules/mowa/__init__.py` 现正式导出 `MoWAFutureGatedHeads` / `MoWAP0GatedHeads` 及其 config alias；`tools/mowa/future_gated_heads_interface_smoke.py` 改为走包级入口；补了 `gated heads` alias/smoke 单测和 `P2 frozen decoder diagnostic` smoke 单测。当前两块都仍是 plan/interface 级，不接训练主干。
+- 2026-07-05 已继续把 `M2-003 gated heads` 往详细设计约束靠拢：`init_gate_value` 现在采用真实 gate 值语义而不是 raw logit 语义，`MoWAGatedHeadsConfig` 会强制 `comparison_scope=single_fullheads_control_only` 且 `allow_per_head_sweep=false`；`gate_summary()` 提供结构化 gate 日志摘要，`future_gated_heads_interface_smoke` 现显式校验“只允许一次 FullHeads 对照”和“禁用 per-head sweep”。仍然不接训练主干。
+- 同日已补 `E-002` 的唯一比较入口草案：新增 `configs/mowa/mowa_e002_future_gated_heads_candidate.yaml` 与 `tools/mowa/e002_future_gated_heads_comparison_smoke.py`，用 `E-001 FullHeads launch candidate` 作为唯一 control，通过 overlay 方式构造 `GatedHeads candidate`，并静态验证除了 `experiment_id/run_id/launch_guard/gated_heads` 相关字段外无额外 drift。当前 `go_no_go=TBD: E-002 single FullHeads comparison entry is wired; training remains gated`。
+- 2026-07-05 已推进 `M3-002 / E-003` 的最小接口实现：新增 `[configs/mowa/mowa_p1_b0_future_latent_prior_interface.yaml](/disk/rl/starVLA/configs/mowa/mowa_p1_b0_future_latent_prior_interface.yaml)`、`[tools/mowa/p1_b0_future_latent_prior_interface_smoke.py](/disk/rl/starVLA/tools/mowa/p1_b0_future_latent_prior_interface_smoke.py)` 和 `starVLA/model/modules/mowa/future_latent_prior.py`。该接口只允许 `current_latent + text_hidden -> predicted_future_latent`，显式拒绝 `history_latent` 输入，future latent 仅作为 target；不接训练主干、不执行真实 Wan encoder/VAE/cache builder。
+- `docs_zh/mowa/mowa_p1_b0_future_latent_prior_interface_smoke.json` 已生成，当前 `go_no_go=TBD: P1-b0 future latent prior interface smoke passed; latent cache builder remains gated`；这意味着 E-003 已从单纯 contract/manifest 进一步推进到 model-side interface smoke，但真实 latent cache builder 仍是独立 gate。
+- 2026-07-05 `launch_draft` / `readiness` 口径已继续对齐当前真实仓库状态：`e001_launch_draft_smoke.py` 不再要求 `launch_ready=false`，而是要求 launch draft 正确记录“E-001 已完成 bounded 1000-step smoke、launch candidate/runtime policy 已批准当前有限范围启动，但 full-scale claim 仍受 core SOT / class mapping / action-gain evidence 约束”；`mowa_e001_launch_draft_smoke.json` 已恢复为 `TBD: launch draft records approved bounded E-001 state; full-scale claims remain gated`。
+- `e001_readiness_smoke.py` 现已把 `launch_draft` 视为“bounded approved state record”而非“不可执行草案”，同时把最终 `go_no_go` 重新收紧到真实 blocker：核心 `00/01/02` SOT 缺失、`class_mapping_status=Data Gate` 时仍保持 `No-Go`。当前 `mowa_e001_readiness_smoke.json` 已无假阴性 check，`go_no_go=No-Go: E-001 prerequisites incomplete` 来自真实前置项而非 smoke 口径漂移。
+- 2026-07-05 已修正 E-001/E-006 的 smoke/readiness 口径漂移：`e001_launch_candidate_smoke.py` 不再写死 `launch_ready=false`，而是校验 launch candidate / training command candidate / runtime policy 三者的 launch state 一致性，并同时接受 gated 与 launch-approved 两种状态；当前真实仓库的 `mowa_e001_launch_candidate_smoke.json` 已恢复为 `go_no_go=TBD: launch candidate is wired and launch-approved`。
+- `e001_starflow_ft0_comparison_smoke.py` 现允许 baseline 保持 gated、MoWA candidate 为 launch-approved，只要求 MoWA launch guard 自洽；`e001_readiness_smoke.py` 不再强依赖 comparison smoke 物理执行 launch guard，也不再把 E-006 rollout 成功执行且无 blocker 的情况误判为失败。当前 `mowa_e001_readiness_smoke.json` 中 `starflow_ft0_comparison_smoke_passed=true`、`e006_policy_rollout_outcome_recorded=true`；整体仍因核心 SOT 缺失和 launch draft 等前置项保持 `No-Go`。
+- E-006 默认 checkpoint 引用已切换到 `latest_complete`：`configs/mowa/mowa_e006_eval_load_smoke.yaml` 与 `configs/mowa/mowa_e006_policy_rollout_candidate.yaml` 不再绑定特定 run_id；`tools/mowa/mowa_checkpoint_resolver.py` 现优先按 `trainer_state.completed_steps` 选择最新完整 checkpoint，并兼容 `optimizer_rank_*.pt`、`bf16_zero_pp_rank_*.pt` 等 optimizer state 形式。
+- M1 G0 Data Verification Gate 数据复验已通过；P0 ConstructibleHeads one-step train smoke 已通过，仍不计入 E-001 主训练。
+- MoWA 后续推进以 `docs_zh/mowa/04_task_breakdown.md` 的“当前落实顺序（2026-07-05）”为准；临时话题不再插队改变执行优先级。当前下一步固定为 E-001 paired baseline/MoWA runtime symmetry checker，不启动正式训练、不做大规模命名重写。
+- E-001 paired baseline/MoWA runtime symmetry checker 已补齐：`tools/mowa/e001_starflow_ft0_comparison_smoke.py` 现在递归比较 baseline/MoWA candidate YAML 的所有叶子节点，只允许 `run_id`、launch reason、MoWA bridge/future label 相关字段不同；`docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json` 显示 `paired_runtime_symmetry_passed=true`、`unexpected_difference_paths=[]`，readiness 已继续读取该 comparison report 且通过。
+- E-001 launch readiness 继续收敛：`tools/mowa/e001_launch_candidate_smoke.py` 已新增结构化最终参数对齐检查，确认 launch candidate 与 training command candidate 在 batch、grad accum、effective batch、max steps、save interval、checkpoint root/format、wandb disabled、logging frequency 上一致，并确认 runtime policy 对这些字段可追溯或明确保持 `TBD_long_training`；readiness 已纳入 `launch_candidate_smoke_passed=true`。
+- E-001 launch draft blocker 口径已同步当前实现状态：`configs/mowa/mowa_e001_launch_draft.yaml` 不再把 “final WAM feature source not confirmed” 作为阻断项，而是明确剩余 gate 为核心 SOT、class mapping、resource policy、action-gain evidence 和人工确认；`tools/mowa/e001_launch_draft_smoke.py` 现已读取 launch candidate smoke、paired comparison smoke 和 readiness，对这些 blocker 口径做结构化校验。
+- E-006 rollout blocker 已结构化到报告层：`tools/mowa/e006_policy_rollout_smoke.py` 现会输出 `rollout_blocker`，既可记录 client 侧 `missing_robocasa_assets`，也可记录 server 启动前的 `checkpoint_model_incompatible`。2026-07-05 复跑真实 rollout smoke 后，当前最新阻断已从早前的 assets 缺失变为 checkpoint 与当前代码不兼容：`docs_zh/mowa/mowa_e006_policy_rollout_smoke.json` 显示四个 intervention 都在 server 启动前因缺少 `mowa_layerwise_bridge_future_feature_heads.*` / `mowa_layerwise_bridge_head_mask_projector.*` 权重而失败，`go_no_go=No-Go: E-006 rollout blocked; see rollout_blocker`；`tools/mowa/e001_readiness_smoke.py` 已同步读取该 blocker。
+- 2026-07-05 继续完成 E-006 rollout 兼容收敛：`share_tools.py` 的 strict checkpoint 校验现接受 `mowa_layerwise_bridge_p0_heads.*` 与 `mowa_layerwise_bridge_future_feature_heads.*` 双向别名，`QwenPI_v3` 保留 legacy checkpoint key 重写 helper；`configs/mowa/mowa_e006_policy_rollout_candidate.yaml` 已切到当前可用的 `MoWA-E-001_starflow_ft0_save_resume_smoke_20260705_codex_a100/checkpoints/steps_2`。最新真实 rollout smoke 中 4 个 intervention 的 policy server 已全部启动成功，说明 checkpoint 兼容问题已消除。
+- 当前 E-006 的最终环境阻断已收敛为 RoboCasa 渲染后端不可用，而非模型/权重问题：`examples/Robocasa_365/eval_files/simulation_env.py` 默认在未显式指定时设置 `MUJOCO_GL=osmesa`、`PYOPENGL_PLATFORM=osmesa`，但本机 `.robocase` 仍在 `mujoco.osmesa` 初始化时触发 `AttributeError: 'NoneType' object has no attribute 'glGetError'`。`docs_zh/mowa/mowa_e006_policy_rollout_smoke.json` 现记录 `rollout_blocker.status=robocasa_render_backend_unavailable`，`tools/mowa/e001_readiness_smoke.py` 已同步把该状态计入 `e006_policy_rollout_blocker_recorded=true`。这表明 MoWA E-006 代码链路已推进到仿真渲染环境层，剩余是机器环境依赖问题。
+- 2026-07-05 E-006 RoboCasa 渲染环境问题已修复：系统安装了 `libegl1` 提供 `libEGL.so.1`（NVIDIA 驱动只有 `libEGL_nvidia.so.0`，不含标准 EGL 库），PyOpenGL/mujoco 的 EGL 后端现在可用；`examples/Robocasa_365/eval_files/simulation_env.py` 默认渲染后端从 `osmesa` 改为 `egl`（NVIDIA 驱动原生支持）；最新真实 rollout smoke 中 4 个 intervention 全部 `returncode=0`，完整跑完 2 个 episode，不再有渲染阻断。成功率均为 0.0（2/2 失败），因为当前 checkpoint 来自 2-step save/resume smoke，模型几乎未学习，这是预期行为。`rollout_blocker` 已清空，E-006 代码链路（policy server → RoboCasa 仿真）完全畅通。
+- 2026-07-04 完成当前机器上 StarFlow VLA tmux `train` 会话自动监控：
+  - 检测到 run_id `P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849` 正在训练（step 15141/80000，约 18.9%）。
+  - 从 tmux capture-pane 抓取到最新 loss（action_dit_loss ≈ 0.0867 @ step 15140）。
+  - 获取 GPU（RTX 4090，利用率 57%，显存 24032/24564 MiB，功耗 246.61W，温度 63°C）和 Docker 内存（31 GiB / 56 GiB）。
+  - 更新 `docs_zh/starflow_vla/bs32/P0-M7-E-H2a-01_starflow_libero-4in1_qwen3vl4b_lwfm_ft0_260703_0849.md` 中的训练进度、loss 记录、GPU、内存字段。
+  - 已 `git add -f`、commit、push 到 `merge-official-starvla-dev` 分支，提交信息：`docs: update E-H2a-01 tracker — step 15141 (18.9%)`。
 
-- 已同步更新 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md` 中以下部分，使其与当前最终训练状态一致：
-  - `实验概况`
-  - `训练过程`
-  - `训练配置`
-  - `性能优化记录`
-  - `W&B Step-Epoch 曲线分析`
-  - `已知问题`
-- 主要修正：
-  - 将“当前步数 `19000 / 80000`”改为“训练完成步数 `80000 / 80000`”
-  - 将训练过程重写为单卡早期、单卡连续训练、2 卡切换、2 卡稳定训练四/五个阶段
-  - 显式写入“切到 2 卡时发生 optimizer 丢失 / 恢复不连续”
-  - 将训练配置中的 `save_interval` 更新为 `500`
-  - 将 `datasets.vla_data.per_device_batch_size` 更新为最终稳定阶段使用的 `8`
-  - 将单卡历史吞吐表标注为历史测算，避免与后期 2 卡阶段混淆
+## StarFlow VLA 训练参数校验与修复（2026-07-04）
+- 校验范围：当前机器上 6 个正在运行的 LIBERO StarFlow VLA run（ft0/16/32/64、continuous_head ft32、mlp baseline）。
+- 数据源：`playground/Checkpoints/<RUN_ID>/config.full.yaml`、checkpoint 内 `starflow_mapping.json`。
+- 结论：
+  - **核心参数已生效**：`num_target_vision_tokens`（0/16/32/64 对应正确）、`framework.name`（mlp baseline 正确覆盖为 `QwenOFT`）、`state_mode`（continuous_head run 正确为 `continuous_head`）、`gradient_accumulation_steps`（32/4 对应正确）、`per_device_batch_size`（按 CLI 生效）。
+  - **`data_mix` 被脚本默认值覆盖**：`run_starflow_train_ready.sh` 中 `DATA_MIX=${DATA_MIX:-libero_all}`，导致 `future_tokens_32.yaml`、`future_tokens_64.yaml`、`continuous_head.yaml` 里的 `libero_goal` 实际都被覆盖为 `libero_all`。
+  - **`is_resume` 未生效**：用户命令中设置 `IS_RESUME=True` 的 4 个 run，实际 `config.full.yaml` 中 `trainer.is_resume=false`。对这些全新 `RUN_ID` 不影响训练结果（都从头开始），但说明 `IS_RESUME` 环境变量未正确传入训练进程。
+- 已修复（2026-07-04）：
+  - `examples/LIBERO/train_files/run_starflow_train_ready.sh`：取消 `DATA_MIX` 默认值，改为 `DATA_MIX=${DATA_MIX:-}`；仅在 `DATA_MIX` 非空时才追加 `--datasets.vla_data.data_mix`，让 YAML 配置说了算。
+  - `configs/starflow_vla/` 下 7 个 YAML 的 `datasets.vla_data.data_mix` 从 `libero_goal` 统一改为 `libero_all`：`ablations/future_tokens_32.yaml`、`ablations/future_tokens_64.yaml`、`stage3_future_token_ablation.yaml`、`state/continuous_head.yaml`、`state/discretized_instruction.yaml`、`state/hybrid_gated.yaml`、`state/hybrid_gated_cross.yaml`。当前所有 starflow_vla YAML 的 `data_mix` 均为 `libero_all`。
+- 根因判断：
+  - `data_mix` 覆盖属于脚本设计（默认值优先），已修复。
+  - `is_resume` 失效不是 `normalize_dotlist_args` 或 `OmegaConf.merge` 的问题（本地模拟可正确合并为 `True`），更可能是 tmux 中实际启动命令与用户贴出的命令存在差异（如 `IS_RESUME=True` 未真正作为环境变量传入）。
+- 下一步建议：在启动脚本或训练入口增加参数生效性断言/打印，避免静默失效。
 
-## 2026-05-25 — 增补 LIBERO SOTA 对齐与不足分析
+## 数据状态
+- `.robocase` venv 已就绪：`/gemini/code/starVLA/.robocase`。
+- 已删除临时的 `robocasa365` conda 环境；改为使用项目根目录 `.robocase` venv 运行 robocasa 下载/评测脚本。
+- `examples/Robocasa_365/train_files/download_target_human.sh` 已改为激活 `.robocase` venv。
+- `DATASET_BASE_PATH` 已配置为 `/gemini/code/datasets/robocasa365`，并通过软链映射到 `playground/Datasets/robocasa365`。
+- **固定主对比 recipe 数据已补齐**：`mowa_robocasa365_target_human_atomic_core_v1` 10 个 target/human/atomic 任务全部下载并解压完成。
+- 已用 `tools/mowa/g0_recipe_smoke.py` 重新核验固定配方 `mowa_robocasa365_target_human_atomic_core_v1`：
+  - task_count=10，available_task_count=10，missing_task_count=0。
+  - go_no_go=`TBD: recipe available; profile/leakage/labels still Data Gate`。
+- 已完成本轮 G0 复验：
+  - 10 项 profile / P0 label coverage / latent cache manifest smoke 已逐任务重跑，30 个命令全部通过；latent manifest 的 OpenDrawer 代表性检查 missing_video_count=0。
+  - batch dataloader smoke：10 个任务、30 个 sampled windows，通过 future action target-only 检查。
+  - metadata leakage gate：5055 个 episode、15165 个 anchor windows、failed_window_count=0。
+  - temporal profile：5055 个 parquet、1342150 行，metadata_total_frames 与 parquet_total_rows 对齐；raw action/state Hz 依据 timestamp delta 约 20Hz。
+  - production-entry preflight smoke：train_episode_count=4544、val_episode_count=511、split_overlap_count=0、distributed_overlap_count=0、worker_sample_count=16、failed_sample_count=0；仍不启动 E-001。
+- 真实 label builder 阈值 / class mapping、生产 dataloader workers、真实 latent cache 仍为 Data Gate。
+- P0 ConstructibleHeads 最小训练入口已完成代码准备：
+  - 仅启用 `task_progress`、`action_outcome_class` 两个当前可构造 head。
+  - 其他五类 P0 head 继续 mask，不进入训练 smoke。
+  - one-step 更新使用手写 SGD step，避免 `torch.optim` 触发额外 `torch._dynamo` / `triton` 导入。
+  - 默认 CPU 运行，预计显存占用为 0。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 已通过 1 项测试，用时 166.764s；本机 `torch` 导入需要分钟级等待窗口。
+  - `p0_constructible_heads_train_smoke.py` 已通过并生成 `docs_zh/mowa/mowa_p0_constructible_heads_train_smoke.json`：sample_count=30、input_shape=[30, 4]、loss_before=0.024293631315231323、loss_after=0.024045661091804504、class_mapping_status=Data Gate。
+- E-001 readiness smoke 已生成 `docs_zh/mowa/mowa_e001_readiness_smoke.json`：
+  - recipe_available=true、production_preflight_passed=true、p0_one_step_smoke_passed=true、p0_fullheads_interface_created=true、e001_launch_draft_created=true、e001_launch_ready_false=true、runtime_policy_draft_created=true、runtime_policy_confirmed_false=true。
+  - go_no_go=`TBD: E-001 prerequisites mostly passed; launch draft exists but resource/save-resume remain Data Gate`。
+- P0 FullHeads interface draft 已完成：
+  - `starVLA/model/modules/mowa/p0_heads.py` 新增 `MoWAP0FullHeads`、`MoWAP0FullHeadsConfig`、`P0FutureFeatures`。
+  - `configs/mowa/mowa_p0_fullheads_interface.yaml` 记录七类固定 head、当前 constructible heads、mask 缺失 head 和 launch blockers。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 已通过 2 项测试，用时 232.065s。
+- E-001 launch draft 已创建：
+  - `configs/mowa/mowa_e001_launch_draft.yaml` 明确 `launch_ready=false`、`training_started=false`。
+  - 草案记录数据 split、FullHeads 策略、训练/资源/checkpoint/logging 待确认字段和 launch blockers。
+  - 最新 launch blocker 已修正为 `full executable training command not created`；现有 `configs/mowa/mowa_e001_training_command_draft.yaml` 仍是 dry-run-only 草案，不是可执行训练命令。
+  - `tools/mowa/e001_launch_draft_smoke.py` 已增强不可启动门禁检查：`runtime_policy_launch_ready_false`、`training_command_entrypoint_tbd`、`full_executable_training_command_absent` 均必须为 true；最新 `docs_zh/mowa/mowa_e001_launch_draft_smoke.json` 无失败检查。
+- E-001 runtime policy draft 已创建：
+  - `configs/mowa/mowa_e001_runtime_policy_draft.yaml` 明确 `policy_confirmed=false`、`launch_ready=false`。
+  - 草案记录 checkpoint target、resume target、logging target 和资源预算 TBD，不修改 checkpoint/resume/save 代码。
+- E-001 初始 production temporal/resource target 已确认：
+  - 用户确认训练资源为单卡 A100 80G；已记录到 runtime policy 草案，但 batch size、expected VRAM、expected runtime 仍为 TBD。
+  - 初始 temporal policy：raw_action_hz=20、production_wam_hz=5、wam_stride=4、history_seconds=2.0/history_steps=10、future_seconds=1.0/future_steps=5、action_chunk_seconds=0.5/action_chunk_steps=10。
+  - 已用 `g0_production_preflight_smoke.py` 按 10/5/10 窗口生成 `docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json`：worker_sample_count=32、failed_sample_count=0、future_action_leakage_status=`smoke_passed`。
+  - `tools/mowa/e001_readiness_smoke.py` 已重跑，报告显示 `production_window_5hz_preflight_passed=true`；E-001 仍不启动。
+- E-001 launch / throughput 草案已补齐：
+  - `configs/mowa/mowa_e001_training_command_draft.yaml` 记录 dry-run-only 的单卡 accelerate 命令草案，`launch_ready=false`、`training_started=false`。
+  - 当前机器已确认为 `NVIDIA A100-SXM4-80GB`，`tools/mowa/e001_a100_throughput_smoke.py` 已完成 heads/bridge 级 throughput smoke。
+  - `docs_zh/mowa/mowa_e001_a100_throughput_smoke.json` 显示候选 batch/grad_accum 1/2/4/8 全部通过；stable smoke candidate 为 per_device_batch_size=8、gradient_accumulation_steps=8、effective_batch_size=64、step_time_sec=0.14424942016601563、samples_per_sec=443.6759601968788、peak_vram_gb=0.04040336608886719。
+  - 该结果只覆盖 `MoWAP0FullHeads+MoWAActionBridge` smoke，不代表完整 VLA E-001 主训练吞吐；runtime policy 已记录为 smoke-observed，`policy_confirmed=false`、`launch_ready=false` 保持不变。
+  - `configs/mowa/mowa_e001_training_smoke.yaml` 已新增为 training-config smoke，不启动训练、不保存 checkpoint，显式引用 A100 throughput 报告、5Hz production-window preflight 和 runtime policy。
+  - `tools/mowa/e001_training_config_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_training_config_smoke.json`：`training_started=false`、`launch_ready=false`，所有 config wiring 检查通过；完整 E-001 training entrypoint 仍为 TBD。
+  - `train_starvla.py` 已新增 `trainer.full_path_dry_run_only` 分支；`configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml` 已在 A100 上完成 full-path dry-run，覆盖 `setup_directories -> build_framework(QwenOFT) -> prepare_data(RoboCasa365 OpenDrawer) -> setup_optimizer_and_scheduler -> trainer init -> fetch one batch`，随后停止。
+  - `docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json` 显示 `training_started=false`、`checkpoint_saved=false`、`wandb_started=false`；该 dry-run 验证 StarVLA/QwenOFT RoboCasa365 主入口连通性，不等于 MoWA bridge 已接入 action path。
+  - `tools/mowa/e001_train_starvla_full_path_dry_run_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run_smoke.json`，并接入 readiness：`train_starvla_full_path_dry_run_smoke_passed=true`。
+  - `tools/mowa/e001_launch_draft_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_launch_draft_smoke.json`，确认 training command draft、A100 throughput plan、runtime policy 均存在且保持不可执行。
+  - `QwenOFT` 已新增默认关闭的 MoWA action bridge probe；在 dry-run 配置中显式启用后，从 Qwen action-token hidden state 派生 `P0FutureFeatures`，经 `MoWAActionBridge` 生成 bridge tokens，不读取 future action label，不改变 `action_loss`，不接入 `LayerwiseFM_ActionHeader.py` 内部逻辑。
+  - `QwenOFT` 已新增默认关闭的 MoWA P0 supervision probe；显式 label 存在时从 action-token hidden state 计算 `MoWAP0FullHeads` loss，当前只放行 `task_progress` 和 `action_outcome_class`，不把该 loss 加入 `action_loss`，不改变 action generation。
+  - `LeRobotSingleDataset` / `LeRobotMixtureDataset` 已新增默认关闭的 `enable_mowa_p0_labels` 开关；开启后从当前 trajectory dataframe 的 `frame_index`、`next.reward`、`next.done` 为样本追加 `mowa_p0_targets`、`mowa_p0_masks`、`mowa_p0_metadata`，其他五类 P0 head 继续 mask。
+  - dry-run 配置已启用 P0 labels 和 one-batch no-backward forward；`docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json` 最新显示 `framework.mowa_action_bridge_probe_enabled=true`、`framework.mowa_p0_supervision_probe_enabled=true`、`framework.mowa_p0_supervision_label_status=forward_evaluated_in_full_path_dry_run`、`data.mowa_p0_labels_enabled=true`、`training_started=false`、`checkpoint_saved=false`、`wandb_started=false`。
+  - 最新 forward smoke 观测：`action_loss=0.8124334216117859`、`mowa_p0_supervision_loss=1.241126298904419`、active heads 为 `task_progress` 和 `action_outcome_class`；P0 loss 仍未加入 `action_loss`。
+  - `StarFlowVLA + RoboCasa365` 已新增独立 full-path dry-run：`configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml` 当前声明 `starflow_ft_variant=ft0`，使用 `LayerwiseFM`、`num_target_vision_tokens=0`、RoboCasa 12D action/16D state、P0 label/mask 开关；ft variant 已改为配置声明，后续可改成 `custom` / `ft_custom` 并自定义 `num_target_vision_tokens`。
+  - `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json` 显示 `framework.name=StarFlowVLA`、`starflow_ft_variant=ft0`、`action_model_type=LayerwiseFM`、`num_target_vision_tokens=0`、`training_started=false`、`checkpoint_saved=false`、`wandb_started=false`；最新 one-batch no-backward forward 观测 `action_loss=1.9165695905685425`。
+  - 为支持 MoWA StarFlow ft0 forward smoke，`QwenPI_v3._project_vl_hidden_for_action` 已新增默认关闭的 `framework.mowa.enable_qwenpi_projector_dtype_alignment` 开关；只有 MoWA 配置显式开启时才做 BF16 VLM hidden 到 FP32 projection layer 的 dtype 对齐，StarFlow 原 ft0 配置默认不受影响。
+  - `QwenPI_v3` 已新增默认关闭的 `framework.mowa.enable_layerwise_bridge_token_coupling` 开关；仅 MoWA StarFlow dry-run 配置显式开启时，才通过 `MoWAActionBridge` 生成 bridge tokens，并调用 `append_layerwise_bridge_tokens` 拼到每层 `vl_embs_list[layer_idx]`，同时扩展 `encoder_attention_mask`；不修改 `LayerwiseFM_ActionHeader.py` 内部逻辑，不影响 StarFlow 原启动指令。
+  - 最新 StarFlow ft0 dry-run 报告显示 `framework.mowa_layerwise_bridge_coupling_enabled=true`、`mowa_layerwise_bridge_coupling_status=forward_coupled_in_full_path_dry_run`，forward keys 包含 `mowa_layerwise_bridge_coupled`，bridge token shape=`[1, 2, 1024]`，attention mask shape=`[1, 341]`。
+  - StarFlow ft0 full-path dry-run 已新增 one-batch no-backward forward 指标：`metric_scope=one_batch_no_backward_forward_dry_run`、`elapsed_sec=20.668267000000924`、`samples_per_sec=0.04838335018605843`，并记录 `cuda_device_name=NVIDIA A100-SXM4-80GB`；当前 dry-run 在 `prepare_training()` 前停止，torch CUDA allocator VRAM 字段为 0.0，不代表正式训练 steady-state VRAM。
+  - `tests.mowa.test_mowa_p0_heads` 已新增 CLI dotlist override 测试，覆盖 `--key value` 与 `--key=value` 两类参数覆盖，确认 `trainer.full_path_dry_run_report`、`framework.starflow_ft_variant`、`framework.action_model.num_target_vision_tokens`、`datasets.vla_data.per_device_batch_size` 会按 CLI 修改合并。
+  - MoWA checkpoint/run 根目录已统一改为 `playground/mowa_ckpt`；MoWA 配置不再指向 `playground/Checkpoints/mowa`。历史 dry-run JSON 中的旧 output_dir 保留为当时实际输出记录，不回写伪造。
+  - StarFlow ft0 真实 save/resume training smoke 已通过：`configs/mowa/mowa_e001_starflow_ft0_training_throughput_smoke.yaml` 使用 `run_root_dir=playground/mowa_ckpt`、`trainer.disable_wandb=true`、`save_interval=1`；`tools/mowa/e001_starflow_ft0_training_throughput_smoke.py --execute` 先跑 `max_train_steps=1` 保存 `steps_1`，再用同一 run_id `is_resume=true` 跑到 `max_train_steps=2` 保存 `steps_2` 和 `final_model`。
+  - 最新成功 run_id 为 `MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657`；报告 `docs_zh/mowa/mowa_e001_starflow_ft0_training_throughput_smoke_check.json` 显示 `first_checkpoint_saved=true`、`resume_checkpoint_saved=true`、`final_model_saved=true`、`first_trainer_state_step_1=true`、`resume_trainer_state_step_2=true`、`command_runs_succeeded=true`。该 run 已覆盖 `mowa_p0_fullheads` bridge feature source。
+  - 2026-07-05 在当前 A100 机器重新执行最小真实 save/resume training smoke，run_id=`MoWA-E-001_starflow_ft0_save_resume_smoke_20260705_codex_a100`，first-run 1 step 用时 172.9s，resume 到 2 step 用时 262.6s；`steps_1`、`steps_2`、`final_model`、optimizer/scheduler/rng/config snapshot 均保存成功，run 目录约 96GB，wandb disabled；该结果仍只是短训保存恢复验证，不是 action-gain 证据。
+  - save/resume smoke 首次尝试 `MoWA-E-001_starflow_ft0_save_resume_smoke_20260703_233722` 在 checkpoint 保存前失败，根因是 `trainer.disable_wandb=true` 时 `_log_metrics()` 仍调用 `wandb.log`；已修复为禁用 wandb 时不调用 `wandb.log`/`wandb.finish`。用户确认后已删除该失败 run 目录。
+  - E-006 eval-load smoke 已重新指向最新成功 run 的 `checkpoints/steps_2`；`.venv/bin/python tools/mowa/e006_eval_load_smoke.py --execute-load --output docs_zh/mowa/mowa_e006_eval_load_smoke.json` 已真实构建 StarFlowVLA 并通过 StarVLA 原生 loader 加载新 `steps_2` sharded safetensors，`model_load.loaded=true`、`elapsed_sec=31.528859380050562`、`param_count=5074304558`。
+  - E-001 runtime policy 已推进为 prelaunch 部分确认状态：checkpoint/save/resume、`playground/mowa_ckpt`、`disable_wandb=true`、logging_frequency=10、save/resume smoke 与 eval-load smoke 均记录为 confirmed；resource_policy 仍为 false，`policy_confirmed=false`、`launch_ready=false` 保持不变。
+  - E-001 bounded full-VLA runtime sweep 已完成：新增默认关闭的 `trainer.runtime_metrics_report` 和 `trainer.skip_final_checkpoint`，仅 smoke 显式开启；`tools/mowa/e001_full_vla_runtime_sweep_smoke.py` 已真实跑 bs1/bs2 各 2 step，并补跑 bs4 2 step，均跳过 final checkpoint。bs4 报告 `docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json` 显示 `peak_vram_gb=46.816529750823975`、`peak_reserved_gb=50.13671875`、last step `samples_per_sec=2.666600602349555`、`last_step_time_sec=1.5000371620990336`。
+  - runtime policy / launch draft / training command draft 已记录 bounded full-VLA bs4 观测值；这只是短步 smoke 候选，`resource_policy_confirmed=false`、`policy_confirmed=false`、`launch_ready=false` 继续保持。
+  - E-001 launch candidate 已生成但未放行：`configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml` 固定 StarFlowVLA ft0、MoWA P0FullHeads bridge、bs4/grad_accum1、`max_train_steps=1000`、`save_interval=1000`、`disable_wandb=true`、`playground/mowa_ckpt`；`configs/mowa/mowa_e001_training_command_candidate.yaml` 给出可执行命令，但 `launch_ready=false`、`policy_confirmed=false`、`requires_human_confirmation=true` 保持不变。
+  - `tools/mowa/e001_launch_candidate_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_launch_candidate_smoke.json`；launch candidate、launch draft、readiness、training config smoke 均无失败检查，且 `training_started=false`。
+  - `tools/mowa/download_robocasa_remaining.py` 已作为可选数据维护工具纳入：默认 plan-only，不执行外网下载；必须显式传 `--execute` 才会下载/解压。工具已支持 `current`、`target`、`pretrain`、`target/atomic`、`target/composite`、`pretrain/atomic`、`pretrain/composite`、`all` 子集，以及 `--tasks` / `--split` / `--source` 过滤。该工具不属于当前 target/human/atomic 主 recipe 的必要路径。
+  - E-006 checkpoint-backed intervention forward smoke 已完成：`train_starvla.py` 新增默认关闭的 `trainer.full_path_dry_run_load_checkpoint` / `trainer.full_path_dry_run_checkpoint`，仅 dry-run 显式开启时用 `TrainerUtils.load_pretrained_backbones` 加载 checkpoint；`tools/mowa/e006_checkpoint_intervention_forward_smoke.py --execute` 已基于 `playground/mowa_ckpt/MoWA-E-001_starflow_ft0_save_resume_smoke_20260704_001657/checkpoints/steps_2` 和真实 RoboCasa batch 跑 baseline/zero/batch_shuffle/head_mask_control 四轮 forward，全部 `returncode=0`、`checkpoint_loaded=true`、`forward.evaluated=true`。
+  - 最新 `docs_zh/mowa/mowa_e006_checkpoint_intervention_forward_smoke.json` 显示 baseline action_loss=8.296131134033203，zero delta=-0.463254451751709，batch_shuffle delta=-0.15985774993896484，head_mask_control delta=-0.5074424743652344；该结果只是单 batch checkpoint forward 干预证据，不是 rollout 成功率或收益声明。
+  - E-006 RoboCasa365 policy rollout preflight 已完成：`server_policy.py` / `PolicyServerWrapper` / `baseframework.from_pretrained` 新增默认关闭的 `--config_override key=value` 链路，用于 eval-time 指定 `framework.mowa.layerwise_bridge_token_intervention`；不传 override 时原有 StarFlow/server 路径保持不变。
+  - `configs/mowa/mowa_e006_policy_rollout_candidate.yaml` 记录 baseline/zero/batch_shuffle/head_mask_control 四类 RoboCasa365 OpenDrawer 1-episode rollout 命令候选，全部 `launch_ready=false`、`eval_started=false`、`requires_human_confirmation=true`；`tools/mowa/e006_policy_rollout_preflight_smoke.py` 已生成 `docs_zh/mowa/mowa_e006_policy_rollout_preflight_smoke.json`，所有检查通过，但没有启动 server/client。
+  - E-006 RoboCasa365 policy rollout smoke 已真实执行到 server/client 链路：`tools/mowa/e006_policy_rollout_smoke.py --execute` 逐轮启动 baseline/zero/batch_shuffle/head_mask_control policy server，四轮 server 均启动成功，client 均拿到 server metadata，metadata 中 `config_overrides` 分别记录对应 intervention；`n_envs=2`、`n_episodes=2` 已用于保证 batch_shuffle 有 batch 维度。
+  - 最新 `docs_zh/mowa/mowa_e006_policy_rollout_smoke.json` 为 `No-Go`：四轮 client 均因 RoboCasa365 assets 缺失失败，`failure_category=missing_robocasa_asset`，缺失路径包括 `robocasa/models/assets/objects/lightwheel/utensil_rack/UtensilRack007/008/014/model.xml` 和 `fixtures/sinks/Sink025/model.xml`；未生成 success_rate，不能声明 rollout 收益。
+  - Claude 自查清单中的 forward/predict 对称问题已修复：`QwenPI_v3.predict_action()` 现在与 `forward()` 一样调用 `_maybe_apply_mowa_layerwise_bridge_coupling()`，并返回 `mowa_layerwise_bridge_*` metadata；rollout 推理路径会实际应用 zero/batch_shuffle/head_mask intervention。
+  - CLI orphan value 静默丢弃问题已修复：`normalize_dotlist_args(['--a.b', 'x', 'orphan'])` 现在会打印 warning，并返回 `['a.b=x']`。
+  - Claude 清单第二轮未修复项已继续推进：`PolicyServerWrapper` 的 server metadata / `action_chunk_size` 现在从 override 后的 framework `action_horizon` 读取，不再从 checkpoint 原始 YAML 重新计算；训练入口新增仅对显式 `launch_guard` 生效的物理 gate，`launch_ready=false` 或要求人工确认但未 `human_confirmed=true` 时拒绝真实训练，full-path dry-run 不拦截；`VLATrainer.prepare_training()` 在保存 accessed-only `config.yaml` 前会触达 `trainer.is_resume`、`trainer.pretrained_checkpoint`、`trainer.gradient_accumulation_steps`、`datasets.vla_data.data_mix`、`framework.name`、`framework.action_model.action_model_type`、`framework.action_model.num_target_vision_tokens`，训练日志也会打印这些最终值与 `resume_from_checkpoint`。
+  - 新增目标单测已通过：`test_policy_wrapper_metadata_uses_override_applied_action_horizon` 验证 metadata 使用 override 后 `action_horizon=5` 而非原始 YAML `16`；`test_train_starvla_launch_guard_blocks_unconfirmed_launch_only` 验证普通配置不拦截、MoWA gated config 真实训练拒绝、dry-run 不拒绝、`human_confirmed=true` 后放行。
+  - Kimi 提出的 2 个 Critical 已修复：`tools/mowa/e001_a100_throughput_smoke.py` 补齐 `Mapping` import；`train_starvla.py` 的 `launch_guard` 放行条件已收紧为必须 `launch_ready=true` 且 `policy_confirmed=true`，若 `requires_human_confirmation=true` 还必须 `human_confirmed=true`。
+  - 最新自查：禁止文件检查无输出；forward/predict coupling grep 仍对称；orphan CLI value warning 生效；E-001 launch candidate 会在构建模型/数据前被 launch guard 拒绝且错误信息明确要求 `policy_confirmed=true`；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 18 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 27 项通过，合计 45 项。
+  - Kimi Major 中对训练准备直接相关的两项已处理：`configs/mowa/mowa_action_bridge_interface.yaml` 不再把早期 heads/bridge smoke 的 `32/2048/4` 当作唯一接口值，已区分 `interface_defaults` 与当前 `starflow_e001_candidate=1024/1024/2`，并用单测对齐 `mowa_e001_starflow_ft0_launch_candidate.yaml`；`tools/mowa/e006_eval_load_smoke.py` 默认 checkpoint/final_model 已改为从 `configs/mowa/mowa_e006_eval_load_smoke.yaml` 读取，CLI override 仍保留，Python 里不再硬编码具体 run_id。
+  - 最新 Major 修复验证：`tools/mowa/e006_eval_load_smoke.py --output /tmp/mowa_e006_eval_load_check.json` plan-only 读取 YAML 默认 checkpoint 成功；`tools/mowa/e001_readiness_smoke.py` 与 `tools/mowa/e006_coupling_eval_plan_smoke.py` 仍识别 ActionBridge interface；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 18 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 29 项通过。
+  - P0 head 常量重复定义已收敛：新增顶层纯模块 `starVLA/mowa_constants.py`，集中定义 `MOWA_P0_FULL_HEADS`、`MOWA_P0_CONSTRUCTIBLE_HEADS`、`MOWA_P0_MASKED_HEADS` 和输出维度；`p0_heads.py`、`p0_label_builder.py`、`robocasa365_adapter.py`、`gr00t_lerobot/datasets.py`、QwenPI/QwenOFT MoWA 默认 active heads 以及 P0/A100 smoke 报告均改为复用共享常量。`rg` 检查显示运行时代码中只有 `starVLA/mowa_constants.py` 定义这些 tuple/dim dict。
+  - 最新 P0 常量去重验证：py_compile 通过；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 18 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 18 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 30 项通过，合计 66 项关键单测通过。
+  - E-006 checkpoint-forward 工具也已去除 Python 硬编码默认 checkpoint：`tools/mowa/e006_checkpoint_intervention_forward_smoke.py` 默认从 `configs/mowa/mowa_e006_eval_load_smoke.yaml` 的 `checkpoint.eval_candidate_checkpoint` 读取，CLI `--checkpoint` 仍可覆盖；对应单测覆盖默认配置读取和显式 override。
+  - 最新 checkpoint-forward 参数化验证：py_compile 通过；`tools/mowa/e006_checkpoint_intervention_forward_smoke.py --output /tmp/mowa_e006_checkpoint_forward_check.json` plan-only 从 YAML 读取默认 checkpoint 且检查存在；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 31 项通过；orphan CLI warning 与 launch guard 拒绝仍生效。
+  - P1 latent cache contract smoke 已新增：`build_mowa_latent_cache_contract_smoke()` 和 `tools/mowa/p1_latent_cache_contract_smoke.py` 只规划 `cache_root/<cache_key>.pt`、记录 encoder 名称、统计 video/cache artifact 是否存在，并显式记录 `future_action_input_status=not_used_as_input`；不执行 Wan encoder/VAE、不读取视频内容、不写 latent cache 文件。
+  - 最新 P1 contract 验证：py_compile 通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 19 项通过；`tools/mowa/p1_latent_cache_contract_smoke.py --output docs_zh/mowa/mowa_p1_latent_cache_contract_smoke.json` plan-only 成功；禁止文件检查无输出，forward/predict coupling grep 对称，orphan CLI warning 生效，E-001 launch candidate 仍被 `launch_guard` 拒绝。
+  - Kimi 提到的 anchor 选择一致性已推进：`sampler.py` 新增共享 `select_mowa_smoke_anchor_index()` 与 `select_mowa_leakage_anchor_indices()`，dataset smoke / batch smoke / production preflight 统一使用 first-full-history anchor，leakage gate 继续 start/mid/end 多锚点覆盖但复用共享边界策略；对应 Data Gate 单测新增 anchor policy 覆盖。
+  - 最新 anchor policy 验证：py_compile 通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 20 项通过；`g0_dataset_smoke.py`、`g0_batch_dataloader_smoke.py`、`g0_leakage_gate_smoke.py`、`g0_production_preflight_smoke.py` 默认 preflight 和 5Hz preflight 报告均已重跑；禁止文件检查无输出。
+  - Kimi/Claude 二次检查中的低风险残留已继续收敛：移除 `robocasa365_adapter.MOWA_P0_HEADS` 兼容别名，P0 label coverage 直接使用 `starVLA.mowa_constants.MOWA_P0_FULL_HEADS`；`MoWAActionHeadBinding` 字段改为 `adapter_helper_implemented` 与 `framework_forward_integrated`，LayerwiseFM 标记为已在 StarFlowVLA framework forward 集成，MLP/VLA_Adapter/DiT 仍仅 helper ready；清理 `download_robocasa_remaining.py`、`e001_starflow_ft0_training_throughput_smoke.py` 的未使用变量，并修复 MoWA 范围 ruff E/W/F。
+  - 最新二次检查修复验证：`/opt/conda/bin/ruff check --select E,W,F tools/mowa starVLA/dataloader/mowa starVLA/model/modules/mowa configs/mowa` 通过；py_compile 通过；configs/mowa YAML parse 通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 31 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 20 项通过；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 18 项通过。
+  - 为降低运行时代码里的阶段命名扩散，新增语义化兼容别名：`MOWA_FUTURE_*` 常量、`MoWAFutureFeatures`、`MoWAFutureFeatureHeads`、`MoWAFutureConstructibleHeads`、`build_mowa_future_constructible_batch_from_smoke`，以及 future latent cache manifest/contract aliases；旧 `P0`/latent cache 名称继续保留，确保现有配置、报告和实验文档不破坏。`action_bridge.py` 的类型标注已切到 `MoWAFutureFeatures`。
+  - 最新语义化别名验证：py_compile 通过；ruff 目标文件通过；新增 alias 单测通过。后续新运行时代码应优先使用 `Future` 语义名，配置/文档/历史报告可继续使用 P0/P1/P2 阶段名。
+  - 语义化别名已开始用于运行时代码：`QwenPI_v3.py`、`QwenOFT.py`、`tools/mowa/e001_a100_throughput_smoke.py`、`tools/mowa/p0_constructible_heads_train_smoke.py` 改为使用 `MOWA_FUTURE_*` / `MoWAFuture*` alias；配置 key、feature source 字符串和历史报告字段仍保持兼容。
+  - 最新 runtime alias adoption 验证：py_compile 通过；`/opt/conda/bin/ruff check --select E,W,F tools/mowa starVLA/dataloader/mowa starVLA/model/modules/mowa configs/mowa` 通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 32 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 21 项通过；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 18 项通过。
+  - MoWA framework 配置 alias 继续收敛：`QwenPI_v3` 的 `framework.mowa.layerwise_bridge_feature_source` 新增 `mowa_future_feature_heads`，与旧 `mowa_p0_fullheads` 等价走真实 `MoWAFutureFeatureHeads` bridge；`QwenOFT` 新增 `future_supervision_active_heads` / `future_supervision_hidden_dim`，旧 `p0_supervision_*` 仍作为 fallback。
+  - 最新 framework alias 验证：py_compile 通过；新增 StarFlow forward alias 单测和 QwenOFT supervision alias 单测通过；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 19 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 33 项通过。ruff 对框架文件仍会报告历史 E402/E501，本轮未重排 QwenOFT import 或修改底部注释。
+  - MoWA smoke/readiness alias 校验继续收敛：`e001_starflow_ft0_full_path_dry_run_smoke.py` 和 `e001_launch_candidate_smoke.py` 的硬校验从只接受 `mowa_p0_fullheads` 改为接受 `mowa_future_feature_heads` / `mowa_p0_fullheads` 两种 feature source；新增 launch candidate 使用新 alias 的单测，刷新 E-001 full-path dry-run smoke 与 launch-candidate smoke JSON。
+  - 最新 smoke alias 验证：py_compile 通过；目标单测 3 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 34 项通过；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 19 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 21 项通过；本轮改动文件 ruff E/W/F 通过。
+  - MoWA feature source 字符串已收敛到共享常量：`starVLA/mowa_constants.py` 新增 `MOWA_STARFLOW_CONDITION_PROBE_FEATURE_SOURCE`、`MOWA_FUTURE_FEATURE_HEADS_SOURCE`、`MOWA_P0_FULLHEADS_FEATURE_SOURCE`、`MOWA_FUTURE_FEATURE_SOURCE_ALIASES`，并通过 `starVLA.model.modules.mowa` 导出；`QwenPI_v3` 与 E-001 两个 smoke 工具改为复用这些常量。
+  - 最新 feature source 常量化验证：py_compile 通过；目标单测 4 项通过；本轮改动文件 ruff E/W/F 通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 34 项通过；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 19 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 21 项通过。
+  - MoWA supervision runtime summary 继续语义化：`QwenOFT.forward()` 现在同时输出 `mowa_future_supervision_*` 与旧 `mowa_p0_supervision_*`；`train_starvla.py` full-path dry-run framework summary 也新增 `mowa_future_supervision_probe_enabled`、`mowa_future_supervision_active_heads`、`mowa_future_supervision_label_status`，旧字段保留兼容；`e001_train_starvla_full_path_dry_run_smoke.py` 优先检查新字段，旧报告 fallback。
+  - MoWA label/bridge runtime summary 继续语义化：`QwenPI_v3` 内部 layerwise bridge head 属性已改为 `mowa_layerwise_bridge_future_feature_heads`，旧 `mowa_layerwise_bridge_p0_heads` 仅保留兼容别名；`train_starvla.py` full-path dry-run data summary 新增 `mowa_future_labels_enabled`，两个 E-001 dry-run smoke 优先检查 future-label 字段并 fallback 到旧 `mowa_p0_labels_enabled`。
+  - 最新 supervision summary 验证：py_compile 通过；目标单测 3 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 34 项通过；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 19 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 21 项通过；`tools/mowa/e001_train_starvla_full_path_dry_run_smoke.py` 与对应单测 ruff E/W/F 通过。`QwenOFT.py` / `train_starvla.py` 仍有历史 ruff E402/E501/F401/F811，未做无关重排。
+  - Kimi 校验中可安全修复的两项已处理：`temporal_profile.py` 不再跨模块导入 `robocasa365_adapter._fixed_size_list_shape`，改为公开 `fixed_size_list_shape()` helper 并从 `starVLA.dataloader.mowa` 导出；`configs/mowa/mowa_action_bridge_interface.yaml` 的 `production_wam_hz` / `production_window` 从误导性的 confirmed 降回 `Data Gate`，另保留 `e001_preflight_target_*` 记录 5Hz 只是 E-001 preflight target。
+  - 最新 Kimi 可修项验证：py_compile 通过；目标单测 3 项通过；configs/mowa YAML parse 通过；MoWA Data Gate 22 项通过；MoWA P0 heads 34 项通过；相关 dataloader/test 文件 ruff E/W/F 通过。
+  - Kimi 提到的剩余 Major/Minor 尚未在本轮展开：SOT 文档缺失处理、E-006 YAML 仍绑定具体 smoke checkpoint、`action_outcome_class` 损失形式需要单独工程任务；其中 `action_outcome_class` class mapping 仍为 Data Gate，不应在类别定义未确认时直接改成 CE。
+  - Claude/DeepSeek 对 bridge review 的 6 点反馈已处理：`head_mask_control` 现在要求 future-head feature source，并用 constructible head outputs 重新生成 bridge features/tokens，而不是只改 metadata；训练 audit config 触达 MoWA bridge 关键字段；QwenOFT action bridge probe 会从 action model 推断层数；bridge metadata 新增 `bridge_token_shape` 与 `adapted_vl_embed_shape`；P0 label builder 复用 `MOWA_P0_MASKED_HEADS`；production dataloader 中 `action_outcome_class` 的 tensor-ready list 格式已加注释说明，未改变训练输入格式。
+  - 最新 bridge review 修复验证：py_compile 通过；本轮范围 ruff E/W/F 通过；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 20 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 35 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 22 项通过。E-006 synthetic coupling intervention smoke JSON 已重跑，`head_mask_control` 报告 `intervention_note=rebuilt_from_constructible_head_outputs`。
+  - SOT/readiness 文档缺口已结构化：新增派生设计索引 `09_p0_label_builder_design.md` 和 `10_p1_latent_cache_manifest_design.md`；`README.md` / `AGENTS.md` 明确当前 checkout 缺少核心 `00/01/02` SOT，禁止临时补写；`tools/mowa/e001_readiness_smoke.py` 输出 `sot.required_core_docs`、`missing_core_docs`、`derived_design_docs` 和 `status=missing_core_sot`，readiness JSON 已刷新，launch gate 仍保持关闭。
+  - 最新 SOT/readiness 验证：py_compile 通过；`/opt/conda/bin/ruff check --select E,W,F tools/mowa/e001_readiness_smoke.py tests/mowa/test_mowa_p0_heads.py` 通过；新增 readiness SOT 单测通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 36 项通过；`.venv/bin/python -m unittest tests.mowa.test_mowa_data_gate -v` 22 项通过。
+  - E-006 checkpoint 解析能力已补齐：新增 `tools/mowa/mowa_checkpoint_resolver.py`，支持 `latest_complete` / `latest_approved` 别名解析到 `playground/mowa_ckpt/<latest_complete_run>/checkpoints/steps_2` 与对应 `final_model`；`e006_eval_load_smoke.py`、`e006_checkpoint_intervention_forward_smoke.py`、`e006_policy_rollout_preflight_smoke.py`、`e006_policy_rollout_smoke.py` 均复用该 resolver。现有 YAML 仍保持显式 checkpoint 路径，未在本轮修改配置默认值。
+  - 最新 checkpoint resolver 验证：py_compile 通过；目标 ruff E/W/F 通过；新增 eval-load latest alias 与 rollout preflight latest alias 单测通过；三个 E-006 plan/preflight 工具直接脚本执行通过，仍解析到当前显式 smoke checkpoint；`.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 38 项通过。
+  - `action_outcome_class` loss 语义已收敛为显式配置：`MoWAP0ConstructibleHeadsConfig` / `MoWAP0FullHeadsConfig` 新增 `action_outcome_loss_type`，默认仍为 `mse`；新增 opt-in `cross_entropy_done`，只使用 target 最后一维 `next_done` 作为二分类标签。QwenOFT future/P0 supervision probe 支持 `future_supervision_action_outcome_loss_type` / `p0_supervision_action_outcome_loss_type`，未配置时行为不变。
+  - 最新 action_outcome loss 验证：py_compile 通过；目标 ruff E/W/F 通过；新增 `cross_entropy_done` 单测和 QwenOFT 配置传递单测通过；默认 MSE 相关 ConstructibleHeads/FullHeads/QwenOFT supervision 单测仍通过。
+  - StarFlow ft0 对比配置已补齐：新增 `configs/mowa/mowa_e001_starflow_ft0_baseline_candidate.yaml`，与 MoWA launch candidate 使用同 RoboCasa 数据、同 QwenVL/LayerwiseFM/ft0/action/trainer 关键参数，但关闭 `enable_layerwise_bridge_token_coupling` 和 `enable_mowa_p0_labels`；新增 `tools/mowa/e001_starflow_ft0_comparison_smoke.py` 和报告 `docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json`，明确官方 StarFlow ft0 YAML 是 LIBERO reference，不是同数据 paired baseline。
+  - 最新 comparison smoke 验证：comparison report 生成成功；readiness 已纳入 `starflow_ft0_baseline_candidate_created` 与 `starflow_ft0_comparison_smoke_passed`；目标单测通过；baseline/MoWA 两份 candidate 都保持 `launch_ready=false`。
+  - StarFlow ft0 paired baseline / MoWA candidate 的启动安全检查已从静态 YAML gate 推进到训练入口物理 gate：`tools/mowa/e001_starflow_ft0_comparison_smoke.py --check-launch-guard` 会分别调用两份 candidate 的 `train_starvla.py`，要求在 build framework/data 前被 `Training launch blocked by launch_guard` 拦截；最新报告中 baseline/MoWA returncode 均为 1，`baseline_launch_guard_blocks_entrypoint=true`、`mowa_launch_guard_blocks_entrypoint=true`，readiness 已要求该证据存在。
+  - 第 4 步真实 WAM/P0 feature source 工程接入已完成：MoWA StarFlow 配置显式设置 `framework.mowa.layerwise_bridge_feature_source=mowa_p0_fullheads`，`QwenPI_v3` 会通过 `MoWAP0FullHeads.future_features()` 生成 `P0FutureFeatures` 后再进入 `MoWAActionBridge`；默认未配置路径仍保留 `starflow_condition_probe` 兼容，不影响 StarFlow 原链路。
+  - 最新 `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json` 显示 `framework.mowa_layerwise_bridge_feature_source=mowa_p0_fullheads`、`forward.mowa_layerwise_bridge_feature_source=mowa_p0_fullheads`、active heads 为 `task_progress` 和 `action_outcome_class`，不再是 `starflow_condition_probe`。
+  - `tools/mowa/e001_starflow_ft0_full_path_dry_run_smoke.py` 已生成 `docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run_smoke.json`，并接入 readiness：`starflow_ft0_full_path_dry_run_smoke_passed=true`。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 17 项测试；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 已通过 12 项测试，其中包含 dtype alignment opt-in 和 MoWA layerwise bridge coupling opt-in 边界测试。
+- M5-001 MoWAActionBridge interface draft 已完成：
+  - `starVLA/model/modules/mowa/action_bridge.py` 新增 `MoWAActionBridge`、`MoWAActionBridgeConfig`、`MoWAActionBridgeOutput`。
+  - `configs/mowa/mowa_action_bridge_interface.yaml` 记录 bridge 输出为 `layerwise_condition_features`，并通过 `MoWAActionHeadAdapter` 按 `action_model_type` 选择注入方式，不改 action head 内部逻辑。
+  - `starVLA/model/modules/mowa/action_head_adapter.py` 新增 MoWA action-head adapter 边界：`LayerwiseFM` 支持 layerwise condition token append；`MLP/OFT` 支持 action hidden residual fusion；`DiT-S/DiT-B/DiT-L` 与 GR00T-style single-condition heads 支持 single sequence token append；`VLA_Adapter` 支持在 action-query suffix 前插入 bridge tokens。上述均是 MoWA adapter helper，不修改 StarVLA 固有 action head 内部逻辑。
+  - `configs/mowa/mowa_action_bridge_interface.yaml` 已区分 `adapter_helper` 和 `framework_forward_integrated`；当前只有已接入的 StarFlowVLA/LayerwiseFM dry-run 路径具备 forward coupling smoke，其他 action head 仍需在对应 framework forward 中 gated 调用 adapter。
+  - `append_layerwise_bridge_tokens` 已通过单测验证会扩展每层 `vl_embs_list[layer_idx]` 和 `encoder_attention_mask`，为后续 B 方案 coupling smoke 提供可插拔接入点。
+  - `fuse_mlp_bridge_features`、`append_single_sequence_bridge_tokens`、`append_vla_adapter_bridge_tokens` 已通过单测验证 shape 与 action-query suffix 保持，不触碰 action head 内部实现。
+  - `.venv/bin/python -m py_compile starVLA/model/modules/mowa/action_bridge.py starVLA/model/modules/mowa/__init__.py tests/mowa/test_mowa_p0_heads.py tools/mowa/e001_readiness_smoke.py` 已通过。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 13 项测试。
+  - `tools/mowa/e001_readiness_smoke.py` 已重跑，报告显示 `action_bridge_interface_created=true`；E-001 仍因 runtime policy / checkpoint/save/resume 策略和 coupling 消融保持不可启动。
+- M5-002 E-006 coupling / feature removal eval plan 已完成：
+  - `configs/mowa/mowa_e006_coupling_eval_plan.yaml` 记录 baseline、feature removal、batch shuffle、head mask control 四类 intervention。
+  - `tools/mowa/e006_coupling_eval_plan_smoke.py` 生成 `docs_zh/mowa/mowa_e006_coupling_eval_plan_smoke.json`，确认 plan/readiness/bridge 前置项存在，且 `training_started=false`、`eval_started=false`。
+  - `QwenPI_v3` 的 MoWA layerwise bridge coupling 已新增默认 `baseline` 的 `framework.mowa.layerwise_bridge_token_intervention`，支持 `zero`、`batch_shuffle`、`head_mask_control` 三类 E-006 smoke intervention；默认路径不启用 coupling，MoWA dry-run 默认仍为 baseline。
+  - `QwenPI_v3._setup_mowa_layerwise_bridge_coupling` 已新增 layerwise bridge hidden dim 预检：`mowa.action_hidden_dim` 必须等于投影后的 `action_dit_hidden_dim`，避免延迟到 adapter 拼接时才报 shape mismatch。
+  - `batch_shuffle` intervention 在 batch_size<=1 时会在 forward metadata 中标记 `mowa_layerwise_bridge_intervention_applied=false` 与 `batch_shuffle_not_applied_due_to_batch_size`，避免单样本 smoke 被误读为已完成 shuffle 消融。
+  - `tools/mowa/e006_coupling_intervention_smoke.py` 已生成 `docs_zh/mowa/mowa_e006_coupling_intervention_smoke.json`，使用合成 StarFlowVLA forward batch 验证 baseline coupled、zero tokens zeroed、batch shuffle swaps samples、head mask control keeps constructible heads；`training_started=false`、`eval_started=false`。
+  - StarFlow future-token variant 支持已恢复为配置化：`configs/starflow_vla/stage3_future_token_ablation.yaml` 的 `num_target_vision_tokens_values=[0, 8, 16, 32, 64]`；`starVLA/model/modules/starflow_vla/mapping.py` 记录 `starflow_ft_variant`，MoWA StarFlow dry-run smoke 不再把 ft0 写死为唯一合法路径。
+  - `.venv/bin/python -m unittest tests.mowa.test_mowa_p0_heads -v` 最新已通过 13 项测试；`.venv/bin/python -m unittest tests.test_starflow_vla_reuse -v` 最新已通过 15 项测试，其中包含 intervention 边界、hidden dim 预检和 batch_shuffle 单样本 metadata 测试。
+  - E-006 仍需要训练 checkpoint 或 smoke-compatible action checkpoint 才能做真实 policy eval；当前 synthetic intervention smoke 不声明 action 指标收益、不启动 eval、不计入训练。
 
-- 已在 `examples/LIBERO/train_files/training_log_1229_libero4in1_qwen3oft.md` 末尾新增 `对齐当前 LIBERO SOTA 与不足分析`
-- 内容包括：
-  - `LIBERO-Goal` 单套件与公开方法的可比性边界
-  - 与 `TraceVLA / OpenVLA / PixelVLA` 的目标成功率对齐
-  - 当前结果的主要不足：评测范围、长尾任务、训练协议可比性、鲁棒性评测缺失
-  - 下一步建议：补齐 `Spatial/Object/Long`、定向补长尾、固定训练协议、增加鲁棒性评测
-- 当前在日志中的结论：
-  - `steps_70000=74.0%` 已接近已发表强基线 `TraceVLA=75.1%`
-  - 但距离更前沿公开结果 `PixelVLA=85.8%` 仍有明显差距
-  - 目前还不能声称“对齐完整 LIBERO SOTA”
+## 进行中的任务
+- 2026-07-01 已完成 10 个 target/human/atomic core 任务下载、G0 复验、production-entry preflight、P0 one-step smoke 和 E-001 readiness smoke。
+- 当前没有启动 P0/P1 主训练；本轮仅完成训练前工程 smoke。
+- 已把 opt-in future supervision loss 接入 StarFlowVLA 训练路径，并把 paired comparison 的 runtime symmetry 恢复为只保留 MoWA bridge / label 差异；默认未启用时不改变原路径。
+- 已补 `VLATrainer._train_step()` 的单测，确认 future supervision loss 会按 `loss_scale.mowa_future_supervision` 进入 backward。
+- 已真实重跑 `train_starvla` full-path dry-run，`docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json` 已刷新并确认 `mowa_future_supervision_*` 进入观测 report，训练仍停在 dry-run 阶段。
+- 已按用户确认放开 E-001 launch gate，并补齐 `framework.mowa.enable_future_supervision_loss=true`；真实 `train_starvla` 已启动到 step 16，step 10 日志确认 `mowa_future_supervision_loss=0.21699252724647522`，随后按需中断。
+- 已给 E-001 launch candidate smoke 增加回归检查，确保 future supervision 不是只在 trainer 侧打开，launch candidate 也必须显式声明 `framework.mowa.enable_future_supervision_loss: true`。
+- 已重新跑 E-001 save/resume smoke，`MoWA-E-001_starflow_ft0_save_resume_smoke_20260705_codex_a100_v2` 的 first-train / resume 两阶段都成功，`steps_1`、`steps_2`、`final_model` 均已产出。
 
-## 2026-05-23 — LIBERO eval 环境缺包定位
+## 下一步
 
-- `tmux` 会话 `sim` 当前稳定复现报错：`ModuleNotFoundError: No module named 'robosuite'`
-- 直接原因不是 `eval_libero.py` 路径错误，而是 `.libero` 虚拟环境只安装了 `libero` editable 包本体，没有安装 `LIBERO/requirements.txt` 中声明的运行依赖
-- 证据：
-  - `.libero` 中 `pip show libero` 显示 editable project 指向 `/gemini/code/starVLA/LIBERO`
-  - `LIBERO/setup.py` 中 `install_requires=[]`，因此 `pip install -e LIBERO` 不会自动带上依赖
-  - 当前 `.libero` 缺失的关键包包括：`robosuite`、`bddl`、`robomimic`、`hydra-core`、`easydict`、`transformers`、`opencv-python`、`einops`、`thop`、`future`、`gym`、`cloudpickle`
-- 已修正 `examples/LIBERO/eval_files/install_libero.sh`：
-  - 改为使用仓库内 `.libero` 虚拟环境
-  - 改为基于仓库相对路径定位 `LIBERO`
-  - 安装顺序改为先 `python -m pip install -r requirements.txt`，再 `python -m pip install -e .`
-  - 验证步骤增加 `robosuite`、`bddl` 导入检查
-- 当前 `sim` 会话尚未恢复；仍需在允许联网安装依赖的前提下重新执行安装脚本或等价安装命令
-
-## 2026-05-23 — LIBERO eval 输出路径只读
-
-- `tmux` 会话 `sim` 在依赖补齐后继续运行到评测入口，但 `eval_libero.py` 创建视频输出目录时失败
-- 直接报错：`OSError: [Errno 30] Read-only file system: '/gemini/code/starVLA/playground/trained_model/.../results'`
-- 根因：`examples/LIBERO/eval_files/eval_libero.sh` 默认把 `video_out_path` 写到 checkpoint 所在的 `playground/trained_model/.../results`，该路径在当前环境只读
-- 已做最小修复：将 `video_out_path` 改为仓库内可写路径 `playground/eval_results/${task_suite_name}/${folder_name}`
-
-## 2026-05-23 — LIBERO init_states 与 PyTorch 2.6 兼容
-
-- `tmux` 会话 `sim` 在修复输出路径后继续报错：`_pickle.UnpicklingError: Weights only load failed`
-- 根因：PyTorch `2.6.0` 将 `torch.load` 的默认 `weights_only` 从 `False` 改为 `True`，而 LIBERO 的 `init_states` 文件是可信任的普通 pickle 数据，不是纯模型权重
-- 已做最小修复：在 `examples/LIBERO/eval_files/eval_libero.py` 导入 `libero` 前为 `torch.load` 补兼容包装；当调用方未显式传入 `weights_only` 时，默认按 `False` 处理，兼容 LIBERO 的 `init_states` 旧格式文件
-- 已重新拉起 `tmux sim` 验证：当前评测已进入真实 rollout 阶段，日志显示 `Task: open the middle drawer of the cabinet`，并已完成多个 episode
-
-## 2026-05-22 — policy 推理加载分片 checkpoint 误报 missing keys
-
-- `tmux` 会话 `policy` 的报错不是 `tmux` 故障，而是 `deployment/model_server/server_policy.py` 在加载 `steps_40000` 时失败
-- 根因一：`starVLA/model/framework/share_tools.py` 对分片目录调用 `accelerate.load_checkpoint_in_model(..., strict=True)`，而当前 `accelerate` 会对每个 shard 单独执行 `model.load_state_dict(..., strict=True)`，把“尚未加载到当前 shard 的参数”误判成 `Missing key(s)`
-- 修复：分片目录在共享加载入口里先根据 `*.index.json` 做完整 key 校验，再用 `strict=False` 逐 shard 实际加载，避免分片级误报
-- 根因二：误报消掉后，暴露出 HF/Qwen safetensors 的兼容差异：`lm_head.weight` 作为 tied weight 未单独落盘，`rotary*_inv_freq` 作为非持久/缓存 buffer 出现在 index 中
-- 修复：严格 key 校验里过滤上述已知无害差异，保留其它真实 missing/unexpected keys 的报错能力
-
-## 2026-05-17 — 项目初始化
-
-- 创建 CLAUDE.md、AGENTS.md、SESSION.md、TODO.md、MEMORY/
-- 当前分支：未知（非 git 仓库或有 detached HEAD）
-- 环境就绪，可开始开发
-
-## 2026-05-20 — LIBERO 训练中断排查
-
-- 定位到 `train_starvla.py` 在 `Step 20000` 后进入 checkpoint 保存流程时被 cgroup OOM 杀死
-- 证据：`/sys/fs/cgroup/memory/memory.limit_in_bytes=34359738368`，`memory.oom_control` 显示 `oom_kill=2`
-- 根因：DeepSpeed 训练仍用 `accelerator.get_state_dict()` + `torch.save()` 保存 9.3G 单文件 checkpoint，保存期内存峰值触发 32GB 限制
-- 修复：DeepSpeed 周期性/最终 checkpoint 改为 `accelerator.save_state()` 目录式保存，并补充目录式 checkpoint 的自动恢复
-- 顺手修复：`starVLA/dataloader/__init__.py` 在未初始化分布式时直接 `dist.get_rank()` 的异常
-
-## 2026-05-20 — 本地临时 checkpoint 工作区
-
-- `train_starvla.py` 支持可选 `trainer.local_checkpoint_root`
-- 启用后 checkpoint 先保存到本地临时目录 `<local_checkpoint_root>/<run_id>/checkpoints`
-- 若本地临时目录为空，则从网络盘 run 目录复制“最新完整 checkpoint + config/dataset statistics/summary”
-- 每次本地保存完成后，启动独立后台进程同步该 checkpoint 到网络盘 run 目录
-- 若网络盘存在同名旧目录，后台同步会先改名为 `.stale_<ts>`，再放入新目录，避免半成品 checkpoint 阻塞恢复
-
-## 2026-05-20 — checkpoint 保存模式与本地空间预检
-
-- `train_starvla.py` 新增 `trainer.save_with_training_state`，默认 `False`
-- `train_starvla.py` 新增 `trainer.save_checkpoint_as_directory`，默认 `True`
-- 默认改为“轻量目录式保存”：模型使用 Accelerate 标准分片目录保存，optimizer/scheduler/trainer state 分文件保存
-- 轻量目录式恢复时，模型通过分片逐步加载，减少 CPU 侧峰值内存
-- 仅当 `save_with_training_state=True` 且使用 DeepSpeed 时，才走 `accelerator.save_state()` 完整训练态目录式保存
-- checkpoint 读取同时兼容旧单文件、轻量目录式分片目录和 DeepSpeed 完整训练态目录式格式
-- 启用本地临时 checkpoint 中转时，保存前会根据最近 checkpoint 大小估算所需空间，空间不足则提前报错，避免写到一半失败
-- `run_libero_train.sh` 增加 `save_checkpoint_as_directory=True`、`save_with_training_state=False` 和 `checkpoint_max_shard_size=5GB` 启动参数
-- 本地临时 checkpoint 的“最新性检查/必要时复制”已前移到程序启动阶段后台执行，并在 `prepare_training()` 前等待完成，以便和模型构建、数据初始化并行
-- 每次本地 checkpoint 后台同步回网络盘完成后，会自动删除本地源 checkpoint，避免临时路径持续堆积
-- 启动阶段若发现本地临时路径存在多个 checkpoint，只保留最新一个
-- 启动阶段若发现本地最新 checkpoint 新于网络盘且完整，则直接复用本地版本，并后台继续向网络盘补同步，不再用网络旧版本覆盖本地
-- 后台 checkpoint 同步改为单 worker 串行消费 `.checkpoint_sync_queue`，避免多个同步进程并发运行
-- 新增 `trainer.local_checkpoint_keep_count`，用于控制本地临时路径保留的 checkpoint 版本数；脚本默认设为 `2`
-- 启动阶段从网络盘整理到临时路径时，仍然只保证本地有一份最新可恢复版本；`local_checkpoint_keep_count` 只作用于训练过程中新 checkpoint 的本地裁剪
-- 正常训练同步完成后，不再直接删除当前本地 checkpoint，而是按 `local_checkpoint_keep_count` 裁剪较旧版本
-
-## 2026-05-21 — LIBERO 训练降峰值参数调整
-
-- `run_libero_train.sh` 中 `checkpoint_max_shard_size` 从 `5GB` 调整为 `4GB`
-- `run_libero_train.sh` 中 `per_device_batch_size` 从 `32` 调整为 `16`
-- `starVLA/config/deepseeds/ds_config.yaml` 中 `gradient_accumulation_steps` 从 `1` 调整为 `2`
-- 目标是在保持全局 batch 基本不变的前提下，降低单步激活/保存时的内存峰值
-- 进一步将 `local_checkpoint_keep_count` 调整为 `1`，避免本地临时盘同时保留两个 checkpoint 导致保存前空间预检失败
-- 确认 `Accelerator()` 的梯度累积步数不直接读取训练 yaml 或 DeepSpeed 配置文件中的该字段；实际生效值来自 `accelerate launch --gradient_accumulation_steps`
-- `run_libero_train.sh` 已显式传入 `--gradient_accumulation_steps 2`，确保 `accelerator.gradient_accumulation_steps` 与预期一致
-- 对齐 `local_checkpoint_keep_count` 的真实语义：该值表示“本地临时路径最多可占用的 checkpoint 配额数”
-- 后台同步完成后的本地保留数改为 `max(local_checkpoint_keep_count - 1, 0)`，与保存前空间预检逻辑一致
-- 因此当 `local_checkpoint_keep_count=1` 时，同步完成后本地应清空；当 `=2` 时，同步完成后本地保留 1 份最新 checkpoint
-- 定位到一次 checkpoint 保存报错 `DataLoader worker ... killed by signal: Killed` 的直接根因是 cgroup OOM：`accelerator.save_model()` 内部会在 CPU 侧克隆模型 state_dict，峰值期间 dataloader worker 被系统先杀掉
-- `starVLA/dataloader/__init__.py` 中 VLA dataloader 的 `num_workers` 改为可配置，默认回落到 `0`
-- `run_libero_train.sh` 显式传入 `--datasets.vla_data.num_workers 0`，优先降低 checkpoint 保存期的 CPU 内存压力
-- `run_libero_train.sh` 中 `save_interval` 从 `250` 调整为 `500`，降低 checkpoint 保存频率
-- `train_starvla.py` 中补充了轻量训练态加载/保存路径下的 `del + gc.collect()`：
-  - 加载后回收 `trainer_state`
-  - 单文件保存后回收 `state_dict`
-  - 轻量目录式保存后回收 `optimizer_state`、`scheduler_state`、`trainer_state`
-- 轻量目录式模型保存不再调用 `accelerator.save_model()`；改为按参数/缓冲区逐个搬到 CPU、按 shard 流式写盘并生成 index 文件
-- 目标是绕开 `accelerator.get_state_dict()` / `clone_tensors_for_torch_save()` 带来的整份模型 `state_dict` CPU 克隆峰值
-- `train_starvla.py` 中未显式配置时的默认 `save_format` 改为 `safetensors`
-- `run_libero_train.sh` 显式传入 `--trainer.save_format safetensors`，使轻量目录式默认产出 `model-xxxxx.safetensors` 与 `model.safetensors.index.json`
-- 目录 checkpoint 读取逻辑改为“优先按 `preferred_format` 探测，缺失时再回退到其他格式”
-- 对分片 index 会校验其 `weight_map` 中引用的 shard 文件是否真实存在，避免因为目录中残留了另一种格式的 index 文件而误读
-- 训练侧 `TrainerUtils.load_pretrained_backbones()` 与推理侧 `baseframework.from_pretrained()` 现在统一调用 `share_tools.py` 中的共享模型权重加载入口
-- 共享入口负责：
-  - 单文件 / 目录式 / 分片目录 checkpoint 解析
-  - 指定格式优先、缺失回退
-  - 分片目录加载与单文件加载
-- `examples/LIBERO/eval_files/eval_libero.sh` 已改为当前仓库相对路径启动，不再硬编码作者机器路径
-- `eval_libero.sh` 默认 `CKPT` 对齐到 `playground/trained_model/.../steps_23000`
-- `eval_libero.sh` 对结果目录的推导同时兼容旧的 `/checkpoints/steps_xxx` 路径和新的 `trained_model/.../steps_xxx` 路径
-- `eval_libero.sh` 本身不直接加载模型权重；真正的 checkpoint 解析和权重加载仍由 `run_policy_server.sh` 启动的 policy server 负责
-- `safetensors` 分片写入前会再次确保目标目录存在，避免保存过程中因目录缺失触发 `SavetensorError: I/O error: No such file or directory`
-- 针对 2 卡 24G / 64G 内存机器，`run_libero_train.sh` 已调整为：
-  - `per_device_batch_size=8`
-  - `gradient_accumulation_steps=2`
-  - `num_processes=2`
-  - `num_workers=4`
-- 临时 checkpoint 存储扩容到约 100G 后，`local_checkpoint_keep_count` 调整为 `2`，表示本地临时路径在同步完成后可保留 1 份旧版本作为缓冲
-- 对应全局 batch 为 `8 x 2 x 2 = 32`
-- 启动阶段本地 checkpoint 最新性检查/复制逻辑已前移到 `main()` 刚完成配置归一化之后，早于 `setup_directories()`、模型构建和数据集初始化
-- 记录遗留问题：LIBERO 数据集构建/初始化链路仍偏慢，主要热点在 `LeRobotSingleDataset._get_metadata()`、`_load_or_compute_statistics()`、`_get_all_steps()` 和 `LeRobotMixtureDataset.update_metadata()`；后续应加阶段计时日志量化
-- 2 卡 ZeRO2 恢复轻量 checkpoint 时，旧版单文件 `optimizer.pt` 会导致 rank1 在 DeepSpeed `state_dict_list[dp_rank]` 处越界
-- 轻量训练态 optimizer 保存已改为 per-rank 分片：`optimizer_rank_00000.pt`、`optimizer_rank_00001.pt` 等，并在 `trainer_state.json` 记录 `optimizer_format=rank_sharded` 与 `optimizer_world_size`
-- 轻量训练态恢复只在 `optimizer_format=rank_sharded` 且保存时 `optimizer_world_size` 与当前一致时恢复 optimizer
-- 旧版单文件 `optimizer.pt` 只在当前 `world_size=1` 时恢复；多卡场景下会跳过 optimizer 状态，继续恢复模型、scheduler 与 step，避免伪造 rank 分片造成错误恢复
-- 现有 `steps_26000/optimizer.pt` 曾在本地临时路径和网络 checkpoint 路径下复制出 2 份 rank 文件，但由于 `trainer_state.json` 未声明 `rank_sharded`，当前加载逻辑不会把这些文件当作可靠 ZeRO2 optimizer 分片
-- 2 卡 ZeRO2 + `gradient_accumulation_steps=2` 下，`accelerator.accumulate()` 默认会在非同步步进入 DeepSpeed `no_sync()`，触发 `no_sync context manager is incompatible with gradient partitioning logic of ZeRO stage 2`
-- `Accelerator` 初始化改为显式使用 `GradientAccumulationPlugin(sync_each_batch=True)`，并从 `ACCELERATE_GRADIENT_ACCUMULATION_STEPS` 读取累积步数；保留累积步数语义，同时避免 ZeRO2 下进入 `no_sync`
-- 发现网络 checkpoint 目录几乎每个 step 都留下 `steps_xxx.stale_*`，原因是后台同步在目标目录已存在时永久保留旧目录
-- 后台同步逻辑改为：源目录与目标目录文件名/大小一致时直接跳过；确需替换时只在替换期间临时保留旧目录，替换成功后删除该临时旧目录，避免后续继续堆积 `.stale_*`
-- 继续定位 `.stale_*` 大量产生的直接触发点：gradient accumulation 下非同步 micro-batch 不会递增 `completed_steps`，但原训练循环仍会执行 eval/log/save，导致同一个 `steps_xxx` 在下一次 micro-batch 被再次保存和同步
-- 训练循环已改为仅在 `accelerator.sync_gradients=True` 的真实 optimizer update 步执行 eval、日志和 checkpoint 保存，避免同一个 step 重复保存
-- `examples/LIBERO/train_files/starvla_cotrain_libero.yaml` 中显式添加 `datasets.vla_data.num_workers: 8`
-- `run_libero_train.sh` 默认 `num_workers` 同步调整为 `8`，CLI override 仍会传入 `--datasets.vla_data.num_workers`
-- W&B 初始化改为使用稳定 run id：默认由 `run_id` 归一化得到 `wandb.init(id=..., resume="allow")`
-- 后续同一 `run_id` 的训练重启会续写同一个 W&B run，避免每次重启在网站上生成新的碎片 run
-- 已确认当前本地历史 W&B run 目录有 30 个；历史碎片不会因代码修改自动合并，若需要网站全局视图，需单独解析历史日志并上传为一个新 W&B run
-- 已将历史碎片 W&B 日志解析去重后上传为 clean 合并 run：`1229_libero4in1_qwen3oft_merged_history_clean`
-- 合并 run 包含原始记录 466 条，去重后 264 个 step，范围 `100..43200`
-- 本地导出文件：`playground/Checkpoints/1229_libero4in1_qwen3oft/wandb_merged_history_clean.csv` 与 `.jsonl`
-- 定位到 `Attempt ... Cannot allocate memory` 的直接失败点在 DataLoader worker 内部 PyAV / `torchvision.io.VideoReader` 打开视频 codec context
-- 当前 2 卡配置下 `num_workers=8` 等价于 16 个 worker，PyTorch 默认 `prefetch_factor=2` 会放大到最多 32 个预取 batch，视频解码并发过高
-- `starVLA/dataloader/__init__.py` 增加 `datasets.vla_data.prefetch_factor` 配置透传
-- LIBERO 启动脚本与 yaml 默认调整为 `num_workers=5`、`prefetch_factor=2`，2 卡并发预取峰值为 10 个 worker / 20 个 batch
-- 推理侧 checkpoint 辅助文件解析增强：`_resolve_inference_run_files()` 现在按 checkpoint 目录、直接父目录、旧训练 run 目录，以及 symlink resolve 后的对应目录查找 `config.yaml` 和 `dataset_statistics.json`
-- 该逻辑兼容 `.../Checkpoints/run/checkpoints/steps_xxx` 与 `.../trained_model/name/steps_xxx` 两种布局
+- 2026-07-23 WanOFT 双视角 Stage1 已接入 LIBERO UMT5 指令缓存：`WanOFT` 在 `use_text_cache=true` 时从 `latent_cache.instruction_text_latent` 按 `lang` 查得 4096 维 embedding，训练与服务均不再加载 UMT5；cache miss fail-fast。现有 LIBERO 表含 40 条 fp16 指令。官方 checkpoint 中 UMT5 占 12.54 GiB，移除后轻量 `steps_1000` server 在 4090 占 11.67 GiB，真实 expert probe 成功返回 `[8,7]` 动作块；视觉仍在线经 VAE 编码，尚未切 visual cache。
+- 2026-07-23 无持久化 UMT5 表也已经真实 full-path dry-run 验证：`preload_text_cache=true` 从 LIBERO 数据根目录收集 40 条去重指令，临时编码后安装内存表并显式释放 UMT5/tokenizer；首个 batch 为 2 个样本、动作形状 `[8,7]`，未进入训练。
+- 若继续推进正式长训练，优先顺序已经明确：1）先确认是否允许新增/修改正式 long-training config（这一步会改配置，需人工确认）；2）把当前 bounded smoke 参数与正式 long-run 参数拆开；3）明确 checkpoint 保留与 resume_latest_complete_only 的长期策略；4）再启动正式长训练。当前不建议直接复用 `mowa_e001_starflow_ft0_launch_candidate.yaml` 作为长训练最终配置。
+- 已重刷 `docs_zh/mowa/mowa_e001_readiness_smoke.json` 与 `docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json`；两者继续保持 `No-Go`，但阻断语义已回到正确口径：当前缺的是 full-launch 级证据，不是 bridge 是否接通。下一步不再围绕 `steps_1000` 的 `0%` 打转，而应继续推进正式长训练/后续实验准备，把 bounded smoke 与正式结论严格分开。
+- 2026-07-05 E-006 RoboCasa 渲染环境问题已修复：系统安装 `libegl1` 提供 `libEGL.so.1`（NVIDIA 驱动只有 `libEGL_nvidia.so.0`）；`simulation_env.py` 默认渲染后端从 `osmesa` 改为 `egl`。4 个 rollout intervention 全部 `returncode=0`，成功跑完 2 个 episode。成功率均为 0.0（checkpoint 来自 2-step save/resume smoke，模型几乎未学习），这是预期行为。
+- 2026-07-05 E-001 freeze_modules 对齐修复：所有 11 个 StarFlow 原生配置均使用 `freeze_modules: qwen_vl_interface`（冻结 VLM，仅训练 DiT + MoWA bridge），但 MoWA 的 launch candidate、baseline candidate、full_path_dry_run、training_throughput_smoke 四个配置均错误地设为 `freeze_modules: ''`（全部 5.07B 参数可训练）。已修复四个 YAML，并对齐 comparison smoke 检查。修复前首次训练跑至 ~180 step（VLM 全训，显存 55 GB），已清除；修复后重启训练，仅 ~637M 参数可训练，显存降至 19.9 GB，速度从 3.26s/it 降至 1.2s/it。
+- 训练精度确认：VLM 以 bf16 加载（QWen3.py 硬编码），冻结不做 backward；VL 输出通过 `QwenPI_v3:677` 上转 fp32 送入 DiT；DiT + MoWA bridge forward/backward 全程 fp32 autocast（`QwenPI_v3:729,851`）。这与 StarFlow 原生行为一致。
+- E-001 正式训练当前正在运行：`MoWA-E-001_starflow_ft0_bs4_candidate`，bs4/grad_accum1/max_steps=1000/save_interval=1000，单卡 A100 19.9 GB 显存，~1.2s/it，预计 ~20 分钟完成。step 320 时 action_dit_loss≈0.26，mowa_future_supervision_loss≈0.07。
+- 训练入口必须显式引用 G0 temporal profile 与 5Hz production-window preflight；batch size、显存、训练时长仍需 throughput smoke 后确认。
+- 真实 Wan latent cache builder 仍需单独放行。
+- E-005 的 shuffled-robot checkpoint preflight 已补上聚合键 `checkpoint_preflight_passed`，随后又补了 shuffled-robot rollout smoke 并把 evidence 接回 matrix；执行版 rollout 也已跑完，四个干预都返回 `success_rate=0.0`，但这仍然不是统计意义上的正式 shuffled-robot 结论。
+- 这轮再收了两个资源管理点：E-003 launch smoke 的临时 dry-run config 改成 `TemporaryDirectory` 上下文清理；`MoWALatentCacheDataset` 的 payload cache 改成 `OrderedDict` LRU，并加了上限回归，避免大 cache 场景无限涨内存。
+- 新增了 WAM 输入禁用项：`mowa_future_latent` / `mowa_future_latent_target` / `mowa_predicted_future_latent` 现在都会被 `MoWAWindowSample.validate()` 拒绝，防止未来 latent 误混入 WAM 输入。
+- 继续补了 E-003 / E-004 的 formal long-training 草案：新增 long-training candidate YAML 和 preview 脚本，并把两份 preview JSON 落盘；它们现在明确记录了 4090 batch profile、checkpoint policy 和仍待接线的正式 long-run entrypoint。
+- 2026-07-07 继续推进 E-004 checkpoint-backed rollout 证据：新增 `configs/mowa/mowa_e004_hlc_gci_policy_rollout_candidate.yaml` 与 `tools/mowa/e004_hlc_gci_policy_rollout_smoke.py`，并跑通了实际 rollout smoke 的 baseline 阶段 checkpoint 启动与 websocket server 初始化；真实 client 在 `.robocase` 环境里直接被 `robocasa_render_backend_unavailable` 阻断，报告已落到 `docs_zh/mowa/mowa_e004_hlc_gci_policy_rollout_smoke.json`，`go_no_go` 为 `No-Go: E-004 rollout blocked; see rollout_blocker`。这说明 checkpoint-backed rollout 入口可执行，但当前机器的 RoboCasa EGL/OSMesa 栈还不可用，无法继续产出 success_rate。
+- 2026-07-07 随后把 E-004 rollout 证据接回 readiness matrix：`tools/mowa/experiment_launch_readiness_matrix.py` 现在消费 `mowa_e004_hlc_gci_policy_rollout_smoke.json`，E-004 的 matrix entry 显示 `hlcgci_policy_rollout_passed=true` 且 `hlcgci_policy_rollout_zero_success=true`，但总体 `can_start_now` / `status=launchable_now` 不变，因为这轮 rollout 只证明可执行且 success 仍为 0，没有提供 action-gain 证据。
+- 2026-07-09 在 A100 上补齐了 E-003 / E-004 的真实 launch smoke，并修复了 `starVLA/dataloader/mowa/latent_cache_builder.py` 里 Wan2.2 encode 路径误删 `window_role` 的 bug。E-003 launch smoke 现在同时通过 real Wan2.2 cache build/validate 与未来 latent prior dry-run；E-004 launch smoke 通过 config preview、interface smoke 和 synthetic train。随后重刷 readiness matrix，E-003 / E-004 / E-006 等 training entries 仍保持 `launchable_now`，且测试模块 `tests.mowa.test_mowa_future_heads`、`tests.mowa.test_mowa_latent_cache_builder` 全绿。
+- 2026-07-09 继续补齐 E-005 的 rollout smoke：新增 `configs/mowa/mowa_e005_shuffled_robot_rollout_candidate.yaml` 与 `tools/mowa/e005_shuffled_robot_rollout_smoke.py`，默认 plan 模式可生成 baseline/zero/batch_shuffle/head_mask_control 四路命令并消费 `mowa_e005_shuffled_robot_checkpoint_preflight_smoke.json`；随后重刷 matrix，将 E-005 的 rollout smoke 也接入 readiness 证据链，相关回归测试已通过。
+- 2026-07-09 已重新核验 P1 代码链路：`starVLA/model/framework/WM4A/WanPI.py` 的 future latent prior 与 HLC-GCI 已和 `train_starvla.py` / latent cache batch contract 对齐，`mowa_current_latent`、`mowa_future_latent_target`、`mowa_history_latent` 均能透传到模型侧；随后跑通 `.venv/bin/python -m unittest tests.mowa.test_train_starvla_window_latent_integration tests.mowa.test_window_latent_train_smoke tests.mowa.test_mowa_future_heads -v`，95 个相关测试全部通过。当前 P1 侧未见新的代码断点，后续应转向正式 E-003 / E-004 实验证据推进。
+- 2026-07-10 已补齐 `tools/mowa/p1_latent_cache_contract_smoke.py` 的兼容入口，直接转发到现有 `tools/mowa/latent_cache_contract_smoke.py`，把文档里提到的 P1 contract smoke 文件名和实际可执行入口对齐；主逻辑、契约字段和 Data Gate 语义未变。
+- 2026-07-10 已把 episode-level window manifest / low-dim 读取链路按新分层收口：episode store 现在记录 `dataset_path` 和 `source_episode_path`，window manifest 也会写出这两个来源字段；`MoWAWindowLatentSampleDataset` 优先从原始 episode parquet 读取 `observation.state` / `action` 低维数据，视觉 latent 仍然从 episode latent store 读取，旧 manifest 缺少来源字段时保持回退兼容。`MoWALatentCacheDataset` 和 `build_dataloader()` 也补了 sibling `*_manifests/window_manifest*.parquet` 自动发现。
+- 2026-07-13 已纠正 E-003 WanPI future latent prior 的数据契约：`MoWAFutureLatentPrior` 的 `current_latent` 输入不应来自 dataloader 的 VAE pooled `mowa_current_latent`，而应来自 WanPI backbone 投影后的 hidden states。`WanPI.forward()` 现在用 `base_hidden.mean(dim=1)` 作为 current context，再预测 cache 中的 future VAE latent target；E-003 WanPI/long-training 配置同步记录 `current_latent_dim=1024`、`future_latent_dim=48`。
+- 2026-07-13 已停止并重启 E-003 long training，修复 long config 未接入 Wan2.2 文本/视觉 cache 的问题：`mowa_e003_future_latent_prior_long_training_launch_candidate.yaml` 现在配置 `latent_cache.instruction_text_latent`，并设置 `framework.world_model.use_text_cache=true`、`use_visual_cache=true`。重启日志确认只加载 Wan2.2 transformer，模型参数从约 11.85B 降到约 5.46B，训练进入 step 后显存约 17.7GB。
+- 2026-07-13 已将 E-003 WanPI/future-latent-prior 两份配置的 `framework.state_mode` 从误导性的 `discretized_instruction` 改为 `continuous_head`，匹配实际链路：语言使用 cached UMT5 text latent，robot state 作为连续张量进入 LayerwiseFM state encoder。已停止旧 run 并重启 long training，新的 `config.full.yaml` 记录 `state_mode=continuous_head`，训练已进入 step。
+- 2026-07-13 已按 E-003 修正经验收口 E-004 long config 的链路契约：保留 `per_device_batch_size=1`、`gradient_accumulation_steps=32`、`num_workers=3`，但补上 `latent_cache.instruction_text_latent`、`world_model.use_text_cache=true`、`use_visual_cache=true`，将 `state_mode` 改为 `continuous_head`，并把 HLC-GCI `history_window_steps/history_steps/history_latent_dim` 对齐为 `10/10/48`。E-004 HLC-GCI 目标单测 3 项通过，`git diff --check` 通过。
+- 2026-07-13 已调整 E-004 HLC-GCI 注入语义：`MoWAHLCGCI` 新增独立 `encode_history_tokens()`，默认 GRU 将 history latent 编成 condition-side history tokens；`WanPI` 不再替换最后一层前置 condition tokens，而是把 HLC-GCI 实际输出的 `[B, N, 1024]` history tokens append 到每层 LayerwiseFM condition，N 由历史编码算法决定，接口不绑定到 `history_steps` 或固定 K。验证：py_compile 通过；E-004 config preview、launch smoke、HLC-GCI interface、WanPI variable history-token append 4 项单测通过；`git diff --check` 通过。
+- 2026-07-13 E-004 首次长训启动在 step 0 前报错：`history_latent time steps mismatch: expected 10, got 8`。根因是 `build_dataloader()` 在未显式配置 manifest_path 时按字典序选择了 `window_manifest.parquet`，而不是与 `latent_cache.history_window_steps=10` 匹配的 `window_manifest_h10.parquet`。已修复自动选择逻辑：存在 `history_window_steps` 时优先选择 `window_manifest_h{steps}.parquet`，否则回退旧行为。验证：py_compile 通过；`BuildDataloaderManifestWiringTest` 2 项通过；`git diff --check` 通过；直接读取 h10 manifest 样本确认 `history_latent_shape=(10,48)`。
+- 2026-07-14 文本缓存已统一为唯一 instruction → UMT5 latent：删除 per-episode text HDF5 store、独立 CLI、窗口读取 fallback，以及视觉全量脚本里的 `--skip-text` / `--text-dtype` 误导入口；instruction-level builder 接管 UMT5 adapter，并加入配置、模型加载、逐 instruction 编码耗时、失败数、速度和 ETA 进度条。未删除任何已有缓存数据。instruction cache 冒烟验证通过，episode/window 相关回归 22 项通过。
+- 2026-07-16 已完成 E003-B1 双视角在线 RoboCasa 回环：临时 100-step checkpoint 通过 websocket 服务接收同步 main/wrist 原始帧，服务端完成 Wan VAE、共享 Wan + cross-view 和 LayerwiseFM 动作推理；OpenDrawer 1 episode 正常结束，结果为 `0/1`（短训 checkpoint，不作为能力结论）。修复 bf16 服务加载时 `wm_projector`、多视角 fusion/Done LayerNorm 的输入 dtype 对齐；strict checkpoint loader 同时忽略 Wan RoPE 重建表与 cross-view 运行期诊断 buffer。系统已按确认安装 `libegl1`，EGL 客户端可正常创建环境。
+- 2026-07-16 E003-B1 长训 checkpoint 策略已定版：永久保留 `5k/10k/20k/30k/40k/50k/60k/70k/80k`，其余仅保留最近 3 个；不在最近 3 个中的永久里程碑删除 `optimizer_rank_*.pt`，保留模型、scheduler、RNG 与配置。训练器新增默认关闭的通用 retention helper，E003-B1 YAML 显式开启；旧里程碑用于评估/加载，不可精确 resume，resume 继续选择最新完整 checkpoint。W&B 保持 `online`。
+- 2026-07-16 E003-B1 已补 `resume_latest_complete_only` 的实际语义：训练器在 `trainer.is_resume=false` 但当前 run 存在完整 checkpoint 时自动恢复最新完整 checkpoint；首次运行无 checkpoint 仍从零开始。长训 YAML 同时设 `latent_cache.overwrite=false`。真实 RTX4090 smoke 已从临时 `steps_100` 自动加载模型、optimizer、scheduler、RNG 并连续训练至 step 102，两轮数据流检查通过。当前 lightweight checkpoint 仍保存完整冻结 Wan：总模型约11.21GiB，Wan transformer约9.33GiB，其他 action/cross-view/MoWA 约1.88GiB；尚未实施 trainable-only checkpoint 格式。
+- 2026-07-16 checkpoint 新增 `trainer.save_frozen_backbone`（默认 `false`）：lightweight saver 省略 `backbone.*` 参数与 buffer，并在 `trainer_state.json` 记录 `omitted_model_state_prefixes=["backbone."]`。partial-load 仅在该元数据明确存在时启用，并严格验证“保存键 + 已从本地预训练初始化的 backbone 键”覆盖完整模型 state；任何非 backbone 缺失或 unexpected key 都失败。真实 E003 `steps_103` 从15GiB降至5.7GiB（592 tensors、无 `backbone.*`），随后自动恢复并完成 step104，optimizer/scheduler/RNG 均成功恢复。
+- 2026-07-21 完成 E-001/E-003 v2 新配方 LoRA 重建收口：公共 `lora_utils.py` 负责旧 checkpoint 到 PEFT 包装 key 的对齐与严格 partial-load，Qwen/Wan 仅保留各自 target-module 解析；两条配置均为冻结具身 backbone + r32/alpha64 LoRA + 新 cont.ft32 头。补上 `action_chunk_steps=32`，避免 RoboCasa 默认 8-step 动作触发 LayerwiseFM 契约错误。
+- 2026-07-21 真实一阶 smoke 均通过：E-001 `action_dit_loss=1.6143`；E-003 使用缓存 UMT5/VAE 与双视角 Wan 路径，flow contract 1/1 通过，`action_dit_loss=1.8551`，LoRA 梯度非零并写出 `wan_lora.safetensors`。这两次只证明链路可训练，不代表收敛或仿真成功率；正式 20–40k 训练仍待人工确认 launch guard。
+- 2026-07-21 按统一 action-head 契约将 E-001 state 注入改为 continuous_head：修复 QwenPI `_prepare_state_condition()` 原先无条件离散化 state 的问题，continuous 模式保留实际 `[B,1,32]` state，交给 LayerwiseFM 内部 `state_encoder(32→1024)`；旧离散语言路径保持兼容。E-001 `state_dim` 同步改为32，一步真实 smoke 的 contract validation 1/1 通过，`action_dit_loss=1.6663`。
+- 2026-07-22 完成 E-003-B1 LIBERO 4-in-1 适配：新增 `libero_franka_wanpi` 数据注册与四套数据混合，按 7D delta-EF action、8D raw state→16D sin/cos state、binary gripper 和 32-step Wan cache 配方新增训练 YAML；新增四数据集 episode latent/window manifest/text cache 构建脚本。LIBERO 评测入口增加 WanPI 双视角 5 帧历史 payload；修复 latent cache anchor video 可配置及 LIBERO 直层级 instruction 收集。registry/config、instruction collector、WanPI payload 和 py_compile smoke 均通过；缓存构建和长训尚未启动。
+- 2026-07-22 LIBERO 缓存首次运行暴露 AV1 解码问题：decord/OpenCV 均无法读取本地 LIBERO MP4，新增 PyAV episode-store backend，并将 LIBERO 缓存脚本切换到 `video_backend=pyav`。单 episode 真实 Wan VAE 编码通过，两个视角均写入 37 个 temporal latent 帧；`vae_lib` 已重新启动全量缓存，当前 `libero_object` 已写入 34 个 episode，未再出现 video stream 错误。
+- 2026-07-22 LIBERO 四套 WanPI cache 完成：`object 454/454`、`spatial 432/432`、`libero_10 379/379`、`goal 427/428`；唯一缺失为 `libero_goal` episode 82，原因是 wrist AV1 MP4 截断（主视角 129 帧，腕部只能解出 105 帧）。现有 1692 个 `.h5` 均包含 image/wrist 两个 latent 且长度一致，四套 window manifest 已生成，instruction text cache 40/40。
+- 2026-07-22 E-003 LIBERO 真实训练联调通过：四数据集 mixture 长度 101644，缓存样本含双视角 latent/text cache、state `(1,16)`、action `(32,7)`；临时单卡 10-step WanPI 训练通过，E-003 flow validation 2/2，Wan backbone strict load 0 missing/0 unexpected，LoRA 480 tensors 写出，最终 checkpoint 落到 `/tmp/mowa_e003_libero_smoke/MoWA-E-003-LIBERO-smoke/final_model`。正式配置未改、长训未启动。
+- 2026-07-22 LIBERO 配方切换为 original Wan2.2-only：新 YAML 保留 `base_wm=Wan2.2-TI2V-5B-Diffusers`，移除 WM4A `pretrained_checkpoint` 覆盖并将 `reload_modules=null`；1-step 真实训练 smoke 通过，Wan strict load 0 missing/0 unexpected，E-003 flow validation 1/1，LoRA 480 tensors 写出到 `/tmp/mowa_e003_libero_origwan_smoke/MoWA-E-003-LIBERO-origWan-smoke/final_model`。
+- 2026-07-22 已生成 DP 专用 RoboCasa365 指令缓存：使用本地 `openai/clip-vit-large-patch14`，复用现有 UMT5 缓存中的 217 条任务文本，输出 217 个有限的 `[768]` float32 embedding 至 `playground/Datasets/robocasa365_dp_cache/instruction_clip_embeddings.pt`；训练/推理可直接读取该缓存，不再加载文本编码器。

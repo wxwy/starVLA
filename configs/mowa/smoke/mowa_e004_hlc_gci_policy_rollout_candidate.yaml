@@ -1,0 +1,38 @@
+project_short_name: MoWA
+stage: hlc_gci
+task_id: M4-001
+experiment_id: E-004
+experiment_name: HLC-GCI checkpoint-backed policy rollout smoke
+config_role: policy_rollout_candidate_not_launch
+launch_ready: false
+eval_started: false
+requires_human_confirmation: true
+
+checkpoint: latest_complete
+checkpoint_root_policy: playground/mowa_ckpt
+server:
+  python: .venv/bin/python
+  entrypoint: deployment/model_server/server_policy.py
+  port_base: 5696
+  use_bf16: true
+  idle_timeout: 1800
+client:
+  python: .robocase/bin/python
+  module: examples.Robocasa_365.eval_files.simulation_env
+  env_name: robocasa/OpenDrawer
+  n_episodes: 2
+  n_envs: 2
+  max_episode_steps: 100
+  n_action_steps: 8
+  video_out_path: playground/eval_results/mowa_e004_robocasa365_open_drawer_smoke/videos
+interventions:
+  - baseline
+  - zero
+  - batch_shuffle
+  - head_mask_control
+guardrails:
+  start_server_in_preflight: false
+  start_client_in_preflight: false
+  claim_action_gain_without_rollout_report: false
+  config_override_required_for_non_baseline: true
+  starflow_project_experiments_unchanged: true

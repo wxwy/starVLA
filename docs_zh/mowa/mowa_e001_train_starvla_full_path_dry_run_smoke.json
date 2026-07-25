@@ -1,0 +1,42 @@
+{
+  "stage": "full_heads",
+  "experiment_id": "E-001",
+  "training_started": false,
+  "checks": {
+    "dry_run_config_created": true,
+    "dry_run_report_created": false,
+    "entrypoint_is_train_starvla": false,
+    "full_path_dry_run_only": false,
+    "training_not_started": false,
+    "checkpoint_not_saved": false,
+    "wandb_not_started": false,
+    "robocasa_data_mix": false,
+    "framework_qwenoft": false,
+    "mowa_action_bridge_probe_enabled": false,
+    "mowa_future_supervision_probe_enabled": false,
+    "mowa_future_supervision_labels_forward_evaluated": false,
+    "batch_fetched": false,
+    "mowa_future_labels_enabled": false,
+    "batch_has_mowa_future_targets": false,
+    "batch_has_mowa_future_masks": false,
+    "forward_evaluated": false,
+    "forward_has_mowa_future_supervision_loss": false,
+    "forward_has_action_loss": false
+  },
+  "reports": {
+    "dry_run_config": "configs/mowa/mowa_e001_train_starvla_full_path_dry_run.yaml",
+    "dry_run_report": "docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json"
+  },
+  "observed": {
+    "run_id": null,
+    "framework": null,
+    "data": null,
+    "trainer": null
+  },
+  "unresolved_items": [
+    "This validates QwenOFT StarVLA full-path wiring, not MoWA action-bridge coupling.",
+    "MoWA future supervision loss is forward-evaluated but not added to action_loss.",
+    "No checkpoint/save/resume launch policy is confirmed."
+  ],
+  "go_no_go": "No-Go: train_starvla full-path dry-run smoke incomplete"
+}

@@ -50,6 +50,28 @@ from starVLA.dataloader.gr00t_lerobot.schema import (
     LeRobotStateActionMetadata,
 )
 from starVLA.dataloader.gr00t_lerobot.transform import ComposedModalityTransform
+from starVLA.dataloader.gr00t_lerobot.transform.state_action import StateActionTransform
+from starVLA.mowa_constants import (
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+    MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
+    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_FULL_HEADS,
+)
+from starVLA.dataloader.mowa.atomic_task_label_builder import (
+    get_builder_for_dataset_path,
+    get_builder_for_task,
+    get_task_name_from_dataset_path,
+)
+from starVLA.dataloader.mowa.label_cache import (
+    label_cache_available,
+    load_label_cache_for_episode,
+)
+from starVLA.dataloader.mowa.opendrawer_label_cache import (
+    load_opendrawer_label_cache_for_episode,
+    opendrawer_label_cache_available,
+)
+from starVLA.dataloader.mowa.latent_cache_dataset import MoWALatentCacheDataset
 
 from functools import partial
 from typing import Tuple, List
@@ -72,6 +94,375 @@ LE_ROBOT3_TASKS_FILENAME = "meta/tasks.parquet"
 LE_ROBOT3_EPISODE_FILENAME = "meta/episodes/*/*.parquet"
 
 
+def _mowa_future_labels_enabled(data_cfg) -> bool:
+    if data_cfg is None:
+        return False
+    return bool(data_cfg.get("enable_mowa_future_labels", False))
+
+
+def _mowa_latent_cache_cfg(data_cfg):
+    if data_cfg is None:
+        return None
+    return data_cfg.get("mowa_latent_cache", None)
+
+
+def _mowa_latent_cache_enabled(data_cfg) -> bool:
+    return _mowa_latent_cache_cfg(data_cfg) is not None
+
+
+def _get_mowa_latent_cache_dataset(dataset) -> MoWALatentCacheDataset:
+    cache_dataset = getattr(dataset, "_mowa_latent_cache_dataset", None)
+    if cache_dataset is not None:
+        return cache_dataset
+
+    cache_cfg = _mowa_latent_cache_cfg(getattr(dataset, "data_cfg", None))
+    if cache_cfg is None:
+        raise RuntimeError("MoWA latent cache is not configured for this dataset.")
+
+    configured_cache_root = cache_cfg.get("cache_root", None)
+    if configured_cache_root is None:
+        raise ValueError("mowa_latent_cache.cache_root is required when latent cache is enabled.")
+    cache_root = _resolve_mowa_cache_root(dataset, cache_cfg, Path(configured_cache_root))
+    manifest_path = cache_cfg.get("manifest_path", None)
+    future_steps = cache_cfg.get("future_window_steps", None)
+    action_chunk_steps = cache_cfg.get("action_chunk_steps", None)
+    if action_chunk_steps is None and future_steps is not None:
+        action_chunk_steps = int(future_steps) * 4
+    cache_dataset = MoWALatentCacheDataset(
+        cache_root=cache_root,
+        manifest_path=manifest_path,
+        # Keep large UMT5 tensors out of worker-to-rank shared-memory batches.
+        # WanPI resolves them from the same cache in each training rank.
+        instruction_text_latent=None,
+        history_steps=cache_cfg.get("history_window_steps", None),
+        future_steps=future_steps,
+        action_chunk_steps=action_chunk_steps,
+        video_keys=tuple(cache_cfg.get("video_keys", ())) or None,
+        raw_episode_cache_size=int(cache_cfg.get("raw_episode_cache_size", 2)),
+    )
+    dataset._mowa_latent_cache_dataset = cache_dataset
+    return cache_dataset
+
+
+def _resolve_mowa_cache_root(dataset, cache_cfg, configured_cache_root: Path) -> Path:
+    """将 atomic 总 cache 根映射到当前 LeRobot 子数据集的 episode cache 根。"""
+
+    if any(configured_cache_root.glob("ep_*.h5")):
+        return configured_cache_root
+    source_root = cache_cfg.get("dataset_path", None)
+    dataset_path = getattr(dataset, "dataset_path", None)
+    if source_root is None or dataset_path is None:
+        return configured_cache_root
+    try:
+        relative_dataset_path = Path(dataset_path).resolve().relative_to(Path(source_root).resolve())
+    except ValueError:
+        return configured_cache_root
+    candidate = configured_cache_root / relative_dataset_path
+    if any(candidate.glob("ep_*.h5")):
+        return candidate
+    return configured_cache_root
+
+
+def _filter_steps_to_mowa_latent_cache(dataset) -> None:
+    if not _mowa_latent_cache_enabled(getattr(dataset, "data_cfg", None)):
+        return
+    cache_dataset = _get_mowa_latent_cache_dataset(dataset)
+    allowed = {
+        (int(artifact[0]), int(artifact[1]))
+        for artifact in cache_dataset.sample_keys
+    }
+    dataset._all_steps = [step for step in dataset._all_steps if (int(step[0]), int(step[1])) in allowed]
+    if not dataset._all_steps:
+        raise RuntimeError(
+            f"MoWA latent cache filter removed every step for dataset {dataset.dataset_path}; "
+            f"available cache keys={cache_dataset.sample_keys}"
+        )
+
+
+def _attach_mowa_latent_cache(sample: dict, dataset, trajectory_id: int, base_index: int) -> dict:
+    if not _mowa_latent_cache_enabled(getattr(dataset, "data_cfg", None)):
+        return sample
+
+    cache_cfg = _mowa_latent_cache_cfg(dataset.data_cfg)
+    cache_dataset = _get_mowa_latent_cache_dataset(dataset)
+    # Manifest rows are view-independent.  The anchor view alone defines the
+    # temporal grid; any additional configured views must not create duplicate
+    # action/state samples.  Keep the anchor configurable so non-RoboCasa
+    # WanPI datasets (e.g. LIBERO primary_image) can reuse the same path.
+    configured_video_keys = tuple(cache_cfg.get("video_keys", ()))
+    video_key = str(
+        cache_cfg.get("anchor_video_key")
+        or (configured_video_keys[0] if configured_video_keys else "observation.images.robot0_agentview_left")
+    )
+    cache_sample = cache_dataset.get_sample(
+        episode_index=int(trajectory_id),
+        anchor_index=int(base_index),
+        video_key=str(video_key),
+    )
+
+    sample["mowa_current_latent"] = cache_sample.get(
+        "mowa_current_latent", cache_sample["current_latent"]
+    )
+    sample["mowa_future_latent_target"] = cache_sample.get("mowa_future_latent_sequence", cache_sample["future_latent"])
+    sample["mowa_history_latent"] = cache_sample["history_latent"]
+    if "mowa_history_valid_mask" in cache_sample:
+        sample["mowa_history_valid_mask"] = cache_sample["mowa_history_valid_mask"]
+    future_mask = cache_sample.get("mowa_future_valid_mask")
+    if future_mask is not None:
+        sample["mowa_future_valid_mask"] = future_mask
+    action_mask = cache_sample.get("mowa_action_valid_mask")
+    # 旧非 Wan regular-grid manifest 合法地使用空 mask；此时不注入，
+    # 由 action head 将整个 action chunk 视为有效。
+    if action_mask is not None and int(action_mask.numel()) > 0:
+        sample["mowa_action_valid_mask"] = action_mask
+    if "mowa_future_done_target" in cache_sample:
+        sample["mowa_future_done_target"] = cache_sample["mowa_future_done_target"]
+    for key in (
+        "mowa_multi_view_video_keys",
+        "mowa_multi_view_history_latents",
+        "mowa_multi_view_current_latents",
+        "mowa_multi_view_future_latents",
+    ):
+        if key in cache_sample:
+            sample[key] = cache_sample[key]
+    sample["mowa_latent_cache_metadata"] = {
+        "episode_index": int(trajectory_id),
+        "anchor_index": int(base_index),
+        "video_key": str(video_key),
+        "cache_root": str(cache_dataset.cache_root),
+        "history_latent_sequence_status": "per_step_history_sequence_from_cache",
+    }
+
+    # WanPI cache path: pass pre-computed visual / text latents so the world
+    # model can skip loading the VAE and UMT5 text encoder.
+    if "visual_latent" in cache_sample:
+        sample["visual_latent"] = cache_sample["visual_latent"]
+    if "text_embeds" in cache_sample:
+        sample["text_embeds"] = cache_sample["text_embeds"]
+    if "text_attention_mask" in cache_sample:
+        sample["text_attention_mask"] = cache_sample["text_attention_mask"]
+    if "lang" in cache_sample:
+        sample["lang"] = cache_sample["lang"]
+    task_name = get_task_name_from_dataset_path(dataset.dataset_path)
+    if task_name is not None:
+        sample["mowa_task_name"] = task_name
+    return sample
+
+
+def _attach_mowa_future_labels(sample: dict, dataset, trajectory_id: int, base_index: int) -> dict:
+    if not _mowa_future_labels_enabled(getattr(dataset, "data_cfg", None)):
+        return sample
+
+    trajectory_data = getattr(dataset, "curr_traj_data", None)
+    if trajectory_data is None:
+        trajectory_data = dataset.get_trajectory_data(trajectory_id)
+    if len(trajectory_data) == 0:
+        raise ValueError(f"MoWA future labels require non-empty trajectory: {trajectory_id}")
+
+    row_index = min(int(base_index), len(trajectory_data) - 1)
+    row = trajectory_data.iloc[row_index]
+    required_columns = ("frame_index", "next.reward", "next.done")
+    missing = tuple(column for column in required_columns if column not in trajectory_data.columns)
+    if missing:
+        raise ValueError(f"MoWA future labels missing required columns: {missing}")
+
+    denominator = max(len(trajectory_data) - 1, 1)
+    reward = float(row["next.reward"])
+    done = bool(row["next.done"])
+    masks = {head: head in MOWA_FUTURE_CONSTRUCTIBLE_HEADS for head in MOWA_FUTURE_FULL_HEADS}
+    # Production targets are tensor-ready values; class_mapping_status stays in
+    # metadata while smoke label reports may keep a richer dict for inspection.
+    sample["mowa_future_targets"] = {
+        "task_progress": float(row["frame_index"]) / denominator,
+        "action_outcome_class": [reward, 1.0 if done else 0.0],
+    }
+    sample["mowa_future_masks"] = masks
+    sample["mowa_future_metadata"] = {
+        "trajectory_id": int(trajectory_id),
+        "base_index": int(base_index),
+        "row_index": row_index,
+        "constructible_heads": list(MOWA_FUTURE_CONSTRUCTIBLE_HEADS),
+        "masked_heads": [head for head in MOWA_FUTURE_FULL_HEADS if not masks[head]],
+        "label_status": "constructible_from_parquet_fields",
+        "class_mapping_status": MOWA_ACTION_OUTCOME_CLASS_MAPPING_STATUS,
+        "class_mapping_version": MOWA_ACTION_OUTCOME_CLASS_MAPPING_VERSION,
+        "class_mapping_note": MOWA_ACTION_OUTCOME_CLASS_MAPPING_NOTE,
+    }
+
+    # State-derived labels: if a pre-computed sidecar exists for this task,
+    # merge subgoal_feasibility / manipulation_readiness / failure_risk into
+    # the sample.  This avoids online MuJoCo XML parsing during training.
+    dataset_path = getattr(dataset, "dataset_path", None)
+    if dataset_path is not None:
+        # Generic task dispatch.
+        builder = get_builder_for_dataset_path(dataset_path)
+        if builder is not None and label_cache_available(builder, dataset_path):
+            cache = load_label_cache_for_episode(builder, dataset_path, int(trajectory_id))
+            if cache is not None:
+                _merge_task_label_cache(sample, cache, row_index)
+        # Backward compatibility: legacy OpenDrawer sidecars under
+        # ``mowa_future_labels/opendrawer/``.
+        elif opendrawer_label_cache_available(dataset_path):
+            cache = load_opendrawer_label_cache_for_episode(dataset_path, int(trajectory_id))
+            if cache is not None:
+                _merge_opendrawer_label_cache(sample, cache, row_index)
+
+    return sample
+
+
+def _merge_opendrawer_label_cache(
+    sample: dict,
+    cache: dict,
+    row_index: int,
+) -> None:
+    """Merge a pre-computed OpenDrawer label sidecar into a training sample.
+
+    The sidecar provides subgoal_feasibility / manipulation_readiness /
+    failure_risk labels and masks.  failure_risk is kept masked if the cached
+    labels are single-class (all zeros), because a head with no positive
+    examples has no training signal.
+    """
+    if row_index >= len(cache["frame_index"]):
+        return
+
+    cache_labels = cache["labels"]
+    cache_masks = cache["masks"]
+
+    sample["mowa_future_targets"]["subgoal_feasibility"] = float(
+        cache_labels["subgoal_feasibility"][row_index]
+    )
+    sample["mowa_future_targets"]["manipulation_readiness"] = float(
+        cache_labels["manipulation_readiness"][row_index]
+    )
+    sample["mowa_future_targets"]["failure_risk"] = float(
+        cache_labels["failure_risk"][row_index]
+    )
+    sample["mowa_future_targets"]["object_visibility_future"] = float(
+        cache_labels.get("object_visibility_future", [0.0])[row_index]
+        if "object_visibility_future" in cache_labels
+        else 0.0
+    )
+    sample["mowa_future_targets"]["next_best_view_score"] = float(
+        cache_labels.get("next_best_view_score", [0.0])[row_index]
+        if "next_best_view_score" in cache_labels
+        else 0.0
+    )
+
+    sample["mowa_future_masks"]["subgoal_feasibility"] = bool(
+        cache_masks["subgoal_feasibility"][row_index]
+    )
+    sample["mowa_future_masks"]["manipulation_readiness"] = bool(
+        cache_masks["manipulation_readiness"][row_index]
+    )
+    sample["mowa_future_masks"]["object_visibility_future"] = bool(
+        cache_masks.get("object_visibility_future", [False])[row_index]
+        if "object_visibility_future" in cache_masks
+        else False
+    )
+    sample["mowa_future_masks"]["next_best_view_score"] = bool(
+        cache_masks.get("next_best_view_score", [False])[row_index]
+        if "next_best_view_score" in cache_masks
+        else False
+    )
+
+    failure_risk_mask = bool(cache_masks["failure_risk"][row_index])
+    failure_risk_values = cache_labels["failure_risk"]
+    failure_risk_array = (
+        failure_risk_values
+        if isinstance(failure_risk_values, np.ndarray)
+        else np.asarray([failure_risk_values])
+    )
+    # Keep failure_risk masked in production if the cached distribution is
+    # single-class (no positive examples); otherwise respect the cache mask.
+    if failure_risk_mask and int(failure_risk_array.sum()) == 0:
+        sample["mowa_future_masks"]["failure_risk"] = False
+        sample["mowa_future_metadata"]["failure_risk_single_class_override"] = True
+    else:
+        sample["mowa_future_masks"]["failure_risk"] = failure_risk_mask
+
+    sample["mowa_future_metadata"]["label_status"] = "merged_opendrawer_label_cache"
+    sample["mowa_future_metadata"]["constructible_heads"] = [
+        head for head in MOWA_FUTURE_FULL_HEADS if sample["mowa_future_masks"][head]
+    ]
+    sample["mowa_future_metadata"]["masked_heads"] = [
+        head for head in MOWA_FUTURE_FULL_HEADS if not sample["mowa_future_masks"][head]
+    ]
+
+
+def _merge_task_label_cache(
+    sample: dict,
+    cache: dict,
+    row_index: int,
+) -> None:
+    """Merge a generic task label sidecar into a training sample.
+
+    Mirrors ``_merge_opendrawer_label_cache`` but uses a generic label status.
+    """
+    if row_index >= len(cache["frame_index"]):
+        return
+
+    cache_labels = cache["labels"]
+    cache_masks = cache["masks"]
+
+    sample["mowa_future_targets"]["subgoal_feasibility"] = float(
+        cache_labels["subgoal_feasibility"][row_index]
+    )
+    sample["mowa_future_targets"]["manipulation_readiness"] = float(
+        cache_labels["manipulation_readiness"][row_index]
+    )
+    sample["mowa_future_targets"]["failure_risk"] = float(
+        cache_labels["failure_risk"][row_index]
+    )
+    sample["mowa_future_targets"]["object_visibility_future"] = float(
+        cache_labels.get("object_visibility_future", [0.0])[row_index]
+        if "object_visibility_future" in cache_labels
+        else 0.0
+    )
+    sample["mowa_future_targets"]["next_best_view_score"] = float(
+        cache_labels.get("next_best_view_score", [0.0])[row_index]
+        if "next_best_view_score" in cache_labels
+        else 0.0
+    )
+
+    sample["mowa_future_masks"]["subgoal_feasibility"] = bool(
+        cache_masks["subgoal_feasibility"][row_index]
+    )
+    sample["mowa_future_masks"]["manipulation_readiness"] = bool(
+        cache_masks["manipulation_readiness"][row_index]
+    )
+    sample["mowa_future_masks"]["object_visibility_future"] = bool(
+        cache_masks.get("object_visibility_future", [False])[row_index]
+        if "object_visibility_future" in cache_masks
+        else False
+    )
+    sample["mowa_future_masks"]["next_best_view_score"] = bool(
+        cache_masks.get("next_best_view_score", [False])[row_index]
+        if "next_best_view_score" in cache_masks
+        else False
+    )
+
+    failure_risk_mask = bool(cache_masks["failure_risk"][row_index])
+    failure_risk_values = cache_labels["failure_risk"]
+    failure_risk_array = (
+        failure_risk_values
+        if isinstance(failure_risk_values, np.ndarray)
+        else np.asarray([failure_risk_values])
+    )
+    if failure_risk_mask and int(failure_risk_array.sum()) == 0:
+        sample["mowa_future_masks"]["failure_risk"] = False
+        sample["mowa_future_metadata"]["failure_risk_single_class_override"] = True
+    else:
+        sample["mowa_future_masks"]["failure_risk"] = failure_risk_mask
+
+    sample["mowa_future_metadata"]["label_status"] = "merged_task_label_cache"
+    sample["mowa_future_metadata"]["constructible_heads"] = [
+        head for head in MOWA_FUTURE_FULL_HEADS if sample["mowa_future_masks"][head]
+    ]
+    sample["mowa_future_metadata"]["masked_heads"] = [
+        head for head in MOWA_FUTURE_FULL_HEADS if not sample["mowa_future_masks"][head]
+    ]
+
+
 def calculate_dataset_statistics(parquet_paths: list[Path]) -> dict:
     """Calculate the dataset statistics of all columns for a list of parquet files."""
     # Dataset statistics
@@ -86,7 +477,13 @@ def calculate_dataset_statistics(parquet_paths: list[Path]) -> dict:
         parquet_data = pd.read_parquet(parquet_path)
         parquet_data = parquet_data
         all_low_dim_data_list.append(parquet_data)
-    
+
+    if not all_low_dim_data_list:
+        raise FileNotFoundError(
+            f"No parquet files found under the provided paths: {[str(p) for p in parquet_paths[:3]]}..."
+            f" — make sure the dataset has been downloaded/converted before training."
+        )
+
     all_low_dim_data = pd.concat(all_low_dim_data_list, axis=0)
     # Compute dataset statistics
     dataset_statistics = {}
@@ -230,7 +627,8 @@ def _compute_statistics_for_mode(
     action_mode_apply_keys: list[str] | None,
     action_mode_state_map: dict[str, str] | None,
 ) -> dict:
-    print(f"[RANK 0] Calculating dataset statistics for {dataset_name} (mode={action_mode})")
+    if int(os.environ.get("RANK", "0")) == 0:
+        print(f"[RANK 0] Calculating dataset statistics for {dataset_name} (mode={action_mode})")
 
     base_stats = calculate_dataset_statistics(parquet_paths)
     
@@ -628,11 +1026,12 @@ class LeRobotSingleDataset(Dataset):
         self._modality_keys = self._get_modality_keys()
         self._delta_indices = self._get_delta_indices()
         self._all_steps = self._get_all_steps()
+        _filter_steps_to_mowa_latent_cache(self)
         self.set_transforms_metadata(self.metadata)
         self.set_epoch(0)
 
-        print(f"Initialized dataset {self.dataset_name} with {embodiment_tag}")
-
+        if int(os.environ.get("RANK", "0")) == 0:
+            print(f"Initialized dataset {self.dataset_name} with {embodiment_tag}")
 
         # Check if the dataset is valid
         self._check_integrity()
@@ -1366,7 +1765,9 @@ class LeRobotSingleDataset(Dataset):
         trajectory_id, base_index = self.all_steps[index]
         raw_data = self.get_step_data(trajectory_id, base_index)
         data = self.transforms(raw_data)
-        return self._pack_sample(data)
+        sample = self._pack_sample(data)
+        sample = _attach_mowa_future_labels(sample, self, trajectory_id, base_index)
+        return _attach_mowa_latent_cache(sample, self, trajectory_id, base_index)
 
     def _pack_sample(self, data: dict) -> dict:
         """Pack transformed modality data into training sample format."""
@@ -1391,10 +1792,19 @@ class LeRobotSingleDataset(Dataset):
 
         if self.data_cfg is not None and self.data_cfg.get("include_state", False) not in ["False", False]:
             state = []
-            for state_key in self.modality_keys["state"]:
+            for state_key in self.modality_keys.get("state", []):
                 state.append(data[state_key])
-            state = np.concatenate(state, axis=1).astype(np.float16)
-            sample["state"] = state
+            if not state:
+                import warnings
+                warnings.warn(
+                    "include_state=True but no state modality keys found in modality_configs "
+                    "(state modality may be disabled in the dataset's DataConfig). "
+                    "Skipping state packing.",
+                    stacklevel=2,
+                )
+            else:
+                state = np.concatenate(state, axis=1).astype(np.float16)
+                sample["state"] = state
 
         return sample
 
@@ -1852,9 +2262,11 @@ class LeRobotSingleDataset(Dataset):
                 # Combine statistics from filtered action sub-keys
                 combined_action_stats = combine_modality_stats(filtered_action_stats)
                 
-                # Add mask field based on whether it's gripper or not
+                # mask=False for dimensions whose normalization mode is "binary"
+                _action_norm_modes = _extract_action_normalization_modes(self.transforms)
                 mask = generate_action_mask_for_used_keys(
-                    self.metadata.modalities.action, filtered_action_stats.keys()
+                    self.metadata.modalities.action, filtered_action_stats.keys(),
+                    normalization_modes=_action_norm_modes,
                 )
                 combined_action_stats["mask"] = mask
                 
@@ -2060,38 +2472,64 @@ def combine_modality_stats(modality_stats: dict) -> dict:
     
     return combined_stats
 
-def generate_action_mask_for_used_keys(action_modalities: dict, used_action_keys_ordered) -> list[bool]:
+def _extract_action_normalization_modes(transforms) -> dict:
+    """Extract normalization modes for action keys from a ComposedModalityTransform.
+
+    Returns:
+        dict: {subkey_without_action_prefix -> normalization_mode_str}
     """
-    Generate mask based on action modalities, but only for used keys.
-    Gripper-related are False, others are True.
-    
+    modes = {}
+    for t in transforms.transforms:
+        if isinstance(t, StateActionTransform):
+            for key, mode in t.normalization_modes.items():
+                if key.startswith("action."):
+                    subkey = key[len("action."):]
+                    modes[subkey] = mode
+    return modes
+
+
+def generate_action_mask_for_used_keys(
+    action_modalities: dict,
+    used_action_keys_ordered,
+    normalization_modes: dict | None = None,
+) -> list[bool]:
+    """Generate per-dimension mask for action statistics.
+
+    A dimension gets ``mask=False`` only when its normalization mode is ``"binary"``.
+    This tells the inference code to skip continuous de-normalization for that dimension.
+    All other modes (q99, mean_std, min_max ...) produce ``mask=True``.
+
     Args:
         action_modalities (dict): Configuration information for action modalities.
-        used_action_keys_ordered: Iterable of actually used action keys in the correct order.
-        
+        used_action_keys_ordered: Iterable of actually used action keys (no "action." prefix).
+        normalization_modes (dict | None): Mapping {subkey -> mode} (no "action." prefix).
+            If ``None``, all dimensions default to ``mask=True``.
+
     Returns:
-        list[bool]: List of mask values
+        list[bool]: Per-dimension mask values.
     """
     mask = []
-    
-    # Generate mask in the same order as the statistics were combined
+
     for subkey in used_action_keys_ordered:
         if subkey in action_modalities:
             subkey_config = action_modalities[subkey]
-            
+
             # Get dimension count from shape
             if hasattr(subkey_config, 'shape') and len(subkey_config.shape) > 0:
                 dim_count = subkey_config.shape[0]
             else:
                 dim_count = 1
-            
-            # Check if it's gripper-related
-            is_gripper = "gripper" in subkey.lower()
-            
-            # Generate mask value for each dimension
+
+            # mask=False only when the normalization mode is explicitly "binary"
+            is_binary = (
+                normalization_modes.get(subkey) == "binary"
+                if normalization_modes is not None
+                else False
+            )
+
             for _ in range(dim_count):
-                mask.append(not is_gripper)  # gripper is False, others are True
-    
+                mask.append(not is_binary)
+
     return mask
 
 def get_used_modality_keys(modality_keys: dict) -> tuple[list, list]:
@@ -2230,21 +2668,6 @@ class LeRobotMixtureDataset(Dataset):
         # Set the epoch and sample the first epoch
         self.set_epoch(0)
 
-        self._sequential_step_sampling = True
-        if self.data_cfg is not None:
-            seq_cfg = self.data_cfg.get("sequential_step_sampling", True)
-            self._sequential_step_sampling = seq_cfg not in ["False", False]
-
-        self._step_order: list[np.ndarray] = []
-        self._step_pos: list[int] = []
-        if self._sequential_step_sampling:
-            for dataset in self.datasets:
-                self._step_order.append(np.arange(len(dataset.all_steps)))
-                if self.mode == "train":
-                    rng = np.random.default_rng(self.seed)
-                    rng.shuffle(self._step_order[-1])
-                self._step_pos.append(0)
-
         self.update_metadata(metadata_config)
 
     @property
@@ -2297,6 +2720,11 @@ class LeRobotMixtureDataset(Dataset):
         # Sample dataset
         dataset_index = rng.choice(len(self.datasets), p=self.dataset_sampling_weights)
         dataset = self.datasets[dataset_index]
+
+        if _mowa_latent_cache_enabled(getattr(dataset, "data_cfg", None)):
+            step_index = int(rng.integers(len(dataset.all_steps)))
+            trajectory_id, base_index = dataset.all_steps[step_index]
+            return dataset, trajectory_id, base_index
 
         # Sample trajectory
         trajectory_index = rng.choice(
@@ -2354,6 +2782,8 @@ class LeRobotMixtureDataset(Dataset):
                 raw_data = dataset.get_step_data(trajectory_id, step)    
                 data = dataset.transforms(raw_data)
                 sample = dataset._pack_sample(data)
+                sample = _attach_mowa_future_labels(sample, dataset, trajectory_id, step)
+                sample = _attach_mowa_latent_cache(sample, dataset, trajectory_id, step)
                 
                 return sample
                 
@@ -2686,8 +3116,17 @@ class LeRobotMixtureDataset(Dataset):
                 if filtered_action_stats:
                     combined_action_stats = combine_modality_stats(filtered_action_stats)
                     
+                    # Collect action normalization modes from datasets of this tag.
+                    # "binary" takes precedence: if any dataset marks a key as binary, use binary.
+                    _action_norm_modes: dict = {}
+                    for _ds in self.datasets:
+                        if _ds.tag == tag:
+                            for _k, _m in _extract_action_normalization_modes(_ds.transforms).items():
+                                if _k not in _action_norm_modes or _m == "binary":
+                                    _action_norm_modes[_k] = _m
                     mask = generate_action_mask_for_used_keys(
-                        merged_metadata.modalities.action, filtered_action_stats.keys()
+                        merged_metadata.modalities.action, filtered_action_stats.keys(),
+                        normalization_modes=_action_norm_modes,
                     )
                     combined_action_stats["mask"] = mask
                     
@@ -2843,5 +3282,5 @@ class LeRobotMixtureDataset(Dataset):
         for dataset in self.datasets:
             if dataset.tag in self.merged_metadata:
                 dataset.set_transforms_metadata(self.merged_metadata[dataset.tag])
-        
+
         print(f"Applied cached statistics for {len(self.merged_metadata)} embodiment tags.")

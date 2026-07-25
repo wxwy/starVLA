@@ -1,0 +1,24 @@
+project_short_name: MoWA
+stage: hlc_gci
+task_id: M4-003
+experiment_id: E-005
+config_role: shuffled_robot_sanity_plan_smoke
+
+plan:
+  episode_indices: [0, 1, 4]
+  history_source: robot_history_latent_only
+  shuffle_policy: cyclic_non_self
+  expected_outcome: shuffled_robot_metrics_drop
+  metric_scope:
+    - action_success_rate
+    - action_loss
+  future_action_policy: target_only
+
+status:
+  rollout_status: Data Gate
+  metric_status: Data Gate
+  leakage_status: Data Gate
+
+unresolved_items:
+  - This smoke only validates pair construction and plan constraints.
+  - Real shuffled-robot evaluation still depends on trained checkpoints.

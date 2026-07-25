@@ -10,6 +10,7 @@ N_EPISODES=${N_EPISODES:-5}
 N_ENVS=${N_ENVS:-1}
 MAX_STEPS=${MAX_STEPS:-500}
 N_ACT=${N_ACT:-8}
+WAN_HISTORY_FRAMES=${WAN_HISTORY_FRAMES:-5}
 
 case "${1:-}" in
   server)
@@ -28,7 +29,8 @@ case "${1:-}" in
       --args.n-episodes "${N_EPISODES}" \
       --args.n-envs "${N_ENVS}" \
       --args.max-episode-steps "${MAX_STEPS}" \
-      --args.n-action-steps "${N_ACT}"
+      --args.n-action-steps "${N_ACT}" \
+      --args.wan-history-frames "${WAN_HISTORY_FRAMES}"
     ;;
   *)
     cat <<USAGE
@@ -38,7 +40,7 @@ Usage:
   # terminal 2 (conda env robocasa365):
   bash examples/Robocasa_365/eval_files/run_eval.sh client
 
-Override defaults with env vars: CKPT, ENV_NAME, PORT, N_EPISODES, N_ENVS, MAX_STEPS, N_ACT.
+Override defaults with env vars: CKPT, ENV_NAME, PORT, N_EPISODES, N_ENVS, MAX_STEPS, N_ACT, WAN_HISTORY_FRAMES.
 USAGE
     ;;
 esac

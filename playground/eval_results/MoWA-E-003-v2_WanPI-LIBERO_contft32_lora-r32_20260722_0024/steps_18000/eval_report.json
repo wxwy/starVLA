@@ -1,0 +1,209 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 5,
+  "max_tasks": -1,
+  "checkpoint_path": "playground/mowa_ckpt/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/checkpoints/steps_18000",
+  "checkpoint_step": "steps_18000",
+  "checkpoint_hash": "6c9b26253aa6e9b9b41e9606a7a972ea4498f26fc261f15317170e7be43639d3",
+  "config_path": "playground/mowa_ckpt/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/checkpoints/steps_18000/config.yaml",
+  "config_hash": "121baf2340597ba71fc1afda378b8586059464b83be003f5ed0d58b988cfdb7a",
+  "data_version": {
+    "data_mix": "robocasa365_atomic_target_human_all",
+    "data_root_dir": "playground/Datasets/robocasa365",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "d147ea7abcc452c58c4a71285e7dd2338e8e2419ad1e4c2feea2f22682cf9be0"
+  },
+  "starflow_mapping": {
+    "schema_version": "future_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "LayerwiseFM",
+    "state_mode": "continuous_head",
+    "state_enters_instruction": false,
+    "state_enters_action_head": true,
+    "adapter_mode": "future_token_cross_dit",
+    "starflow_ft_variant": "ft0",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 0,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "model": {
+    "framework_name": "WanPI",
+    "vlm": "Wan2.2-TI2V-5B-Diffusers",
+    "action_head": "LayerwiseFM"
+  },
+  "total_episodes": 10,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "runtime_error": 10
+  },
+  "tasks": [
+    {
+      "task_description": "open the middle drawer of the cabinet",
+      "episodes": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "runtime_error": 5
+      }
+    },
+    {
+      "task_description": "put the bowl on the stove",
+      "episodes": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "runtime_error": 5
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "Error in inference server:\nTraceback (most recent call last):\n  File \"/disk/rl/starVLA/deployment/model_server/tools/websocket_policy_server.py\", line 179, in _handler\n    ret = await future\n          ^^^^^^^^^^^^\n  File \"/disk/rl/starVLA/deployment/model_server/tools/websocket_policy_server.py\", line 124, in _process_batch\n    output_dict = self._policy.predict_action(examples=examples, **kwargs_common)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/disk/rl/starVLA/deployment/model_server/policy_wrapper.py\", line 193, in predict_action\n    out = self._framework.predict_action(examples=examples, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/disk/rl/starVLA/.venv/lib/python3.11/site-packages/torch/utils/_contextlib.py\", line 116, in decorate_context\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/disk/rl/starVLA/starVLA/model/framework/WM4A/WanPI.py\", line 1543, in predict_action\n    state = _prepare_action_state(\n            ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/disk/rl/starVLA/starVLA/model/framework/WM4A/WanPI.py\", line 92, in _prepare_action_state\n    raise ValueError(\nValueError: MoWA action state_dim mismatch: expected 32, got 16.\n",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_open_the_middle_drawer_of_the_cabinet_episode0_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_open_the_middle_drawer_of_the_cabinet_episode1_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 2,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_open_the_middle_drawer_of_the_cabinet_episode2_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 3,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_open_the_middle_drawer_of_the_cabinet_episode3_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 4,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_open_the_middle_drawer_of_the_cabinet_episode4_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 1,
+      "task_description": "put the bowl on the stove",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_put_the_bowl_on_the_stove_episode0_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 1,
+      "task_description": "put the bowl on the stove",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_put_the_bowl_on_the_stove_episode1_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 1,
+      "task_description": "put the bowl on the stove",
+      "episode_idx": 2,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_put_the_bowl_on_the_stove_episode2_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 1,
+      "task_description": "put the bowl on the stove",
+      "episode_idx": 3,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_put_the_bowl_on_the_stove_episode3_failure.mp4",
+      "chunk_timings": {}
+    },
+    {
+      "task_id": 1,
+      "task_description": "put the bowl on the stove",
+      "episode_idx": 4,
+      "success": false,
+      "failure_category": "runtime_error",
+      "runtime_error": "received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.",
+      "steps_executed": 0,
+      "model_calls": 0,
+      "total_infer_elapsed_sec": 0.0,
+      "avg_infer_elapsed_sec": 0.0,
+      "video_path": "playground/eval_results/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024/steps_18000/rollout_put_the_bowl_on_the_stove_episode4_failure.mp4",
+      "chunk_timings": {}
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+project_short_name: MoWA
+stage: full_heads
+experiment_id: E-006
+config_role: eval_load_smoke
+
+checkpoint:
+  run_id: latest_complete
+  run_dir: latest_complete
+  eval_candidate_checkpoint: latest_complete
+  final_model_checkpoint: latest_complete
+  checkpoint_root_policy: playground/mowa_ckpt
+
+eval_load_smoke:
+  execute_model_load: optional_via_cli
+  preferred_format: safetensors
+  required_sidecars:
+    - config.full.yaml
+    - dataset_statistics.json
+    - starflow_mapping.json
+    - trainer_state.json
+  required_training_state:
+    - optimizer_rank_00000.pt
+    - scheduler.pt
+    - random_states_0.pkl
+
+launch_guard:
+  eval_started: false
+  policy_eval_started: false
+  reason: load smoke only; no policy rollout
+
+unresolved_items:
+  - E-006 policy rollout environment/runtime is not launched by this smoke.
+  - Checkpoint uses mowa_future_feature_heads bridge feature source, but action-gain evidence is still pending.

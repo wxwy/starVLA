@@ -1,0 +1,111 @@
+project_short_name: MoWA
+stage: full_heads
+experiment_id: E-001
+experiment_name: FullHeads vs VLA baseline
+config_role: launch_draft_not_executable
+
+launch:
+  launch_ready: true
+  training_started: true
+  requires_human_confirmation: true
+  human_confirmed: true
+  training_completed_1000_steps: true
+  reason: short smoke training (1000 steps, bs4) completed; long-training resource policy, core SOT, and action-gain evidence remain unconfirmed for full-scale training
+
+references:
+  interface_config: configs/mowa/mowa_full_heads_interface.yaml
+  runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
+  readiness_report: docs_zh/mowa/mowa_e001_readiness_smoke.json
+  launch_candidate_smoke_report: docs_zh/mowa/mowa_e001_launch_candidate_smoke.json
+  paired_comparison_smoke_report: docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json
+  production_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_preflight_smoke.json
+  production_window_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
+  full_heads_train_smoke_report: docs_zh/mowa/mowa_full_heads_constructible_train_smoke.json
+  a100_throughput_smoke_report: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
+
+data:
+  recipe_name: mowa_robocasa365_target_human_atomic_core_v1
+  split: target
+  source: human
+  task_type: atomic
+  train_episode_count: 4544
+  val_episode_count: 511
+  split_strategy: episode_index_modulo
+  val_every: 10
+  split_status: smoke_passed
+  production_preflight: smoke_passed
+
+model:
+  type: MoWAFutureFullHeads
+  heads:
+    full:
+      - task_progress
+      - manipulation_readiness
+      - failure_risk
+      - next_best_view_score
+      - subgoal_feasibility
+      - object_visibility_future
+      - action_outcome_class
+    active_for_initial_launch_draft:
+      - task_progress
+      - action_outcome_class
+    masked_until_data_gate:
+      - manipulation_readiness
+      - failure_risk
+      - next_best_view_score
+      - subgoal_feasibility
+      - object_visibility_future
+  label_policy: mask_missing_heads
+  class_mapping_status: confirmed_for_e001_initial_target
+
+training:
+  counted_in_experiment_budget: true
+  max_train_steps: TBD
+  per_device_batch_size: TBD
+  gradient_accumulation_steps: TBD
+  learning_rate: TBD
+  raw_action_hz: 20
+  raw_state_hz: 20
+  wam_hz: 5
+  wam_stride: 4
+  history_window_seconds: 2.0
+  history_steps: 10
+  future_window_seconds: 1.0
+  future_steps: 5
+  action_chunk_seconds: 0.5
+  action_chunk_steps: 10
+  temporal_policy_status: confirmed_for_e001_initial_target
+  temporal_policy_evidence: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
+  per_device_batch_size_smoke_observed: 8
+  gradient_accumulation_steps_smoke_observed: 8
+  effective_batch_size_smoke_observed: 64
+  full_vla_runtime_sweep_report: docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_smoke.json
+  full_vla_runtime_sweep_bs4_report: docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json
+  full_vla_runtime_bs4_status: bounded_2_step_passed_skip_final_checkpoint
+  full_vla_runtime_bs4_last_step_time_sec: 1.5000371620990336
+  full_vla_runtime_bs4_samples_per_sec: 2.666600602349555
+  expected_vram: bounded_full_vla_bs4_peak_46.817GB_reserved_50.137GB
+  expected_runtime: TBD_full_e001_training
+  initial_full_vla_smoke_batch_size: 4
+  initial_full_vla_target_gradient_accumulation_steps: 1
+
+checkpoint:
+  runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
+  run_root_dir: playground/mowa_ckpt
+  save_interval: initial_target_1000
+  resume_policy: resume_latest_complete_only
+  checkpoint_format: lightweight
+  delete_or_overwrite_policy: no_delete_without_confirmation
+  save_resume_smoke_status: passed_steps_1_to_2
+  eval_load_smoke_status: passed_steps_2_model_load
+
+logging:
+  wandb_mode: disabled_for_initial_training
+  wandb_project: TBD
+  logging_frequency: 10
+
+launch_blockers:
+  - resource policy remains unconfirmed for full E-001 long training
+  - StarFlow ft0 baseline/MoWA launch candidates are aligned and gated, but action-gain evidence is not validated
+  - batch size 4 / expected VRAM are bounded-smoke observed only, not long-training confirmed
+  - executable training command candidate exists and is human-confirmed

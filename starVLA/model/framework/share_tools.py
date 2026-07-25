@@ -10,7 +10,6 @@ import functools
 import gc
 import inspect
 import json
-import os
 import re
 from pathlib import Path
 from types import SimpleNamespace
@@ -239,9 +238,55 @@ def _collect_checkpoint_keys_from_index(checkpoint_dir: Path) -> set[str]:
     return set()
 
 
+def _expand_checkpoint_key_for_compatibility(key: str) -> set[str]:
+    if key.startswith("mowa_layerwise_bridge_p0_heads."):
+        return {
+            key,
+            key.replace(
+                "mowa_layerwise_bridge_p0_heads.",
+                "mowa_layerwise_bridge_future_feature_heads.",
+                1,
+            ),
+        }
+    if key.startswith("mowa_layerwise_bridge_future_heads."):
+        return {
+            key,
+            key.replace(
+                "mowa_layerwise_bridge_future_heads.",
+                "mowa_layerwise_bridge_future_feature_heads.",
+                1,
+            ),
+        }
+    return {key}
+
+
+def _expand_model_key_for_compatibility(key: str) -> set[str]:
+    if key.startswith("mowa_layerwise_bridge_future_feature_heads."):
+        return {
+            key,
+            key.replace(
+                "mowa_layerwise_bridge_future_feature_heads.",
+                "mowa_layerwise_bridge_future_heads.",
+                1,
+            ),
+            key.replace(
+                "mowa_layerwise_bridge_future_feature_heads.",
+                "mowa_layerwise_bridge_p0_heads.",
+                1,
+            ),
+        }
+    return {key}
+
+
 def _filter_strict_key_mismatches(model_keys: set[str], checkpoint_keys: set[str]) -> tuple[list[str], list[str]]:
-    missing_keys = set(model_keys - checkpoint_keys)
-    unexpected_keys = set(checkpoint_keys - model_keys)
+    normalized_checkpoint_keys = set()
+    for key in checkpoint_keys:
+        normalized_checkpoint_keys.update(_expand_checkpoint_key_for_compatibility(key))
+    normalized_model_keys = set()
+    for key in model_keys:
+        normalized_model_keys.update(_expand_model_key_for_compatibility(key))
+    missing_keys = set(model_keys - normalized_checkpoint_keys)
+    unexpected_keys = set(normalized_checkpoint_keys - normalized_model_keys)
 
     # HF/Qwen-style safetensors checkpoints may omit tied lm_head weights and
     # still keep non-persistent rotary caches in the serialized weight map.
@@ -249,19 +294,75 @@ def _filter_strict_key_mismatches(model_keys: set[str], checkpoint_keys: set[str
         if not missing_key.endswith(".lm_head.weight"):
             continue
         embed_key = missing_key.replace(".lm_head.weight", ".model.language_model.embed_tokens.weight")
-        if embed_key in checkpoint_keys:
+        if embed_key in normalized_checkpoint_keys:
             missing_keys.remove(missing_key)
 
     unexpected_keys = {
-        key for key in unexpected_keys if not key.endswith(".rotary_emb.inv_freq") and not key.endswith(".rotary_pos_emb.inv_freq")
+        key
+        for key in unexpected_keys
+        if not key.endswith(".rotary_emb.inv_freq")
+        and not key.endswith(".rotary_pos_emb.inv_freq")
+        # Wan checkpoint exports its computed RoPE tables and MoWA cross-view
+        # diagnostic buffers even though both are rebuilt at model construction.
+        and not key.endswith(".rope.freqs_cos")
+        and not key.endswith(".rope.freqs_sin")
+        and not key.endswith(".last_output_norm")
+        and not key.endswith(".last_grad_norm")
+        and not key.endswith(".last_residual_ratio")
     }
 
     return sorted(missing_keys), sorted(unexpected_keys)
 
 
+def _checkpoint_omits_frozen_backbone(checkpoint_path: Path) -> bool:
+    trainer_state_path = checkpoint_path / "trainer_state.json"
+    if not trainer_state_path.is_file():
+        return False
+    try:
+        trainer_state = json.loads(trainer_state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return trainer_state.get("omitted_model_state_prefixes") == ["backbone."]
+
+
+def _validate_partial_frozen_backbone_load(model, checkpoint_keys: set[str]) -> None:
+    model_keys = set(model.state_dict().keys())
+    missing_keys, unexpected_keys = _filter_strict_key_mismatches(model_keys, checkpoint_keys)
+    # Lightweight checkpoints omit only the frozen backbone tensors.  LoRA
+    # tensors live under ``backbone.*`` too, but are trainable and must be
+    # present; otherwise inference would silently fall back to zero-init
+    # adapters.  Keep the omission rule identical to the saver.
+    initialized_frozen_backbone_keys = {
+        key
+        for key in model_keys
+        if key.startswith("backbone.") and "lora_" not in key
+    }
+    covered_model_keys = (model_keys & checkpoint_keys) | initialized_frozen_backbone_keys
+    uncovered_model_keys = model_keys - covered_model_keys
+    invalid_missing_keys = [key for key in missing_keys if key not in initialized_frozen_backbone_keys]
+    if uncovered_model_keys != set(invalid_missing_keys):
+        raise RuntimeError(
+            "Partial frozen-backbone checkpoint coverage mismatch: "
+            f"uncovered={sorted(uncovered_model_keys)}, "
+            f"missing_non_omitted={sorted(invalid_missing_keys)}"
+        )
+    if invalid_missing_keys or unexpected_keys:
+        raise RuntimeError(
+            f"Error(s) in loading state_dict for {type(model).__name__}:\n\t"
+            "A partial frozen-backbone checkpoint may omit only frozen non-LoRA `backbone.*`; "
+            f"missing non-omitted key(s): {invalid_missing_keys}\n\t"
+            f"Unexpected key(s) in state_dict: {unexpected_keys}"
+        )
+
+
 def load_model_weights(model, pretrained_checkpoint, preferred_format=None, strict=False):
     resolved = _resolve_model_checkpoint_artifact(pretrained_checkpoint, preferred_format=preferred_format)
     checkpoint_path = resolved["path"]
+    # `resolved["path"]` is the inner model.safetensors for a single-file
+    # lightweight directory.  The omission manifest lives beside that file,
+    # so inspect the caller-provided checkpoint directory instead.
+    checkpoint_root = Path(pretrained_checkpoint)
+    omit_frozen_backbone = checkpoint_root.is_dir() and _checkpoint_omits_frozen_backbone(checkpoint_root)
 
     if resolved["kind"] == "deepspeed_model_states":
         checkpoint = torch.load(
@@ -273,17 +374,24 @@ def load_model_weights(model, pretrained_checkpoint, preferred_format=None, stri
         try:
             if isinstance(checkpoint, dict) and "module" in checkpoint and isinstance(checkpoint["module"], dict):
                 checkpoint = checkpoint["module"]
-            model.load_state_dict(checkpoint, strict=strict)
+            if omit_frozen_backbone:
+                _validate_partial_frozen_backbone_load(model, set(checkpoint))
+                model.load_state_dict(checkpoint, strict=False)
+            else:
+                model.load_state_dict(checkpoint, strict=strict)
         finally:
             del checkpoint
             gc.collect()
         return model
 
     if resolved["kind"] == "sharded_dir":
-        if strict:
+        if strict or omit_frozen_backbone:
             model_keys = set(model.state_dict().keys())
             checkpoint_keys = _collect_checkpoint_keys_from_index(Path(checkpoint_path))
             missing_keys, unexpected_keys = _filter_strict_key_mismatches(model_keys, checkpoint_keys)
+            if omit_frozen_backbone:
+                _validate_partial_frozen_backbone_load(model, checkpoint_keys)
+                missing_keys = []
             if missing_keys or unexpected_keys:
                 raise RuntimeError(
                     f"Error(s) in loading state_dict for {type(model).__name__}:\n\t"
@@ -310,7 +418,11 @@ def load_model_weights(model, pretrained_checkpoint, preferred_format=None, stri
             mmap=True,
         )
     try:
-        model.load_state_dict(checkpoint, strict=strict)
+        if omit_frozen_backbone:
+            _validate_partial_frozen_backbone_load(model, set(checkpoint))
+            model.load_state_dict(checkpoint, strict=False)
+        else:
+            model.load_state_dict(checkpoint, strict=strict)
     finally:
         del checkpoint
         gc.collect()

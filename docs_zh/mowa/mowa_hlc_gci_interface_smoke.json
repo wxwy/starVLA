@@ -1,0 +1,41 @@
+{
+  "stage": "hlc_gci",
+  "task_id": "M4-001",
+  "experiment_id": "E-004",
+  "training_started": false,
+  "checks": {
+    "config_exists": true,
+    "compressed_history_shape_expected": true,
+    "gate_shape_expected": true,
+    "gated_condition_shape_expected": true,
+    "gate_values_in_unit_interval": true,
+    "injection_policy_condition_path_only": true,
+    "history_sampling_status_data_gate": true,
+    "gate_init_status_data_gate": true,
+    "shape_status_data_gate": true
+  },
+  "config": "configs/mowa/mowa_hlc_gci_interface.yaml",
+  "observed": {
+    "compressed_history_shape": [
+      2,
+      512
+    ],
+    "gate_shape": [
+      2,
+      1024
+    ],
+    "gated_condition_shape": [
+      2,
+      4,
+      1024
+    ],
+    "gate_min": 0.4599853754043579,
+    "gate_max": 0.542267918586731
+  },
+  "unresolved_items": [
+    "This smoke validates interface shape and gate range only.",
+    "History sampling policy and actual training gain remain separately gated.",
+    "No StarVLA framework integration is enabled by this interface smoke."
+  ],
+  "go_no_go": "TBD: HLC-GCI interface smoke passed; framework integration remains gated"
+}

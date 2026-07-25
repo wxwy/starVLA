@@ -1,0 +1,119 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 10,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000",
+  "checkpoint_step": "steps_40000",
+  "checkpoint_hash": "86c984e2dce6b1efb8a8abb57abc77a1097c827612db8b957cb3d32b88fea15e",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000/config.yaml",
+  "config_hash": "2dd9e51a1b6a2b92885b505e779205d9383a6067b06f7e66e6c8572d173d0eca",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "MLP",
+    "state_mode": "discretized_instruction",
+    "state_enters_instruction": true,
+    "state_enters_action_head": false,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 32,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "model": {
+    "framework_name": "QwenOFT",
+    "vlm": "Qwen3-VL-4B-Instruct",
+    "action_head": "MLP"
+  },
+  "total_episodes": 2,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "timeout_no_success": 2
+  },
+  "tasks": [
+    {
+      "task_description": "push the plate to the front of the stove",
+      "episodes": 2,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "timeout_no_success": 2
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 5,
+      "task_description": "push the plate to the front of the stove",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_push_the_plate_to_the_front_of_the_stove_episode0_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.0020848819985985756,
+        "client_pack_and_queue_sec": 9.37220174819231e-05,
+        "client_server_roundtrip_sec": 0.976314296014607,
+        "client_unpack_sec": 8.365395478904247e-05,
+        "client_total_call_sec": 0.9764961029868573,
+        "server_total_sec": 0.18713276903145015,
+        "server_framework_sec": 0.18677034601569176,
+        "server_unnorm_sec": 0.0003600330092012882,
+        "framework_prepare_inputs_sec": 0.000379765871912241,
+        "framework_build_qwen_inputs_sec": 0.004226109012961388,
+        "framework_qwen_forward_sec": 0.17963739694096148,
+        "framework_gather_action_tokens_sec": 0.0015024531167000532,
+        "framework_action_head_sec": 0.00047450000420212746,
+        "framework_to_numpy_sec": 0.0003755090292543173,
+        "framework_total_sec": 0.18659992306493223
+      }
+    },
+    {
+      "task_id": 5,
+      "task_description": "push the plate to the front of the stove",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_push_the_plate_to_the_front_of_the_stove_episode1_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.002852603094652295,
+        "client_pack_and_queue_sec": 0.0001040259376168251,
+        "client_server_roundtrip_sec": 0.297089999075979,
+        "client_unpack_sec": 0.00010810303501784801,
+        "client_total_call_sec": 0.29730558302253485,
+        "server_total_sec": 0.277094085002318,
+        "server_framework_sec": 0.2766811370383948,
+        "server_unnorm_sec": 0.0004089861176908016,
+        "framework_prepare_inputs_sec": 0.00041204411536455154,
+        "framework_build_qwen_inputs_sec": 0.13901215721853077,
+        "framework_qwen_forward_sec": 0.13459430797956884,
+        "framework_gather_action_tokens_sec": 0.0014197388663887978,
+        "framework_action_head_sec": 0.0005309409461915493,
+        "framework_to_numpy_sec": 0.000526907155290246,
+        "framework_total_sec": 0.27650014916434884
+      }
+    }
+  ]
+}

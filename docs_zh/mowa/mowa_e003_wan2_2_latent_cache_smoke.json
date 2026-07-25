@@ -1,0 +1,308 @@
+{
+  "stage": "future_latent_prior",
+  "task_id": "M3-004",
+  "experiment_id": "E-003",
+  "training_started": false,
+  "checks": {
+    "dataset_path_exists": true,
+    "model_path_exists": true,
+    "launch_guard_closed": true,
+    "config_valid": true,
+    "build_report_written": true,
+    "encoder_kind_wan2_2_vae": true,
+    "validation_ok": true
+  },
+  "observed": {
+    "repo_root": ".",
+    "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+    "cache_root": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache",
+    "model_path": "playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+    "cache_build_report": {
+      "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+      "cache_root": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache",
+      "manifest_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/manifest.json",
+      "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "encoder_version": "wan2.2-vae-v1",
+      "latent_dim": 1024,
+      "dry_run": false,
+      "episode_count": 3,
+      "anchor_count": 3,
+      "planned_artifact_count": 9,
+      "written_artifact_count": 9,
+      "skipped_missing_episode_count": 0,
+      "skipped_boundary_count": 0,
+      "skipped_existing_count": 0,
+      "preview_artifacts": [
+        {
+          "cache_key": "c12ebad4827a94e8b0a1757b",
+          "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/c12ebad4827a94e8b0a1757b.pt",
+          "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "episode_index": 0,
+          "anchor_index": 7,
+          "video_key": "observation.images.robot0_agentview_left",
+          "window_role": "current",
+          "frame_indices": [
+            7
+          ],
+          "latent_shape": [
+            1024
+          ],
+          "dtype": "float32",
+          "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          "encoder_version": "wan2.2-vae-v1",
+          "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|0|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
+          "source_sha256": "37473e84964da8c9b666c628e4adc72bd2239d7e47adf09760795ad084cb9fce",
+          "latent_sha256": "8305ee7ce21efd1100a24bfb47a56c19e1adccb63d3d96dbd581f13bf2da3e40",
+          "video_exists": true,
+          "cache_status": "written",
+          "row_count": 334
+        },
+        {
+          "cache_key": "5ba68b5cbfcc4f99c9a06559",
+          "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/5ba68b5cbfcc4f99c9a06559.pt",
+          "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "episode_index": 0,
+          "anchor_index": 7,
+          "video_key": "observation.images.robot0_agentview_left",
+          "window_role": "future",
+          "frame_indices": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "latent_shape": [
+            1024
+          ],
+          "dtype": "float32",
+          "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          "encoder_version": "wan2.2-vae-v1",
+          "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|0|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
+          "source_sha256": "37473e84964da8c9b666c628e4adc72bd2239d7e47adf09760795ad084cb9fce",
+          "latent_sha256": "72f44530541fc41ecfdac3445e6a31c4f0264937726df594937d506bbfd2c9ac",
+          "video_exists": true,
+          "cache_status": "written",
+          "row_count": 334
+        },
+        {
+          "cache_key": "cba09a692d3e827ab4a1757d",
+          "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/cba09a692d3e827ab4a1757d.pt",
+          "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "episode_index": 0,
+          "anchor_index": 7,
+          "video_key": "observation.images.robot0_agentview_left",
+          "window_role": "history",
+          "frame_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "latent_shape": [
+            1024
+          ],
+          "dtype": "float32",
+          "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          "encoder_version": "wan2.2-vae-v1",
+          "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|0|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000000.mp4",
+          "source_sha256": "37473e84964da8c9b666c628e4adc72bd2239d7e47adf09760795ad084cb9fce",
+          "latent_sha256": "57e9c20dca61da028ad8ef4f6927fce648b049983948619691d3f6ffe1b7af93",
+          "video_exists": true,
+          "cache_status": "written",
+          "row_count": 334
+        },
+        {
+          "cache_key": "909712b3ec9bc7efd36d1cd7",
+          "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/909712b3ec9bc7efd36d1cd7.pt",
+          "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "episode_index": 1,
+          "anchor_index": 7,
+          "video_key": "observation.images.robot0_agentview_left",
+          "window_role": "current",
+          "frame_indices": [
+            7
+          ],
+          "latent_shape": [
+            1024
+          ],
+          "dtype": "float32",
+          "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          "encoder_version": "wan2.2-vae-v1",
+          "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|1|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000001.mp4",
+          "source_sha256": "bc5deadbe7ed2a2d7618745d99ef92169505d740347e32f78fe50c6c8803f991",
+          "latent_sha256": "b221b4ac3dbe816a2f8a634cd18d0d191bf5779511db169daee95562f3c56eb0",
+          "video_exists": true,
+          "cache_status": "written",
+          "row_count": 235
+        },
+        {
+          "cache_key": "c86aa02857834064134bd0a7",
+          "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/c86aa02857834064134bd0a7.pt",
+          "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "episode_index": 1,
+          "anchor_index": 7,
+          "video_key": "observation.images.robot0_agentview_left",
+          "window_role": "future",
+          "frame_indices": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "latent_shape": [
+            1024
+          ],
+          "dtype": "float32",
+          "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          "encoder_version": "wan2.2-vae-v1",
+          "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|1|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000001.mp4",
+          "source_sha256": "bc5deadbe7ed2a2d7618745d99ef92169505d740347e32f78fe50c6c8803f991",
+          "latent_sha256": "92caa83f13b3aea9fed00e30a5b6ca59e5b2bab1ea3602cccd37297c407332fa",
+          "video_exists": true,
+          "cache_status": "written",
+          "row_count": 235
+        },
+        {
+          "cache_key": "b2ca4c88b3b04783bd8fb88f",
+          "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/b2ca4c88b3b04783bd8fb88f.pt",
+          "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "episode_index": 1,
+          "anchor_index": 7,
+          "video_key": "observation.images.robot0_agentview_left",
+          "window_role": "history",
+          "frame_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "latent_shape": [
+            1024
+          ],
+          "dtype": "float32",
+          "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          "encoder_version": "wan2.2-vae-v1",
+          "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|1|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000001.mp4",
+          "source_sha256": "bc5deadbe7ed2a2d7618745d99ef92169505d740347e32f78fe50c6c8803f991",
+          "latent_sha256": "ca85636286f354392f38c245f4ffe65e511d647cc1f92d8f4549239bef77d175",
+          "video_exists": true,
+          "cache_status": "written",
+          "row_count": 235
+        },
+        {
+          "cache_key": "6f47e313206329b002151804",
+          "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/6f47e313206329b002151804.pt",
+          "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "episode_index": 4,
+          "anchor_index": 7,
+          "video_key": "observation.images.robot0_agentview_left",
+          "window_role": "current",
+          "frame_indices": [
+            7
+          ],
+          "latent_shape": [
+            1024
+          ],
+          "dtype": "float32",
+          "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          "encoder_version": "wan2.2-vae-v1",
+          "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|4|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000004.mp4",
+          "source_sha256": "5b83d5911d1d28b5643e3584e4809c9dfbb6050ad4610e0ff9d0bdf126a676c3",
+          "latent_sha256": "3fb7ed7131f3e366c21f096aaf58140a947182ca78313233144291f55660e691",
+          "video_exists": true,
+          "cache_status": "written",
+          "row_count": 208
+        },
+        {
+          "cache_key": "0381205c984402535f992e2d",
+          "cache_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/0381205c984402535f992e2d.pt",
+          "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+          "episode_index": 4,
+          "anchor_index": 7,
+          "video_key": "observation.images.robot0_agentview_left",
+          "window_role": "future",
+          "frame_indices": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "latent_shape": [
+            1024
+          ],
+          "dtype": "float32",
+          "encoder_name": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          "encoder_version": "wan2.2-vae-v1",
+          "source_identity": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot|4|observation.images.robot0_agentview_left|playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/videos/chunk-000/observation.images.robot0_agentview_left/episode_000004.mp4",
+          "source_sha256": "5b83d5911d1d28b5643e3584e4809c9dfbb6050ad4610e0ff9d0bdf126a676c3",
+          "latent_sha256": "c193e15ca7d782e8882d7b48240371db7f70091754dc759e8087d9ac7f64f7e0",
+          "video_exists": true,
+          "cache_status": "written",
+          "row_count": 208
+        }
+      ],
+      "summary": {
+        "episode_paths": 3,
+        "window_role_count": 3,
+        "video_key_count": 1,
+        "dry_run": false,
+        "manifest_written": true,
+        "allow_partial_windows": false,
+        "source_policy": "wan2.2-vae",
+        "encoder_kind": "wan2.2-vae"
+      },
+      "go_no_go": "TBD: latent cache write completed; validate cache before integration",
+      "notes": [
+        "This builder uses a deterministic fake encoder and CPU-only tensor I/O.",
+        "No Wan encoder, VAE or training code is executed."
+      ]
+    },
+    "cache_validation_report": {
+      "cache_root": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache",
+      "manifest_path": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache/manifest.json",
+      "manifest_exists": true,
+      "artifact_count": 9,
+      "readable_artifact_count": 9,
+      "missing_artifact_count": 0,
+      "shape_mismatch_count": 0,
+      "hash_mismatch_count": 0,
+      "duplicate_cache_key_count": 0,
+      "all_ok": true,
+      "summary": {
+        "cache_root": "playground/mowa_latent_cache/robocasa365_open_drawer_target_human_wan2_2_latent_cache",
+        "manifest_entries": 9,
+        "manifest_exists": true
+      },
+      "go_no_go": "TBD: latent cache validation passed; cache remains fake-encoder only",
+      "notes": [
+        "Validation checks manifest consistency, file presence and latent hashes.",
+        "It does not attempt real encoder parity or training integration."
+      ]
+    }
+  },
+  "unresolved_items": [
+    "This smoke validates the real Wan2.2 adapter path only when the local model directory exists.",
+    "The smoke is dry-run by default; pass --execute to materialize and validate cache artifacts."
+  ],
+  "go_no_go": "TBD: Wan2.2 latent cache write and validation passed; training remains gated"
+}

@@ -1,0 +1,6 @@
+# 评估结果 - 大量 mp4 不提交，仅提交 JSON 报告和样例视频
+eval_results/**/*.mp4
+!eval_results/_sample_mp4s/*.mp4
+
+# 不提交 bare 目录中的 task_x 子目录
+eval_results/**/task_*/

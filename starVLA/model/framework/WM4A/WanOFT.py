@@ -59,6 +59,11 @@ class WanOFTDefaultConfig:
         default_factory=lambda: {
             "base_wm": "./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers",
             "extract_layers": [-1],
+            # WanOFT 训练/官方评测使用的 VAE 输入格式：480x832、不按 4n+1
+            # 补帧、latent_dist.sample()。MoWA/WanPI 路径不使用该标志。
+            "legacy_vae_input": True,
+            # 无持久化表时，可由训练入口一次性预编码全部去重指令后释放 UMT5。
+            "preload_text_cache": False,
         }
     )
 
@@ -76,6 +81,11 @@ class WanOFTDefaultConfig:
             "action_hidden_dim": 3072,
             "future_action_window_size": 8,
             "past_action_window_size": 0,
+        }
+    )
+    multi_view_residual: dict = field(
+        default_factory=lambda: {
+            "enabled": False,
         }
     )
 
@@ -109,39 +119,235 @@ class Wan_OFT(baseframework):
         self.chunk_len = self.action_horizon
 
         self.action_query_proj = nn.Linear(wm_hidden, self.chunk_len * wm_hidden)  # Project into a two-layer MLP
+        self.multi_view_residual_enabled = bool(
+            self.config.framework.multi_view_residual.enabled
+        )
+        self.multi_view_fusion = None
+        if self.multi_view_residual_enabled:
+            self.multi_view_fusion = nn.Linear(2 * wm_hidden, wm_hidden)
+            self._reset_multi_view_fusion()
 
+        self._mowa_instruction_text_cache = None
         self.l1_loss = nn.L1Loss()
 
-    def _pool_to_action_queries(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        B, N, H = hidden_states.shape
+    def load_state_dict(self, state_dict, strict: bool = True, assign: bool = False):
+        """允许旧 WanOFT checkpoint 缺失零初始化的多视角融合层。"""
+        result = super().load_state_dict(state_dict, strict=False, assign=assign)
+        allowed_missing = (
+            {"multi_view_fusion.weight", "multi_view_fusion.bias"}
+            if self.multi_view_residual_enabled
+            else set()
+        )
+        unexpected_missing = [key for key in result.missing_keys if key not in allowed_missing]
+        if strict and (unexpected_missing or result.unexpected_keys):
+            raise RuntimeError(
+                "Error(s) in loading state_dict: "
+                f"missing={unexpected_missing}, unexpected={result.unexpected_keys}."
+            )
+        if result.missing_keys and not unexpected_missing:
+            logger.info(
+                "[WanOFT multi-view residual] checkpoint lacks fusion parameters; "
+                "using [I,0] initialization."
+            )
+        return result
+
+    def _reset_multi_view_fusion(self) -> None:
+        """初始化为 fused=原生 [main,wrist] 联合编码特征。"""
+        if self.multi_view_fusion is None:
+            return
+        hidden_size = self.multi_view_fusion.out_features
+        with torch.no_grad():
+            self.multi_view_fusion.weight.zero_()
+            self.multi_view_fusion.weight[:, :hidden_size].copy_(
+                torch.eye(hidden_size, dtype=self.multi_view_fusion.weight.dtype)
+            )
+            self.multi_view_fusion.bias.zero_()
+
+    def _pool_action_feature(self, hidden_states: torch.Tensor) -> torch.Tensor:
         pooled = hidden_states.mean(dim=1)
-        queries = self.action_query_proj(pooled)
-        action_queries = queries.view(B, self.chunk_len, H)
-        return action_queries
+        if pooled.dim() != 2:
+            raise ValueError(f"WanOFT pooled feature must be [B,H], got {tuple(pooled.shape)}.")
+        return pooled
 
-    def forward(self, examples: List[dict] = None, **kwargs) -> Tuple:
-        batch_images = [example["image"] for example in examples]
-        instructions = [example["lang"] for example in examples]
-        actions = [example["action"] for example in examples]
-        state = [example["state"] for example in examples] if "state" in examples[0] else None
-
-        # Optionally prepend discretised proprioceptive state tokens (π₀.5 style).
-        instructions = (
-            add_discretized_state_to_instruction(instructions, state) if state is not None else instructions
+    def _fuse_action_features(
+        self,
+        base_feature: torch.Tensor,
+        wrist_feature: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        if not self.multi_view_residual_enabled:
+            return base_feature
+        if wrist_feature is None or self.multi_view_fusion is None:
+            raise ValueError("WanOFT multi-view residual requires an independently encoded wrist feature.")
+        if wrist_feature.shape != base_feature.shape:
+            raise ValueError(
+                "WanOFT base/wrist feature shape mismatch: "
+                f"{tuple(base_feature.shape)} vs {tuple(wrist_feature.shape)}."
+            )
+        fusion_dtype = self.multi_view_fusion.weight.dtype
+        return self.multi_view_fusion(
+            torch.cat([base_feature, wrist_feature], dim=-1).to(dtype=fusion_dtype)
         )
 
-        wm_inputs = self.backbone.build_inputs(images=batch_images, instructions=instructions)
+    @staticmethod
+    def _wrist_only_images(batch_images: List) -> List[List]:
+        wrist_images = []
+        for sample_index, images in enumerate(batch_images):
+            if not isinstance(images, (list, tuple)) or len(images) != 2:
+                raise ValueError(
+                    "WanOFT multi-view residual requires image=[main,wrist] for every sample; "
+                    f"sample {sample_index} has {type(images).__name__}."
+                )
+            wrist_images.append([images[1]])
+        return wrist_images
 
+    def _extract_base_and_wrist_features(
+        self,
+        batch_images: List,
+        instructions: List[str],
+        text_kwargs: Optional[dict[str, torch.Tensor]] = None,
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
+        # 训练 batch 可能是 ndarray，服务推理已转为 PIL；统一在共享视觉入口
+        # 规范化，避免同一 RGB 因输入容器类型不同而得到不同 VAE 特征。
+        batch_images = [to_pil_preserve(images) for images in batch_images]
+        text_kwargs = text_kwargs or {}
+        wm_inputs = self.backbone.build_inputs(
+            images=batch_images,
+            instructions=instructions,
+            **text_kwargs,
+        )
         with torch.autocast("cuda", dtype=torch.bfloat16):
             wm_outputs = self.backbone(
                 **wm_inputs,
                 output_hidden_states=True,
                 return_dict=True,
             )
-            last_hidden = wm_outputs.hidden_states[-1]
+            base_feature = self._pool_action_feature(wm_outputs.hidden_states[-1])
+            if not self.multi_view_residual_enabled:
+                return base_feature, None
+
+            wrist_inputs = self.backbone.build_inputs(
+                images=self._wrist_only_images(batch_images),
+                instructions=instructions,
+                **text_kwargs,
+            )
+            wrist_outputs = self.backbone(
+                **wrist_inputs,
+                output_hidden_states=True,
+                return_dict=True,
+            )
+            wrist_feature = self._pool_action_feature(wrist_outputs.hidden_states[-1])
+        return base_feature, wrist_feature
+
+    @staticmethod
+    def _collect_cached_text_inputs(examples: List[dict]) -> dict[str, torch.Tensor]:
+        """收集 batch 内一致的 UMT5 缓存，缺失时回退到原始文本路径。"""
+        text_embeds = [example.get("text_embeds") for example in examples]
+        text_masks = [example.get("text_attention_mask") for example in examples]
+        has_embeds = [value is not None for value in text_embeds]
+        has_masks = [value is not None for value in text_masks]
+        if not any(has_embeds) and not any(has_masks):
+            return {}
+        if not all(has_embeds) or not all(has_masks):
+            raise ValueError(
+                "WanOFT batch must provide text_embeds/text_attention_mask for every sample or none."
+            )
+
+        embeds = torch.stack([torch.as_tensor(value) for value in text_embeds], dim=0)
+        masks = torch.stack([torch.as_tensor(value) for value in text_masks], dim=0)
+        if embeds.ndim == 4 and embeds.shape[1] == 1:
+            embeds = embeds.squeeze(1)
+        if masks.ndim == 3 and masks.shape[1] == 1:
+            masks = masks.squeeze(1)
+        if embeds.ndim != 3 or masks.ndim != 2 or embeds.shape[:2] != masks.shape:
+            raise ValueError(
+                "WanOFT cached text shape mismatch: "
+                f"text_embeds={tuple(embeds.shape)}, text_attention_mask={tuple(masks.shape)}."
+            )
+        return {"text_embeds": embeds, "text_attention_mask": masks}
+
+    def _populate_mowa_cached_text(self, examples: List[dict]) -> List[dict]:
+        """在启用 UMT5 cache 时，按指令补齐训练和在线推理的文本条件。"""
+        if not getattr(self.backbone, "use_text_cache", False):
+            return examples
+        if all(
+            example.get("text_embeds") is not None
+            and example.get("text_attention_mask") is not None
+            for example in examples
+        ):
+            return examples
+
+        if getattr(self.backbone, "_instruction_text_cache", None) is not None:
+            return examples
+        cache_path = getattr(getattr(self.config, "latent_cache", None), "instruction_text_latent", None)
+        if not cache_path:
+            raise ValueError(
+                "WanOFT use_text_cache=True requires latent_cache.instruction_text_latent."
+            )
+        if self._mowa_instruction_text_cache is None:
+            from starVLA.dataloader.mowa.instruction_text_latent_cache import MoWAInstructionTextLatentCache
+
+            self._mowa_instruction_text_cache = MoWAInstructionTextLatentCache(Path(cache_path))
+            logger.info(
+                "[WanOFT] loaded UMT5 instruction cache=%s entries=%d",
+                cache_path,
+                len(self._mowa_instruction_text_cache),
+            )
+
+        resolved = []
+        for index, example in enumerate(examples):
+            instruction = str(example.get("lang", ""))
+            entry = self._mowa_instruction_text_cache.lookup(instruction)
+            if entry is None:
+                raise KeyError(
+                    f"WanOFT UMT5 cache misses instruction at batch index {index}: {instruction!r}."
+                )
+            resolved.append(
+                {
+                    **example,
+                    "text_embeds": entry["text_embeds"],
+                    "text_attention_mask": entry["attention_mask"],
+                }
+            )
+        return resolved
+
+    def _extract_action_feature(
+        self,
+        batch_images: List,
+        instructions: List[str],
+        text_kwargs: Optional[dict[str, torch.Tensor]] = None,
+    ) -> torch.Tensor:
+        base_feature, wrist_feature = self._extract_base_and_wrist_features(
+            batch_images, instructions, text_kwargs=text_kwargs
+        )
+        if not self.multi_view_residual_enabled:
+            return base_feature
+        return self._fuse_action_features(base_feature, wrist_feature)
+
+    def _pool_to_action_queries(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        B, H = hidden_states.shape
+        queries = self.action_query_proj(hidden_states)
+        action_queries = queries.view(B, self.chunk_len, H)
+        return action_queries
+
+    def forward(self, examples: List[dict] = None, **kwargs) -> Tuple:
+        examples = self._populate_mowa_cached_text(examples)
+        batch_images = [example["image"] for example in examples]
+        instructions = [example["lang"] for example in examples]
+        actions = [example["action"] for example in examples]
+        state = [example["state"] for example in examples] if "state" in examples[0] else None
+        text_kwargs = self._collect_cached_text_inputs(examples)
+        if state is not None and text_kwargs:
+            raise ValueError("WanOFT cached UMT5 text is incompatible with discretized state instructions.")
+
+        # Optionally prepend discretised proprioceptive state tokens (π₀.5 style).
+        instructions = (
+            add_discretized_state_to_instruction(instructions, state) if state is not None else instructions
+        )
+
+        action_feature = self._extract_action_feature(batch_images, instructions, text_kwargs=text_kwargs)
 
         with torch.autocast("cuda", dtype=torch.float32):
-            action_queries = self._pool_to_action_queries(last_hidden)  # B, chunk_len, hidden_dim
+            action_queries = self._pool_to_action_queries(action_feature)  # B, chunk_len, hidden_dim
             pred_actions = self.action_model.predict_action(action_queries)
 
             actions = torch.tensor(np.array(actions), device=pred_actions.device, dtype=pred_actions.dtype)
@@ -155,9 +361,13 @@ class Wan_OFT(baseframework):
     def predict_action(self, examples: List[dict], **kwargs) -> np.ndarray:
         if type(examples) is not list:
             examples = [examples]
+        examples = self._populate_mowa_cached_text(examples)
         batch_images = [to_pil_preserve(example["image"]) for example in examples]
         instructions = [example["lang"] for example in examples]
         state = [example["state"] for example in examples] if "state" in examples[0] else None
+        text_kwargs = self._collect_cached_text_inputs(examples)
+        if state is not None and text_kwargs:
+            raise ValueError("WanOFT cached UMT5 text is incompatible with discretized state instructions.")
 
         instructions = (
             add_discretized_state_to_instruction(instructions, state) if state is not None else instructions
@@ -167,17 +377,10 @@ class Wan_OFT(baseframework):
         if train_obs_image_size:
             batch_images = resize_images(batch_images, target_size=train_obs_image_size)
 
-        wm_inputs = self.backbone.build_inputs(images=batch_images, instructions=instructions)
-        with torch.autocast("cuda", dtype=torch.bfloat16):
-            wm_outputs = self.backbone(
-                **wm_inputs,
-                output_hidden_states=True,
-                return_dict=True,
-            )
-            last_hidden = wm_outputs.hidden_states[-1]
+        action_feature = self._extract_action_feature(batch_images, instructions, text_kwargs=text_kwargs)
 
         with torch.autocast("cuda", dtype=torch.float32):
-            action_queries = self._pool_to_action_queries(last_hidden)
+            action_queries = self._pool_to_action_queries(action_feature)
             pred_actions = self.action_model.predict_action(action_queries)
 
         normalized_actions = pred_actions.detach().cpu().numpy()

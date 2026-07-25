@@ -1,0 +1,93 @@
+project_short_name: MoWA
+stage: full_heads
+experiment_id: E-001
+config_role: runtime_policy_prelaunch_partial_confirmed
+
+resource_budget:
+  gpu_type: A100_80G
+  num_gpus: 1
+  per_device_batch_size: bounded_full_vla_smoke_passed_4
+  gradient_accumulation_steps: bounded_full_vla_smoke_1
+  effective_batch_size: bounded_full_vla_smoke_4
+  max_train_steps: 1000
+  max_train_steps_note: short_smoke_training_only_not_full_long_training
+  expected_vram: bounded_full_vla_bs4_peak_46.817GB_reserved_50.137GB
+  expected_runtime: TBD_full_e001_training
+  throughput_smoke_report: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
+  throughput_smoke_scope: MoWAFutureFullHeads_plus_MoWAActionBridge_only
+  throughput_smoke_step_time_sec: 0.14424942016601563
+  throughput_smoke_samples_per_sec: 443.6759601968788
+  throughput_smoke_status: smoke_passed_not_production_training
+  full_vla_runtime_sweep_report: docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_smoke.json
+  full_vla_runtime_sweep_bs4_report: docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json
+  full_vla_runtime_sweep_scope: bounded_2_step_train_skip_final_checkpoint
+  full_vla_runtime_sweep_status: passed_bs1_bs2_bs4
+  full_vla_runtime_bs4_last_step_time_sec: 1.5000371620990336
+  full_vla_runtime_bs4_samples_per_sec: 2.666600602349555
+  full_vla_runtime_bs4_peak_vram_gb: 46.816529750823975
+  full_vla_runtime_bs4_peak_reserved_gb: 50.13671875
+  full_vla_save_resume_smoke_report: docs_zh/mowa/mowa_e001_starflow_ft0_training_throughput_smoke_check.json
+  full_vla_save_resume_smoke_status: passed_batch1_gradaccum1_save_interval1
+
+temporal_policy:
+  raw_action_hz: 20
+  raw_state_hz: 20
+  raw_hz_evidence: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_temporal_profile.json
+  production_wam_hz: 5
+  wam_stride: 4
+  history_seconds: 2.0
+  history_steps: 10
+  future_seconds: 1.0
+  future_steps: 5
+  action_chunk_seconds: 0.5
+  action_chunk_steps: 10
+  production_window_preflight: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
+  status: confirmed_for_e001_initial_target
+
+checkpoint:
+  run_root_dir: playground/mowa_ckpt
+  local_checkpoint_root: playground/mowa_ckpt
+  save_interval: initial_target_1000
+  checkpoint_format: lightweight
+  save_checkpoint_as_directory: true
+  local_checkpoint_keep_count: 1
+  resume_policy: resume_latest_complete_only
+  incomplete_checkpoint_policy: ignore_or_prune_incomplete
+  delete_or_overwrite_policy: no_delete_without_confirmation
+  checkpoint_logic_change_allowed: false
+  save_resume_smoke_report: docs_zh/mowa/mowa_e001_starflow_ft0_training_throughput_smoke_check.json
+  save_resume_smoke_status: passed_steps_1_to_2
+  eval_load_smoke_report: docs_zh/mowa/mowa_e006_eval_load_smoke.json
+  eval_load_smoke_status: passed_steps_2_model_load
+
+logging:
+  wandb_mode: disabled_for_initial_training
+  wandb_project: mowa
+  logging_frequency: 10
+
+launch_requirements:
+  require_recipe_available: true
+  require_production_preflight_passed: true
+  require_full_heads_one_step_smoke_passed: true
+  require_fullheads_interface: true
+  require_runtime_policy_confirmation: true
+  require_human_confirmation_before_training: true
+
+status:
+  checkpoint_policy_confirmed: true
+  logging_policy_confirmed: true
+  save_resume_smoke_passed: true
+  eval_load_smoke_passed: true
+  resource_policy_confirmed: true
+  policy_confirmed: true
+  launch_ready: true
+  notes:
+    - Checkpoint/save/resume and wandb-disabled logging policy are confirmed for prelaunch smoke.
+    - Resource target is single A100 80G as confirmed by user.
+    - A100 throughput smoke has run on Future FullHeads plus ActionBridge only; it is not full VLA E-001 throughput.
+    - Bounded full-VLA runtime sweep passed for per_device_batch_size 1, 2, and 4 with skip_final_checkpoint=true.
+    - Batch size 4 is only a short-smoke candidate; long-training VRAM/runtime stability is not confirmed.
+    - Full StarFlowVLA save/resume smoke has passed only at per_device_batch_size=1 and gradient_accumulation_steps=1.
+    - Temporal policy is confirmed for E-001 initial target by production-window preflight, not by full training throughput.
+    - This policy does not modify checkpoint/resume/save code.
+    - E-001 long training must not start until resource_policy_confirmed, policy_confirmed, and launch_ready are explicitly true.

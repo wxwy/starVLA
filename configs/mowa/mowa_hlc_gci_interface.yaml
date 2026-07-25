@@ -1,0 +1,24 @@
+project_short_name: MoWA
+stage: hlc_gci
+task_id: M4-001
+experiment_id: E-004
+config_role: hlcgci_interface_smoke
+
+interface:
+  history_latent_dim: 1024
+  condition_hidden_dim: 1024
+  history_steps: 10
+  compressed_history_dim: 512
+  gate_hidden_dim: 256
+  batch_size_smoke: 2
+  condition_token_count: 4
+  injection_policy: condition_path_only
+
+status:
+  history_sampling_status: Data Gate
+  gate_init_status: Data Gate
+  shape_status: Data Gate
+
+unresolved_items:
+  - This smoke validates interface shape and gate range only.
+  - Real HLC-GCI training and injection into StarVLA framework remain separately gated.

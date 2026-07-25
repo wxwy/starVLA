@@ -21,6 +21,7 @@ Note: How to add special tokens to Qwen2.5:
 """
 
 from dataclasses import dataclass, field
+import time
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -40,6 +41,15 @@ IGNORE_INDEX = -100
 from starVLA.model.framework.base_framework import baseframework
 from starVLA.model.framework.share_tools import add_discretized_state_to_instruction, merge_framework_config
 from starVLA.model.modules.action_model.MLP_ActionHeader import get_action_model
+from starVLA.model.modules.mowa import (
+    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+    MOWA_FUTURE_FULL_HEADS,
+    MoWAActionBridge,
+    MoWAActionBridgeConfig,
+    MoWAFutureFeatureHeads,
+    MoWAFutureFeatureHeadsConfig,
+    MoWAFutureFeatures,
+)
 from starVLA.model.modules.vlm import get_vlm_model
 from starVLA.training.trainer_utils.trainer_tools import resize_images
 
@@ -134,6 +144,8 @@ class Qwenvl_OFT(baseframework):
 
         # L1 loss
         self.l1_loss = nn.L1Loss()
+        self._setup_mowa_future_supervision_probe()
+        self._setup_mowa_action_bridge_probe()
 
     def forward(
         self,
@@ -197,7 +209,10 @@ class Qwenvl_OFT(baseframework):
             action_queries = self._gather_action_token_embeddings(
                 last_hidden, input_ids, action_token_id=self.action_token_id
             )  # [B, chunk_len, H]
+            action_queries = action_queries.to(dtype=next(self.action_model.parameters()).dtype)
             pred_actions = self.action_model.predict_action(action_queries)  # (B, chunk_len, action_dim)
+            mowa_future_supervision_probe = self._maybe_run_mowa_future_supervision_probe(action_queries, examples)
+            mowa_probe = self._maybe_run_mowa_action_bridge_probe(action_queries)
 
             # Label alignment: take the last chunk_len segment
             actions = torch.tensor(
@@ -208,7 +223,29 @@ class Qwenvl_OFT(baseframework):
             # Compute L1 loss
             action_loss = self.l1_loss(pred_actions, actions_target)
 
-        return {"action_loss": action_loss}
+        output = {"action_loss": action_loss}
+        if mowa_future_supervision_probe is not None:
+            output["mowa_p0_supervision_available"] = mowa_future_supervision_probe[
+                "supervision_available"
+            ]
+            output["mowa_p0_supervision_active_heads"] = mowa_future_supervision_probe[
+                "active_heads"
+            ]
+            output["mowa_p0_supervision_masked_heads"] = mowa_future_supervision_probe[
+                "masked_heads"
+            ]
+            output["mowa_future_supervision_available"] = mowa_future_supervision_probe["supervision_available"]
+            output["mowa_future_supervision_active_heads"] = mowa_future_supervision_probe["active_heads"]
+            output["mowa_future_supervision_masked_heads"] = mowa_future_supervision_probe["masked_heads"]
+            if mowa_future_supervision_probe["loss"] is not None:
+                output["mowa_p0_supervision_loss"] = mowa_future_supervision_probe["loss"]
+                output["mowa_p0_supervision_losses"] = mowa_future_supervision_probe["losses"]
+                output["mowa_future_supervision_loss"] = mowa_future_supervision_probe["loss"]
+                output["mowa_future_supervision_losses"] = mowa_future_supervision_probe["losses"]
+        if mowa_probe is not None:
+            output["mowa_bridge_probe_loss"] = mowa_probe["probe_loss"]
+            output["mowa_bridge_probe_token_shape"] = mowa_probe["token_shape"]
+        return output
 
     @torch.inference_mode()
     def predict_action(
@@ -227,6 +264,7 @@ class Qwenvl_OFT(baseframework):
             dict:
                 normalized_actions (np.ndarray): Shape [B, T, action_dim], diffusion-sampled normalized actions.
         """
+        overall_start = time.perf_counter()
         if type(examples) is not list:
             examples = [examples]
         batch_images = [to_pil_preserve(example["image"]) for example in examples]  #  [B，[PLT]]
@@ -243,6 +281,7 @@ class Qwenvl_OFT(baseframework):
         train_obs_image_size = getattr(self.config.datasets.vla_data, "obs_image_size", None)
         if train_obs_image_size:
             batch_images = resize_images(batch_images, target_size=train_obs_image_size)
+        prepare_inputs_done = time.perf_counter()
 
         # step 0: add special action token to instruction
         action_tokens = (
@@ -252,7 +291,9 @@ class Qwenvl_OFT(baseframework):
         instructions = [instruction + prompt_suffix for instruction in instructions]
 
         # Step 1: QWenVL input format
+        build_qwen_inputs_start = time.perf_counter()
         qwen_inputs = self.qwen_vl_interface.build_qwenvl_inputs(images=batch_images, instructions=instructions)
+        build_qwen_inputs_done = time.perf_counter()
         with torch.autocast("cuda", dtype=torch.bfloat16):
             qwenvl_outputs = self.qwen_vl_interface(
                 **qwen_inputs,
@@ -262,6 +303,7 @@ class Qwenvl_OFT(baseframework):
             )
             # last_hidden_state: [B, seq_len, H]
             last_hidden = qwenvl_outputs.hidden_states[-1]  # [B, L, H]
+        qwen_forward_done = time.perf_counter()
 
         # Step 4: Action Expert Forward and Loss
         with torch.autocast("cuda", dtype=torch.float32):
@@ -270,10 +312,24 @@ class Qwenvl_OFT(baseframework):
             action_queries = self._gather_action_token_embeddings(
                 last_hidden, input_ids, action_token_id=self.action_token_id
             )  # [B, chunk_len, H]
+            gather_action_tokens_done = time.perf_counter()
             pred_actions = self.action_model.predict_action(action_queries)  # (B, chunk_len, action_dim)
+        action_head_done = time.perf_counter()
 
         normalized_actions = pred_actions.detach().cpu().numpy()
-        return {"normalized_actions": normalized_actions}
+        to_numpy_done = time.perf_counter()
+        return {
+            "normalized_actions": normalized_actions,
+            "timings": {
+                "framework_prepare_inputs_sec": prepare_inputs_done - overall_start,
+                "framework_build_qwen_inputs_sec": build_qwen_inputs_done - build_qwen_inputs_start,
+                "framework_qwen_forward_sec": qwen_forward_done - build_qwen_inputs_done,
+                "framework_gather_action_tokens_sec": gather_action_tokens_done - qwen_forward_done,
+                "framework_action_head_sec": action_head_done - gather_action_tokens_done,
+                "framework_to_numpy_sec": to_numpy_done - action_head_done,
+                "framework_total_sec": to_numpy_done - overall_start,
+            },
+        }
 
     def _gather_action_token_embeddings(
         self,
@@ -328,6 +384,161 @@ class Qwenvl_OFT(baseframework):
         expanded_index = selected_pos.unsqueeze(-1).expand(-1, -1, H)  # [B, chunk_len, H]
         action_queries = last_hidden.gather(dim=1, index=expanded_index)  # [B, chunk_len, H]
         return action_queries
+
+    def _setup_mowa_future_supervision_probe(self) -> None:
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        self.mowa_future_supervision_probe_enabled = bool(
+            getattr(
+                mowa_cfg,
+                "enable_future_supervision_probe",
+                getattr(mowa_cfg, "enable_p0_supervision_probe", False),
+            )
+        )
+        self.mowa_future_supervision_probe = None
+        self.mowa_future_supervision_active_heads = tuple(
+            getattr(
+                mowa_cfg,
+                "future_supervision_active_heads",
+                getattr(
+                    mowa_cfg,
+                    "p0_supervision_active_heads",
+                    MOWA_FUTURE_CONSTRUCTIBLE_HEADS,
+                ),
+            )
+        )
+        if not self.mowa_future_supervision_probe_enabled:
+            return
+
+        action_hidden_dim = int(self.config.framework.action_model.action_hidden_dim)
+        hidden_dim = int(
+            getattr(
+                mowa_cfg,
+                "future_supervision_hidden_dim",
+                getattr(mowa_cfg, "p0_supervision_hidden_dim", 32),
+            )
+        )
+        action_outcome_loss_type = str(
+            getattr(
+                mowa_cfg,
+                "future_supervision_action_outcome_loss_type",
+                getattr(mowa_cfg, "p0_supervision_action_outcome_loss_type", "mse"),
+            )
+        )
+        self.mowa_future_supervision_probe = MoWAFutureFeatureHeads(
+            MoWAFutureFeatureHeadsConfig(
+                input_dim=action_hidden_dim,
+                hidden_dim=hidden_dim,
+                action_outcome_loss_type=action_outcome_loss_type,
+            )
+        )
+
+    def _maybe_run_mowa_future_supervision_probe(
+        self,
+        action_queries: torch.Tensor,
+        examples: List[dict],
+    ) -> dict | None:
+        if not self.mowa_future_supervision_probe_enabled:
+            return None
+        if self.mowa_future_supervision_probe is None:
+            raise RuntimeError("MoWA future supervision probe is enabled but not initialized.")
+
+        hidden_features = action_queries.mean(dim=1)
+        if not examples or not all("mowa_future_targets" in example for example in examples):
+            return {
+                "supervision_available": False,
+                "loss": None,
+                "losses": {},
+                "active_heads": (),
+                "masked_heads": MOWA_FUTURE_FULL_HEADS,
+            }
+
+        targets = {}
+        masks = {}
+        device = hidden_features.device
+        for head in MOWA_FUTURE_FULL_HEADS:
+            head_active = head in self.mowa_future_supervision_active_heads and all(
+                bool((example.get("mowa_future_masks") or {}).get(head, False)) for example in examples
+            )
+            masks[head] = head_active
+            if not head_active:
+                continue
+            values = [example["mowa_future_targets"][head] for example in examples]
+            targets[head] = torch.as_tensor(values, device=device, dtype=hidden_features.dtype)
+
+        if not any(masks.values()):
+            return {
+                "supervision_available": False,
+                "loss": None,
+                "losses": {},
+                "active_heads": (),
+                "masked_heads": MOWA_FUTURE_FULL_HEADS,
+            }
+
+        loss, losses, _ = self.mowa_future_supervision_probe.compute_loss(hidden_features, targets, masks)
+        return {
+            "supervision_available": True,
+            "loss": loss,
+            "losses": losses,
+            "active_heads": tuple(head for head in MOWA_FUTURE_FULL_HEADS if bool(masks.get(head, False))),
+            "masked_heads": tuple(head for head in MOWA_FUTURE_FULL_HEADS if not bool(masks.get(head, False))),
+        }
+
+    def _setup_mowa_action_bridge_probe(self) -> None:
+        mowa_cfg = getattr(self.config.framework, "mowa", None)
+        self.mowa_action_bridge_probe_enabled = bool(
+            getattr(mowa_cfg, "enable_action_bridge_probe", False)
+        )
+        self.mowa_action_bridge_probe = None
+        if not self.mowa_action_bridge_probe_enabled:
+            return
+
+        action_hidden_dim = int(self.config.framework.action_model.action_hidden_dim)
+        bridge_hidden_dim = int(getattr(mowa_cfg, "action_hidden_dim", action_hidden_dim))
+        num_action_layers = int(
+            getattr(
+                mowa_cfg,
+                "num_action_layers",
+                self._infer_mowa_action_bridge_probe_layers(),
+            )
+        )
+        num_bridge_tokens = int(getattr(mowa_cfg, "num_bridge_tokens", 1))
+        self.mowa_action_bridge_probe = MoWAActionBridge(
+            MoWAActionBridgeConfig(
+                wam_feature_dim=action_hidden_dim,
+                action_hidden_dim=bridge_hidden_dim,
+                num_action_layers=num_action_layers,
+                num_bridge_tokens=num_bridge_tokens,
+            )
+        )
+
+    def _infer_mowa_action_bridge_probe_layers(self) -> int:
+        action_model = getattr(self, "action_model", None)
+        blocks = getattr(getattr(action_model, "model", None), "mlp_resnet_blocks", None)
+        if blocks is not None:
+            return max(int(len(blocks)), 1)
+        return 1
+
+    def _maybe_run_mowa_action_bridge_probe(self, action_queries: torch.Tensor) -> dict | None:
+        if not self.mowa_action_bridge_probe_enabled:
+            return None
+        if self.mowa_action_bridge_probe is None:
+            raise RuntimeError("MoWA action bridge probe is enabled but not initialized.")
+
+        hidden_features = action_queries.mean(dim=1)
+        future_features = MoWAFutureFeatures(
+            hidden_features=hidden_features,
+            head_outputs={},
+            active_heads=("qwen_action_token_probe",),
+            masked_heads=(),
+        )
+        bridge_output = self.mowa_action_bridge_probe(future_features)
+        first_layer_tokens = bridge_output.layerwise_condition_features[0]
+        return {
+            "probe_loss": first_layer_tokens.float().square().mean() * 0.0,
+            "token_shape": tuple(first_layer_tokens.shape),
+            "active_heads": bridge_output.active_heads,
+            "masked_heads": bridge_output.masked_heads,
+        }
 
     # Discretised state → instruction prefix (π₀.5 style); shared with QwenPI_v3.
     add_discretized_state_to_instruction = staticmethod(add_discretized_state_to_instruction)

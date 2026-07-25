@@ -1,0 +1,2900 @@
+ ▐▛███▜▌   Claude Code v2.1.214
+▝▜█████▛▘  kimi-k2.6 · API Usage Billing
+  ▘▘ ▝▝    /disk/rl/starVLA
+
+
+❯ playground/mowa_e003_eval.sh测试脚本是不是可以多进程                          
+
+  Thought for 18s, read 3 files (ctrl+o to expand)
+
+● playground/mowa_e003_eval.sh 现在是单进程顺序执行的：启动一个 policy server →
+  依次对每个 task 启动一个 client → 一个 task 跑完再跑下一个。不过底层链路已经具
+  备了做多进程/并行的基础，只是脚本没有利用起来。
+
+  当前脚本的多进程潜力
+
+  1. 单 server 可服务多 client
+  deployment/model_server/server_policy.py 里的 WebsocketPolicyServer
+  监听一个端口，多个 client 可以同时连上来请求推理。
+  2. simulation_env.py 已经支持多 env 并发
+  examples/Robocasa_365/eval_files/simulation_env.py:121 的 run_simulation
+  会根据 n_envs 选择：
+    - n_envs == 1：SyncVectorEnv
+    - n_envs > 1：AsyncVectorEnv(..., context="spawn")
+  所以只要把 --args.n-envs 改大，就能在一个 client 里并发跑多个 robocasa
+  环境。但注意当前脚本里写死了 --args.n-envs 
+  1（playground/mowa_e003_eval.sh:191）。
+  3. 多 task 也可以并行
+  因为 server 是无状态的（每个请求独立图像+语言指令），你可以同时启动多个
+  simulation_env.py 实例，各自评估不同 task，共享同一个 server。
+
+  如果你想改成多进程，最常见的改法
+
+  方案 A：单个 client 内多 env（最简单）
+
+  把脚本里的 --args.n-envs 1 改成 --args.n-envs 4 之类的值，同时确保 N_EPISODES
+  能被 n_envs 整除或处理好余数。
+
+  局限：所有 env 共享一个 client 进程，GPU 侧仍然是串行处理每个 obs；适合 CPU
+  侧环境模拟慢、GPU 推理快的场景。
+
+  方案 B：多 task 并行（server 共享，client 并发）
+
+  保持 server 单实例，但把 for env_name in ... 循环改成后台并行，例如用 GNU
+  parallel 或 & + wait。每个 task 有自己的 client log 和 result json。RESUME
+  逻辑仍然有效，因为结果文件是按 task 分开的。
+
+  这种方式的好处是 GPU 利用率更高：一个 task 的 env 在等 CPU 模拟时，另一个 task
+  的 client 可以发请求给 server。
+
+  方案 C：每个 GPU 一个 server + 多 task 分片
+
+  如果有多张 GPU，可以按 task 分片：
+  - GPU 0 跑 task 1/2/3
+  - GPU 1 跑 task 4/5/6
+
+  每个分片独立跑一份 mowa_e003_eval.sh，指定不同的 GPU 和 PORT 即可。
+
+  ---
+  需要我直接帮你把 playground/mowa_e003_eval.sh 改成**方案 B（多 task
+  并行）或者方案 A（单 client 多 env）**吗？
+
+✻ Cogitated for 26s
+
+❯ a                                                                             
+
+  Thought for 8s (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line
+      15  #   MAX_STEPS     每条 episode 最大步数（默认 500）
+      16  #   N_ACT         每次 policy 调用后执行的 action 步数（默认 8
+          ）
+      17  #   WAN_HISTORY_FRAMES  视频历史帧数，需满足 1+4k 且 >=5（默认 
+          5）
+      18 +#   N_ENVS        每个 task 内部并行的环境数（默认 1）         
+      19  #   PORT          server 端口（默认 6789）
+      20  #   GPU           server 可见 GPU（默认 0）
+      21  #   RESUME        设置为 1 时，已有完整结果的任务直接跳过（默认
+          覆盖重跑）
+
+  Thought for 6s (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line
+      44  MAX_STEPS=${MAX_STEPS:-500}
+      45  N_ACT=${N_ACT:-8}
+      46  WAN_HISTORY_FRAMES=${WAN_HISTORY_FRAMES:-5}
+      47 +N_ENVS=${N_ENVS:-1}                                            
+      48  RESUME=${RESUME:-0}
+      49  
+      50  # 默认测试一组有代表性的 robocasa365 atomic target 任务
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line, removed 1 line
+      75  echo "MoWA-E-003 steps_9000 仿真测试"
+      76  echo "Checkpoint: $CKPT_DIR"
+      77  echo "Tasks:      ${TASK_LIST[*]}"
+      78 -echo "Episodes:   $N_EPISODES | Max steps: $MAX_STEPS | N_ACT: 
+         -$N_ACT"                                                        
+      78 +echo "Episodes:   $N_EPISODES | Max steps: $MAX_STEPS | N_ACT: 
+         +$N_ACT | N_ENVS: $N_ENVS"                                      
+      79  echo "Mode:       $(if [[ "$RESUME" == "1" ]]; then echo "resum
+          e (skip completed)"; else echo "overwrite"; fi)"
+      80  echo "Server:     $SERVER_PYTHON (GPU $GPU, port $PORT)"
+      81  echo "Client:     $CLIENT_PYTHON"
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line, removed 1 line
+      190      --args.host 127.0.0.1 \
+      191      --args.port "$PORT" \
+      192      --args.n-episodes "$N_EPISODES" \
+      193 -    --args.n-envs 1 \                                         
+      193 +    --args.n-envs "$N_ENVS" \                                 
+      194      --args.max-episode-steps "$MAX_STEPS" \
+      195      --args.n-action-steps "$N_ACT" \
+      196      --args.wan-history-frames "$WAN_HISTORY_FRAMES" \
+
+  Thought for 6s (ctrl+o to expand)
+
+● 已改成方案 A：单个 client 内多环境并行。
+
+  改动内容（playground/mowa_e003_eval.sh）：
+
+  - 新增环境变量 N_ENVS，默认 1，行为与之前完全一致。
+  - 把写死的 --args.n-envs 1 改成 --args.n-envs "$N_ENVS"。
+  - 启动日志里会打印当前 N_ENVS。
+
+  用法示例：
+
+  # 4 个 env 并行跑一个 task
+  N_ENVS=4 bash playground/mowa_e003_eval.sh /path/to/checkpoint
+
+  # 与其他参数组合
+  N_ENVS=4 N_EPISODES=20 MAX_STEPS=300 bash playground/mowa_e003_eval.sh
+  /path/to/checkpoint
+
+  注意：
+  - simulation_env.py 在 n_envs > 1 时会用 AsyncVectorEnv(..., 
+  context="spawn")。
+  - 如果 N_EPISODES 不是 N_ENVS 的整数倍，最后一批多跑的 episode
+  会被计入结果，所以最好让 N_EPISODES % N_ENVS == 0。
+  - 多 env 主要并行 CPU 侧环境模拟，policy server 仍是单实例，所以 GPU
+  推理还是串行处理每个请求。如果目标是提高 GPU 利用率，建议再叠加方案 B（多 task
+  并行 client）。需要我顺便加上吗？
+
+✻ Churned for 41s
+
+❯ 录制的视频将eys on hand拼接到右边                                             
+
+  Thought for 5s (ctrl+o to expand)
+
+  Thought for 1m 10s, searched for 5 patterns, read 3 files, ran 6 shell commands (ctrl+o to expand)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ 让你修改代码实现                                                              
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ 不是操作结果                                                                  
+
+  Thought for 45s, ran 2 shell commands (ctrl+o to expand)
+
+● Update(examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.
+        py)  ⎿  Added 8 lines
+      184          steps_per_render=1,
+      185          task_description: Optional[str] = None,
+      186          env_idx: int = 0,
+      187 +        concat_wrist_camera: bool = False,                    
+      188 +        wrist_camera_name: str = "robot0_eye_in_hand",        
+      189          **kwargs,
+      190      ):
+      191          """
+     ...
+      198                  ``annotation.human.task_description`` for Robo
+           Casa environments).
+      199              env_idx: Environment index, included in the filena
+           me when no task
+      200                  description is available.
+      201 +            concat_wrist_camera: If True, concatenate the wris
+          +t (eye-in-hand)                                               
+      202 +                camera view to the right of the main rendered 
+          +frame.                                                        
+      203 +            wrist_camera_name: Name of the wrist camera in the
+          + underlying                                                   
+      204 +                RoboCasa/RoboSuite environment.               
+      205          """
+      206          super().__init__(env)
+      207  
+     ...
+      222          self.task_description = task_description
+      223          self.env_idx = env_idx
+      224          self.episode_idx = 0
+      225 +        self.concat_wrist_camera = concat_wrist_camera        
+      226 +        self.wrist_camera_name = wrist_camera_name            
+      227  
+      228      @staticmethod
+      229      def _sanitize_filename(s: str) -> str:
+
+  Thought for 10s (ctrl+o to expand)
+
+● Update(examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.
+        py)
+  ⎿  Added 61 lines
+      240          filename = f"{task_part}_episode{self.episode_idx:03d}
+           .mp4"
+      241          return filename
+      242  
+      243 +    def _find_base_env(self):                                 
+      244 +        """Traverse wrappers to reach the base RoboCasa/RoboSu
+          +ite env."""                                                   
+      245 +        env = self.env                                        
+      246 +        while isinstance(env, gym.Wrapper):                   
+      247 +            env = env.env                                     
+      248 +        return env                                            
+      249 +                                                              
+      250 +    def _maybe_get_wrist_frame(self, main_frame: np.ndarray) -
+          +> np.ndarray | None:                                          
+      251 +        """Render the wrist camera and orient it to match the 
+          +main frame."""                                                
+      252 +        if not self.concat_wrist_camera:                      
+      253 +            return None                                       
+      254 +                                                              
+      255 +        base = self._find_base_env()                          
+      256 +        if (                                                  
+      257 +            base is None                                      
+      258 +            or not hasattr(base, "camera_names")              
+      259 +            or not hasattr(base, "env")                       
+      260 +        ):                                                    
+      261 +            return None                                       
+      262 +                                                              
+      263 +        if self.wrist_camera_name not in base.camera_names:   
+      264 +            return None                                       
+      265 +                                                              
+      266 +        width = getattr(base, "camera_widths", main_frame.shap
+          +e[1])                                                         
+      267 +        height = getattr(base, "camera_heights", main_frame.sh
+          +ape[0])                                                       
+      268 +        # The wrapper may store scalar or list dimensions.    
+      269 +        if isinstance(width, (list, tuple, np.ndarray)):      
+      270 +            idx = base.camera_names.index(self.wrist_camera_na
+          +me)                                                           
+      271 +            width = width[idx]                                
+      272 +            height = height[idx]                              
+      273 +                                                              
+      274 +        try:                                                  
+      275 +            wrist = base.env.sim.render(int(height), int(width
+          +), camera_name=self.wrist_camera_name)                        
+      276 +        except Exception:                                     
+      277 +            return None                                       
+      278 +                                                              
+      279 +        if wrist is None:                                     
+      280 +            return None                                       
+      281 +                                                              
+      282 +        if wrist.shape[:2] != main_frame.shape[:2]:           
+      283 +            # Simple center crop / pad to match main frame siz
+          +e.                                                            
+      284 +            h, w = main_frame.shape[:2]                       
+      285 +            wh, ww = wrist.shape[:2]                          
+      286 +            # Crop wrist if larger.                           
+      287 +            y0 = max(0, (wh - h) // 2)                        
+      288 +            x0 = max(0, (ww - w) // 2)                        
+      289 +            wrist = wrist[y0 : y0 + min(h, wh), x0 : x0 + min(
+          +w, ww)]                                                       
+      290 +            # Pad if smaller.                                 
+      291 +            ph = max(0, h - wrist.shape[0])                   
+      292 +            pw = max(0, w - wrist.shape[1])                   
+      293 +            if ph or pw:                                      
+      294 +                wrist = np.pad(                               
+      295 +                    wrist,                                    
+      296 +                    ((0, ph), (0, pw), (0, 0)),               
+      297 +                    mode="constant",                          
+      298 +                    constant_values=0,                        
+      299 +                )                                             
+      300 +                                                              
+      301 +        # Main frame has been vertically flipped by the RoboCa
+          +sa wrapper; match it.                                         
+      302 +        return np.ascontiguousarray(wrist[::-1, :, :]).astype(
+          +main_frame.dtype)                                             
+      303 +                                                              
+      304      def reset(self, **kwargs):
+      305          result = super().reset(**kwargs)
+      306          # Gymnasium reset returns (obs, info); older APIs may 
+           return just obs.
+
+  Thought for 6s (ctrl+o to expand)
+
+● Update(examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.
+        py)
+  ⎿  Added 3 lines
+      348  
+      349              frame = self.env.render()
+      350              assert frame.dtype == np.uint8
+      351 +            wrist_frame = self._maybe_get_wrist_frame(frame)  
+      352 +            if wrist_frame is not None:                       
+      353 +                frame = np.concatenate([frame, wrist_frame], a
+          +xis=1)                                                        
+      354              self.video_recorder.write_frame(frame)
+      355          return result
+      356  
+
+  Thought for 12s (ctrl+o to expand)
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 2 lines
+      71      crf: int = 22
+      72      thread_type: str = "FRAME"
+      73      thread_count: int = 1
+      74 +    concat_wrist: bool = True                                  
+      75 +    wrist_camera_name: str = "robot0_eye_in_hand"              
+      76  
+      77  
+      78  @dataclass
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 2 lines
+      109              video_dir=Path(config.video.video_dir),
+      110              steps_per_render=config.video.steps_per_render,
+      111              env_idx=idx,
+      112 +            concat_wrist_camera=config.video.concat_wrist,    
+      113 +            wrist_camera_name=config.video.wrist_camera_name, 
+      114          )
+      115      env = MultiStepWrapper(
+      116          env,
+
+  Thought for 39s, searched for 1 pattern, ran 2 shell commands (ctrl+o to expand)
+
+  Thought for 9s (ctrl+o to expand)
+
+● 已改好，现在 Robocasa_365 的评测视频会把
+  eye-in-hand（wrist）相机画面拼到主画面的右边。
+
+  改动文件
+
+  1. examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.py
+    - VideoRecordingWrapper 新增参数 concat_wrist_camera（默认 False，保持
+  tabletop 等旧行为不变）。
+    - 新增 _find_base_env() 和 _maybe_get_wrist_frame()：从底层
+  RoboCasa/RoboSuite 环境额外渲染 robot0_eye_in_hand
+  相机，并做垂直翻转使其与主视角方向一致。
+    - 在 step() 中，如果取到了 wrist 帧，就用 np.concatenate(..., axis=1)
+  横向拼接后写入视频。
+  2. examples/Robocasa_365/eval_files/simulation_env.py
+    - VideoConfig 新增 concat_wrist: bool = True 和 wrist_camera_name: str = 
+  "robot0_eye_in_hand"。
+    - _create_single_env() 创建 VideoRecordingWrapper 时把这两个配置传进去。
+
+  效果
+
+  录制出来的视频宽度会变成原来的 2 倍：
+  [主视角 robot0_agentview_left | 手腕视角 robot0_eye_in_hand]
+
+  如果你想关掉
+
+  在运行脚本时，目前这个行为是硬编码在 simulation_env.py
+  里的。要临时关闭，可以把 VideoConfig 里的 concat_wrist 改成
+  False，或者我帮你暴露成环境变量/命令行参数。需要吗？
+
+✻ Sautéed for 2m 47s
+
+❯ 改成配置参数，主左边、主右、腕部，默认是主左+腕部                             
+
+  Thought for 12s (ctrl+o to expand)
+
+  Thought for 31s, read 2 files (ctrl+o to expand)
+
+● Update(examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.
+        py)
+  ⎿  Added 1 line, removed 1 line
+      17  import re
+      18  import uuid
+      19  from pathlib import Path
+      20 -from typing import Optional                                    
+      20 +from typing import Optional, Sequence                          
+      21  
+      22  import av
+      23  import gymnasium as gym
+
+● Update(examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.
+        py)
+  ⎿  Added 64 lines, removed 45 lines
+      175  
+      176  
+      177  class VideoRecordingWrapper(gym.Wrapper):
+      178 +    """Record episodes to video, optionally concatenating mult
+          +iple camera views."""                                         
+      179 +                                                              
+      180 +    # Friendly aliases -> raw RoboSuite camera names used by R
+          +oboCasa.                                                      
+      181 +    VIEW_NAME_MAP = {                                         
+      182 +        "agentview_left": "robot0_agentview_left",            
+      183 +        "main_left": "robot0_agentview_left",                 
+      184 +        "agentview_right": "robot0_agentview_right",          
+      185 +        "main_right": "robot0_agentview_right",               
+      186 +        "eye_in_hand": "robot0_eye_in_hand",                  
+      187 +        "wrist": "robot0_eye_in_hand",                        
+      188 +    }                                                         
+      189 +                                                              
+      190      def __init__(
+      191          self,
+      192          env,
+     ...
+      196          steps_per_render=1,
+      197          task_description: Optional[str] = None,
+      198          env_idx: int = 0,
+      187 -        concat_wrist_camera: bool = False,                    
+      188 -        wrist_camera_name: str = "robot0_eye_in_hand",        
+      199 +        record_views: Sequence[str] = ("agentview_left", "eye_
+          +in_hand"),                                                    
+      200          **kwargs,
+      201      ):
+      202          """
+     ...
+      209                  ``annotation.human.task_description`` for Robo
+           Casa environments).
+      210              env_idx: Environment index, included in the filena
+           me when no task
+      211                  description is available.
+      201 -            concat_wrist_camera: If True, concatenate the wris
+          -t (eye-in-hand)                                               
+      202 -                camera view to the right of the main rendered 
+          -frame.                                                        
+      203 -            wrist_camera_name: Name of the wrist camera in the
+          - underlying                                                   
+      204 -                RoboCasa/RoboSuite environment.               
+      212 +            record_views: Ordered list of camera views to conc
+          +atenate horizontally.                                         
+      213 +                Supported aliases: ``agentview_left``/``main_l
+          +eft``,                                                        
+      214 +                ``agentview_right``/``main_right``, ``eye_in_h
+          +and``/``wrist``.                                              
+      215 +                Raw RoboSuite camera names are also accepted. 
+          +Default is                                                    
+      216 +                ``("agentview_left", "eye_in_hand")``.        
+      217          """
+      218          super().__init__(env)
+      219  
+     ...
+      234          self.task_description = task_description
+      235          self.env_idx = env_idx
+      236          self.episode_idx = 0
+      225 -        self.concat_wrist_camera = concat_wrist_camera        
+      226 -        self.wrist_camera_name = wrist_camera_name            
+      237 +        self.record_views = tuple(record_views)               
+      238  
+      239      @staticmethod
+      240      def _sanitize_filename(s: str) -> str:
+     ...
+      258              env = env.env
+      259          return env
+      260  
+      250 -    def _maybe_get_wrist_frame(self, main_frame: np.ndarray) -
+          -> np.ndarray | None:                                          
+      251 -        """Render the wrist camera and orient it to match the 
+          -main frame."""                                                
+      252 -        if not self.concat_wrist_camera:                      
+      253 -            return None                                       
+      261 +    @staticmethod                                             
+      262 +    def _match_shape(img: np.ndarray, target_shape: tuple) -> 
+          +np.ndarray:                                                   
+      263 +        """Crop or pad ``img`` to ``target_shape`` (H, W, C)."
+          +""                                                            
+      264 +        if img.shape == target_shape:                         
+      265 +            return img                                        
+      266 +        h, w = target_shape[:2]                               
+      267 +        ih, iw = img.shape[:2]                                
+      268 +        # Crop if larger.                                     
+      269 +        y0 = max(0, (ih - h) // 2)                            
+      270 +        x0 = max(0, (iw - w) // 2)                            
+      271 +        img = img[y0 : y0 + min(h, ih), x0 : x0 + min(w, iw)] 
+      272 +        # Pad if smaller.                                     
+      273 +        ph = max(0, h - img.shape[0])                         
+      274 +        pw = max(0, w - img.shape[1])                         
+      275 +        if ph or pw:                                          
+      276 +            img = np.pad(                                     
+      277 +                img,                                          
+      278 +                ((0, ph), (0, pw), (0, 0)),                   
+      279 +                mode="constant",                              
+      280 +                constant_values=0,                            
+      281 +            )                                                 
+      282 +        return img                                            
+      283  
+      284 +    def _render_view(self, view_name: str) -> np.ndarray | Non
+          +e:                                                            
+      285 +        """Render a single camera view, matching the orientati
+          +on of ``env.render()``."""                                    
+      286          base = self._find_base_env()
+      256 -        if (                                                  
+      257 -            base is None                                      
+      258 -            or not hasattr(base, "camera_names")              
+      259 -            or not hasattr(base, "env")                       
+      260 -        ):                                                    
+      287 +        if base is None or not hasattr(base, "camera_names"): 
+      288              return None
+      289  
+      263 -        if self.wrist_camera_name not in base.camera_names:   
+      290 +        camera_name = self.VIEW_NAME_MAP.get(view_name, view_n
+          +ame)                                                          
+      291 +        if camera_name not in base.camera_names:              
+      292              return None
+      293  
+      266 -        width = getattr(base, "camera_widths", main_frame.shap
+          -e[1])                                                         
+      267 -        height = getattr(base, "camera_heights", main_frame.sh
+          -ape[0])                                                       
+      268 -        # The wrapper may store scalar or list dimensions.    
+      294 +        # The default env.render() already returns the first c
+          +amera, vertically flipped.                                    
+      295 +        render_obs_key = getattr(base, "render_obs_key", None)
+      296 +        if render_obs_key == f"{camera_name}_image":          
+      297 +            return self.env.render()                          
+      298 +                                                              
+      299 +        width = getattr(base, "camera_widths", None)          
+      300 +        height = getattr(base, "camera_heights", None)        
+      301          if isinstance(width, (list, tuple, np.ndarray)):
+      270 -            idx = base.camera_names.index(self.wrist_camera_na
+          -me)                                                           
+      302 +            idx = base.camera_names.index(camera_name)        
+      303              width = width[idx]
+      304              height = height[idx]
+      305 +        elif width is None:                                   
+      306 +            # Fallback to the render() frame size if dimension
+          +s are unknown.                                                
+      307 +            ref = self.env.render()                           
+      308 +            height, width = ref.shape[:2]                     
+      309  
+      310 +        if not hasattr(base, "env"):                          
+      311 +            return None                                       
+      312          try:
+      275 -            wrist = base.env.sim.render(int(height), int(width
+          -), camera_name=self.wrist_camera_name)                        
+      313 +            frame = base.env.sim.render(int(height), int(width
+          +), camera_name=camera_name)                                   
+      314          except Exception:
+      315              return None
+      316  
+      279 -        if wrist is None:                                     
+      317 +        if frame is None:                                     
+      318              return None
+      319  
+      282 -        if wrist.shape[:2] != main_frame.shape[:2]:           
+      283 -            # Simple center crop / pad to match main frame siz
+          -e.                                                            
+      284 -            h, w = main_frame.shape[:2]                       
+      285 -            wh, ww = wrist.shape[:2]                          
+      286 -            # Crop wrist if larger.                           
+      287 -            y0 = max(0, (wh - h) // 2)                        
+      288 -            x0 = max(0, (ww - w) // 2)                        
+      289 -            wrist = wrist[y0 : y0 + min(h, wh), x0 : x0 + min(
+          -w, ww)]                                                       
+      290 -            # Pad if smaller.                                 
+      291 -            ph = max(0, h - wrist.shape[0])                   
+      292 -            pw = max(0, w - wrist.shape[1])                   
+      293 -            if ph or pw:                                      
+      294 -                wrist = np.pad(                               
+      295 -                    wrist,                                    
+      296 -                    ((0, ph), (0, pw), (0, 0)),               
+      297 -                    mode="constant",                          
+      298 -                    constant_values=0,                        
+      299 -                )                                             
+      320 +        # RoboCasa wrapper flips images vertically before expo
+          +sing them; do the same.                                       
+      321 +        return np.ascontiguousarray(frame[::-1, :, :]).astype(
+          +np.uint8)                                                     
+      322  
+      301 -        # Main frame has been vertically flipped by the RoboCa
+          -sa wrapper; match it.                                         
+      302 -        return np.ascontiguousarray(wrist[::-1, :, :]).astype(
+          -main_frame.dtype)                                             
+      303 -                                                              
+      323      def reset(self, **kwargs):
+      324          result = super().reset(**kwargs)
+      325          # Gymnasium reset returns (obs, info); older APIs may 
+           return just obs.
+
+  Thought for 12s (ctrl+o to expand)
+
+● Update(examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.
+        py)
+  ⎿  Added 14 lines, removed 4 lines
+      365              if not self.video_recorder.is_ready():
+      366                  self.video_recorder.start(self.file_path)
+      367  
+      368 -            frame = self.env.render()                         
+      368 +            frames = []                                       
+      369 +            for view_name in self.record_views:               
+      370 +                frame = self._render_view(view_name)          
+      371 +                if frame is not None:                         
+      372 +                    frames.append(frame)                      
+      373 +                                                              
+      374 +            if not frames:                                    
+      375 +                # Fallback to the default render if none of th
+          +e configured views exist.                                     
+      376 +                frames = [self.env.render()]                  
+      377 +                                                              
+      378 +            # Normalize heights before horizontal concatenatio
+          +n.                                                            
+      379 +            target_shape = frames[0].shape                    
+      380 +            frames = [self._match_shape(f, target_shape) for f
+          + in frames]                                                   
+      381 +            frame = np.concatenate(frames, axis=1)            
+      382              assert frame.dtype == np.uint8
+      370 -            wrist_frame = self._maybe_get_wrist_frame(frame)  
+      371 -            if wrist_frame is not None:                       
+      372 -                frame = np.concatenate([frame, wrist_frame], a
+          -xis=1)                                                        
+      383              self.video_recorder.write_frame(frame)
+      384          return result
+      385  
+
+  Thought for 15s (ctrl+o to expand)
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)  ⎿  Added 3 lines, removed 2 lines
+      71      crf: int = 22
+      72      thread_type: str = "FRAME"
+      73      thread_count: int = 1
+      74 -    concat_wrist: bool = True                                  
+      75 -    wrist_camera_name: str = "robot0_eye_in_hand"              
+      74 +    record_views: tuple[str, ...] = field(                     
+      75 +        default_factory=lambda: ("agentview_left", "eye_in_hand
+         +")                                                             
+      76 +    )                                                          
+      77  
+      78  
+      79  @dataclass
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 1 line, removed 2 lines
+      110              video_dir=Path(config.video.video_dir),
+      111              steps_per_render=config.video.steps_per_render,
+      112              env_idx=idx,
+      113 -            concat_wrist_camera=config.video.concat_wrist,    
+      114 -            wrist_camera_name=config.video.wrist_camera_name, 
+      113 +            record_views=config.video.record_views,           
+      114          )
+      115      env = MultiStepWrapper(
+      116          env,
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 1 line
+      169      wan_history_frames: int = 5
+      170      video_out_path: Optional[str] = "results/robocasa365_eval_
+           test/videos"
+      171      seed: int = 7
+      172 +    record_views: tuple[str, ...] = ("agentview_left", "eye_in
+          +_hand")                                                       
+      173      pretrained_path: str = (
+      174          "playground/Checkpoints/robocasa365_qwenoft_OpenDrawer
+           _100step/checkpoints/steps_100_pytorch_model.pt"
+      175      )
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 4 lines, removed 1 line
+      191          env_name=args.env_name,
+      192          n_episodes=args.n_episodes,
+      193          n_envs=args.n_envs,
+      194 -        video=VideoConfig(video_dir=args.video_out_path),     
+      194 +        video=VideoConfig(                                    
+      195 +            video_dir=args.video_out_path,                    
+      196 +            record_views=args.record_views,                   
+      197 +        ),                                                    
+      198          multistep=MultiStepConfig(
+      199              video_delta_indices=np.arange(1 - args.wan_history
+           _frames, 1),
+      200              n_action_steps=args.n_action_steps,
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 7 lines
+      228      )
+      229      parser.add_argument("--args.video-out-path", dest="video_o
+           ut_path", default=Args.video_out_path)
+      230      parser.add_argument("--args.seed", dest="seed", type=int, 
+           default=Args.seed)
+      231 +    parser.add_argument(                                      
+      232 +        "--args.record-views",                                
+      233 +        dest="record_views",                                  
+      234 +        type=lambda s: tuple(x.strip() for x in s.split(",")),
+      235 +        default=",".join(Args.record_views),                  
+      236 +        help="Comma-separated camera views to record, e.g. age
+          +ntview_left,eye_in_hand",                                     
+      237 +    )                                                         
+      238      parser.add_argument("--args.pretrained-path", dest="pretra
+           ined_path", default=Args.pretrained_path)
+      239      parser.add_argument("--args.unnorm-key", dest="unnorm_key"
+           , default=Args.unnorm_key)
+      240      parsed = parser.parse_args()
+
+  Thought for 40s, read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line
+      16  #   N_ACT         每次 policy 调用后执行的 action 步数（默认 8
+          ）
+      17  #   WAN_HISTORY_FRAMES  视频历史帧数，需满足 1+4k 且 >=5（默认 
+          5）
+      18  #   N_ENVS        每个 task 内部并行的环境数（默认 1）
+      19 +#   RECORD_VIEWS  录制视频的相机视角，逗号分隔（默认 agentview_
+         +left,eye_in_hand）                                             
+      20  #   PORT          server 端口（默认 6789）
+      21  #   GPU           server 可见 GPU（默认 0）
+      22  #   RESUME        设置为 1 时，已有完整结果的任务直接跳过（默认
+          覆盖重跑）
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line
+      46  N_ACT=${N_ACT:-8}
+      47  WAN_HISTORY_FRAMES=${WAN_HISTORY_FRAMES:-5}
+      48  N_ENVS=${N_ENVS:-1}
+      49 +RECORD_VIEWS=${RECORD_VIEWS:-agentview_left,eye_in_hand}       
+      50  RESUME=${RESUME:-0}
+      51  
+      52  # 默认测试一组有代表性的 robocasa365 atomic target 任务
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line
+      78  echo "Checkpoint: $CKPT_DIR"
+      79  echo "Tasks:      ${TASK_LIST[*]}"
+      80  echo "Episodes:   $N_EPISODES | Max steps: $MAX_STEPS | N_ACT: 
+          $N_ACT | N_ENVS: $N_ENVS"
+      81 +echo "Record:     $RECORD_VIEWS"                               
+      82  echo "Mode:       $(if [[ "$RESUME" == "1" ]]; then echo "resum
+          e (skip completed)"; else echo "overwrite"; fi)"
+      83  echo "Server:     $SERVER_PYTHON (GPU $GPU, port $PORT)"
+      84  echo "Client:     $CLIENT_PYTHON"
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line
+      198      --args.n-action-steps "$N_ACT" \
+      199      --args.wan-history-frames "$WAN_HISTORY_FRAMES" \
+      200      --args.video-out-path "$video_dir" \
+      201 +    --args.record-views "$RECORD_VIEWS" \                     
+      202      > "$RESULT_ROOT/client_${task_tag}.log" 2>&1
+      203    client_exit=$?
+      204    set -e
+
+  Thought for 54s, ran 3 shell commands (ctrl+o to expand)
+
+  Thought for 12s (ctrl+o to expand)
+
+● 已改成配置参数，支持任意组合和顺序拼接，默认是 主左（agentview_left）+ 
+  腕部（eye_in_hand）。
+
+  改动点
+
+  1. examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.py
+    - 用 record_views 参数取代之前的 concat_wrist_camera。
+    - 内置别名映射：
+        - agentview_left / main_left → robot0_agentview_left
+      - agentview_right / main_right → robot0_agentview_right
+      - eye_in_hand / wrist → robot0_eye_in_hand
+    - 也支持直接写原始 RoboSuite 相机名。
+    - step() 里按 record_views
+  的顺序横向拼接；如果某个视角不存在则跳过，全部不存在时回退到默认渲染。
+  2. examples/Robocasa_365/eval_files/simulation_env.py
+    - VideoConfig 新增 record_views: tuple[str, ...]，默认 ("agentview_left", 
+  "eye_in_hand")。
+    - Args 和 argparse 新增 --args.record-views，逗号分隔，例如：
+  --args.record-views agentview_left,agentview_right,eye_in_hand
+  3. playground/mowa_e003_eval.sh
+    - 新增环境变量 RECORD_VIEWS，默认 agentview_left,eye_in_hand，并传给
+  client。
+    - 启动日志会打印当前 Record: 配置。
+
+  用法示例
+
+  # 默认：主左 + 腕部
+  bash playground/mowa_e003_eval.sh /path/to/checkpoint
+
+  # 只录主左
+  RECORD_VIEWS=agentview_left bash playground/mowa_e003_eval.sh
+  /path/to/checkpoint
+
+  # 主左 + 主右 + 腕部
+  RECORD_VIEWS=agentview_left,agentview_right,eye_in_hand bash
+  playground/mowa_e003_eval.sh /path/to/checkpoint
+
+  # 顺序可调：腕部在左，主左在右
+  RECORD_VIEWS=eye_in_hand,agentview_left bash playground/mowa_e003_eval.sh
+  /path/to/checkpoint
+
+  视频会按你给的顺序从左到右拼接。需要我再暴露成 YAML
+  配置而不是环境变量/命令行吗？
+
+✻ Crunched for 6m 32s
+
+❯ 测试代码中每个任务的具体测试能不能显示进度，至少显示 成功数/已完成/总数       
+  这样的进度条，可以在一条进度条上用不同颜色或者符号标注来，不过总数是不变的，  
+  已完成包含成功                                                                
+
+  Thought for 8s (ctrl+o to expand)
+  Thought for 52s, read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 92 lines
+      136      current_successes = [False] * config.n_envs
+      137      obs, _ = env.reset()
+      138      t0 = time.time()
+      139 +    pbar = EpisodeProgressBar(total=config.n_episodes, desc=co
+          +nfig.env_name)                                                
+      140      while completed < config.n_episodes:
+      141          out = model.step(obs)
+      142          actions = out["actions"] if "actions" in out else out
+     ...
+      145              current_successes[i] |= bool(env_infos["success"][
+           i][0])
+      146              if terminations[i] or truncations[i]:
+      147                  episode_successes.append(current_successes[i])
+      148 +                pbar.update(1, success=current_successes[i])  
+      149                  current_successes[i] = False
+      150                  completed += 1
+      151          obs = next_obs
+      152  
+      153 +    pbar.close()                                              
+      154      try:
+      155          env.close()
+      156      except Exception as e:  # noqa: BLE001
+     ...
+      159      return config.env_name, episode_successes
+      160  
+      161  
+      162 +class EpisodeProgressBar:                                     
+      163 +    """Simple colored progress bar for vectorized episode eval
+          +uation."""                                                    
+      164 +                                                              
+      165 +    def __init__(self, total: int, desc: str = "", width: int 
+          += 30, file=None):                                             
+      166 +        self.total = max(1, total)                            
+      167 +        self.desc = desc                                      
+      168 +        self.width = max(10, width)                           
+      169 +        self.file = file or sys.stdout                        
+      170 +        self.is_tty = self.file.isatty()                      
+      171 +        self.completed = 0                                    
+      172 +        self.statuses: List[bool] = []  # True for success    
+      173 +        self._last_logged = 0                                 
+      174 +        self._closed = False                                  
+      175 +                                                              
+      176 +    def update(self, n: int = 1, success: bool = False):      
+      177 +        for _ in range(n):                                    
+      178 +            if self.completed >= self.total:                  
+      179 +                break                                         
+      180 +            self.completed += 1                               
+      181 +            self.statuses.append(bool(success))               
+      182 +        self._render()                                        
+      183 +                                                              
+      184 +    def _block_char(self, start: int, end: int) -> str:       
+      185 +        """Return a single colored block character for episode
+          + indices [start, end)."""                                     
+      186 +        display_completed = min(self.completed, self.total)   
+      187 +        if end <= display_completed:                          
+      188 +            block_statuses = self.statuses[start:end]         
+      189 +            if all(block_statuses):                           
+      190 +                color, char = ("\033[32m", "█")  # green: all 
+          +success                                                       
+      191 +            elif not any(block_statuses):                     
+      192 +                color, char = ("\033[31m", "█")  # red: all fa
+          +il                                                            
+      193 +            else:                                             
+      194 +                color, char = ("\033[33m", "█")  # yellow: mix
+          +ed                                                            
+      195 +        elif start >= display_completed:                      
+      196 +            color, char = ("\033[90m", "░")  # gray: pending  
+      197 +        else:                                                 
+      198 +            color, char = ("\033[33m", "▒")  # yellow: in-prog
+          +ress block                                                    
+      199 +        if self.is_tty:                                       
+      200 +            return f"{color}{char}\033[0m"                    
+      201 +        return char                                           
+      202 +                                                              
+      203 +    def _line(self) -> str:                                   
+      204 +        display_completed = min(self.completed, self.total)   
+      205 +        successes = sum(self.statuses[:display_completed])    
+      206 +        failures = display_completed - successes              
+      207 +        pct = 100.0 * display_completed / self.total          
+      208 +        bar = "".join(                                        
+      209 +            self._block_char(                                 
+      210 +                start=i * self.total // self.width,           
+      211 +                end=(i + 1) * self.total // self.width,       
+      212 +            )                                                 
+      213 +            for i in range(self.width)                        
+      214 +        )                                                     
+      215 +        if self.is_tty:                                       
+      216 +            return (                                          
+      217 +                f"{self.desc}: |{bar}| "                      
+      218 +                f"{display_completed}/{self.total} "          
+      219 +                f"\033[32m✅{successes}\033[0m \033[31m❌{fail
+          +ures}\033[0m "                                                
+      220 +                f"({pct:.1f}%)"                               
+      221 +            )                                                 
+      222 +        return (                                              
+      223 +            f"{self.desc}: |{bar}| "                          
+      224 +            f"{display_completed}/{self.total} "              
+      225 +            f"success={successes} fail={failures} ({pct:.1f}%)
+          +"                                                             
+      226 +        )                                                     
+      227 +                                                              
+      228 +    def _render(self):                                        
+      229 +        if self.is_tty:                                       
+      230 +            self.file.write("\r" + self._line())              
+      231 +            self.file.flush()                                 
+      232 +            return                                            
+      233 +                                                              
+      234 +        # Non-TTY (e.g. piped to tee): emit a line at most eve
+          +ry 5% or 5 episodes.                                          
+      235 +        step = max(1, self.total // 20) if self.total >= 20 el
+          +se 1                                                          
+      236 +        if self.completed == self.total or self.completed - se
+          +lf._last_logged >= step:                                      
+      237 +            print(self._line(), file=self.file)               
+      238 +            self._last_logged = self.completed                
+      239 +                                                              
+      240 +    def close(self):                                          
+      241 +        if self._closed:                                      
+      242 +            return                                            
+      243 +        self._closed = True                                   
+      244 +        if self.is_tty:                                       
+      245 +            self.file.write("\n")                             
+      246 +            self.file.flush()                                 
+      247 +        elif self.completed != self._last_logged:             
+      248 +            print(self._line(), file=self.file)               
+      249 +                                                              
+      250 +                                                              
+      251  @dataclasses.dataclass
+      252  class Args:
+      253      host: str = "127.0.0.1"
+
+  Thought for 9s, ran 2 shell commands (ctrl+o to expand)
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 2 lines, removed 1 line
+      165      def __init__(self, total: int, desc: str = "", width: int 
+           = 30, file=None):
+      166          self.total = max(1, total)
+      167          self.desc = desc
+      168 -        self.width = max(10, width)                           
+      168 +        # Use one block per episode when there are few episode
+          +s; cap at ``width``.                                          
+      169 +        self.width = min(max(10, width), self.total)          
+      170          self.file = file or sys.stdout
+      171          self.is_tty = self.file.isatty()
+      172          self.completed = 0
+
+  Thought for 10s, ran 1 shell command (ctrl+o to expand)
+
+  Thought for 2s (ctrl+o to expand)
+
+● 已加上每个 task 的进度条。
+
+  改动
+
+  examples/Robocasa_365/eval_files/simulation_env.py
+  - 新增 EpisodeProgressBar 类：
+    - 进度条上每个块代表一个 episode。
+    - 绿色块：该 block
+  内全部成功；红色块：全部失败；黄色块：有成功也有失败；灰色块：未完成。
+    - 右侧显示 完成数/总数 ✅成功数 ❌失败数 (百分比)。
+    - 在终端（TTY）时用 ANSI 颜色 + emoji，同一行刷新。
+    - 被重定向到日志文件（非 TTY）时，每完成约 5% 打印一行，避免刷屏。
+  - run_simulation 里每完成一个 episode 就更新一次进度条。
+
+  效果示例
+
+  终端里会是类似这样一行实时刷新：
+
+  robocasa/OpenDrawer: |████░░░░░░| 4/10 ✅2 ❌2 (40.0%)
+
+  日志文件里则 periodically 输出：
+
+  robocasa/OpenDrawer: |████░░░░░░| 4/10 success=2 fail=2 (40.0%)
+
+  用法
+
+  现在跑 playground/mowa_e003_eval.sh 时，每个 task 的 client
+  日志里会自动显示进度；直接运行 simulation_env.py 也能在终端看到实时进度条。
+
+  需要我把进度条也做到 shell 脚本层（显示当前是第几个 task / 共几个 task）吗？
+
+✻ Sautéed for 2m 20s
+
+❯ [09:15:30] server 就绪 (75x2s) 75x2是什么意思                                 
+
+  Thought for 3s (ctrl+o to expand)
+
+● 这是 playground/mowa_e003_eval.sh 里检测 server 是否启动就绪的循环打印的。
+
+  代码位置：playground/mowa_e003_eval.sh:109-112
+
+  for i in $(seq 1 180); do
+    sleep 2
+    if grep -q "server running" "$RESULT_ROOT/server.log" 2>/dev/null; then
+      ready=true
+      echo "[$(date +%H:%M:%S)] server 就绪 (${i}x2s)"
+
+  含义：
+
+  - 脚本每隔 2 秒检查一次 server.log 里有没有出现 server running。
+  - 75x2s 表示已经检查了 75 次，每次 2 秒，也就是大约等了 150 秒 后 server
+  才就绪。
+  - 最多检查 180 次，即超时时间为 360 秒（6 分钟）。
+
+  所以 75x2s 只是告诉你 server 启动花了 150
+  秒左右，属于正常情况（模型加载、Warmup 比较耗时）。
+
+✻ Worked for 6s
+
+❯ 开启了，但是gpu使用率一直0                                                    
+
+  Thought for 3m 43s, searched for 13 patterns, read 8 files, listed 4 directories, ran 12 shell commands (ctrl+o to expand)
+
+● GPU 使用率 0% 不等于没启动，从你当前的 nvidia-smi 看， server 和 4
+  个环境进程都占用了显存：
+
+  - server：15332 MiB
+  - 4 个 robocasa env：~8 GB
+
+  总共 23.9 / 24 GB，几乎满了。
+
+  最可能的原因：显存不足导致推理卡住
+
+  server 在收到第一个请求后，已经走到了加载 instruction text cache
+  这一步（server.log 09:16:34），但之后就没有日志了。客户端（client_robocasa_Ope
+  nDrawer.log）也卡在第一条 model.step() 没有进度。
+
+  这通常是 第一次 diffusion 推理时显存不够，PyTorch 在反复尝试分配显存，表现为：
+  - server CPU 占用不低（70% 左右）
+  - GPU utilization 一直 0%
+  - 没有明显的 OOM 报错（因为可能还在重试 / 卡住）
+
+  建议排查 / 解决
+
+  1. 立刻把 N_ENVS 降到 1 或 2
+  每个 env 都会用 EGL 占用显存渲染。4 个 env 同时跑对 24GB 来说太紧张：
+  N_ENVS=1 bash playground/mowa_e003_eval.sh /path/to/checkpoint
+  1. 如果显存还是不够，先不录视频：
+  N_ENVS=1 RECORD_VIEWS=agentview_left bash playground/mowa_e003_eval.sh
+  /path/to/checkpoint
+  2. 给 PyTorch 开启 expandable segments（减少碎片导致分配失败）
+  在启动脚本前设置环境变量：
+  export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+  bash playground/mowa_e003_eval.sh /path/to/checkpoint
+  3. 确认 server 真的在用 GPU 而不是 CPU
+  等它跑起来后，开另一个终端看：
+  watch -n 1 nvidia-smi
+  3. 如果推理正常，你会看到 server_policy.py 进程的 GPU-Util
+  有短暂尖峰，不是一直 0。
+  4. 先做一个最小测试
+  用单 env、短 episode、不录视频，看能否跑通：
+  N_ENVS=1 N_EPISODES=1 MAX_STEPS=50 bash playground/mowa_e003_eval.sh
+  /path/to/checkpoint
+
+  注意
+
+  这个 server 是请求驱动的：只有客户端要新动作 chunk 时才会用
+  GPU。n_action_steps=8、action_chunk_size=32，所以大概每 32 个动作调用一次
+  server。即使一切正常，GPU 也不会 100% 占满，而是间歇性尖峰。
+
+  你现在的情况是连第一个尖峰都没出现，基本可以确定是显存不够/分配卡住了。先降到
+  N_ENVS=1 再试。
+
+✻ Brewed for 5m 0s
+
+❯ 改成2了还是0                                                                  
+
+  Thought for 1m 2s, read 3 files, listed 1 directory, ran 5 shell commands (ctrl+o to expand)
+
+❯ 你代码有问题吧                                                                
+
+  Thought for 1m 39s, searched for 1 pattern, read 1 file, ran 7 shell commands (ctrl+o to expand)
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 1 line, removed 1 line
+      235          # Non-TTY (e.g. piped to tee): emit a line at most eve
+           ry 5% or 5 episodes.
+      236          step = max(1, self.total // 20) if self.total >= 20 el
+           se 1
+      237          if self.completed == self.total or self.completed - se
+           lf._last_logged >= step:
+      238 -            print(self._line(), file=self.file)               
+      238 +            print(self._line(), file=self.file, flush=True)   
+      239              self._last_logged = self.completed
+      240  
+      241      def close(self):
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 1 line, removed 1 line
+      123  
+      124  
+      125  def run_simulation(model: PolicyWarper, config: SimulationConf
+           ig) -> Tuple[str, List[bool]]:
+      126 -    print(f"[robocasa365] running {config.n_episodes} eps on {
+          -config.env_name}")                                            
+      126 +    print(f"[robocasa365] running {config.n_episodes} eps on {
+          +config.env_name}", flush=True)                                
+      127      env_fns = [partial(_create_single_env, config=config, idx=
+           i) for i in range(config.n_envs)]
+      128      env = (
+      129          gym.vector.SyncVectorEnv(env_fns)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line, removed 1 line
+      187    fi
+      188  
+      189    set +e
+      190 -  PYTHONPATH=$REPO_ROOT "$CLIENT_PYTHON" -m examples.Robocasa_
+          -365.eval_files.simulation_env \                               
+      190 +  PYTHONUNBUFFERED=1 PYTHONPATH=$REPO_ROOT "$CLIENT_PYTHON" -m
+          + examples.Robocasa_365.eval_files.simulation_env \            
+      191      --args.pretrained-path "$CKPT_DIR" \
+      192      --args.env-name "$env_name" \
+      193      --args.host 127.0.0.1 \
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(deployment/model_server/policy_wrapper.py)
+  ⎿  Added 14 lines
+      192          framework_start = time.perf_counter()
+      193          out = self._framework.predict_action(examples=examples
+           , **kwargs)
+      194          framework_done = time.perf_counter()
+      195 +                                                              
+      196 +        # Diagnostic log: helps verify GPU is being used and h
+          +ow long each request takes.                                   
+      197 +        try:                                                  
+      198 +            device = next(self._framework.parameters()).device
+      199 +        except Exception:                                     
+      200 +            device = "unknown"                                
+      201 +        logging.info(                                         
+      202 +            "predict_action: batch=%d device=%s framework=%.3f
+          +s total=%.3fs",                                               
+      203 +            len(examples),                                    
+      204 +            device,                                           
+      205 +            framework_done - framework_start,                 
+      206 +            time.perf_counter() - overall_start,              
+      207 +        )                                                     
+      208 +                                                              
+      209          normalized = np.asarray(out["normalized_actions"])  # 
+           (B, T, D)
+      210  
+      211          unnorm_start = time.perf_counter()
+
+  Thought for 10s, ran 1 shell command (ctrl+o to expand)
+
+● Update(deployment/model_server/policy_wrapper.py)
+  ⎿  Added 8 lines, removed 1 line
+      198              device = next(self._framework.parameters()).device
+      199          except Exception:
+      200              device = "unknown"
+      201 +        try:                                                  
+      202 +            backbone_device = next(                           
+      203 +                getattr(self._framework, "backbone", self._fra
+          +mework).parameters()                                          
+      204 +            ).device                                          
+      205 +        except Exception:                                     
+      206 +            backbone_device = "unknown"                       
+      207          logging.info(
+      202 -            "predict_action: batch=%d device=%s framework=%.3f
+          -s total=%.3fs",                                               
+      208 +            "predict_action: batch=%d device=%s backbone_devic
+          +e=%s framework=%.3fs total=%.3fs",                            
+      209              len(examples),
+      210              device,
+      211 +            backbone_device,                                  
+      212              framework_done - framework_start,
+      213              time.perf_counter() - overall_start,
+      214          )
+
+  Thought for 7s, ran 1 shell command (ctrl+o to expand)
+
+  Thought for 5s (ctrl+o to expand)
+
+● 我加了诊断和修复，先停掉当前这次再重跑才能看到效果。
+
+  刚才的问题
+
+  进度条在脚本里会被重定向到 log 文件，而 Python 默认会对文件输出做块缓冲，导致
+  进度行迟迟不刷新。这看起来就像“卡住/没进度”，是我代码里的问题，已经修：
+
+  1. examples/Robocasa_365/eval_files/simulation_env.py
+    - EpisodeProgressBar 非 TTY 输出加 flush=True。
+    - 启动 print 也加了 flush=True。
+  2. playground/mowa_e003_eval.sh
+    - client 启动时加 PYTHONUNBUFFERED=1，保证 log 实时写。
+  3. deployment/model_server/policy_wrapper.py
+    - 每次推理打印一行：
+  predict_action: batch=2 device=cuda:0 backbone_device=cuda:0 framework=1.234s
+  total=1.345s
+    - 这样 server.log 里能直接看到：
+        - 模型到底在 CPU 还是 GPU
+      - 每次推理耗时
+      - 什么时候发生了推理
+
+  为什么 GPU 利用率会显示 0
+
+  这个 server 是请求驱动的：
+  - action_chunk_size=32：server 一次返回 32 个动作
+  - n_action_steps=8：每个动作在环境里执行 8 步
+  - 所以 client 大约每 32 * 8 = 256 个 env step 才找 server 推理一次
+
+  MuJoCo 环境模拟本身较慢，256 步可能要跑好几分钟，这段期间 server
+  就是闲着的，nvidia-smi 自然显示 0%。但这只是“没在执行推理”，不代表 server
+  没启动或模型没上 GPU。
+
+  你现在要做的事
+
+  先停掉当前这次（Ctrl+C 或在另一个终端）：
+
+  pkill -f "server_policy.py"
+  pkill -f "simulation_env"
+
+  然后重跑（建议先用最小配置验证）：
+
+  N_ENVS=2 N_EPISODES=2 MAX_STEPS=100 bash playground/mowa_e003_eval.sh
+  /path/to/checkpoint
+
+  同时看日志：
+
+  # 看 server 每次推理的设备/耗时
+  tail -f playground/mowa_eval_results/.../server.log | grep predict_action
+
+  # 看 client 进度
+  tail -f playground/mowa_eval_results/.../client_*.log
+
+  如果 server.log 里出现 device=cuda:0 且推理时间在 1~3s 左右，说明 GPU
+  是正常的，只是利用率看起来是间歇性尖峰。
+  如果显示 device=cpu，那就是模型没上 GPU，我继续修。
+
+✻ Cooked for 5m 52s
+
+❯ 为什么client 大约每 32 * 8 = 256 个 env step 才找 server 推理一次             
+
+  Thought for 36s, read 1 file (ctrl+o to expand)
+
+● 抱歉，我前面算错了。
+
+  实际调用频率
+
+  client 找 server 推理一次，大约每 n_action_steps 个 env step（默认是 8 个 env
+  step），不是 256。
+
+  流程是：
+
+  1. run_simulation 主循环一次调用 model.step(obs)。
+  2. PolicyWarper.step() 把 server 返回的 action_chunk_size=32 的 action chunk
+  切成前 n_action_steps=8 步：
+  raw_actions[:, : self.n_action_steps, s:e]
+  3. 这个 (B, 8, D) 的动作交给 MultiStepWrapper.step()。
+  4. MultiStepWrapper 在内部执行 8 次 env step（把 8 个动作依次喂给 base env）。
+  5. 8 步跑完后，主循环再次调用 model.step(obs)，重新请求 server。
+
+  所以 server 每次返回 32 个动作，但当前代码只取了前 8 个，剩下 24
+  个被浪费了。client 大约每 8 个 env step 就找 server 一次。
+
+  为什么 GPU 还是 0%
+
+  如果模型正常在 GPU 上，应该每隔 8 个 env step 出现一次短暂的 GPU
+  尖峰。你观察到长时间为 0，可能的原因：
+
+  1. 模型其实没在 GPU 上跑（CPU 推理）。
+  我加的 server.log 诊断会打印 device= 和 backbone_device=，重跑后看是不是
+  cuda:0 就知道了。
+  2. MuJoCo 环境模拟太慢，8 个 env step 可能要十几秒甚至更久，GPU
+  尖峰很短，容易被 nvidia-smi 采样错过。
+  3. 模型卡在第一次推理，根本没返回（比如显存分配 hang 住）。
+
+  建议
+
+  先停掉当前进程，用我加的日志重跑：
+
+  pkill -f "server_policy.py"
+  pkill -f "simulation_env"
+
+  N_ENVS=2 N_EPISODES=2 MAX_STEPS=50 bash playground/mowa_e003_eval.sh
+  /path/to/checkpoint
+
+  然后同时看：
+
+  tail -f playground/mowa_eval_results/.../server.log | grep predict_action
+  tail -f playground/mowa_eval_results/.../client_*.log
+
+  如果看到 predict_action: batch=2 device=cuda:0 backbone_device=cuda:0 
+  framework=...，说明 GPU 是正常的，只是尖峰短。
+  如果看到 device=cpu，那就是模型没上 GPU，我继续修。
+
+✻ Baked for 43s
+
+❯ 启动了，你看看                                                                
+
+  Thought for 1m 39s, searched for 2 patterns, read 1 file, listed 3 directories, ran 4 shell commands (ctrl+o to expand)
+
+● Update(examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.
+        py)
+  ⎿  Added 16 lines, removed 3 lines
+      281              )
+      282          return img
+      283  
+      284 -    def _render_view(self, view_name: str) -> np.ndarray | Non
+          -e:                                                            
+      285 -        """Render a single camera view, matching the orientati
+          -on of ``env.render()``."""                                    
+      284 +    def _render_view(self, view_name: str, raw_obs: Optional[d
+          +ict] = None) -> np.ndarray | None:                            
+      285 +        """Render a single camera view, matching the orientati
+          +on of ``env.render()``.                                       
+      286 +                                                              
+      287 +        Prefer frames that are already present in the environm
+          +ent's last observation                                        
+      288 +        dict (cheap), otherwise fall back to an explicit rende
+          +r call.                                                       
+      289 +        """                                                   
+      290 +        camera_name = self.VIEW_NAME_MAP.get(view_name, view_n
+          +ame)                                                          
+      291 +                                                              
+      292 +        # 1) Try to reuse the already-computed frame from the 
+          +env observation.                                              
+      293 +        video_key = f"video.{camera_name}"                    
+      294 +        if isinstance(raw_obs, dict) and video_key in raw_obs:
+      295 +            frame = raw_obs[video_key]                        
+      296 +            if isinstance(frame, np.ndarray) and frame.ndim ==
+          + 3 and frame.shape[-1] == 3:                                  
+      297 +                return np.ascontiguousarray(frame).astype(np.u
+          +int8)                                                         
+      298 +                                                              
+      299 +        # 2) Fall back to explicit rendering.                 
+      300          base = self._find_base_env()
+      301          if base is None or not hasattr(base, "camera_names"):
+      302              return None
+      303  
+      290 -        camera_name = self.VIEW_NAME_MAP.get(view_name, view_n
+          -ame)                                                          
+      304          if camera_name not in base.camera_names:
+      305              return None
+      306  
+
+● Update(examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.
+        py)
+  ⎿  Added 10 lines, removed 1 line
+      378              if not self.video_recorder.is_ready():
+      379                  self.video_recorder.start(self.file_path)
+      380  
+      381 +            # Reuse the latest raw observation from the wrappe
+          +d env if available.                                           
+      382 +            # It already contains the processed camera frames,
+          + avoiding a second render.                                    
+      383 +            raw_obs = None                                    
+      384 +            wrapped = self.env                                
+      385 +            if hasattr(wrapped, "obs") and wrapped.obs:       
+      386 +                raw_obs = wrapped.obs[-1]                     
+      387 +                if not isinstance(raw_obs, dict):             
+      388 +                    raw_obs = None                            
+      389 +                                                              
+      390              frames = []
+      391              for view_name in self.record_views:
+      383 -                frame = self._render_view(view_name)          
+      392 +                frame = self._render_view(view_name, raw_obs=r
+          +aw_obs)                                                       
+      393                  if frame is not None:
+      394                      frames.append(frame)
+      395  
+
+  Thought for 8s, ran 1 shell command (ctrl+o to expand)
+
+● 看了。好消息是 模型确实在 GPU 上跑：
+
+  predict_action: batch=2 device=cuda:0 backbone_device=cuda:0 framework=2.960s
+  total=2.960s
+
+  但 40 多秒了只完成了一次推理，说明 环境模拟/视频录制这边极慢，卡住了进度。
+
+  最可能的瓶颈
+
+  我给视频加了 wrist 视角后，用的是 base.env.sim.render(...)
+  去额外渲染一次手腕相机。这个调用在 MuJoCo/EGL
+  下会创建一次离屏渲染，每个记录帧都要重新渲染一次手腕图，非常慢，直接把 eval
+  拖住了。
+
+  刚修的性能问题
+
+  examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.py
+  - 现在优先从环境返回的 obs 字典里直接取已经算好的相机图（主视角 +
+  手腕视角都有）。
+  - 只有取不到时才 fallback 到显式 sim.render()。
+
+  这样视频录制基本不再额外增加渲染开销。
+
+  操作
+
+  停掉当前这次，再重跑：
+
+  pkill -f "server_policy.py"
+  pkill -f "simulation_env"
+
+  N_ENVS=2 N_EPISODES=2 MAX_STEPS=50 bash playground/mowa_e003_eval.sh
+  /path/to/checkpoint
+
+  然后继续看：
+
+  tail -f playground/mowa_eval_results/.../server.log | grep predict_action
+  tail -f playground/mowa_eval_results/.../client_robocasa_OpenDrawer.log
+
+  这次应该能看到：
+  - server.log 里 predict_action 的行明显变多（每隔几秒就有一次）
+  - client_*.log 里进度条开始走
+
+  如果还是只偶尔有一条 predict_action，那瓶颈就不是视频渲染，我们再继续查。
+✻ Cooked for 2m 59s
+
+❯ 后面你自己启动-监控-优化吧，确保最后能用                                      
+
+  Thought for 7s (ctrl+o to expand)
+
+  Thought for 23s, listed 1 directory, ran 3 shell commands (ctrl+o to expand)
+
+● Monitor(Monitor eval server and client logs)
+  ⎿  Monitor started · task bm1cadiu7 · timeout 130s
+
+  Thought for 9s (ctrl+o to expand)
+
+● Monitor(Poll GPU utilization during eval)
+  ⎿  Monitor started · task b4ek01ezj · timeout 130s
+
+  Thought for 3s (ctrl+o to expand)
+
+  Thought for 51s, searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Monitor(Monitor eval logs after first inference)
+  ⎿  Monitor started · task bu7ffoc2c · timeout 200s
+
+● Monitor event: "Monitor eval server and client logs"
+
+  Thought for 7s (ctrl+o to expand)
+
+● Monitor(Poll GPU util after first inference)
+  ⎿  Monitor started · task bjuzlj55l · timeout 200s
+
+● Monitor event: "Monitor eval logs after first inference"
+
+  Thought for 10s (ctrl+o to expand)
+
+● Task Output(non-blocking) bnbpcry9w
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) bnbpcry9w
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 1m 5s, searched for 1 pattern, read 1 file, ran 5 shell commands (ctrl+o to expand)
+
+● Monitor "Monitor eval server and client logs" stream ended
+
+● Monitor event: "Poll GPU utilization during eval"
+
+● Monitor "Poll GPU utilization during eval" stream ended
+
+● Background command "Start a short eval run in background" failed with exit
+code 1
+
+● Monitor(Monitor clean eval logs)
+  ⎿  Monitor started · task b7vxxxywi · timeout 200s
+
+  Thought for 5s (ctrl+o to expand)
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 23s, searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● Monitor(Monitor predict count and completion)
+  ⎿  Monitor started · task b6rfs69u6 · timeout 300s
+
+  Thought for 3s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 3s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+● Monitor event: "Monitor clean eval logs"
+
+● Monitor event: "Monitor eval logs after first inference"
+
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+● Monitor event: "Monitor predict count and completion"
+
+  Thought for 8s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 3s (ctrl+o to expand)
+
+● Task Output(non-blocking) bjf9kssn1
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 23s, searched for 1 pattern (ctrl+o to expand)
+● Monitor "Monitor eval logs after first inference" stream ended
+
+● Monitor event: "Poll GPU util after first inference"
+
+● Monitor "Poll GPU util after first inference" stream ended
+
+  Thought for 19s, read 1 file (ctrl+o to expand)
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 3 lines, removed 2 lines
+      63  
+      64  @dataclass
+      65  class VideoConfig:
+      66 +    enabled: bool = True                                       
+      67      video_dir: Optional[str] = None
+      67 -    steps_per_render: int = 2                                  
+      68 +    steps_per_render: int = 4                                  
+      69      fps: int = 20
+      70      codec: str = "h264"
+      71      input_pix_fmt: str = "rgb24"
+      72      crf: int = 22
+      73      thread_type: str = "FRAME"
+      73 -    thread_count: int = 1                                      
+      74 +    thread_count: int = 2                                      
+      75      record_views: tuple[str, ...] = field(
+      76          default_factory=lambda: ("agentview_left", "eye_in_hand
+          ")
+      77      )
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 1 line, removed 1 line
+       96  
+       97  def _create_single_env(config: SimulationConfig, idx: int) -> 
+           gym.Env:
+       98      env = gym.make(config.env_name, enable_render=True, split=
+           "target")
+       99 -    if config.video.video_dir is not None:                    
+       99 +    if config.video.enabled and config.video.video_dir is not 
+          +None:                                                         
+      100          video_recorder = VideoRecorder.create_h264(
+      101              fps=config.video.fps,
+      102              codec=config.video.codec,
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 1 line
+      264      video_out_path: Optional[str] = "results/robocasa365_eval_
+           test/videos"
+      265      seed: int = 7
+      266      record_views: tuple[str, ...] = ("agentview_left", "eye_in
+           _hand")
+      267 +    no_video: bool = False                                    
+      268      pretrained_path: str = (
+      269          "playground/Checkpoints/robocasa365_qwenoft_OpenDrawer
+           _100step/checkpoints/steps_100_pytorch_model.pt"
+      270      )
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 2 lines, removed 1 line
+      287          n_episodes=args.n_episodes,
+      288          n_envs=args.n_envs,
+      289          video=VideoConfig(
+      290 -            video_dir=args.video_out_path,                    
+      290 +            enabled=not args.no_video,                        
+      291 +            video_dir=args.video_out_path if not args.no_video
+          + else None,                                                   
+      292              record_views=args.record_views,
+      293          ),
+      294          multistep=MultiStepConfig(
+
+● Update(examples/Robocasa_365/eval_files/simulation_env.py)
+  ⎿  Added 7 lines
+      331          default=",".join(Args.record_views),
+      332          help="Comma-separated camera views to record, e.g. age
+           ntview_left,eye_in_hand",
+      333      )
+      334 +    parser.add_argument(                                      
+      335 +        "--args.no-video",                                    
+      336 +        dest="no_video",                                      
+      337 +        action="store_true",                                  
+      338 +        default=Args.no_video,                                
+      339 +        help="Disable video recording entirely for faster eval
+          +uation.",                                                     
+      340 +    )                                                         
+      341      parser.add_argument("--args.pretrained-path", dest="pretra
+           ined_path", default=Args.pretrained_path)
+      342      parser.add_argument("--args.unnorm-key", dest="unnorm_key"
+           , default=Args.unnorm_key)
+      343      parsed = parser.parse_args()
+
+  Thought for 9s, read 1 file (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 2 lines
+      17  #   WAN_HISTORY_FRAMES  视频历史帧数，需满足 1+4k 且 >=5（默认 
+          5）
+      18  #   N_ENVS        每个 task 内部并行的环境数（默认 1）
+      19  #   RECORD_VIEWS  录制视频的相机视角，逗号分隔（默认 agentview_
+          left,eye_in_hand）
+      20 +#   STEPS_PER_RENDER  视频每隔多少 env step 录一帧（默认 4）   
+      21 +#   NO_VIDEO      设置为 1 时关闭视频录制（默认开启，提速明显）
+      22  #   PORT          server 端口（默认 6789）
+      23  #   GPU           server 可见 GPU（默认 0）
+      24  #   RESUME        设置为 1 时，已有完整结果的任务直接跳过（默认
+          覆盖重跑）
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 2 lines
+      49  WAN_HISTORY_FRAMES=${WAN_HISTORY_FRAMES:-5}
+      50  N_ENVS=${N_ENVS:-1}
+      51  RECORD_VIEWS=${RECORD_VIEWS:-agentview_left,eye_in_hand}
+      52 +STEPS_PER_RENDER=${STEPS_PER_RENDER:-4}                        
+      53 +NO_VIDEO=${NO_VIDEO:-0}                                        
+      54  RESUME=${RESUME:-0}
+      55  
+      56  # 默认测试一组有代表性的 robocasa365 atomic target 任务
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line, removed 1 line
+      82  echo "Checkpoint: $CKPT_DIR"
+      83  echo "Tasks:      ${TASK_LIST[*]}"
+      84  echo "Episodes:   $N_EPISODES | Max steps: $MAX_STEPS | N_ACT: 
+          $N_ACT | N_ENVS: $N_ENVS"
+      85 -echo "Record:     $RECORD_VIEWS"                               
+      85 +echo "Record:     $(if [[ "$NO_VIDEO" == "1" ]]; then echo "dis
+         +abled"; else echo "$RECORD_VIEWS (render every $STEPS_PER_RENDE
+         +R steps)"; fi)"                                                
+      86  echo "Mode:       $(if [[ "$RESUME" == "1" ]]; then echo "resum
+          e (skip completed)"; else echo "overwrite"; fi)"
+      87  echo "Server:     $SERVER_PYTHON (GPU $GPU, port $PORT)"
+      88  echo "Client:     $CLIENT_PYTHON"
+
+  Thought for 5s, read 1 file (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 10 lines, removed 2 lines
+      191    fi
+      192  
+      193    set +e
+      194 +  # Build optional flags                                      
+      195 +  VIDEO_ARGS=(                                                
+      196 +    --args.video-out-path "$video_dir"                        
+      197 +    --args.record-views "$RECORD_VIEWS"                       
+      198 +  )                                                           
+      199 +  if [[ "$NO_VIDEO" == "1" ]]; then                           
+      200 +    VIDEO_ARGS+=(--args.no-video)                             
+      201 +  fi                                                          
+      202 +                                                              
+      203    PYTHONUNBUFFERED=1 PYTHONPATH=$REPO_ROOT "$CLIENT_PYTHON" -m
+            examples.Robocasa_365.eval_files.simulation_env \
+      204      --args.pretrained-path "$CKPT_DIR" \
+      205      --args.env-name "$env_name" \
+     ...
+      210      --args.max-episode-steps "$MAX_STEPS" \
+      211      --args.n-action-steps "$N_ACT" \
+      212      --args.wan-history-frames "$WAN_HISTORY_FRAMES" \
+      204 -    --args.video-out-path "$video_dir" \                      
+      205 -    --args.record-views "$RECORD_VIEWS" \                     
+      213 +    "${VIDEO_ARGS[@]}" \                                      
+      214      > "$RESULT_ROOT/client_${task_tag}.log" 2>&1
+      215    client_exit=$?
+      216    set -e
+
+  Thought for 4s (ctrl+o to expand)
+
+● Update(examples/Robocasa_tabletop/eval_files/wrappers/video_recording_wrapper.
+        py)
+  ⎿  Added 8 lines, removed 5 lines
+      381              # Reuse the latest raw observation from the wrappe
+           d env if available.
+      382              # It already contains the processed camera frames,
+            avoiding a second render.
+      383              raw_obs = None
+      384 -            wrapped = self.env                                
+      385 -            if hasattr(wrapped, "obs") and wrapped.obs:       
+      386 -                raw_obs = wrapped.obs[-1]                     
+      387 -                if not isinstance(raw_obs, dict):             
+      388 -                    raw_obs = None                            
+      384 +            try:                                              
+      385 +                obs_list = self.env.get_wrapper_attr("obs")   
+      386 +                if obs_list:                                  
+      387 +                    raw_obs = obs_list[-1]                    
+      388 +                    if not isinstance(raw_obs, dict):         
+      389 +                        raw_obs = None                        
+      390 +            except Exception:                                 
+      391 +                raw_obs = None                                
+      392  
+      393              frames = []
+      394              for view_name in self.record_views:
+
+● Monitor event: "Monitor clean eval logs"
+
+  Thought for 23s, ran 3 shell commands (ctrl+o to expand)
+
+● Background command "Start clean single-task eval run" failed with exit code 1
+
+● Monitor(Monitor no-video eval speed)
+  ⎿  Monitor started · task bnwzk7ezb · timeout 300s
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+❯ 视频是必须录制的，别改掉了                                                    
+
+  Thought for 9s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 29s, read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+● Monitor event: "Monitor no-video eval speed"
+
+  Thought for 15s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 3s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 3s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bkwytxz3b
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +16 lines (ctrl+o to expand)
+
+  Thought for 21s, searched for 1 pattern, ran 2 shell commands (ctrl+o to expand)
+
+● Background command "Start eval without video for speed baseline" failed with
+exit code 1
+
+● Monitor(Monitor single-env no-video eval)
+  ⎿  Monitor started · task b0huh9ca2 · timeout 300s
+
+  Thought for 3s (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 3s (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+● Monitor event: "Monitor predict count and completion"
+
+  Thought for 7s (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 10s, ran 1 shell command (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 3s (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+● Monitor event: "Monitor single-env no-video eval"
+
+● Monitor event: "Monitor no-video eval speed"
+
+● Monitor event: "Monitor single-env no-video eval"
+
+  Thought for 10s (ctrl+o to expand)
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+● Monitor event: "Monitor no-video eval speed"
+
+● Monitor event: "Monitor single-env no-video eval"
+
+● Monitor event: "Monitor no-video eval speed"
+
+● Monitor event: "Monitor single-env no-video eval"
+
+● Monitor event: "Monitor no-video eval speed"
+
+● Monitor event: "Monitor single-env no-video eval"
+
+  Thought for 10s (ctrl+o to expand)
+
+● Task Output(non-blocking) b9efhx8ps
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +22 lines (ctrl+o to expand)
+
+● Monitor event: "Monitor no-video eval speed"
+
+● Monitor "Monitor no-video eval speed" stream ended
+
+● Monitor event: "Monitor single-env no-video eval"
+
+● Monitor "Monitor single-env no-video eval" stream ended
+
+● Background command "Start single-env eval without video" completed (exit code
+0)
+
+  Thought for 8s (ctrl+o to expand)
+
+  Thought for 6s, ran 1 shell command (ctrl+o to expand)
+
+● Monitor(Monitor single-env video eval)
+  ⎿  Monitor started · task be52o1acw · timeout 300s
+
+● Monitor event: "Monitor single-env video eval"
+
+● Monitor "Monitor single-env video eval" stream ended
+
+  Thought for 6s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 7s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 6s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 12s, listed 1 directory (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +14 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b36ofrl3f
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +22 lines (ctrl+o to expand)
+
+● Background command "Start single-env eval with video" completed (exit code 0)
+
+  Thought for 22s, listed 1 directory (ctrl+o to expand)
+
+  Thought for 8s (ctrl+o to expand)
+  Thought for 4s, ran 1 shell command (ctrl+o to expand)
+
+● Monitor(Monitor final eval verification)
+  ⎿  Monitor started · task bpif73wd8 · timeout 300s
+
+● Monitor event: "Monitor final eval verification"
+
+● Monitor "Monitor final eval verification" stream ended
+
+  Thought for 6s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +11 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 6s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 10s, searched for 1 pattern (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +15 lines (ctrl+o to expand)
+
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) b875i1g8o
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +23 lines (ctrl+o to expand)
+
+● Background command "Run final moderate eval verification" completed (exit code
+0)
+
+  Thought for 15s, listed 1 directory (ctrl+o to expand)
+
+  Thought for 6s (ctrl+o to expand)
+
+● 已经调通了，当前正在跑的最后验证也成功完成。
+
+  最终验证结果
+
+  TASKS=robocasa/OpenDrawer N_ENVS=1 N_EPISODES=2 MAX_STEPS=100 bash
+  playground/mowa_e003_eval.sh /path/to/checkpoint
+
+  - ✅ 脚本正常跑完，退出码 0
+  - ✅ 生成了 2 个视频：Open_the_right_drawer_episode000/001_success0.mp4
+  - ✅ 进度条实时写入 client log：
+  robocasa/OpenDrawer: |██| 2/2 success=0 fail=2 (100.0%)
+  - ✅ GPU 正常参与推理（nvidia-smi 能看到间歇性 90%+ 尖峰）
+
+  关键结论
+
+  1. GPU 利用率“一直 0”是正常的表象
+  server 只在 client 请求新 action chunk 时才用 GPU，中间大量时间都在跑 MuJoCo
+  环境模拟，所以 nvidia-smi 大部分时间显示 0%，但会有尖峰。
+  2. 最大的性能陷阱是 N_ENVS>1
+  用 AsyncVectorEnv 并行多个带图像观测的 robocasa env 时，子进程之间 pickle 大图
+  + EGL 上下文切换，反而极慢。
+  N_ENVS=1 比 N_ENVS=2 快几十倍。脚本默认已经是 N_ENVS=1，不要改大。
+  3. 视频录制已优化
+    - wrist 视角不再二次渲染，直接复用 env 返回的 obs 中的
+  video.robot0_eye_in_hand。
+    - 默认每 4 个 env step 录一帧（STEPS_PER_RENDER=4），编码线程数改为 2。
+    - 视角可通过 RECORD_VIEWS 配置，默认 agentview_left,eye_in_hand。
+    - 视频仍是默认开启的，我没有把默认关掉。
+
+  推荐用法
+
+  # 默认完整评测（6 task × 10 eps × 500 steps）
+  bash playground/mowa_e003_eval.sh /path/to/checkpoint
+
+  # 快速验证单个 task
+  TASKS=robocasa/OpenDrawer N_ENVS=1 N_EPISODES=2 MAX_STEPS=100 bash
+  playground/mowa_e003_eval.sh /path/to/checkpoint
+
+  # 如果要更快测试（不录视频）
+  NO_VIDEO=1 TASKS=robocasa/OpenDrawer N_ENVS=1 N_EPISODES=1 MAX_STEPS=50 bash
+  playground/mowa_e003_eval.sh /path/to/checkpoint
+
+  耗时预估
+
+  以 N_ENVS=1、开视频、当前模型为准：
+  - 每个 env step 约 0.4~0.5s
+  - 一个 task（10 eps × 500 steps）约 30~40 分钟
+  - 全部 6 个 task 约 3~4 小时
+
+  这个速度受限于 MuJoCo + 双视角渲染 +
+  视频编码，代码层面已经把能省的渲染开销去掉了。
+
+✻ Brewed for 15m 42s
+
+❯ robocasa和libero不一样是吗，libero测试的时候就是一直gpu利用率非0的            
+
+  Thought for 1m 7s, searched for 4 patterns, read 2 files (ctrl+o to expand)
+
+● 对，robocasa 和 libero 的评测循环本身就不一样，所以 GPU
+  利用率的表现不同是正常的。
+
+  核心区别
+
+  1. 调用 server 的频率不同
+
+  LIBERO 的 ModelClient 有一个 action chunk cache：server 一次返回 32
+  个动作，client 把 32 个动作按顺序用掉，每 32 个 env step 才找 server
+  一次。但因为 LIBERO 的 env step 很快，32 步很快就跑完，server
+  很快就会收到下一个请求，所以 GPU 看起来“一直在忙”。
+
+  RoboCasa 这边：
+  - MultiStepWrapper 一次只执行 n_action_steps=8 个 env step，然后才调用一次
+  model.step()。
+  - 目前 PolicyWarper.step() 每次只取 server 返回的 32 个动作中的前 8 个，剩下的
+  24 个直接浪费了。
+  - 更关键的是，robocasa 的 env step 本身很慢（MuJoCo 物理 + 双视角渲染），8 个
+  env step 可能要跑好几秒，server 在这段期间完全闲着。
+
+  所以不是 GPU 没工作，而是 GPU 工作一会儿、歇一会儿，nvidia-smi
+  的平均利用率就显示为 0。我们实测能看到 90%+ 的尖峰：
+
+  09:57:12 98 18199
+
+  2. 环境渲染开销不同
+
+  LIBERO 的 OffScreenRenderEnv 相对轻量；robocasa 每个 env step 都要渲染
+  agentview_left 和 eye_in_hand 两个相机，并且视频录制还要再拼接/编码，单个 env
+  step 耗时明显更长。
+
+  3. 模型类型不同
+
+  - LIBERO 用的是 QwenOFT/FAST 这类自回归/并行动作头，单次推理相对快。
+  - MoWA-E-003 是 Wan2.2 流匹配扩散模型，一次推理要跑 4 步扩散，单次 2~3
+  秒，但调用次数更少。
+
+  结论
+
+  Robocasa 这边 GPU 利用率低不是因为代码没上 GPU，而是因为：
+
+  ▎ server 推理只占一小部分时间，大部分时间花在 MuJoCo 环境模拟和双视角渲染上。
+
+  如果想让 GPU 看起来更“满”，有两个方向：
+
+  1. 在 PolicyWarper 里也实现 action chunk cache（像 LIBERO 那样把 32
+  个动作用完），能把 server 调用次数降到原来的 1/4，但 env
+  模拟本身是瓶颈，总时间提升有限。
+  2. 同时跑多个 task 共用一个 server，server 可以把不同 task 的请求 batch
+  起来，GPU 利用率会更高。
+
+  需要我实现第 1 点（复用 action chunk）吗？它不会显著缩短总时间，但会让 server
+  端 GPU 利用率更连续。
+
+✻ Crunched for 1m 19s
+
+❯ 每部预测的结果只用8步，而且每次推理的结果被执行的步数应该是可以设置的，默认8  
+  步；我原本的意思就是“同时跑多个 task 共用一个 server，server 可以把不同 task  
+  的请求 batch 起来”，你理解成啥了？                                            
+
+  Thought for 38s, read 1 file (ctrl+o to expand)
+  Thought for 4s (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 2 lines, removed 1 line
+      15  #   MAX_STEPS     每条 episode 最大步数（默认 500）
+      16  #   N_ACT         每次 policy 调用后执行的 action 步数（默认 8
+          ）
+      17  #   WAN_HISTORY_FRAMES  视频历史帧数，需满足 1+4k 且 >=5（默认 
+          5）
+      18 -#   N_ENVS        每个 task 内部并行的环境数（默认 1）         
+      18 +#   N_ENVS        每个 task 内部并行的环境数（默认 1，建议保持 
+         +1）                                                            
+      19 +#   TASK_CONCURRENCY  同时跑几个 task 共用一个 server（默认 2）
+      20  #   RECORD_VIEWS  录制视频的相机视角，逗号分隔（默认 agentview_
+          left,eye_in_hand）
+      21  #   STEPS_PER_RENDER  视频每隔多少 env step 录一帧（默认 4）
+      22  #   NO_VIDEO      设置为 1 时关闭视频录制（默认开启，提速明显）
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line
+      49  N_ACT=${N_ACT:-8}
+      50  WAN_HISTORY_FRAMES=${WAN_HISTORY_FRAMES:-5}
+      51  N_ENVS=${N_ENVS:-1}
+      52 +TASK_CONCURRENCY=${TASK_CONCURRENCY:-2}                        
+      53  RECORD_VIEWS=${RECORD_VIEWS:-agentview_left,eye_in_hand}
+      54  STEPS_PER_RENDER=${STEPS_PER_RENDER:-4}
+      55  NO_VIDEO=${NO_VIDEO:-0}
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 1 line
+      84  echo "Checkpoint: $CKPT_DIR"
+      85  echo "Tasks:      ${TASK_LIST[*]}"
+      86  echo "Episodes:   $N_EPISODES | Max steps: $MAX_STEPS | N_ACT: 
+          $N_ACT | N_ENVS: $N_ENVS"
+      87 +echo "Concurrency:$TASK_CONCURRENCY task(s) at a time sharing o
+         +ne server"                                                     
+      88  echo "Record:     $(if [[ "$NO_VIDEO" == "1" ]]; then echo "dis
+          abled"; else echo "$RECORD_VIEWS (render every $STEPS_PER_RENDE
+          R steps)"; fi)"
+      89  echo "Mode:       $(if [[ "$RESUME" == "1" ]]; then echo "resum
+          e (skip completed)"; else echo "overwrite"; fi)"
+      90  echo "Server:     $SERVER_PYTHON (GPU $GPU, port $PORT)"
+
+  Thought for 4s (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 70 lines, removed 20 lines
+      150    server_pid=""
+      151  }
+      152  
+      153 -trap 'stop_server; echo "[$(date +%H:%M:%S)] 脚本被中断"; exit
+          - 130' INT TERM EXIT                                           
+      153 +stop_all_children() {                                         
+      154 +  for pid in "${TASK_PIDS[@]:-}"; do                          
+      155 +    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then    
+      156 +      kill "$pid" 2>/dev/null || true                         
+      157 +    fi                                                        
+      158 +  done                                                        
+      159 +}                                                             
+      160  
+      161 +trap 'stop_all_children; stop_server; echo "[$(date +%H:%M:%S)
+          +] 脚本被中断"; exit 130' INT TERM EXIT                        
+      162 +                                                              
+      163  start_server || exit 1
+      164  
+      157 -SUCCESS_RATES=()                                              
+      158 -TASK_NAMES=()                                                 
+      159 -                                                              
+      160 -for env_name in "${TASK_LIST[@]}"; do                         
+      161 -  task_tag=${env_name//\//_}                                  
+      162 -  video_dir=$RESULT_ROOT/videos/$task_tag                     
+      165 +# ------------------------------------------------------------
+          +------                                                        
+      166 +# 单个 task 的执行体（在后台运行）                            
+      167 +# ------------------------------------------------------------
+          +------                                                        
+      168 +run_one_task() {                                              
+      169 +  local env_name=$1                                           
+      170 +  local task_tag=${env_name//\//_}                            
+      171 +  local video_dir=$RESULT_ROOT/videos/$task_tag               
+      172    mkdir -p "$video_dir"
+      173  
+      174    echo ""
+      175    echo "[$(date +%H:%M:%S)] ===== 评估: $env_name ====="
+      176  
+      168 -  eval_json="${CKPT_DIR}.eval/${task_tag}.json"               
+      169 -  result_json="$RESULT_ROOT/${task_tag}.json"                 
+      177 +  local eval_json="${CKPT_DIR}.eval/${task_tag}.json"         
+      178 +  local result_json="$RESULT_ROOT/${task_tag}.json"           
+      179 +  local marker="$RESULT_ROOT/${task_tag}.marker"              
+      180 +  rm -f "$marker"                                             
+      181  
+      182    # Resume: skip if existing result already has enough episode
+           s
+      183    if [[ "$RESUME" == "1" ]] && [[ -f "$eval_json" ]]; then
+      184 +    local existing_eps                                        
+      185      existing_eps=$(python3 -c "import json; d=json.load(open('
+           $eval_json')); print(len(d.get('successes', [])))" 2>/dev/null
+            || echo 0)
+      186      if [[ "$existing_eps" -ge "$N_EPISODES" ]]; then
+      187        echo "[$(date +%H:%M:%S)] 🔄 已存在完整结果 ($existing_e
+           ps/$N_EPISODES)，跳过"
+      188        cp "$eval_json" "$result_json"
+      189 +      local sr successes                                      
+      190        sr=$(python3 -c "import json; print(json.load(open('$eva
+           l_json'))['success_rate'])")
+      191        successes=$(python3 -c "import json; d=json.load(open('$
+           eval_json')); print(sum(d['successes']), len(d['successes']))"
+           )
+      192        echo "[$(date +%H:%M:%S)] ✅ $env_name | SR=$sr | $succe
+           sses"
+      180 -      SUCCESS_RATES+=("$sr")                                  
+      181 -      TASK_NAMES+=("$env_name")                               
+      182 -      continue                                                
+      193 +      echo "$env_name|$sr" > "$marker"                        
+      194 +      return 0                                                
+      195      else
+      196        echo "[$(date +%H:%M:%S)] ⚠️ 已有部分结果 ($existing_eps
+           /$N_EPISODES)，覆盖重跑"
+      197      fi
+     ...
+      205      fi
+      206    fi
+      207  
+      196 -  set +e                                                      
+      208    # Build optional flags
+      198 -  VIDEO_ARGS=(                                                
+      209 +  local VIDEO_ARGS=(                                          
+      210      --args.video-out-path "$video_dir"
+      211      --args.record-views "$RECORD_VIEWS"
+      212    )
+     ...
+      214      VIDEO_ARGS+=(--args.no-video)
+      215    fi
+      216  
+      217 +  set +e                                                      
+      218    PYTHONUNBUFFERED=1 PYTHONPATH=$REPO_ROOT "$CLIENT_PYTHON" -m
+            examples.Robocasa_365.eval_files.simulation_env \
+      219      --args.pretrained-path "$CKPT_DIR" \
+      220      --args.env-name "$env_name" \
+     ...
+      227      --args.wan-history-frames "$WAN_HISTORY_FRAMES" \
+      228      "${VIDEO_ARGS[@]}" \
+      229      > "$RESULT_ROOT/client_${task_tag}.log" 2>&1
+      218 -  client_exit=$?                                              
+      230 +  local client_exit=$?                                        
+      231    set -e
+      232  
+      233    if [[ -f "$eval_json" ]]; then
+      222 -    # 复制到结果目录方便汇总                                  
+      234      cp "$eval_json" "$result_json"
+      235 +    local sr successes                                        
+      236      sr=$(python3 -c "import json; print(json.load(open('$eval_
+           json'))['success_rate'])")
+      237      successes=$(python3 -c "import json; d=json.load(open('$ev
+           al_json')); print(sum(d['successes']), len(d['successes']))")
+      238      echo "[$(date +%H:%M:%S)] ✅ $env_name | SR=$sr | $success
+           es"
+      227 -    SUCCESS_RATES+=("$sr")                                    
+      228 -    TASK_NAMES+=("$env_name")                                 
+      239 +    echo "$env_name|$sr" > "$marker"                          
+      240    else
+      241      echo "[$(date +%H:%M:%S)] ❌ $env_name 未生成结果 (client 
+           exit=$client_exit)"
+      242      echo "    日志: $RESULT_ROOT/client_${task_tag}.log"
+      232 -    SUCCESS_RATES+=("N/A")                                    
+      233 -    TASK_NAMES+=("$env_name")                                 
+      243 +    echo "$env_name|N/A" > "$marker"                          
+      244    fi
+      245 +}                                                             
+      246 +                                                              
+      247 +# ------------------------------------------------------------
+          +------                                                        
+      248 +# 并发调度：最多同时跑 TASK_CONCURRENCY 个 task               
+      249 +# ------------------------------------------------------------
+          +------                                                        
+      250 +TASK_PIDS=()                                                  
+      251 +                                                              
+      252 +for env_name in "${TASK_LIST[@]}"; do                         
+      253 +  # 等待有空闲槽位                                            
+      254 +  while [[ ${#TASK_PIDS[@]} -ge $TASK_CONCURRENCY ]]; do      
+      255 +    wait -n 2>/dev/null || true                               
+      256 +    local alive=()                                            
+      257 +    for pid in "${TASK_PIDS[@]}"; do                          
+      258 +      if kill -0 "$pid" 2>/dev/null; then                     
+      259 +        alive+=("$pid")                                       
+      260 +      fi                                                      
+      261 +    done                                                      
+      262 +    TASK_PIDS=("${alive[@]}")                                 
+      263 +  done                                                        
+      264 +                                                              
+      265 +  run_one_task "$env_name" &                                  
+      266 +  TASK_PIDS+=($!)                                             
+      267  done
+      268  
+      269 +# 等待所有 task 完成                                          
+      270 +if [[ ${#TASK_PIDS[@]} -gt 0 ]]; then                         
+      271 +  wait "${TASK_PIDS[@]}"                                      
+      272 +fi                                                            
+      273 +                                                              
+      274  stop_server
+      275  trap - INT TERM EXIT
+      276  
+      277 +SUCCESS_RATES=()                                              
+      278 +TASK_NAMES=()                                                 
+      279 +for env_name in "${TASK_LIST[@]}"; do                         
+      280 +  task_tag=${env_name//\//_}                                  
+      281 +  marker="$RESULT_ROOT/${task_tag}.marker"                    
+      282 +  TASK_NAMES+=("$env_name")                                   
+      283 +  if [[ -f "$marker" ]]; then                                 
+      284 +    SUCCESS_RATES+=("$(cut -d'|' -f2 "$marker")")             
+      285 +  else                                                        
+      286 +    SUCCESS_RATES+=("N/A")                                    
+      287 +  fi                                                          
+      288 +done                                                          
+      289 +                                                              
+      290  echo ""
+      291  echo "=========================================="
+      292  echo "评估汇总: $EXP_NAME @ $STEP_NAME"
+
+  Thought for 23s, ran 3 shell commands (ctrl+o to expand)
+
+● Monitor(Monitor concurrent eval output and server)
+  ⎿  Monitor started · task bwys3c0i7 · timeout 200s
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +13 lines (ctrl+o to expand)
+
+● Monitor event: "Monitor concurrent eval output and server"
+
+  Thought for 9s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +13 lines (ctrl+o to expand)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ 之前starflow测试的时候就是一个server带多个eval，batching；多个eval候选通过pol 
+  ling管理                                                                      
+
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +13 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +13 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+● Monitor event: "Monitor concurrent eval output and server"
+
+  Thought for 8s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 5s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 4s (ctrl+o to expand)
+
+● Task Output(non-blocking) bl0ftgsv7
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 39s, read 1 file, listed 1 directory, ran 1 shell command (ctrl+o to expand)
+
+● Monitor event: "Monitor concurrent eval output and server"
+
+● Background command "Test concurrent task evaluation" failed with exit code 130
+
+● Monitor event: "Monitor concurrent eval output and server"
+
+● Update(deployment/model_server/server_policy.py)
+  ⎿  Added 2 lines
+      48          port=args.port,
+      49          idle_timeout=args.idle_timeout,
+      50          metadata=wrapper.metadata,
+      51 +        max_batch_size=args.max_batch_size,                    
+      52 +        batch_timeout_ms=args.batch_timeout_ms,                
+      53      )
+      54      logging.info(
+      55          "server_policy.main: WebsocketPolicyServer init finishe
+          d in %.2fs",
+
+● Update(deployment/model_server/server_policy.py)
+  ⎿  Added 12 lines
+      70      parser.add_argument("--use_bf16", action="store_true")
+      71      parser.add_argument("--idle_timeout", type=int, default=180
+          0, help="Idle timeout in seconds, -1 means never close")
+      72      parser.add_argument(
+      73 +        "--max_batch_size",                                    
+      74 +        type=int,                                              
+      75 +        default=8,                                             
+      76 +        help="Maximum number of infer requests to batch togethe
+         +r.",                                                           
+      77 +    )                                                          
+      78 +    parser.add_argument(                                       
+      79 +        "--batch_timeout_ms",                                  
+      80 +        type=float,                                            
+      81 +        default=30.0,                                          
+      82 +        help="How long (ms) to wait for additional requests bef
+         +ore running a batch.",                                         
+      83 +    )                                                          
+      84 +    parser.add_argument(                                       
+      85          "--config_override",
+      86          action="append",
+      87          default=[],
+
+  Thought for 5s (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 2 lines
+      21  #   STEPS_PER_RENDER  视频每隔多少 env step 录一帧（默认 4）
+      22  #   NO_VIDEO      设置为 1 时关闭视频录制（默认开启，提速明显）
+      23  #   PORT          server 端口（默认 6789）
+      24 +#   BATCH_TIMEOUT_MS  server 批处理等待时间（默认 100ms，并发任
+         +务多时建议加大）                                               
+      25 +#   MAX_BATCH_SIZE    server 最大 batch 大小（默认 8）         
+      26  #   GPU           server 可见 GPU（默认 0）
+      27  #   RESUME        设置为 1 时，已有完整结果的任务直接跳过（默认
+          覆盖重跑）
+      28  
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 2 lines
+      45  STEP_NAME=$(basename "$CKPT_DIR")
+      46  
+      47  PORT=${PORT:-6789}
+      48 +BATCH_TIMEOUT_MS=${BATCH_TIMEOUT_MS:-100}                      
+      49 +MAX_BATCH_SIZE=${MAX_BATCH_SIZE:-8}                            
+      50  GPU=${GPU:-0}
+      51  N_EPISODES=${N_EPISODES:-10}
+      52  MAX_STEPS=${MAX_STEPS:-500}
+
+  Thought for 4s (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 3 lines, removed 1 line
+      112  server_pid=""
+      113  
+      114  start_server() {
+      115 -  echo "[$(date +%H:%M:%S)] 启动 policy server (port $PORT, GP
+          -U $GPU)..."                                                   
+      115 +  echo "[$(date +%H:%M:%S)] 启动 policy server (port $PORT, GP
+          +U $GPU, batch_timeout=${BATCH_TIMEOUT_MS}ms, max_batch=$MAX_BA
+          +TCH_SIZE)..."                                                 
+      116    CUDA_VISIBLE_DEVICES=$GPU "$SERVER_PYTHON" "$REPO_ROOT/deplo
+           yment/model_server/server_policy.py" \
+      117      --ckpt_path "$CKPT_DIR" \
+      118      --port "$PORT" \
+      119      --use_bf16 \
+      120 +    --batch_timeout_ms "$BATCH_TIMEOUT_MS" \                  
+      121 +    --max_batch_size "$MAX_BATCH_SIZE" \                      
+      122      > "$RESULT_ROOT/server.log" 2>&1 &
+      123    server_pid=$!
+      124  
+
+  Thought for 6s (ctrl+o to expand)
+
+● Update(playground/mowa_e003_eval.sh)
+  ⎿  Added 2 lines, removed 1 line
+      164    done
+      165  }
+      166  
+      167 -trap 'stop_all_children; stop_server; echo "[$(date +%H:%M:%S)
+          -] 脚本被中断"; exit 130' INT TERM EXIT                        
+      167 +trap 'echo "[$(date +%H:%M:%S)] 脚本被中断"; stop_all_children
+          +; stop_server; exit 130' INT TERM                             
+      168 +trap 'stop_all_children; stop_server' EXIT                    
+      169  
+      170  start_server || exit 1
+      171  
+
+  Thought for 21s, ran 2 shell commands (ctrl+o to expand)
+
+● Monitor(Monitor retested concurrent eval)
+  ⎿  Monitor started · task bwdrrd47b · timeout 260s
+
+  Thought for 10s (ctrl+o to expand)
+
+● Task Output(non-blocking) b2825fn23
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +13 lines (ctrl+o to expand)
+● Monitor event: "Monitor retested concurrent eval"
+
+  Thought for 20s (ctrl+o to expand)
+
+● Task Output(non-blocking) b2825fn23
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+● Monitor "Monitor concurrent eval output and server" stream ended
+
+● Monitor event: "Monitor retested concurrent eval"
+
+  Thought for 7s (ctrl+o to expand)
+
+● Task Output(non-blocking) b2825fn23
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 7s (ctrl+o to expand)
+
+● Task Output(non-blocking) b2825fn23
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 6s (ctrl+o to expand)
+
+● Task Output(non-blocking) b2825fn23
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 6s (ctrl+o to expand)
+
+● Task Output(non-blocking) b2825fn23
+  ⎿  ==========================================
+     MoWA-E-003 steps_9000 仿真测试
+     Checkpoint: /disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003_future_la
+     … +18 lines (ctrl+o to expand)
+
+  Thought for 6s, ran 1 shell command (ctrl+o to expand)
+
+● Monitor event: "Monitor retested concurrent eval"
+
+● Background command "Retest concurrent eval with batch timeout" failed with
+exit code 1
+
+● API Error: 400 Invalid request: Your request exceeded model token 
+  limit: 262144 (requested: 262652)
+
+✻ Cooked for 3m 37s
+
+● Monitor "Monitor retested concurrent eval" stream ended
+
+● API Error: 400 Invalid request: Your request exceeded model token 
+  limit: 262144 (requested: 262868)
+
+✻ Crunched for 2s
+
+❯ /compact                                                                      
+
+❯ /compact                                                                      
+  ⎿  Error during compaction: API Error: 400 Invalid request: Your request exceeded model token limit: 262144 (requested: 264153)

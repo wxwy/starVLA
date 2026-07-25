@@ -1,0 +1,201 @@
+{
+  "task_suite_name": "libero_object",
+  "num_trials_per_task": 3,
+  "max_tasks": 3,
+  "checkpoint_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1917/checkpoints/steps_6500",
+  "checkpoint_step": "steps_6500",
+  "checkpoint_hash": "a701b8b1a6eff585787057d796129f504b5eb1d5ad57128d291e02bdb102bf9f",
+  "config_path": "/disk/rl/starVLA/playground/mowa_ckpt/MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1917/checkpoints/steps_6500/config.yaml",
+  "config_hash": "a276cba778a18173de054ee0df99960cd9464e65845e1feba76a7d1f2feb200c",
+  "data_version": {
+    "data_mix": "libero_4in1_wanpi",
+    "data_root_dir": "playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "0e55843ec299513c32aeca5fd9fb40af276d716cb22ea7e2be82c1af8c23fd62"
+  },
+  "starflow_mapping": {
+    "schema_version": "future_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "LayerwiseFM",
+    "state_mode": "continuous_head",
+    "state_enters_instruction": false,
+    "state_enters_action_head": true,
+    "adapter_mode": "future_token_cross_dit",
+    "starflow_ft_variant": "ft0",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 0,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "model": {
+    "framework_name": "WanPI",
+    "vlm": "Wan2.2-TI2V-5B-Diffusers",
+    "action_head": "LayerwiseFM"
+  },
+  "total_episodes": 4,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "timeout_no_success": 4
+  },
+  "tasks": [
+    {
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episodes": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "timeout_no_success": 3
+      }
+    },
+    {
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episodes": 1,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "timeout_no_success": 1
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 280,
+      "model_calls": 280,
+      "total_infer_elapsed_sec": 34.8534,
+      "avg_infer_elapsed_sec": 0.1245,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/E003_LIBERO4in1_origWan_steps6500_streaming_3tasks3eps/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode0_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 272,
+        "replan_interval": 8,
+        "resize_sec": 3.2531097531318665e-06,
+        "client_pack_and_queue_sec": 0.0006597070023417473,
+        "client_server_roundtrip_sec": 0.853752070106566,
+        "client_unpack_sec": 4.17088158428669e-05,
+        "client_total_call_sec": 0.8544551488012075,
+        "server_total_sec": 0.8173406347632408,
+        "server_framework_sec": 0.8149326918646693,
+        "server_unnorm_sec": 0.000440400093793869,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 280,
+      "model_calls": 280,
+      "total_infer_elapsed_sec": 34.3462,
+      "avg_infer_elapsed_sec": 0.1227,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/E003_LIBERO4in1_origWan_steps6500_streaming_3tasks3eps/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode1_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 272,
+        "replan_interval": 8,
+        "resize_sec": 3.0687078833580017e-06,
+        "client_pack_and_queue_sec": 0.0006306949071586132,
+        "client_server_roundtrip_sec": 0.8844771389849484,
+        "client_unpack_sec": 6.450014188885689e-05,
+        "client_total_call_sec": 0.8851751917973161,
+        "server_total_sec": 0.8476602602750063,
+        "server_framework_sec": 0.8457251298241317,
+        "server_unnorm_sec": 0.00042431894689798355,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 0,
+      "task_description": "pick up the alphabet soup and place it in the basket",
+      "episode_idx": 2,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 280,
+      "model_calls": 280,
+      "total_infer_elapsed_sec": 34.3533,
+      "avg_infer_elapsed_sec": 0.1227,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/E003_LIBERO4in1_origWan_steps6500_streaming_3tasks3eps/rollout_pick_up_the_alphabet_soup_and_place_it_in_the_basket_episode2_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 272,
+        "replan_interval": 8,
+        "resize_sec": 3.2372772693634033e-06,
+        "client_pack_and_queue_sec": 0.0006606411188840866,
+        "client_server_roundtrip_sec": 0.9141389969736338,
+        "client_unpack_sec": 7.352279499173164e-05,
+        "client_total_call_sec": 0.9148752009496093,
+        "server_total_sec": 0.876236367970705,
+        "server_framework_sec": 0.8738353089429438,
+        "server_unnorm_sec": 0.00046069081872701645,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 1,
+      "task_description": "pick up the cream cheese and place it in the basket",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 280,
+      "model_calls": 280,
+      "total_infer_elapsed_sec": 34.5082,
+      "avg_infer_elapsed_sec": 0.1232,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_object/E003_LIBERO4in1_origWan_steps6500_streaming_3tasks3eps/rollout_pick_up_the_cream_cheese_and_place_it_in_the_basket_episode0_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 272,
+        "replan_interval": 8,
+        "resize_sec": 3.1669624149799347e-06,
+        "client_pack_and_queue_sec": 0.0007297610864043236,
+        "client_server_roundtrip_sec": 1.0507927858270705,
+        "client_unpack_sec": 3.62698920071125e-05,
+        "client_total_call_sec": 1.051559598185122,
+        "server_total_sec": 1.016032436862588,
+        "server_framework_sec": 1.014002830721438,
+        "server_unnorm_sec": 0.00043947482481598854,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "stage": "full_heads",
+  "module": "MoWAFutureConstructibleHeads",
+  "sample_count": 30,
+  "constructible_heads": [
+    "task_progress",
+    "action_outcome_class"
+  ],
+  "masked_heads": [
+    "manipulation_readiness",
+    "failure_risk",
+    "next_best_view_score",
+    "subgoal_feasibility",
+    "object_visibility_future"
+  ],
+  "input_shape": [
+    30,
+    4
+  ],
+  "task_progress_output_shape": [
+    30
+  ],
+  "action_outcome_class_output_shape": [
+    30,
+    2
+  ],
+  "loss_before": 0.024293631315231323,
+  "loss_after": 0.024045661091804504,
+  "loss_terms_before": {
+    "task_progress": 0.009443744085729122,
+    "action_outcome_class": 0.014849887229502201,
+    "total": 0.024293631315231323
+  },
+  "loss_terms_after": {
+    "task_progress": 0.009304342791438103,
+    "action_outcome_class": 0.014741317369043827,
+    "total": 0.024045661091804504
+  },
+  "class_mapping_status": "confirmed_for_e001_initial_target",
+  "class_mapping_version": "reward_done_vector_v1",
+  "go_no_go": "TBD: train smoke passed; class mapping is frozen for E-001 while broader production training remains gated",
+  "notes": [
+    "One optimizer step only; this is not E-001 training.",
+    "Features are smoke-only values derived from G0 labels.",
+    "Only two ConstructibleHeads are active; other future heads remain masked."
+  ]
+}

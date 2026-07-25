@@ -205,7 +205,10 @@ class VLAMTrainer(TrainerUtils):
             if hasattr(self.vlm_train_dataloader, "__len__"):
                 dataloader_length = len(self.vlm_train_dataloader)
                 if dataloader_length:
-                    metrics["epoch"] = round(self.completed_steps / dataloader_length, 2)
+                    metrics["epoch"] = round(
+                        self.completed_steps * self.accelerator.gradient_accumulation_steps / dataloader_length,
+                        2,
+                    )
             wandb.log(metrics, step=self.completed_steps)
             logger.info(f"Step {self.completed_steps}, Metrics: {metrics}")
 
@@ -241,12 +244,17 @@ class VLAMTrainer(TrainerUtils):
                 progress_bar.update(1)
                 self.completed_steps += 1
 
-            if self.completed_steps % self.config.trainer.eval_interval == 0:
+            if self.accelerator.sync_gradients and self.completed_steps % self.config.trainer.eval_interval == 0:
                 step_metrics = self.eval_action_model(step_metrics)
 
-            self._log_metrics(step_metrics)
+            if self.accelerator.sync_gradients:
+                self._log_metrics(step_metrics)
 
-            if self.completed_steps % self.config.trainer.save_interval == 0 and self.completed_steps > 0:
+            if (
+                self.accelerator.sync_gradients
+                and self.completed_steps % self.config.trainer.save_interval == 0
+                and self.completed_steps > 0
+            ):
                 self._save_checkpoint()
                 dist.barrier()
 
@@ -271,16 +279,20 @@ class VLAMTrainer(TrainerUtils):
 
     def _train_step(self, batch_vlm):
         """Execute single training step."""
-        log_dict = {}
         with self.accelerator.accumulate(self.model):
-            self.optimizer.zero_grad()
             with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                 unwrapped = self.accelerator.unwrap_model(self.model)
                 vlm_output = unwrapped.qwen_vl_interface(**batch_vlm)
                 vlm_loss = vlm_output.loss * self.config.trainer.loss_scale.vlm
+            vlm_loss_item = vlm_loss.item()
+            if not hasattr(self, "_loss_accum"):
+                self._loss_accum = {"vlm_loss": 0.0, "count": 0}
+            self._loss_accum["vlm_loss"] += vlm_loss_item
+            self._loss_accum["count"] += 1
+
             self.accelerator.backward(vlm_loss)
 
-            if self.config.trainer.gradient_clipping is not None:
+            if self.accelerator.sync_gradients and self.config.trainer.gradient_clipping is not None:
                 self.accelerator.clip_grad_norm_(self.model.parameters(), self.config.trainer.gradient_clipping)
 
             self.optimizer.step()
@@ -288,9 +300,20 @@ class VLAMTrainer(TrainerUtils):
             # See train_starvla.py for full explanation.
             if self.accelerator.sync_gradients:
                 self.lr_scheduler.step()
-            log_dict["vlm_loss"] = vlm_loss.item()
+                self.optimizer.zero_grad()
 
-        return log_dict
+            if self.accelerator.sync_gradients:
+                metrics = {
+                    "vlm_loss": self._loss_accum["vlm_loss"] / max(self._loss_accum["count"], 1),
+                    "vlm_loss_last_micro": vlm_loss_item,
+                    "train_accumulation_micro_steps": self._loss_accum["count"],
+                }
+                self._loss_accum = {"vlm_loss": 0.0, "count": 0}
+                return metrics
+
+        return {
+            "vlm_loss_last_micro": vlm_loss_item,
+        }
 
     def _finalize_training(self):
         """Training end processing."""

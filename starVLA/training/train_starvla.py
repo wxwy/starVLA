@@ -12,10 +12,13 @@ Conventions:
 
 # Standard Library
 import argparse
+from collections import defaultdict
 import gc
 import json
 import math
 import os
+import pickle
+import random
 import re
 import shutil
 import subprocess
@@ -29,6 +32,15 @@ from typing import Tuple
 import numpy as np
 import torch
 import torch.distributed as dist
+
+# NPU support: import torch_npu and enable automatic CUDA→NPU mapping.
+# On GPU-only environments this is a no-op (ImportError is silently ignored).
+try:
+    import torch_npu
+    from torch_npu.contrib import transfer_to_npu
+except ImportError:
+    pass
+
 import wandb
 from accelerate import Accelerator, DeepSpeedPlugin
 from accelerate.checkpointing import load_accelerator_state, load_custom_state
@@ -36,7 +48,6 @@ from accelerate.logging import get_logger
 from accelerate.utils import (
     DeepSpeedSchedulerWrapper,
     DistributedType,
-    GradientAccumulationPlugin,
     MODEL_NAME,
     RNG_STATE_NAME,
     SAMPLER_NAME,
@@ -51,8 +62,13 @@ from transformers import AutoProcessor, get_scheduler
 
 # Local Modules
 from starVLA.dataloader import build_dataloader
+from starVLA.dataloader.mowa.atomic_task_label_builder import get_task_name_from_dataset_path
 from starVLA.model.framework.base_framework import build_framework
 from starVLA.model.framework.share_tools import apply_config_compat
+from starVLA.training.checkpoints import (
+    load_deepspeed_universal_checkpoint,
+    save_deepspeed_universal_checkpoint,
+)
 from starVLA.training.trainer_utils.config_tracker import AccessTrackedConfig, wrap_config
 from starVLA.training.trainer_utils.trainer_tools import (
     TrainerUtils,
@@ -60,19 +76,22 @@ from starVLA.training.trainer_utils.trainer_tools import (
     setup_optimizer_and_scheduler,
     normalize_dotlist_args,
     _is_complete_deepspeed_checkpoint_dir,
+    _is_complete_deepspeed_universal_checkpoint_dir,
     _is_complete_lightweight_training_checkpoint_dir,
+    save_lightweight_checkpoint_metadata,
+    save_lightweight_scaler_state,
+    load_lightweight_scaler_state,
 )
 
-deepspeed_plugin = DeepSpeedPlugin()
-gradient_accumulation_plugin = GradientAccumulationPlugin(
-    num_steps=int(os.environ.get("ACCELERATE_GRADIENT_ACCUMULATION_STEPS", "1")),
-    sync_each_batch=True,
+_num_processes = int(os.environ.get("NUM_PROCESSES", "1"))
+# When launched via `accelerate launch --config_file deepspeed_*.yaml`, Accelerate
+# sets ACCELERATE_USE_DEEPSPEED / ACCELERATE_DEEPSPEED_CONFIG_FILE and will create
+# the DeepSpeed plugin itself. In that case we must not override it with None.
+_use_accelerate_deepspeed = (
+    os.environ.get("ACCELERATE_USE_DEEPSPEED", "").lower() in ("true", "1")
+    or os.environ.get("ACCELERATE_DEEPSPEED_CONFIG_FILE", "") != ""
 )
-accelerator = Accelerator(
-    deepspeed_plugin=deepspeed_plugin,
-    gradient_accumulation_plugin=gradient_accumulation_plugin,
-)
-accelerator.print(accelerator.state)
+accelerator = None
 
 STARTUP_CHECKPOINT_STAGE_THREAD = None
 STARTUP_CHECKPOINT_STAGE_ERROR = None
@@ -81,6 +100,112 @@ STARTUP_SYNC_INFLIGHT_MARKER = None
 
 # Sane Defaults
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+
+def _get_config_path(cfg, path, default=None):
+    current = cfg
+    for key in path.split("."):
+        try:
+            current = getattr(current, key)
+        except AttributeError:
+            return default
+    return current
+
+
+def _resolve_wandb_mode(cfg) -> str:
+    wandb_mode = getattr(cfg, "wandb_mode", None)
+    if wandb_mode is not None:
+        return str(wandb_mode).strip().lower()
+    return "online"
+
+
+def _wandb_mode_disables_logging(cfg) -> bool:
+    mode = _resolve_wandb_mode(cfg)
+    return mode == "offline" or mode.startswith("disabled")
+
+
+_MOWA_TASK_METRIC_KEYS = (
+    "sample_count",
+    "action_loss_sum",
+    "action_loss_count",
+    "future_main_sum",
+    "future_wrist_sum",
+    "done_positive_sum",
+)
+
+
+def _merge_mowa_task_metric_accumulators(accumulators: list[dict]) -> dict:
+    """Merge rank-local task metric windows without assuming a fixed task registry."""
+    merged = defaultdict(lambda: defaultdict(float))
+    for accumulator in accumulators:
+        for task_name, values in accumulator.items():
+            for key in _MOWA_TASK_METRIC_KEYS:
+                merged[task_name][key] += float(values.get(key, 0.0))
+    return merged
+
+
+def _touch_training_audit_config(cfg) -> None:
+    """Ensure key audit fields are present in AccessTrackedConfig snapshots."""
+    audit_paths = (
+        "trainer.is_resume",
+        "trainer.pretrained_checkpoint",
+        "trainer.gradient_accumulation_steps",
+        "trainer.enable_mowa_future_supervision_loss",
+        "trainer.loss_scale.mowa_future_supervision",
+        "trainer.enable_mowa_future_latent_prior_loss",
+        "trainer.loss_scale.mowa_future_latent_prior",
+        "datasets.vla_data.data_mix",
+        "framework.name",
+        "framework.action_model.action_model_type",
+        "framework.action_model.num_target_vision_tokens",
+        "framework.mowa.enable_future_supervision_loss",
+        "framework.mowa.enable_layerwise_bridge_token_coupling",
+        "framework.mowa.layerwise_bridge_feature_source",
+        "framework.mowa.layerwise_bridge_token_intervention",
+        "framework.mowa.num_bridge_tokens",
+        "framework.mowa.layerwise_bridge_active_heads",
+        "framework.mowa.gated_heads.enabled",
+        "framework.mowa.gated_heads.comparison_scope",
+        "framework.mowa.gated_heads.init_gate_value",
+    )
+    for path in audit_paths:
+        _get_config_path(cfg, path)
+
+
+def _enforce_launch_guard(cfg, *, full_path_dry_run_only: bool) -> None:
+    if full_path_dry_run_only or not hasattr(cfg, "launch_guard"):
+        return
+
+    launch_guard = cfg.launch_guard
+    launch_ready = bool(getattr(launch_guard, "launch_ready", False))
+    requires_human_confirmation = bool(getattr(launch_guard, "requires_human_confirmation", False))
+    human_confirmed = bool(getattr(launch_guard, "human_confirmed", False))
+    policy_confirmed = bool(getattr(launch_guard, "policy_confirmed", False))
+    if launch_ready and policy_confirmed and (not requires_human_confirmation or human_confirmed):
+        return
+
+    raise RuntimeError(
+        "Training launch blocked by launch_guard: "
+        f"launch_ready={launch_ready}, "
+        f"policy_confirmed={policy_confirmed}, "
+        f"requires_human_confirmation={requires_human_confirmation}, "
+        f"human_confirmed={human_confirmed}. "
+        "Set launch_ready=true, policy_confirmed=true, and, when "
+        "requires_human_confirmation=true, human_confirmed=true only after explicit approval."
+    )
+
+
+def _build_accelerator(cfg):
+    deepspeed_plugin = DeepSpeedPlugin() if (_num_processes > 1 and not _use_accelerate_deepspeed) else None
+    gradient_accumulation_steps = int(getattr(cfg.trainer, "gradient_accumulation_steps", 1))
+    mixed_precision = str(getattr(cfg.trainer, "mixed_precision", "no")).lower()
+    if mixed_precision not in {"no", "fp16", "bf16", "fp8"}:
+        mixed_precision = "no"
+    return Accelerator(
+        deepspeed_plugin=deepspeed_plugin,
+        gradient_accumulation_steps=gradient_accumulation_steps,
+        mixed_precision=mixed_precision,
+    )
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -105,10 +230,39 @@ def _parse_shard_size_to_bytes(raw_size) -> int:
     raise ValueError(f"Unsupported checkpoint shard size: {raw_size}")
 
 
-def _iter_model_state_tensors(model):
+def _is_persistent_buffer(model, name: str) -> bool:
+    """Check if a buffer is persistent (should be saved to checkpoint)."""
+    module = model
+    parts = name.split(".")
+    for part in parts[:-1]:
+        if not hasattr(module, part):
+            return True  # defensive: if we can't resolve, save it
+        module = getattr(module, part)
+    local_name = parts[-1]
+    return local_name not in getattr(module, "_non_persistent_buffers_set", set())
+
+
+def _iter_model_state_tensors(model, *, save_frozen_backbone: bool):
     for name, param in model.named_parameters():
+        if (
+            not save_frozen_backbone
+            and name.startswith("backbone.")
+            and "lora_" not in name
+        ):
+            continue
         yield name, param
     for name, buffer in model.named_buffers():
+        if (
+            not save_frozen_backbone
+            and name.startswith("backbone.")
+            and "lora_" not in name
+        ):
+            continue
+        # Non-persistent buffers are transient diagnostic state and should not be
+        # serialized.  PyTorch state_dict() already excludes them, so saving them
+        # creates a mismatch on resume.
+        if not _is_persistent_buffer(model, name):
+            continue
         yield name, buffer
 
 
@@ -116,7 +270,14 @@ def _tensor_num_bytes(tensor: torch.Tensor) -> int:
     return tensor.numel() * tensor.element_size()
 
 
-def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str, max_shard_size) -> None:
+def _streaming_save_model_shards(
+    model,
+    checkpoint_path: Path,
+    save_format: str,
+    max_shard_size,
+    *,
+    save_frozen_backbone: bool,
+) -> None:
     checkpoint_path.mkdir(parents=True, exist_ok=True)
     max_shard_bytes = _parse_shard_size_to_bytes(max_shard_size)
     shard_entries = []
@@ -158,7 +319,10 @@ def _streaming_save_model_shards(model, checkpoint_path: Path, save_format: str,
 
     index_name = None
     bare_model = model
-    for name, tensor in _iter_model_state_tensors(bare_model):
+    for name, tensor in _iter_model_state_tensors(
+        bare_model,
+        save_frozen_backbone=save_frozen_backbone,
+    ):
         cpu_tensor = tensor.detach().to("cpu", copy=True).contiguous()
         tensor_bytes = _tensor_num_bytes(cpu_tensor)
 
@@ -204,7 +368,11 @@ def _get_latest_checkpoint_entry(checkpoint_dir: Path):
         if file_match and entry.is_file():
             checkpoint_entries.append((entry, int(file_match.group(1))))
         elif dir_match and entry.is_dir():
-            if _is_complete_deepspeed_checkpoint_dir(entry) or _is_complete_lightweight_training_checkpoint_dir(entry):
+            if (
+                _is_complete_deepspeed_checkpoint_dir(entry)
+                or _is_complete_deepspeed_universal_checkpoint_dir(entry)
+                or _is_complete_lightweight_training_checkpoint_dir(entry)
+            ):
                 checkpoint_entries.append((entry, int(dir_match.group(1))))
 
     if not checkpoint_entries:
@@ -226,8 +394,10 @@ def _get_latest_checkpoint_entry_with_status(checkpoint_dir: Path):
         if file_match and entry.is_file():
             checkpoint_entries.append({"path": entry, "step": int(file_match.group(1)), "complete": True})
         elif dir_match and entry.is_dir():
-            is_complete = _is_complete_deepspeed_checkpoint_dir(entry) or _is_complete_lightweight_training_checkpoint_dir(
-                entry
+            is_complete = (
+                _is_complete_deepspeed_checkpoint_dir(entry)
+                or _is_complete_deepspeed_universal_checkpoint_dir(entry)
+                or _is_complete_lightweight_training_checkpoint_dir(entry)
             )
             checkpoint_entries.append({"path": entry, "step": int(dir_match.group(1)), "complete": is_complete})
 
@@ -265,11 +435,27 @@ def _list_complete_checkpoint_entries(checkpoint_dir: Path):
         if file_match and entry.is_file():
             checkpoint_entries.append({"path": entry, "step": int(file_match.group(1)), "complete": True})
         elif dir_match and entry.is_dir():
-            if _is_complete_deepspeed_checkpoint_dir(entry) or _is_complete_lightweight_training_checkpoint_dir(entry):
+            if (
+                _is_complete_deepspeed_checkpoint_dir(entry)
+                or _is_complete_deepspeed_universal_checkpoint_dir(entry)
+                or _is_complete_lightweight_training_checkpoint_dir(entry)
+            ):
                 checkpoint_entries.append({"path": entry, "step": int(dir_match.group(1)), "complete": True})
 
     checkpoint_entries.sort(key=lambda x: x["step"])
     return checkpoint_entries
+
+
+def _should_auto_resume_latest_complete(
+    resume_policy: str | None,
+    is_resume: bool,
+    latest_checkpoint: str | Path | None,
+) -> bool:
+    return (
+        not is_resume
+        and str(resume_policy or "").strip().lower() == "resume_latest_complete_only"
+        and latest_checkpoint is not None
+    )
 
 
 def _copy_path_for_stage(src_path: Path, dst_path: Path):
@@ -309,6 +495,38 @@ def _prune_checkpoint_entries_for_stage(checkpoint_dir: Path, keep_count: int, e
     keep_names = {entry["path"].name for entry in complete_entries[-keep_count:]} if keep_count > 0 else set()
     keep_names.update(extra_keep_names)
     _remove_other_checkpoint_entries_for_stage(checkpoint_dir, keep_names)
+
+
+def _apply_checkpoint_retention_policy(
+    checkpoint_dir: Path,
+    *,
+    permanent_steps: set[int],
+    keep_latest_count: int,
+    strip_optimizer_from_non_latest: bool,
+):
+    """保留永久里程碑和最近 checkpoint，并可精简旧里程碑的 optimizer 状态。"""
+    complete_entries = _list_complete_checkpoint_entries(checkpoint_dir)
+    keep_latest_count = max(int(keep_latest_count), 0)
+    latest_names = {
+        entry["path"].name for entry in complete_entries[-keep_latest_count:]
+    } if keep_latest_count else set()
+    permanent_names = {
+        entry["path"].name for entry in complete_entries if entry["step"] in permanent_steps
+    }
+    keep_names = latest_names | permanent_names
+
+    for entry in complete_entries:
+        checkpoint_path = entry["path"]
+        if checkpoint_path.name not in keep_names:
+            shutil.rmtree(checkpoint_path, ignore_errors=True)
+            continue
+        if (
+            strip_optimizer_from_non_latest
+            and checkpoint_path.name in permanent_names
+            and checkpoint_path.name not in latest_names
+        ):
+            for optimizer_path in checkpoint_path.glob("optimizer_rank_*.pt"):
+                optimizer_path.unlink(missing_ok=True)
 
 
 def _copy_helper_artifacts_for_stage(src_dir: Path, dst_dir: Path, helper_artifact_names: tuple[str, ...]):
@@ -651,8 +869,330 @@ def prepare_data(cfg, accelerator, output_dir) -> DataLoader:
     vla_train_dataloader = build_dataloader(cfg=cfg, dataset_py=cfg.datasets.vla_data.dataset_py)
 
     accelerator.dataloader_config.dispatch_batches = False
-    dist.barrier()
+    if dist.is_initialized():
+        dist.barrier()
     return vla_train_dataloader
+
+
+def _prepare_wan_instruction_text_cache(cfg, vla) -> None:
+    """可选地预编码去重指令，并在训练前释放临时 UMT5。"""
+    world_model_cfg = getattr(getattr(cfg, "framework", None), "world_model", None)
+    if world_model_cfg is None or not bool(getattr(world_model_cfg, "preload_text_cache", False)):
+        return
+    backbone = getattr(vla, "backbone", None)
+    if backbone is None or not hasattr(backbone, "set_instruction_text_cache"):
+        raise ValueError("preload_text_cache is only supported by the Wan2 backbone.")
+    if not bool(getattr(backbone, "use_text_cache", False)):
+        raise ValueError("preload_text_cache=True requires world_model.use_text_cache=True.")
+
+    from starVLA.dataloader.mowa.instruction_text_latent_cache import (
+        MoWAInstructionTextLatentCache,
+        build_mowa_instruction_text_latent_cache,
+    )
+
+    cache_path = getattr(getattr(cfg, "latent_cache", None), "instruction_text_latent", None)
+    if cache_path and Path(cache_path).is_file():
+        text_cache = MoWAInstructionTextLatentCache(cache_path)
+        source = str(cache_path)
+    else:
+        _, text_cache = build_mowa_instruction_text_latent_cache(
+            dataset_root=cfg.datasets.vla_data.data_root_dir,
+            output_path=None,
+            encoder_model_path=backbone.model_name,
+            dtype="float16",
+        )
+        source = "memory-only pre-encoding"
+    backbone.set_instruction_text_cache(text_cache)
+    backbone.release_text_encoder()
+    logger.info(
+        "Wan instruction cache ready: source=%s entries=%d; UMT5/tokenizer released.",
+        source,
+        len(text_cache),
+    )
+
+
+def _is_full_path_dry_run(cfg) -> bool:
+    return bool(getattr(cfg.trainer, "full_path_dry_run_only", False))
+
+
+def _summarize_batch(batch) -> dict:
+    if batch is None:
+        return {"fetched": False}
+    summary = {
+        "fetched": True,
+        "type": type(batch).__name__,
+    }
+    if isinstance(batch, (list, tuple)):
+        summary["length"] = len(batch)
+        if batch:
+            first = batch[0]
+            summary["first_item_type"] = type(first).__name__
+            if isinstance(first, dict):
+                summary["first_item_keys"] = sorted(str(key) for key in first.keys())
+                for key in ("image", "lang", "action", "state", "mowa_future_targets", "mowa_future_masks", "mowa_future_metadata"):
+                    if key in first:
+                        value = first[key]
+                        value_summary = {"type": type(value).__name__}
+                        if hasattr(value, "shape"):
+                            value_summary["shape"] = list(value.shape)
+                        elif isinstance(value, (list, tuple)):
+                            value_summary["length"] = len(value)
+                        elif isinstance(value, dict):
+                            value_summary["keys"] = sorted(str(item_key) for item_key in value.keys())
+                        summary[f"first_item_{key}"] = value_summary
+    elif isinstance(batch, dict):
+        summary["keys"] = sorted(str(key) for key in batch.keys())
+    return summary
+
+
+def _summarize_forward_output(output_dict: dict | None) -> dict:
+    if output_dict is None:
+        return {"evaluated": False}
+
+    summary = {"evaluated": True, "keys": sorted(str(key) for key in output_dict.keys())}
+    for key, value in output_dict.items():
+        if hasattr(value, "detach"):
+            detached = value.detach()
+            if detached.numel() == 1:
+                summary[key] = float(detached.float().cpu().item())
+            else:
+                summary[key] = {"shape": list(detached.shape)}
+        elif isinstance(value, (list, tuple)):
+            summary[key] = list(value)
+        elif isinstance(value, dict):
+            summary[key] = sorted(str(item_key) for item_key in value.keys())
+        else:
+            summary[key] = value
+    return summary
+
+
+def _run_full_path_dry_run_forward(model, batch) -> dict:
+    cuda_device = None
+    if torch.cuda.is_available():
+        try:
+            cuda_device = next(model.parameters()).device
+        except StopIteration:
+            cuda_device = torch.device("cuda")
+        if cuda_device.type != "cuda":
+            cuda_device = torch.device("cuda")
+        cuda_allocated_before = torch.cuda.memory_allocated(cuda_device)
+        cuda_reserved_before = torch.cuda.memory_reserved(cuda_device)
+        torch.cuda.reset_peak_memory_stats(cuda_device)
+        torch.cuda.synchronize(cuda_device)
+    else:
+        cuda_allocated_before = None
+        cuda_reserved_before = None
+    start_time = time.perf_counter()
+    output_dict = model(batch)
+    if torch.cuda.is_available():
+        torch.cuda.synchronize(cuda_device)
+    elapsed_sec = time.perf_counter() - start_time
+
+    summary = _summarize_forward_output(output_dict)
+    batch_size = len(batch) if hasattr(batch, "__len__") else None
+    summary["metric_scope"] = "one_batch_no_backward_forward_dry_run"
+    summary["elapsed_sec"] = float(elapsed_sec)
+    summary["batch_size"] = int(batch_size) if batch_size is not None else None
+    summary["samples_per_sec"] = (
+        float(batch_size / elapsed_sec)
+        if batch_size is not None and elapsed_sec > 0
+        else None
+    )
+    summary["cuda_available"] = bool(torch.cuda.is_available())
+    if torch.cuda.is_available():
+        cuda_allocated_after = torch.cuda.memory_allocated(cuda_device)
+        cuda_reserved_after = torch.cuda.memory_reserved(cuda_device)
+        cuda_peak_allocated = max(
+            torch.cuda.max_memory_allocated(cuda_device),
+            cuda_allocated_before,
+            cuda_allocated_after,
+        )
+        cuda_peak_reserved = max(
+            torch.cuda.max_memory_reserved(cuda_device),
+            cuda_reserved_before,
+            cuda_reserved_after,
+        )
+        summary["cuda_device"] = str(cuda_device)
+        summary["cuda_device_name"] = torch.cuda.get_device_name(cuda_device)
+        summary["allocated_vram_gb"] = float(cuda_allocated_after / (1024**3))
+        summary["reserved_vram_gb"] = float(cuda_reserved_after / (1024**3))
+        summary["peak_vram_gb"] = float(cuda_peak_allocated / (1024**3))
+        summary["peak_reserved_vram_gb"] = float(cuda_peak_reserved / (1024**3))
+    else:
+        summary["cuda_device"] = None
+        summary["cuda_device_name"] = None
+        summary["allocated_vram_gb"] = None
+        summary["reserved_vram_gb"] = None
+        summary["peak_vram_gb"] = None
+        summary["peak_reserved_vram_gb"] = None
+    summary["vram_metric_scope"] = "torch_cuda_allocator_in_full_path_dry_run"
+    return summary
+
+
+def _load_full_path_dry_run_checkpoint(cfg, model) -> dict:
+    checkpoint = getattr(cfg.trainer, "full_path_dry_run_checkpoint", None)
+    requested = bool(getattr(cfg.trainer, "full_path_dry_run_load_checkpoint", False))
+    if not requested:
+        return {"requested": False, "loaded": False, "path": None}
+    if not checkpoint:
+        raise ValueError("trainer.full_path_dry_run_load_checkpoint=true requires trainer.full_path_dry_run_checkpoint")
+
+    checkpoint_path = Path(checkpoint).expanduser()
+    if not checkpoint_path.is_absolute():
+        checkpoint_path = Path.cwd() / checkpoint_path
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f"full_path_dry_run_checkpoint does not exist: {checkpoint_path}")
+
+    start_time = time.perf_counter()
+    TrainerUtils.load_pretrained_backbones(
+        model,
+        str(checkpoint_path),
+        preferred_format=getattr(cfg.trainer, "save_format", "safetensors"),
+    )
+    return {
+        "requested": True,
+        "loaded": True,
+        "path": str(checkpoint),
+        "resolved_path": str(checkpoint_path),
+        "elapsed_sec": float(time.perf_counter() - start_time),
+    }
+
+
+def _write_full_path_dry_run_report(
+    cfg,
+    *,
+    output_dir: Path,
+    model,
+    dataloader,
+    optimizer,
+    trainer,
+    batch_summary: dict | None,
+    forward_summary: dict | None,
+    checkpoint_load_summary: dict | None,
+) -> None:
+    report_path = Path(
+        getattr(
+            cfg.trainer,
+            "full_path_dry_run_report",
+            "docs_zh/mowa/mowa_e001_train_starvla_full_path_dry_run.json",
+        )
+    )
+    trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
+    total_params = sum(param.numel() for param in model.parameters())
+    mowa_labels_enabled = bool(getattr(cfg.datasets.vla_data, "enable_mowa_future_labels", False))
+    mowa_supervision_enabled = bool(
+        getattr(
+            model,
+            "mowa_future_supervision_loss_enabled",
+            getattr(model, "mowa_future_supervision_probe_enabled", False),
+        )
+    )
+    mowa_supervision_active_heads = list(
+        getattr(
+            model,
+            "mowa_future_supervision_active_heads",
+            getattr(model, "mowa_future_supervision_active_heads", ()),
+        )
+    )
+    mowa_supervision_label_status = (
+        "forward_evaluated_in_full_path_dry_run"
+        if (
+            "mowa_future_supervision_loss" in ((forward_summary or {}).get("keys") or [])
+            or "mowa_p0_supervision_loss" in ((forward_summary or {}).get("keys") or [])
+        )
+        else "not_evaluated_in_full_path_dry_run"
+    )
+    payload = {
+        "stage": "full_heads",
+        "experiment_id": getattr(cfg, "experiment_id", "E-001"),
+        "entrypoint": "starVLA/training/train_starvla.py",
+        "full_path_dry_run_only": True,
+        "training_started": False,
+        "checkpoint_saved": False,
+        "checkpoint_loaded": bool((checkpoint_load_summary or {}).get("loaded", False)),
+        "checkpoint_load": checkpoint_load_summary or {"requested": False, "loaded": False, "path": None},
+        "wandb_started": False,
+        "config_yaml": getattr(cfg, "config_yaml", None),
+        "run_id": cfg.run_id,
+        "output_dir": str(output_dir),
+        "framework": {
+            "name": cfg.framework.name,
+            "starflow_ft_variant": getattr(cfg.framework, "starflow_ft_variant", "config_defined"),
+            "action_model_type": getattr(cfg.framework.action_model, "action_model_type", None),
+            "num_target_vision_tokens": getattr(cfg.framework.action_model, "num_target_vision_tokens", None),
+            "state_mode": getattr(cfg.framework, "state_mode", None),
+            "total_params": int(total_params),
+            "trainable_params": int(trainable_params),
+            "mowa_action_bridge_probe_enabled": bool(
+                getattr(model, "mowa_action_bridge_probe_enabled", False)
+            ),
+            "mowa_layerwise_bridge_coupling_enabled": bool(
+                getattr(model, "mowa_layerwise_bridge_coupling_enabled", False)
+            ),
+            "mowa_layerwise_bridge_coupling_status": (
+                "forward_coupled_in_full_path_dry_run"
+                if "mowa_layerwise_bridge_coupled" in ((forward_summary or {}).get("keys") or [])
+                else "not_coupled_in_full_path_dry_run"
+            ),
+            "mowa_layerwise_bridge_feature_source": getattr(
+                model,
+                "mowa_layerwise_bridge_feature_source",
+                None,
+            ),
+            "mowa_future_gated_heads_enabled": bool(
+                getattr(model, "mowa_future_gated_heads_enabled", False)
+            ),
+            "mowa_layerwise_bridge_gated_heads_summary": getattr(
+                model,
+                "mowa_last_layerwise_bridge_gated_heads_summary",
+                None,
+            ),
+            "mowa_future_supervision_gated_heads_summary": getattr(
+                model,
+                "mowa_last_future_supervision_gated_heads_summary",
+                None,
+            ),
+            "mowa_future_supervision_probe_enabled": mowa_supervision_enabled,
+            "mowa_future_supervision_active_heads": mowa_supervision_active_heads,
+            "mowa_future_supervision_label_status": mowa_supervision_label_status,
+        },
+        "data": {
+            "dataset_py": cfg.datasets.vla_data.dataset_py,
+            "data_mix": cfg.datasets.vla_data.data_mix,
+            "data_root_dir": str(cfg.datasets.vla_data.data_root_dir),
+            "per_device_batch_size": int(cfg.datasets.vla_data.per_device_batch_size),
+            "dataloader_type": type(dataloader).__name__,
+            "dataloader_length": len(dataloader) if hasattr(dataloader, "__len__") else None,
+            "mowa_future_labels_enabled": mowa_labels_enabled,
+            "batch_summary": batch_summary or {"fetched": False},
+        },
+        "optimizer": {
+            "type": type(optimizer).__name__,
+            "param_group_count": len(optimizer.param_groups),
+            "param_group_names": [group.get("name", str(index)) for index, group in enumerate(optimizer.param_groups)],
+        },
+        "trainer": {
+            "max_train_steps": int(cfg.trainer.max_train_steps),
+            "gradient_accumulation_steps": int(getattr(cfg.trainer, "gradient_accumulation_steps", 1)),
+            "total_batch_size": int(trainer.total_batch_size),
+            "checkpoint_format": getattr(cfg.trainer, "checkpoint_format", None),
+            "save_interval": int(cfg.trainer.save_interval),
+            "eval_interval": int(cfg.trainer.eval_interval),
+        },
+        "forward": forward_summary or {"evaluated": False},
+        "go_no_go": "TBD: train_starvla full-path dry-run passed; training remains gated",
+        "notes": [
+            "This dry-run stops before prepare_training(), wandb, checkpoint saving, and train().",
+            "Checkpoint loading is optional and only runs when trainer.full_path_dry_run_load_checkpoint is true.",
+            "It validates StarVLA build/data/optimizer/trainer wiring only.",
+            "MoWA future supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
+            "MoWA bridge coupling into LayerwiseFM action generation is only active when the MoWA gated config enables it.",
+        ],
+    }
+    if accelerator.is_main_process:
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        logger.info(f"MoWA E-001 train_starvla full-path dry-run report saved at {report_path}")
 
 
 def setup_optimizer_and_scheduler(model, cfg) -> Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
@@ -684,6 +1224,101 @@ def setup_optimizer_and_scheduler(model, cfg) -> Tuple[torch.optim.Optimizer, to
     return optimizer, lr_scheduler
 
 
+def _convert_deepspeed_optimizer_state_to_plain(optimizer_state, target_optimizer, model):
+    """
+    Convert a DeepSpeed ZeRO optimizer state dict (with flattened per-group params)
+    into a standard PyTorch optimizer state dict matching ``target_optimizer``.
+
+    DeepSpeed stores one flat ``exp_avg`` / ``exp_avg_sq`` tensor per parameter
+    group and records the slice position of every original parameter in
+    ``param_slice_mappings``. This function slices those flat tensors back into
+    per-parameter states so the checkpoint can be resumed without DeepSpeed.
+    """
+    base_state = optimizer_state.get("base_optimizer_state")
+    param_slice_mappings = optimizer_state.get("param_slice_mappings", [])
+    if not isinstance(base_state, dict) or "param_groups" not in base_state or "state" not in base_state:
+        raise RuntimeError("Invalid DeepSpeed optimizer state: missing base_optimizer_state.")
+
+    # Build a name -> param map for all trainable parameters in the model.
+    name_to_param = {}
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            name_to_param[name] = param
+
+    # Build a lookup from group name to target group.
+    target_groups_by_name = {}
+    for group in target_optimizer.param_groups:
+        group_name = group.get("name")
+        if group_name is None:
+            raise RuntimeError("Target optimizer param group is missing the 'name' key required for DeepSpeed conversion.")
+        if group_name in target_groups_by_name:
+            raise RuntimeError(f"Duplicate target optimizer group name: {group_name}")
+        target_groups_by_name[group_name] = group
+
+    new_state = {}
+    new_param_groups = []
+
+    for ds_group_idx, ds_group in enumerate(base_state["param_groups"]):
+        ds_group_name = ds_group.get("name", f"group_{ds_group_idx}")
+        if ds_group_name not in target_groups_by_name:
+            raise RuntimeError(
+                f"DeepSpeed optimizer group '{ds_group_name}' not found in target optimizer. "
+                f"Available groups: {list(target_groups_by_name.keys())}"
+            )
+        target_group = target_groups_by_name[ds_group_name]
+
+        ds_group_state = base_state["state"][ds_group_idx]
+        ds_exp_avg = ds_group_state["exp_avg"]
+        ds_exp_avg_sq = ds_group_state["exp_avg_sq"]
+        ds_step = ds_group_state["step"]
+
+        slice_mapping = param_slice_mappings[ds_group_idx] if ds_group_idx < len(param_slice_mappings) else {}
+
+        # Reconstruct per-parameter states for every parameter in the target group.
+        for param in target_group["params"]:
+            param_name = None
+            for name, p in name_to_param.items():
+                if p is param:
+                    param_name = name
+                    break
+            if param_name is None:
+                raise RuntimeError(
+                    "A parameter in the target optimizer could not be matched to any named trainable model parameter."
+                )
+            if param_name not in slice_mapping:
+                raise RuntimeError(
+                    f"Parameter '{param_name}' not found in DeepSpeed param_slice_mappings for group '{ds_group_name}'."
+                )
+            fragment = slice_mapping[param_name]
+            start = int(fragment.start)
+            numel = int(fragment.numel)
+            if numel != param.numel():
+                raise RuntimeError(
+                    f"Parameter '{param_name}' numel mismatch: checkpoint slice has {numel}, "
+                    f"but model parameter has {param.numel()}."
+                )
+            new_state[id(param)] = {
+                "step": ds_step,
+                "exp_avg": ds_exp_avg[start : start + numel].view_as(param).clone(),
+                "exp_avg_sq": ds_exp_avg_sq[start : start + numel].view_as(param).clone(),
+            }
+            # Keep Adam moments in their checkpoint dtype (normally fp32). Fused
+            # AdamW requires matching devices, but downcasting exp_avg/exp_avg_sq
+            # to bf16 loses optimizer precision after resume.
+            for key in ("exp_avg", "exp_avg_sq"):
+                new_state[id(param)][key] = new_state[id(param)][key].to(param.device)
+
+        # Reconstruct the param group with current parameter ids but preserved hyperparameters.
+        # Force fused=False because the converted state does not satisfy the strict requirements
+        # of the fused AdamW kernel (contiguity / dtype / device checks can fail across params).
+        new_group = {k: v for k, v in ds_group.items() if k != "params"}
+        new_group["params"] = [id(p) for p in target_group["params"]]
+        new_group["fused"] = False
+        new_param_groups.append(new_group)
+
+    return {"state": new_state, "param_groups": new_param_groups}
+
+
 class VLATrainer(TrainerUtils):
     def __init__(self, cfg, model, vla_train_dataloader, optimizer, lr_scheduler, accelerator):
         self.config = cfg
@@ -697,6 +1332,7 @@ class VLATrainer(TrainerUtils):
         self.total_batch_size = self._calculate_total_batch_size()
         self.resume_requires_training_state = False
         self.resume_requires_lightweight_state = False
+        self.runtime_metrics_report = getattr(self.config.trainer, "runtime_metrics_report", None)
         self.network_output_dir = Path(self.config.output_dir)
         self.network_checkpoint_dir = self.network_output_dir / "checkpoints"
         self.enable_local_checkpoint_staging = getattr(self.config.trainer, "enable_local_checkpoint_staging", True)
@@ -725,7 +1361,265 @@ class VLATrainer(TrainerUtils):
         self.save_with_training_state = getattr(self.config.trainer, "save_with_training_state", False)
         self.save_checkpoint_as_directory = getattr(self.config.trainer, "save_checkpoint_as_directory", True)
         self.checkpoint_max_shard_size = getattr(self.config.trainer, "checkpoint_max_shard_size", "5GB")
+        self.save_frozen_backbone = bool(getattr(self.config.trainer, "save_frozen_backbone", False))
         self.local_checkpoint_keep_count = max(int(getattr(self.config.trainer, "local_checkpoint_keep_count", 1)), 1)
+        self.checkpoint_permanent_steps = {
+            int(step) for step in getattr(self.config.trainer, "checkpoint_permanent_steps", [])
+        }
+        self.checkpoint_keep_latest_count = max(
+            int(getattr(self.config.trainer, "checkpoint_keep_latest_count", 0)), 0
+        )
+        self.strip_optimizer_from_non_latest_checkpoints = bool(
+            getattr(self.config.trainer, "strip_optimizer_from_non_latest_checkpoints", False)
+        )
+        self.save_universal_checkpoint = getattr(self.config.trainer, "save_universal_checkpoint", False)
+        self.checkpoint_format = self._resolve_checkpoint_format()
+        self._mowa_task_metric_window = defaultdict(lambda: defaultdict(float))
+        self._mowa_task_metric_cumulative = defaultdict(float)
+        self._mowa_target_sampling_probabilities = self._resolve_mowa_target_sampling_probabilities()
+        self._mowa_padding_metric_window = defaultdict(lambda: defaultdict(float))
+
+    def _resolve_mowa_target_sampling_probabilities(self) -> dict[str, float]:
+        """Return the normalized task sampling probabilities used by the mixture dataset."""
+        dataset = getattr(self.vla_train_dataloader, "dataset", None)
+        datasets = getattr(dataset, "datasets", None)
+        weights = getattr(dataset, "dataset_sampling_weights", None)
+        if datasets is None or weights is None or len(datasets) != len(weights):
+            return {}
+
+        probabilities = defaultdict(float)
+        for single_dataset, weight in zip(datasets, weights):
+            task_name = get_task_name_from_dataset_path(single_dataset.dataset_path)
+            if task_name is not None:
+                probabilities[str(task_name)] += float(weight)
+        total = sum(probabilities.values())
+        return {
+            task_name: probability / total
+            for task_name, probability in probabilities.items()
+            if probability > 0
+        } if total > 0 else {}
+
+    @staticmethod
+    def _mowa_example_mask(examples: list[dict], key: str, width: int) -> torch.Tensor:
+        values = [example.get(key) for example in examples]
+        if all(value is None for value in values):
+            return torch.ones(len(examples), width, dtype=torch.bool)
+        if any(value is None for value in values):
+            raise ValueError(f"MoWA batch mixes present and missing {key}.")
+        mask = torch.stack([torch.as_tensor(value, dtype=torch.bool) for value in values])
+        if mask.shape != (len(examples), width):
+            raise ValueError(f"MoWA {key} must be [B,{width}], got {tuple(mask.shape)}.")
+        return mask
+
+    def _accumulate_mowa_padding_metrics(self, examples: list[dict], output_dict: dict) -> None:
+        required = (
+            "action_loss_per_timestep",
+            "loss_future_main_per_timestep",
+            "loss_future_wrist_per_timestep",
+        )
+        if any(output_dict.get(key) is None for key in required):
+            return
+        action_loss = output_dict["action_loss_per_timestep"].detach().float().cpu()
+        future_main = output_dict["loss_future_main_per_timestep"].detach().float().cpu()
+        future_wrist = output_dict["loss_future_wrist_per_timestep"].detach().float().cpu()
+        if action_loss.ndim != 2 or future_main.ndim != 2 or future_wrist.shape != future_main.shape:
+            raise ValueError("MoWA padding diagnostics require [B,T] action and future loss tensors.")
+        action_mask = self._mowa_example_mask(examples, "mowa_action_valid_mask", action_loss.shape[1])
+        future_mask = self._mowa_example_mask(examples, "mowa_future_valid_mask", future_main.shape[1])
+        history_mask = self._mowa_example_mask(examples, "mowa_history_valid_mask", 0)
+
+        for index in range(len(examples)):
+            front_padded = history_mask.shape[1] > 0 and not bool(history_mask[index].all())
+            back_padded = not bool(action_mask[index].all()) or not bool(future_mask[index].all())
+            category = "both_pad" if front_padded and back_padded else "front_pad" if front_padded else "back_pad" if back_padded else "no_pad"
+            metrics = self._mowa_padding_metric_window[category]
+            metrics["sample_count"] += 1.0
+            metrics["action_valid_count"] += float(action_mask[index].sum())
+            metrics["action_token_count"] += float(action_mask.shape[1])
+            metrics["future_valid_count"] += float(future_mask[index].sum())
+            metrics["future_token_count"] += float(future_mask.shape[1])
+            if history_mask.shape[1] > 0:
+                metrics["history_real_count"] += float(history_mask[index].sum())
+                metrics["history_token_count"] += float(history_mask.shape[1])
+            for name, loss, mask in (
+                ("action", action_loss[index], action_mask[index]),
+                ("future_main", future_main[index], future_mask[index]),
+                ("future_wrist", future_wrist[index], future_mask[index]),
+            ):
+                metrics[f"{name}_loss_sum"] += float((loss * mask.to(device=loss.device)).sum())
+                metrics[f"{name}_loss_count"] += float(mask.sum())
+            split = action_loss.shape[1] // 2
+            for label, start, end in (("near", 0, split), ("far", split, action_loss.shape[1])):
+                mask = action_mask[index, start:end]
+                metrics[f"action_{label}_sum"] += float(
+                    (action_loss[index, start:end] * mask.to(device=action_loss.device)).sum()
+                )
+                metrics[f"action_{label}_count"] += float(mask.sum())
+            split = future_main.shape[1] // 2
+            for label, start, end in (("near", 0, split), ("far", split, future_main.shape[1])):
+                mask = future_mask[index, start:end]
+                for name, loss in (("future_main", future_main[index]), ("future_wrist", future_wrist[index])):
+                    metrics[f"{name}_{label}_sum"] += float(
+                        (loss[start:end] * mask.to(device=loss.device)).sum()
+                    )
+                    metrics[f"{name}_{label}_count"] += float(mask.sum())
+
+    def _flush_mowa_padding_metrics(self) -> dict:
+        local = {category: dict(values) for category, values in self._mowa_padding_metric_window.items()}
+        self._mowa_padding_metric_window.clear()
+        if dist.is_initialized():
+            gathered = [None] * dist.get_world_size()
+            dist.all_gather_object(gathered, local)
+        else:
+            gathered = [local]
+        if not self.accelerator.is_main_process:
+            return {}
+        merged = defaultdict(lambda: defaultdict(float))
+        for window in gathered:
+            for category, values in window.items():
+                for key, value in values.items():
+                    merged[category][key] += float(value)
+        metrics, total = {}, defaultdict(float)
+        for category, values in merged.items():
+            for key, value in values.items():
+                total[key] += value
+            count = values["sample_count"]
+            if count <= 0:
+                continue
+            metrics[f"supervision/sample_count/{category}"] = count
+            for name in ("action", "future"):
+                metrics[f"supervision/{name}_valid_ratio/{category}"] = values[f"{name}_valid_count"] / values[f"{name}_token_count"]
+            for name in ("action", "future_main", "future_wrist"):
+                if values[f"{name}_loss_count"] > 0:
+                    metrics[f"loss_{name}/{category}"] = values[f"{name}_loss_sum"] / values[f"{name}_loss_count"]
+        if total["sample_count"] > 0:
+            for category in ("front_pad", "back_pad", "both_pad"):
+                metrics[f"supervision/padding_ratio/{category}"] = merged[category]["sample_count"] / total["sample_count"]
+            for name in ("action", "future"):
+                metrics[f"supervision/{name}_valid_ratio"] = total[f"{name}_valid_count"] / total[f"{name}_token_count"]
+            if total["history_token_count"] > 0:
+                metrics["supervision/history_real_ratio"] = total["history_real_count"] / total["history_token_count"]
+            for name in ("action", "future_main", "future_wrist"):
+                for label in ("near", "far"):
+                    if total[f"{name}_{label}_count"] > 0:
+                        prefix = "loss_action_horizon" if name == "action" else "loss_future_horizon"
+                        suffix = label if name != "future_wrist" else f"wrist_{label}"
+                        metrics[f"{prefix}/{suffix}"] = total[f"{name}_{label}_sum"] / total[f"{name}_{label}_count"]
+        return metrics
+
+    def _accumulate_mowa_task_metrics(self, examples: list[dict], output_dict: dict) -> None:
+        """Accumulate detached per-sample MoWA metrics for the next W&B log window."""
+        task_names = [example.get("mowa_task_name") for example in examples]
+        if not task_names or any(task_name is None for task_name in task_names):
+            return
+
+        required = (
+            "action_loss_per_sample",
+            "action_loss_valid_per_sample",
+            "loss_future_main_per_sample",
+            "loss_future_wrist_per_sample",
+            "done_positive_ratio_per_sample",
+        )
+        if any(output_dict.get(key) is None for key in required):
+            return
+
+        values = {
+            key: output_dict[key].detach().float().cpu().reshape(-1).tolist()
+            for key in required
+        }
+        batch_size = len(task_names)
+        if any(len(value) != batch_size for value in values.values()):
+            raise ValueError(
+                "MoWA per-task metrics must have one value per batch sample, "
+                f"got batch={batch_size}, lengths={{{', '.join(f'{key}: {len(value)}' for key, value in values.items())}}}."
+            )
+
+        for index, task_name in enumerate(task_names):
+            metrics = self._mowa_task_metric_window[str(task_name)]
+            metrics["sample_count"] += 1.0
+            metrics["future_main_sum"] += values["loss_future_main_per_sample"][index]
+            metrics["future_wrist_sum"] += values["loss_future_wrist_per_sample"][index]
+            metrics["done_positive_sum"] += values["done_positive_ratio_per_sample"][index]
+            if bool(values["action_loss_valid_per_sample"][index]):
+                metrics["action_loss_sum"] += values["action_loss_per_sample"][index]
+                metrics["action_loss_count"] += 1.0
+
+    def _flush_mowa_task_metrics(self) -> dict:
+        """All-gather and emit task metrics from one completed logging window."""
+        local_window = {
+            task_name: dict(values)
+            for task_name, values in self._mowa_task_metric_window.items()
+        }
+        self._mowa_task_metric_window.clear()
+
+        if dist.is_initialized():
+            gathered_windows = [None] * dist.get_world_size()
+            dist.all_gather_object(gathered_windows, local_window)
+        else:
+            gathered_windows = [local_window]
+        if not self.accelerator.is_main_process:
+            return {}
+
+        merged = _merge_mowa_task_metric_accumulators(gathered_windows)
+        metrics = {}
+        total_sample_count = sum(values["sample_count"] for values in merged.values())
+        for task_name, values in merged.items():
+            self._mowa_task_metric_cumulative[task_name] += values["sample_count"]
+        cumulative_sample_count = sum(self._mowa_task_metric_cumulative.values())
+        for task_name, values in sorted(merged.items()):
+            sample_count = values["sample_count"]
+            if sample_count <= 0:
+                continue
+            metrics[f"sample_count/task/{task_name}"] = sample_count
+            metrics[f"loss_future_main/task/{task_name}"] = values["future_main_sum"] / sample_count
+            metrics[f"loss_future_wrist/task/{task_name}"] = values["future_wrist_sum"] / sample_count
+            metrics[f"done_positive_ratio/task/{task_name}"] = values["done_positive_sum"] / sample_count
+            if values["action_loss_count"] > 0:
+                metrics[f"loss_action/task/{task_name}"] = (
+                    values["action_loss_sum"] / values["action_loss_count"]
+                )
+        for task_name, target_probability in sorted(self._mowa_target_sampling_probabilities.items()):
+            observed_probability = (
+                merged[task_name]["sample_count"] / total_sample_count
+                if total_sample_count > 0
+                else 0.0
+            )
+            cumulative_probability = (
+                self._mowa_task_metric_cumulative[task_name] / cumulative_sample_count
+                if cumulative_sample_count > 0
+                else 0.0
+            )
+            metrics[f"sampling/target_prob/task/{task_name}"] = target_probability
+            metrics[f"sampling/observed_prob/task/{task_name}"] = observed_probability
+            metrics[f"sampling/observed_to_target_ratio/task/{task_name}"] = (
+                observed_probability / target_probability
+            )
+            metrics[f"sampling/observed_prob_cumulative/task/{task_name}"] = cumulative_probability
+            metrics[f"sampling/observed_to_target_ratio_cumulative/task/{task_name}"] = (
+                cumulative_probability / target_probability
+            )
+        return metrics
+
+    def _resolve_checkpoint_format(self) -> str:
+        raw_format = getattr(self.config.trainer, "checkpoint_format", None)
+        if raw_format is None:
+            if self.save_with_training_state:
+                return "deepspeed_state"
+            return "universal"
+
+        checkpoint_format = str(raw_format).strip().lower()
+        aliases = {
+            "deepspeed_universal": "universal",
+            "universal_full_adam": "universal",
+            "deepspeed": "deepspeed_state",
+            "training_state": "deepspeed_state",
+            "directory": "lightweight",
+        }
+        checkpoint_format = aliases.get(checkpoint_format, checkpoint_format)
+        valid_formats = {"lightweight", "universal", "deepspeed_state", "model_only"}
+        if checkpoint_format not in valid_formats:
+            raise ValueError(f"Unsupported trainer.checkpoint_format `{raw_format}`. Expected one of {sorted(valid_formats)}.")
+        return checkpoint_format
 
     def prepare_training(self):
         rank = dist.get_rank() if dist.is_initialized() else 0
@@ -734,6 +1628,7 @@ class VLATrainer(TrainerUtils):
 
         _wait_for_startup_checkpoint_stage()
         self._setup_checkpoint_storage()
+        _touch_training_audit_config(self.config)
 
         # Save config snapshots upfront so that even if a later setup step
         # (ckpt load / DeepSpeed init / dataloader build) crashes, the
@@ -764,6 +1659,7 @@ class VLATrainer(TrainerUtils):
         elif self.resume_requires_lightweight_state and self.resume_from_checkpoint:
             self._load_lightweight_training_state(self.resume_from_checkpoint)
 
+        self._capture_wan_lora_initial_state()
         self._init_wandb()
 
     def _calculate_total_batch_size(self):
@@ -774,14 +1670,75 @@ class VLATrainer(TrainerUtils):
             * self.accelerator.gradient_accumulation_steps
         )
 
+    def _iter_wan_lora_parameters(self):
+        for name, parameter in self.model.named_parameters():
+            if "backbone.transformer." in name and "lora_" in name:
+                yield name, parameter
+
+    def _capture_wan_lora_initial_state(self):
+        """保存当前训练会话的 Wan LoRA 基线，仅用于诊断日志。"""
+        self._wan_lora_initial_params = {
+            id(parameter): parameter.detach().clone()
+            for _, parameter in self._iter_wan_lora_parameters()
+        }
+        if self._wan_lora_initial_params and self.accelerator.is_main_process:
+            logger.info("Captured %d Wan LoRA tensors for update diagnostics.", len(self._wan_lora_initial_params))
+
+    def _collect_wan_lora_metrics(self, *, include_grad: bool) -> dict:
+        totals = {
+            "all": {"param_sq": 0.0, "delta_sq": 0.0, "grad_sq": 0.0},
+            "self_attention": {"param_sq": 0.0, "delta_sq": 0.0, "grad_sq": 0.0},
+            "cross_attention": {"param_sq": 0.0, "delta_sq": 0.0, "grad_sq": 0.0},
+        }
+        found = False
+        for name, parameter in self._iter_wan_lora_parameters():
+            found = True
+            group = "self_attention" if ".attn1." in name else "cross_attention" if ".attn2." in name else None
+            values = [totals["all"]]
+            if group is not None:
+                values.append(totals[group])
+            param_sq = float(parameter.detach().float().pow(2).sum().item())
+            initial = getattr(self, "_wan_lora_initial_params", {}).get(id(parameter))
+            delta_sq = (
+                float((parameter.detach().float() - initial.float()).pow(2).sum().item())
+                if initial is not None
+                else 0.0
+            )
+            grad_sq = (
+                float(parameter.grad.detach().float().pow(2).sum().item())
+                if include_grad and parameter.grad is not None
+                else 0.0
+            )
+            for value in values:
+                value["param_sq"] += param_sq
+                value["delta_sq"] += delta_sq
+                value["grad_sq"] += grad_sq
+
+        if not found:
+            return {}
+
+        metrics = {}
+        for group, values in totals.items():
+            prefix = "wan_lora" if group == "all" else f"wan_lora/{group}"
+            metrics[f"{prefix}_param_norm"] = values["param_sq"] ** 0.5
+            metrics[f"{prefix}_delta_norm"] = values["delta_sq"] ** 0.5
+            if include_grad:
+                metrics[f"{prefix}_grad_norm"] = values["grad_sq"] ** 0.5
+        return metrics
+
     def _init_wandb(self):
         """Initialize Weights & Biases."""
+        if _wandb_mode_disables_logging(self.config):
+            logger.info("W&B disabled by wandb_mode.")
+            return
         if self.accelerator.is_main_process:
-            wandb_run_id = re.sub(r"[^A-Za-z0-9_.-]", "-", str(self.config.run_id))[:128]
+            raw_wandb_run_id = getattr(self.config, "wandb_run_id", None) or self.config.run_id
+            wandb_run_id = re.sub(r"[^A-Za-z0-9_.-]", "-", str(raw_wandb_run_id))[:128]
+            wandb_name = getattr(self.config, "wandb_name", None) or self.config.run_id
             wandb.init(
                 id=wandb_run_id,
                 resume="allow",
-                name=self.config.run_id,
+                name=wandb_name,
                 dir=os.path.join(self.config.output_dir, "wandb"),
                 project=self.config.wandb_project,
                 entity=self.config.wandb_entity,
@@ -815,6 +1772,14 @@ class VLATrainer(TrainerUtils):
 
         pretrained_checkpoint = getattr(self.config.trainer, "pretrained_checkpoint", None)
         is_resume = getattr(self.config.trainer, "is_resume", False)
+        resume_policy = str(getattr(self.config.trainer, "resume_policy", "")).strip().lower()
+        latest_checkpoint, _ = self._get_latest_checkpoint(self.checkpoint_dir)
+        if _should_auto_resume_latest_complete(resume_policy, is_resume, latest_checkpoint):
+            is_resume = True
+            logger.info(
+                "resume_policy=resume_latest_complete_only 找到完整 checkpoint，"
+                f"自动恢复: {latest_checkpoint}"
+            )
         self.resume_from_checkpoint = pretrained_checkpoint
 
         if is_resume:
@@ -822,6 +1787,10 @@ class VLATrainer(TrainerUtils):
             if resume_from_checkpoint:
                 self.resume_from_checkpoint = resume_from_checkpoint
                 if os.path.isdir(self.resume_from_checkpoint) and _is_complete_deepspeed_checkpoint_dir(
+                    self.resume_from_checkpoint
+                ):
+                    self.resume_requires_training_state = True
+                elif os.path.isdir(self.resume_from_checkpoint) and _is_complete_deepspeed_universal_checkpoint_dir(
                     self.resume_from_checkpoint
                 ):
                     self.resume_requires_training_state = True
@@ -887,6 +1856,7 @@ class VLATrainer(TrainerUtils):
             return
 
         checkpoint_parts = self._inspect_directory_checkpoint(checkpoint_path)
+        is_universal_checkpoint = _is_complete_deepspeed_universal_checkpoint_dir(checkpoint_path)
         total_stages = 2 + int(checkpoint_parts["custom_count"] > 0)
 
         if self.accelerator.is_main_process:
@@ -894,6 +1864,7 @@ class VLATrainer(TrainerUtils):
             logger.info(
                 "目录式 checkpoint 检测结果: "
                 f"deepspeed_tag={checkpoint_parts['deepspeed_tag']}, "
+                f"is_universal={is_universal_checkpoint}, "
                 f"scheduler_files={checkpoint_parts['scheduler_files']}, "
                 f"sampler_files={checkpoint_parts['sampler_files']}, "
                 f"rng_files={checkpoint_parts['rng_files']}, "
@@ -903,35 +1874,50 @@ class VLATrainer(TrainerUtils):
         for hook in self.accelerator._load_model_state_pre_hook.values():
             hook([], str(checkpoint_path))
 
-        logger.info(f"[1/{total_stages}] 开始加载 DeepSpeed 模型/优化器状态: {checkpoint_path}")
-        load_path, _ = self.model.load_checkpoint(
-            str(checkpoint_path),
-            checkpoint_parts["deepspeed_tag"],
-            load_module_strict=True,
-            load_optimizer_states=True,
-            load_lr_scheduler_states=True,
-        )
+        if is_universal_checkpoint:
+            logger.info(f"[1/{total_stages}] 开始加载 DeepSpeed Universal 模型/优化器状态: {checkpoint_path}")
+            load_path, _ = load_deepspeed_universal_checkpoint(
+                self.model,
+                checkpoint_path,
+                load_optimizer_states=True,
+                load_lr_scheduler_states=True,
+            )
+        else:
+            logger.info(
+                f"[1/{total_stages}] 开始加载 DeepSpeed 模型/优化器状态: "
+                f"{checkpoint_path}, tag={checkpoint_parts['deepspeed_tag']}"
+            )
+            load_path, _ = self.model.load_checkpoint(
+                str(checkpoint_path),
+                checkpoint_parts["deepspeed_tag"],
+                load_module_strict=True,
+                load_optimizer_states=True,
+                load_lr_scheduler_states=True,
+            )
         if load_path is None:
             raise RuntimeError(f"DeepSpeed checkpoint load failed: {checkpoint_path}")
         logger.info(f"[1/{total_stages}] DeepSpeed 模型/优化器状态加载完成: {load_path}")
 
-        logger.info(f"[2/{total_stages}] 开始加载 scheduler / dataloader / RNG 状态")
-        schedulers = [scheduler for scheduler in self.accelerator._schedulers if not isinstance(scheduler, DeepSpeedSchedulerWrapper)]
-        override_attributes = load_accelerator_state(
-            str(checkpoint_path),
-            [],
-            [],
-            schedulers,
-            self.accelerator._dataloaders,
-            self.accelerator.state.process_index,
-            self.accelerator.scaler,
-            "cpu",
-        )
-        if "step" in override_attributes:
-            self.accelerator.step = override_attributes["step"]
-        logger.info(
-            f"[2/{total_stages}] scheduler / dataloader / RNG 状态加载完成"
-        )
+        if checkpoint_parts["scheduler_files"] or checkpoint_parts["rng_files"] or checkpoint_parts["sampler_files"]:
+            logger.info(f"[2/{total_stages}] 开始加载 scheduler / dataloader / RNG 状态")
+            schedulers = [scheduler for scheduler in self.accelerator._schedulers if not isinstance(scheduler, DeepSpeedSchedulerWrapper)]
+            override_attributes = load_accelerator_state(
+                str(checkpoint_path),
+                [],
+                [],
+                schedulers,
+                self.accelerator._dataloaders,
+                self.accelerator.state.process_index,
+                self.accelerator.scaler,
+                "cpu",
+            )
+            if "step" in override_attributes:
+                self.accelerator.step = override_attributes["step"]
+            logger.info(
+                f"[2/{total_stages}] scheduler / dataloader / RNG 状态加载完成"
+            )
+        else:
+            logger.warning(f"[2/{total_stages}] checkpoint 不包含 scheduler / dataloader / RNG 状态，跳过该阶段")
 
         if checkpoint_parts["custom_count"] > 0:
             logger.info(f"[3/{total_stages}] 开始加载 {checkpoint_parts['custom_count']} 个自定义状态")
@@ -943,7 +1929,7 @@ class VLATrainer(TrainerUtils):
 
     def _load_lightweight_training_state(self, checkpoint_path):
         checkpoint_path = Path(checkpoint_path)
-        total_stages = 2
+        total_stages = 4
         with open(checkpoint_path / "trainer_state.json", "r", encoding="utf-8") as f:
             trainer_state = json.load(f)
 
@@ -962,6 +1948,10 @@ class VLATrainer(TrainerUtils):
                 weights_only=False,
                 mmap=True,
             )
+            is_deepspeed_optimizer_state = (
+                isinstance(optimizer_state, dict)
+                and ("base_optimizer_state" in optimizer_state or "zero_stage" in optimizer_state or "ds_version" in optimizer_state)
+            )
             if self.accelerator.distributed_type == DistributedType.DEEPSPEED and hasattr(self.optimizer, "optimizer"):
                 world_size = self.accelerator.num_processes
                 state_dict_list = [None] * world_size
@@ -971,8 +1961,43 @@ class VLATrainer(TrainerUtils):
                     load_optimizer_states=True,
                     load_from_fp32_weights=False,
                 )
+            elif is_deepspeed_optimizer_state:
+                # Fallback: load the underlying PyTorch optimizer state from a DeepSpeed
+                # checkpoint even though the current run is not using DeepSpeed.
+                # This preserves momentum/variance and param_groups so that a run originally
+                # trained with DeepSpeed can be resumed on a single GPU without DeepSpeed.
+                logger.warning(
+                    f"Checkpoint optimizer state at {optimizer_state_path} was saved under DeepSpeed, "
+                    f"but the current distributed_type is {self.accelerator.distributed_type}. "
+                    f"Extracting base_optimizer_state and loading it without DeepSpeed. "
+                    f"DeepSpeed-specific states (loss scaler, fp32 partitions) will be discarded."
+                )
+                base_optimizer_state = optimizer_state.get("base_optimizer_state")
+                if not isinstance(base_optimizer_state, dict) or "param_groups" not in base_optimizer_state:
+                    raise RuntimeError(
+                        f"Cannot downgrade-load DeepSpeed optimizer state: missing base_optimizer_state "
+                        f"or param_groups in {optimizer_state_path}."
+                    )
+                plain_optimizer_state = _convert_deepspeed_optimizer_state_to_plain(
+                    optimizer_state, self.optimizer, self.model
+                )
+                self.optimizer.load_state_dict(plain_optimizer_state)
             else:
                 self.optimizer.load_state_dict(optimizer_state)
+                # The underlying AdamW was created with fused=True. Old checkpoints
+                # saved during fused=False runs persist fused=False in param_groups.
+                # For plain (non-DeepSpeed) checkpoints, move optimizer state
+                # tensors to the same device as their parameters and restore
+                # fused=True. Preserve Adam state dtype, which should remain fp32
+                # even when model parameters are bf16.
+                for group in self.optimizer.param_groups:
+                    for p in group["params"]:
+                        if p in self.optimizer.state:
+                            state = self.optimizer.state[p]
+                            for key in ("exp_avg", "exp_avg_sq", "step"):
+                                if key in state and isinstance(state[key], torch.Tensor):
+                                    state[key] = state[key].to(p.device)
+                    group["fused"] = True
             del optimizer_state
         logger.info(f"[1/{total_stages}] lightweight optimizer 状态加载完成")
 
@@ -990,6 +2015,14 @@ class VLATrainer(TrainerUtils):
         del trainer_state
         gc.collect()
         logger.info(f"[2/{total_stages}] lightweight scheduler / trainer 状态加载完成")
+
+        logger.info(f"[3/{total_stages}] 开始恢复 lightweight scaler 状态")
+        self._load_lightweight_scaler_state(checkpoint_path)
+        logger.info(f"[3/{total_stages}] lightweight scaler 状态恢复完成")
+
+        logger.info(f"[4/{total_stages}] 开始恢复 lightweight RNG 状态")
+        self._load_lightweight_rng_state(checkpoint_path)
+        logger.info(f"[4/{total_stages}] lightweight RNG 状态恢复完成")
 
         self.accelerator.print(f"Resumed lightweight training state from checkpoint: {checkpoint_path}")
 
@@ -1034,6 +2067,7 @@ class VLATrainer(TrainerUtils):
             deepspeed_tag = latest_file.read_text().strip() or MODEL_NAME
 
         scheduler_files = [name for name in entries if name.startswith(SCHEDULER_NAME)]
+        scaler_files = [name for name in entries if name.startswith(SCALER_NAME)]
         sampler_files = [name for name in entries if name.startswith(SAMPLER_NAME) or name.startswith("dl_state_dict")]
         rng_files = [name for name in entries if name.startswith(RNG_STATE_NAME)]
         custom_files = [name for name in entries if name.startswith("custom_checkpoint_")]
@@ -1042,6 +2076,7 @@ class VLATrainer(TrainerUtils):
             "entries": entries,
             "deepspeed_tag": deepspeed_tag,
             "scheduler_files": scheduler_files,
+            "scaler_files": scaler_files,
             "sampler_files": sampler_files,
             "rng_files": rng_files,
             "custom_count": len(custom_files),
@@ -1053,9 +2088,11 @@ class VLATrainer(TrainerUtils):
         checkpoint_path = self.local_checkpoint_dir / f"steps_{self.completed_steps}"
         self._ensure_local_checkpoint_capacity(checkpoint_path)
 
-        if self.accelerator.distributed_type == DistributedType.DEEPSPEED and self.save_with_training_state:
+        if self.checkpoint_format == "universal":
+            self._save_deepspeed_universal_checkpoint(checkpoint_path, save_format)
+        elif self.checkpoint_format == "deepspeed_state":
             self.accelerator.save_state(output_dir=str(checkpoint_path), safe_serialization=(save_format == "safetensors"))
-        elif self.save_checkpoint_as_directory:
+        elif self.checkpoint_format == "lightweight":
             self._save_lightweight_directory_checkpoint(checkpoint_path, save_format)
         elif self.accelerator.is_main_process and save_format == "safetensors":
             from safetensors.torch import save_file
@@ -1077,22 +2114,108 @@ class VLATrainer(TrainerUtils):
         if self.accelerator.is_main_process:
             self._append_summary_entry({"steps": self.completed_steps})
             self._sync_accessed_config_snapshots()
+            if self.checkpoint_permanent_steps or self.checkpoint_keep_latest_count:
+                _apply_checkpoint_retention_policy(
+                    self.local_checkpoint_dir,
+                    permanent_steps=self.checkpoint_permanent_steps,
+                    keep_latest_count=self.checkpoint_keep_latest_count,
+                    strip_optimizer_from_non_latest=self.strip_optimizer_from_non_latest_checkpoints,
+                )
             self.accelerator.print(f"✅ Checkpoint saved at {checkpoint_path}")
             self._enqueue_checkpoint_sync(checkpoint_path)
 
         self.accelerator.wait_for_everyone()
 
+    def save_deepspeed_zero_checkpoint(self, output_dir, tag=None):
+        """Save the current DeepSpeed engine state as a native ZeRO checkpoint.
+
+        This is intended for one-shot conversion from lightweight checkpoints to
+        DeepSpeed Universal Checkpoints. It should only be called when the model
+        has already been prepared as a DeepSpeed engine.
+        """
+        if self.accelerator.distributed_type != DistributedType.DEEPSPEED:
+            raise RuntimeError("save_deepspeed_zero_checkpoint requires a DeepSpeed engine")
+
+        output_dir = Path(output_dir)
+        if self.accelerator.is_main_process:
+            output_dir.mkdir(parents=True, exist_ok=True)
+        self.accelerator.wait_for_everyone()
+
+        if tag is None:
+            tag = f"steps_{self.completed_steps}"
+
+        logger.info(f"Saving DeepSpeed ZeRO checkpoint to {output_dir} with tag {tag}")
+        self.model.save_checkpoint(str(output_dir), tag=tag)
+        self.accelerator.wait_for_everyone()
+        logger.info(f"DeepSpeed ZeRO checkpoint saved to {output_dir / tag}")
+
+    def _save_deepspeed_universal_checkpoint(self, checkpoint_path: Path, save_format: str):
+        """Save a full Adam DeepSpeed Universal Checkpoint.
+
+        The lightweight checkpoint is used only as a temporary source for
+        rank-sharded ZeRO optimizer states. Adam exp_avg/exp_avg_sq are
+        preserved from optimizer_rank_*.pt files.
+        """
+        if self.accelerator.distributed_type != DistributedType.DEEPSPEED:
+            raise RuntimeError("save_universal_checkpoint requires DeepSpeed training")
+        if save_format != "safetensors":
+            raise ValueError("save_universal_checkpoint currently requires trainer.save_format=safetensors")
+
+        save_deepspeed_universal_checkpoint(
+            checkpoint_path=checkpoint_path,
+            save_format=save_format,
+            model=self.model,
+            accelerator=self.accelerator,
+            save_lightweight_checkpoint=self._save_lightweight_directory_checkpoint,
+            logger=logger,
+        )
+
     def _log_metrics(self, metrics):
         """Record training metrics."""
-        if self.completed_steps % self.config.trainer.logging_frequency == 0 and dist.get_rank() == 0:
+        if self.completed_steps % self.config.trainer.logging_frequency == 0 and self.accelerator.is_main_process:
             last_lrs = self.lr_scheduler.get_last_lr()
             for i, group in enumerate(self.optimizer.param_groups):
                 group_name = group.get("name", str(i))
                 metrics[f"learning_rate/{group_name}"] = last_lrs[i] if i < len(last_lrs) else last_lrs[-1]
-            metrics["epoch"] = round(self.completed_steps / len(self.vla_train_dataloader), 2)
-            wandb.log(metrics, step=self.completed_steps)
+            metrics["epoch"] = round(
+                self.completed_steps * self.accelerator.gradient_accumulation_steps / len(self.vla_train_dataloader),
+                2,
+            )
+            if not _wandb_mode_disables_logging(self.config):
+                wandb.log(metrics, step=self.completed_steps)
             logger.info(f"Step {self.completed_steps}, Loss: {metrics})")
+            self._write_runtime_metrics(metrics)
             self._maybe_cleanup_local_resume_checkpoint()
+
+    def _write_runtime_metrics(self, metrics):
+        if not self.runtime_metrics_report:
+            return
+        report_path = Path(self.runtime_metrics_report)
+        if not report_path.is_absolute():
+            report_path = Path.cwd() / report_path
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        timing_data = float(metrics.get("timing/data", 0.0))
+        timing_model = float(metrics.get("timing/model", 0.0))
+        step_time = timing_data + timing_model
+        payload = {
+            "completed_steps": int(self.completed_steps),
+            "total_batch_size": int(self.total_batch_size),
+            "timing_data_sec": timing_data,
+            "timing_model_sec": timing_model,
+            "step_time_sec": step_time,
+            "samples_per_sec": float(self.total_batch_size / step_time) if step_time > 0 else None,
+            "metrics": {
+                key: float(value)
+                for key, value in metrics.items()
+                if isinstance(value, (int, float))
+            },
+        }
+        if torch.cuda.is_available():
+            payload["cuda_device_name"] = torch.cuda.get_device_name()
+            payload["peak_vram_gb"] = float(torch.cuda.max_memory_allocated() / (1024**3))
+            payload["peak_reserved_gb"] = float(torch.cuda.max_memory_reserved() / (1024**3))
+        with report_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
     def _create_data_iterators(self):
         """Create data iterators."""
@@ -1115,6 +2238,8 @@ class VLATrainer(TrainerUtils):
     def train(self):
         """Execute training loop."""
         self._log_training_config()
+        if self.runtime_metrics_report and torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
         self._create_data_iterators()
         progress_bar = tqdm(
             total=self.config.trainer.max_train_steps,
@@ -1164,21 +2289,37 @@ class VLATrainer(TrainerUtils):
         self._finalize_training()
 
     def eval_action_model(self, step_metrics: dict = None) -> float:
-        """Run simple action-eval on current batch and attach score to metrics."""
-        examples = self._get_next_batch()
-        actions = [example["action"] for example in examples]
-        output_dict = self.accelerator.unwrap_model(self.model).predict_action(
-            examples=examples, use_ddim=True, num_ddim_steps=20
-        )
+        """Run simple action-eval over multiple batches and attach score to metrics.
 
-        if self.accelerator.is_main_process:
-            normalized_actions = output_dict["normalized_actions"]
-            actions = np.array(actions)
-            num_pots = np.prod(actions.shape)
-            score = TrainerUtils.euclidean_distance(normalized_actions, actions)
-            step_metrics["mse_score"] = score / num_pots
+        The number of eval batches is read from ``config.trainer.eval_num_batches``
+        (default 1).  When per_device_batch_size is small (e.g. 1 on a 4090) set
+        this to 8–16 to get a stable mse_score estimate.
+        """
+        eval_num_batches = getattr(self.config.trainer, "eval_num_batches", 1)
+        total_score = 0.0
+        total_pots = 0
 
-        del examples
+        for _ in range(eval_num_batches):
+            examples = self._get_next_batch()
+            actions = [example["action"] for example in examples]
+            output_dict = self.accelerator.unwrap_model(self.model).predict_action(
+                examples=examples, use_ddim=True, num_ddim_steps=20
+            )
+
+            if self.accelerator.is_main_process:
+                normalized_actions = output_dict["normalized_actions"]
+                actions_np = np.array(actions)
+                num_pots = int(np.prod(actions_np.shape))
+                score = TrainerUtils.euclidean_distance(normalized_actions, actions_np)
+                total_score += score
+                total_pots += num_pots
+
+            del examples, actions, output_dict
+
+        if self.accelerator.is_main_process and total_pots > 0:
+            step_metrics["mse_score"] = total_score / total_pots
+            step_metrics["eval_num_samples"] = total_pots
+
         if dist.is_initialized():
             dist.barrier()
         return step_metrics
@@ -1188,6 +2329,26 @@ class VLATrainer(TrainerUtils):
         if self.accelerator.is_main_process:
             logger.info("***** Training Configuration *****")
             logger.info(f"  Total optimization steps = {self.config.trainer.max_train_steps}")
+            logger.info(f"  is_resume = {_get_config_path(self.config, 'trainer.is_resume', None)}")
+            logger.info(
+                f"  enable_mowa_future_supervision_loss = "
+                f"{_get_config_path(self.config, 'trainer.enable_mowa_future_supervision_loss', False)}"
+            )
+            logger.info(f"  resume_from_checkpoint = {getattr(self, 'resume_from_checkpoint', None)}")
+            logger.info(
+                f"  trainer.pretrained_checkpoint = "
+                f"{_get_config_path(self.config, 'trainer.pretrained_checkpoint', None)}"
+            )
+            logger.info(f"  data_mix = {_get_config_path(self.config, 'datasets.vla_data.data_mix', None)}")
+            logger.info(f"  framework.name = {_get_config_path(self.config, 'framework.name', None)}")
+            logger.info(
+                f"  action_model_type = "
+                f"{_get_config_path(self.config, 'framework.action_model.action_model_type', None)}"
+            )
+            logger.info(
+                f"  num_target_vision_tokens = "
+                f"{_get_config_path(self.config, 'framework.action_model.num_target_vision_tokens', None)}"
+            )
             logger.info(f"  Per device batch size = {self.config.datasets.vla_data.per_device_batch_size}")
             logger.info(f"  Gradient accumulation steps = {self.accelerator.gradient_accumulation_steps}")
             logger.info(f"  Total batch size = {self.total_batch_size}")
@@ -1195,16 +2356,122 @@ class VLATrainer(TrainerUtils):
     def _train_step(self, batch_vla, batch_vlm=None):
         """Execute single training step."""
         with self.accelerator.accumulate(self.model):
-            self.optimizer.zero_grad()
-
             with torch.autocast("cuda", dtype=torch.bfloat16):
                 output_dict = self.model.forward(batch_vla)
                 action_loss = output_dict["action_loss"]
                 total_loss = action_loss
+                mowa_future_supervision_loss = output_dict.get("mowa_future_supervision_loss")
+                if mowa_future_supervision_loss is None:
+                    mowa_future_supervision_loss = output_dict.get("mowa_p0_supervision_loss")
+                mowa_future_latent_prior_loss = output_dict.get("mowa_future_latent_prior_loss")
+                if (
+                    bool(getattr(self.config.trainer, "enable_mowa_future_supervision_loss", False))
+                    and mowa_future_supervision_loss is not None
+                ):
+                    total_loss = total_loss + (
+                        mowa_future_supervision_loss
+                        * float(getattr(self.config.trainer.loss_scale, "mowa_future_supervision", 1.0))
+                    )
+
+                multiview_metrics = {}
+                if output_dict.get("loss_future_main") is not None:
+                    mowa_cfg = getattr(self.config.framework, "mowa", None)
+                    future_loss_cfg = getattr(mowa_cfg, "future_loss", None)
+                    done_head_cfg = getattr(mowa_cfg, "done_head", None)
+                    prior_scale = float(
+                        getattr(self.config.trainer.loss_scale, "mowa_future_latent_prior", 1.0)
+                    )
+                    if not bool(getattr(self.config.trainer, "enable_mowa_future_latent_prior_loss", False)):
+                        prior_scale = 0.0
+                    main_weight = float(getattr(future_loss_cfg, "main_weight", 1.0))
+                    wrist_weight = float(getattr(future_loss_cfg, "wrist_weight", 1.0))
+                    done_weight = float(getattr(done_head_cfg, "loss_weight", 1.0))
+                    for name in (
+                        "loss_future_main",
+                        "loss_future_wrist",
+                        "loss_future_total",
+                        "loss_done",
+                        "loss_multiview_total",
+                        "cross_view_gate_mean",
+                        "cross_view_output_norm",
+                        "cross_view_residual_ratio",
+                        "main_future_pred_norm",
+                        "wrist_future_pred_norm",
+                        "done_positive_ratio",
+                        "done_logit_mean",
+                        "done_probability_mean",
+                    ):
+                        value = output_dict.get(name)
+                        if value is not None:
+                            multiview_metrics[name] = float(value.detach().float().item())
+                    multiview_metrics["loss_action"] = float(action_loss.detach().float().item())
+                    weighted_future_main = prior_scale * main_weight * output_dict["loss_future_main"]
+                    weighted_future_wrist = prior_scale * wrist_weight * output_dict["loss_future_wrist"]
+                    weighted_done = prior_scale * done_weight * output_dict["loss_done"]
+                    weighted_future_total = weighted_future_main + weighted_future_wrist + weighted_done
+                    multiview_metrics["weighted_future_main"] = float(
+                        weighted_future_main.detach().float().item()
+                    )
+                    multiview_metrics["weighted_future_wrist"] = float(
+                        weighted_future_wrist.detach().float().item()
+                    )
+                    multiview_metrics["weighted_done"] = float(weighted_done.detach().float().item())
+                    multiview_metrics["weighted_future_total"] = float(
+                        weighted_future_total.detach().float().item()
+                    )
+                    multiview_metrics["aux_to_action_ratio"] = float(
+                        (weighted_future_total.detach().float() / action_loss.detach().float().clamp_min(1e-8))
+                        .item()
+                    )
+                    for layer, value in output_dict.get("cross_view_gate_by_layer", {}).items():
+                        multiview_metrics[f"cross_view_gate/layer_{layer}"] = float(
+                            value.detach().float().item()
+                        )
+                    for layer, value in output_dict.get("cross_view_residual_ratio_by_layer", {}).items():
+                        multiview_metrics[f"cross_view_residual_ratio/layer_{layer}"] = float(
+                            value.detach().float().item()
+                        )
+                if (
+                    bool(getattr(self.config.trainer, "enable_mowa_future_latent_prior_loss", False))
+                    and mowa_future_latent_prior_loss is not None
+                ):
+                    total_loss = total_loss + (
+                        mowa_future_latent_prior_loss
+                        * float(getattr(self.config.trainer.loss_scale, "mowa_future_latent_prior", 1.0))
+                    )
+                if multiview_metrics:
+                    multiview_metrics["loss_total"] = float(total_loss.detach().float().item())
+
+            action_loss_item = action_loss.item()
+            self._accumulate_mowa_task_metrics(batch_vla, output_dict)
+            self._accumulate_mowa_padding_metrics(batch_vla, output_dict)
+            if not hasattr(self, "_loss_accum"):
+                self._loss_accum = {
+                    "action_dit_loss": 0.0,
+                    "mowa_future_supervision_loss": 0.0,
+                    "mowa_future_latent_prior_loss": 0.0,
+                    "count": 0,
+                }
+            self._loss_accum["action_dit_loss"] += action_loss_item
+            if mowa_future_supervision_loss is not None:
+                self._loss_accum["mowa_future_supervision_loss"] += mowa_future_supervision_loss.item()
+            if mowa_future_latent_prior_loss is not None:
+                self._loss_accum["mowa_future_latent_prior_loss"] += mowa_future_latent_prior_loss.item()
+            self._loss_accum["count"] += 1
 
             self.accelerator.backward(total_loss)
+            if multiview_metrics:
+                cross_view_grad_sq = sum(
+                    float(parameter.grad.detach().float().pow(2).sum().item())
+                    for name, parameter in self.model.named_parameters()
+                    if "cross_view_adapters" in name and parameter.grad is not None
+                )
+                if cross_view_grad_sq > 0:
+                    multiview_metrics["cross_view_grad_norm"] = cross_view_grad_sq**0.5
+            if self.accelerator.sync_gradients:
+                multiview_metrics.update(self._collect_wan_lora_metrics(include_grad=True))
 
-            if self.config.trainer.gradient_clipping is not None:
+            if self.accelerator.sync_gradients and self.config.trainer.gradient_clipping is not None:
                 self.accelerator.clip_grad_norm_(self.model.parameters(), self.config.trainer.gradient_clipping)
 
             self.optimizer.step()
@@ -1215,21 +2482,51 @@ class VLATrainer(TrainerUtils):
             # at min_lr well before max_train_steps is reached.
             if self.accelerator.sync_gradients:
                 self.lr_scheduler.step()
+                multiview_metrics.update(self._collect_wan_lora_metrics(include_grad=False))
+                self.optimizer.zero_grad()
+
+            if self.accelerator.sync_gradients:
+                metrics = {
+                    "action_dit_loss": self._loss_accum["action_dit_loss"] / max(self._loss_accum["count"], 1),
+                    "mowa_future_supervision_loss": self._loss_accum["mowa_future_supervision_loss"]
+                    / max(self._loss_accum["count"], 1),
+                    "mowa_future_latent_prior_loss": self._loss_accum["mowa_future_latent_prior_loss"]
+                    / max(self._loss_accum["count"], 1),
+                    "action_dit_loss_last_micro": action_loss_item,
+                    "train_accumulation_micro_steps": self._loss_accum["count"],
+                }
+                metrics.update(multiview_metrics)
+                next_completed_step = self.completed_steps + 1
+                if next_completed_step % self.config.trainer.logging_frequency == 0:
+                    metrics.update(self._flush_mowa_task_metrics())
+                    metrics.update(self._flush_mowa_padding_metrics())
+                self._loss_accum = {
+                    "action_dit_loss": 0.0,
+                    "mowa_future_supervision_loss": 0.0,
+                    "mowa_future_latent_prior_loss": 0.0,
+                    "count": 0,
+                }
+                return metrics
 
         return {
-            "action_dit_loss": action_loss.item(),
+            "action_dit_loss_last_micro": action_loss_item,
         }
 
     def _finalize_training(self):
         """Training end processing."""
+        if bool(getattr(self.config.trainer, "skip_final_checkpoint", False)):
+            logger.info("Final checkpoint skipped because trainer.skip_final_checkpoint=true.")
+            return
         save_format = getattr(self.config.trainer, "save_format", "safetensors")
         final_checkpoint = self.local_output_dir / "final_model"
         self._ensure_local_checkpoint_capacity(final_checkpoint)
         os.makedirs(final_checkpoint, exist_ok=True)
 
-        if self.accelerator.distributed_type == DistributedType.DEEPSPEED and self.save_with_training_state:
+        if self.checkpoint_format == "universal":
+            self._save_deepspeed_universal_checkpoint(final_checkpoint, save_format)
+        elif self.checkpoint_format == "deepspeed_state":
             self.accelerator.save_state(output_dir=str(final_checkpoint), safe_serialization=(save_format == "safetensors"))
-        elif self.save_checkpoint_as_directory:
+        elif self.checkpoint_format == "lightweight":
             self._save_lightweight_directory_checkpoint(final_checkpoint, save_format)
         elif self.accelerator.is_main_process and save_format == "safetensors":
             from safetensors.torch import save_file
@@ -1252,7 +2549,7 @@ class VLATrainer(TrainerUtils):
             logger.info(f"Training complete. Final model saved at {final_checkpoint}")
             self._enqueue_checkpoint_sync(final_checkpoint)
 
-        if self.accelerator.is_main_process:
+        if self.accelerator.is_main_process and not _wandb_mode_disables_logging(self.config):
             wandb.finish()
 
         self.accelerator.wait_for_everyone()
@@ -1394,7 +2691,14 @@ class VLATrainer(TrainerUtils):
         checkpoint_path.mkdir(parents=True, exist_ok=True)
         if self.accelerator.is_main_process:
             bare_model = self.accelerator.unwrap_model(self.model)
-            _streaming_save_model_shards(bare_model, checkpoint_path, save_format, self.checkpoint_max_shard_size)
+            _streaming_save_model_shards(
+                bare_model,
+                checkpoint_path,
+                save_format,
+                self.checkpoint_max_shard_size,
+                save_frozen_backbone=self.save_frozen_backbone,
+            )
+            self._save_wan_lora_adapter(bare_model, checkpoint_path)
             gc.collect()
 
             scheduler_state = self.lr_scheduler.state_dict()
@@ -1402,12 +2706,17 @@ class VLATrainer(TrainerUtils):
             del scheduler_state
             gc.collect()
 
+            self._save_lightweight_scaler_state(checkpoint_path)
+            self._save_lightweight_checkpoint_metadata(checkpoint_path)
+
             trainer_state = {
                 "completed_steps": self.completed_steps,
                 "save_format": save_format,
                 "checkpoint_type": "lightweight_training",
                 "optimizer_format": "rank_sharded",
                 "optimizer_world_size": self.accelerator.num_processes,
+                "save_frozen_backbone": self.save_frozen_backbone,
+                "omitted_model_state_prefixes": [] if self.save_frozen_backbone else ["backbone."],
             }
             with open(checkpoint_path / "trainer_state.json", "w", encoding="utf-8") as f:
                 json.dump(trainer_state, f, ensure_ascii=False, indent=2)
@@ -1425,7 +2734,111 @@ class VLATrainer(TrainerUtils):
         del optimizer_state
         gc.collect()
 
+        self._save_lightweight_rng_state(checkpoint_path)
+
         self.accelerator.wait_for_everyone()
+
+    @staticmethod
+    def _save_wan_lora_adapter(bare_model, checkpoint_path: Path) -> None:
+        """额外导出独立的 Wan PEFT LoRA adapter，便于轻量分发和复用。"""
+        backbone = getattr(bare_model, "backbone", None)
+        if not bool(getattr(backbone, "lora_enabled", False)):
+            return
+
+        transformer = getattr(backbone, "transformer", None)
+        adapter_name = getattr(backbone, "lora_adapter_name", None)
+        if transformer is None or not adapter_name:
+            raise RuntimeError("Wan LoRA is enabled but its transformer or adapter name is unavailable.")
+
+        try:
+            from peft.utils import get_peft_model_state_dict
+            from safetensors.torch import save_file
+        except ImportError as error:
+            raise ImportError(
+                "Saving a Wan LoRA adapter requires `peft` and `safetensors`."
+            ) from error
+
+        adapter_state = get_peft_model_state_dict(transformer, adapter_name=adapter_name)
+        if not adapter_state:
+            raise RuntimeError(f"Wan LoRA adapter `{adapter_name}` has no parameters to save.")
+        adapter_state = {
+            name: tensor.detach().to("cpu", copy=True).contiguous()
+            for name, tensor in adapter_state.items()
+        }
+        adapter_path = checkpoint_path / "wan_lora.safetensors"
+        save_file(adapter_state, str(adapter_path))
+
+        peft_config = getattr(transformer, "peft_config", {}).get(adapter_name)
+        if peft_config is None:
+            raise RuntimeError(f"Wan LoRA adapter `{adapter_name}` has no PEFT config.")
+        adapter_metadata = {
+            "adapter_name": adapter_name,
+            "base_model": getattr(backbone, "model_name", None),
+            "target_modules": list(getattr(backbone, "lora_target_modules", ())),
+            "peft_config": peft_config.to_dict(),
+        }
+        with open(checkpoint_path / "wan_lora_config.json", "w", encoding="utf-8") as file:
+            json.dump(adapter_metadata, file, ensure_ascii=False, indent=2, default=str)
+        logger.info(
+            "Saved Wan LoRA adapter: tensors=%d, path=%s",
+            len(adapter_state),
+            adapter_path,
+        )
+
+    def _save_lightweight_checkpoint_metadata(self, checkpoint_path: Path):
+        save_lightweight_checkpoint_metadata(
+            checkpoint_path,
+            self.config,
+            local_output_dir=self.local_output_dir,
+            network_output_dir=self.network_output_dir,
+        )
+
+    @staticmethod
+    def _lightweight_scaler_state_path(checkpoint_path: Path) -> Path:
+        return checkpoint_path / SCALER_NAME
+
+    def _save_lightweight_scaler_state(self, checkpoint_path: Path):
+        save_lightweight_scaler_state(
+            checkpoint_path,
+            getattr(self.accelerator, "scaler", None),
+        )
+
+    def _load_lightweight_scaler_state(self, checkpoint_path: Path):
+        load_lightweight_scaler_state(
+            checkpoint_path,
+            getattr(self.accelerator, "scaler", None),
+            logger=logger,
+        )
+
+    def _lightweight_rng_state_path(self, checkpoint_path: Path) -> Path:
+        return checkpoint_path / f"{RNG_STATE_NAME}_{self.accelerator.process_index}.pkl"
+
+    def _save_lightweight_rng_state(self, checkpoint_path: Path):
+        rng_state = {
+            "python": random.getstate(),
+            "numpy": np.random.get_state(),
+            "torch": torch.get_rng_state(),
+        }
+        if torch.cuda.is_available():
+            rng_state["torch_cuda"] = torch.cuda.get_rng_state_all()
+
+        with open(self._lightweight_rng_state_path(checkpoint_path), "wb") as f:
+            pickle.dump(rng_state, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def _load_lightweight_rng_state(self, checkpoint_path: Path):
+        rng_state_path = self._lightweight_rng_state_path(checkpoint_path)
+        if not rng_state_path.exists():
+            logger.warning(f"lightweight RNG 状态文件不存在，跳过恢复: {rng_state_path}")
+            return
+
+        with open(rng_state_path, "rb") as f:
+            rng_state = pickle.load(f)
+
+        random.setstate(rng_state["python"])
+        np.random.set_state(rng_state["numpy"])
+        torch.set_rng_state(rng_state["torch"])
+        if torch.cuda.is_available() and "torch_cuda" in rng_state:
+            torch.cuda.set_rng_state_all(rng_state["torch_cuda"])
 
     def _sync_accessed_config_snapshots(self):
         if not isinstance(self.config, AccessTrackedConfig):
@@ -1551,15 +2964,24 @@ for raw_path in sys.argv[1:]:
 
 
 def main(cfg) -> None:
+    global accelerator
+    accelerator = _build_accelerator(cfg)
+    accelerator.print(accelerator.state)
+
     logger.info("VLA Training :: Warming Up")
 
     cfg = wrap_config(cfg)
     logger.info("✅ Configuration wrapped for access tracking")
 
-    _launch_startup_checkpoint_stage(cfg)
+    full_path_dry_run_only = _is_full_path_dry_run(cfg)
+    _enforce_launch_guard(cfg, full_path_dry_run_only=full_path_dry_run_only)
+    if not full_path_dry_run_only:
+        _launch_startup_checkpoint_stage(cfg)
     output_dir = setup_directories(cfg=cfg)
     vla = build_framework(cfg)
+    checkpoint_load_summary = _load_full_path_dry_run_checkpoint(cfg, vla)
     vla_train_dataloader = prepare_data(cfg=cfg, accelerator=accelerator, output_dir=output_dir)
+    _prepare_wan_instruction_text_cache(cfg, vla)
     optimizer, lr_scheduler = setup_optimizer_and_scheduler(model=vla, cfg=cfg)
 
     trainer = VLATrainer(
@@ -1570,6 +2992,33 @@ def main(cfg) -> None:
         lr_scheduler=lr_scheduler,
         accelerator=accelerator,
     )
+
+    if full_path_dry_run_only:
+        batch_summary = None
+        forward_summary = None
+        if bool(getattr(cfg.trainer, "full_path_dry_run_fetch_batch", False)):
+            batch = next(iter(vla_train_dataloader))
+            batch_summary = _summarize_batch(batch)
+            if bool(getattr(cfg.trainer, "full_path_dry_run_forward_batch", False)):
+                vla.eval()
+                with torch.no_grad():
+                    forward_summary = _run_full_path_dry_run_forward(vla, batch)
+        _write_full_path_dry_run_report(
+            cfg,
+            output_dir=output_dir,
+            model=vla,
+            dataloader=vla_train_dataloader,
+            optimizer=optimizer,
+            trainer=trainer,
+            batch_summary=batch_summary,
+            forward_summary=forward_summary,
+            checkpoint_load_summary=checkpoint_load_summary,
+        )
+        logger.info("MoWA E-001 train_starvla full-path dry-run complete; training skipped.")
+        if dist.is_initialized():
+            dist.barrier()
+            dist.destroy_process_group()
+        return
 
     trainer.prepare_training()
     trainer.train()
@@ -1588,12 +3037,26 @@ if __name__ == "__main__":
         default="examples/SimplerEnv/train_files/starvla_cotrain_oxe.yaml",
         help="Path to YAML config",
     )
+    parser.add_argument(
+        "--validate-data-flow",
+        action="store_true",
+        help="Validate the first MoWA training batches end to end.",
+    )
+    parser.add_argument(
+        "--validation-steps",
+        type=int,
+        default=2,
+        help="Number of initial MoWA batches to validate (default: 2).",
+    )
     args, clipargs = parser.parse_known_args()
 
     cfg = OmegaConf.load(args.config_yaml)
     dotlist = normalize_dotlist_args(clipargs)
     cli_cfg = OmegaConf.from_dotlist(dotlist)
     cfg = OmegaConf.merge(cfg, cli_cfg)
+    if args.validate_data_flow:
+        cfg.framework.mowa.validate_data_flow = True
+        cfg.framework.mowa.validation_steps = args.validation_steps
 
     # Normalise legacy YAML keys into the current `version_id == "0.21"` schema.
     # This is idempotent and does not modify framework class signatures.

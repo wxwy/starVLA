@@ -1,0 +1,91 @@
+project_short_name: MoWA
+stage: full_heads
+experiment_id: E-001
+config_role: training_config_smoke_not_launch
+
+launch_guard:
+  launch_ready: false
+  training_started: false
+  dry_run_only: true
+  requires_human_confirmation: true
+  reason: full E-001 training path is not wired yet
+
+references:
+  runtime_policy_config: configs/mowa/mowa_e001_runtime_policy_draft.yaml
+  launch_draft_config: configs/mowa/mowa_e001_launch_draft.yaml
+  readiness_report: docs_zh/mowa/mowa_e001_readiness_smoke.json
+  a100_throughput_smoke_report: docs_zh/mowa/mowa_e001_a100_throughput_smoke.json
+  production_window_preflight_report: docs_zh/mowa/g0_atomic_core_smoke/mowa_g0_atomic_core_production_window_5hz_preflight_smoke.json
+
+data:
+  recipe_name: mowa_robocasa365_target_human_atomic_core_v1
+  data_root: playground/Datasets/robocasa365
+  split: target
+  source: human
+  task_type: atomic
+  train_episode_count: 4544
+  val_episode_count: 511
+  split_strategy: episode_index_modulo
+  val_every: 10
+
+model:
+  type: MoWAFutureFullHeads
+  action_bridge: MoWAActionBridge
+  active_heads:
+    - task_progress
+    - action_outcome_class
+  masked_until_data_gate:
+    - manipulation_readiness
+    - failure_risk
+    - next_best_view_score
+    - subgoal_feasibility
+    - object_visibility_future
+  class_mapping_status: confirmed_for_e001_initial_target
+
+temporal_policy:
+  raw_action_hz: 20
+  raw_state_hz: 20
+  production_wam_hz: 5
+  wam_stride: 4
+  history_steps: 10
+  future_steps: 5
+  action_chunk_steps: 10
+  status: confirmed_for_e001_initial_target
+
+runtime_smoke_observed:
+  gpu_type: A100_80G
+  num_gpus: 1
+  per_device_batch_size: 8
+  gradient_accumulation_steps: 8
+  effective_batch_size: 64
+  step_time_sec: 0.14424942016601563
+  samples_per_sec: 443.6759601968788
+  peak_vram_gb: 0.04040336608886719
+  scope: MoWAFutureFullHeads_plus_MoWAActionBridge_only
+
+training:
+  counted_in_experiment_budget: true
+  max_train_steps: TBD
+  learning_rate: TBD
+  precision: bf16_target
+  executable_training_entrypoint: TBD
+
+checkpoint:
+  save_checkpoint_during_smoke: false
+  checkpoint_logic_change_allowed: false
+  run_root_dir: playground/mowa_ckpt
+  save_interval: target_1000
+  checkpoint_format: target_lightweight
+  local_checkpoint_keep_count: target_1
+  resume_policy: target_resume_latest_complete_only
+  delete_or_overwrite_policy: no_delete_without_confirmation
+
+logging:
+  wandb_mode: TBD
+  wandb_project: TBD
+  logging_frequency: target_10
+
+launch_blockers:
+  - runtime policy draft not confirmed
+  - executable E-001 training entrypoint remains TBD
+  - full VLA E-001 throughput is not measured

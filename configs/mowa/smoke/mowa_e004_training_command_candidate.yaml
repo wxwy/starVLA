@@ -1,0 +1,51 @@
+project_short_name: MoWA
+stage: hlc_gci
+experiment_id: E-004
+config_role: training_command_candidate_requires_confirmation
+
+launch_guard:
+  launch_ready: true
+  training_started: false
+  requires_human_confirmation: true
+  human_confirmed: true
+  policy_confirmed: true
+
+command_candidate:
+  entrypoint: tools/mowa/e004_hlc_gci_launch_smoke.py
+  launcher: python_single_process
+  num_processes: 1
+  mixed_precision: none
+  config_yaml: configs/mowa/smoke/mowa_e004_hlc_gci_launch_candidate.yaml
+  command: >-
+    .venv/bin/python tools/mowa/e004_hlc_gci_launch_smoke.py
+    --repo-root .
+    --config-yaml configs/mowa/smoke/mowa_e004_hlc_gci_launch_candidate.yaml
+    --output docs_zh/mowa/mowa_e004_hlc_gci_launch_smoke.json
+
+runtime_targets:
+  gpu_type: A4090
+  num_gpus: 1
+  per_device_batch_size: 2
+  gradient_accumulation_steps: 1
+  effective_batch_size: 2
+  max_train_steps: 2
+  save_interval: 2
+  expected_vram: synthetic_hlc_gci_smoke
+  runtime_evidence: docs_zh/mowa/mowa_e004_hlc_gci_launch_smoke.json
+
+checkpoint_policy:
+  run_root_dir: playground/mowa_ckpt
+  checkpoint_format: lightweight
+  save_interval: 2
+  save_checkpoint_as_directory: true
+  resume_policy: resume_latest_complete_only
+  delete_or_overwrite_policy: no_delete_without_confirmation
+
+logging:
+  wandb_mode: disabled_for_initial_training
+  logging_frequency: 10
+
+notes:
+  - This command candidate is executable and launch-approved for the E-004 synthetic HLC-GCI smoke.
+  - It validates the interface, preview, and a tiny synthetic optimization loop.
+  - Real shuffled-robot rollout still needs the E-004 checkpoint and the downstream checkpoint-backed policy path.

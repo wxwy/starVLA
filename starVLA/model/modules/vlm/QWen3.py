@@ -5,11 +5,13 @@
 from typing import Optional
 
 import torch
+from starVLA.model.tools import has_flash_attn  # unified flash-attn detection (GPU / NPU)
 from starVLA.training.trainer_utils import initialize_overwatch
 from transformers import AutoProcessor, Qwen3VLForConditionalGeneration
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
 logger = initialize_overwatch(__name__)
+from starVLA.model.modules.lora_utils import load_pretrained_lora_compatible
 
 IGNORE_INDEX = -100
 IMAGE_TOKEN_INDEX = 151655
@@ -49,12 +51,10 @@ class _QWen3_VL_Interface(nn.Module):
         qwenvl_config = config.framework.get("qwenvl", {})
         model_id = qwenvl_config.get("base_vlm", "Qwen/Qwen3-VL-4B-Instruct")
         attn_implementation = qwenvl_config.get("attn_implementation", "sdpa")
-
+        attn_implementation = "sdpa"
         # Fallback to sdpa if flash_attention_2 is requested but flash_attn is not installed
         if attn_implementation == "flash_attention_2":
-            try:
-                import flash_attn  # noqa: F401
-            except ImportError:
+            if not has_flash_attn():
                 print("[WARNING] flash_attn not installed, falling back to sdpa")
                 attn_implementation = "sdpa"
 
@@ -93,6 +93,10 @@ class _QWen3_VL_Interface(nn.Module):
             )
 
         return outputs
+
+    def load_pretrained_state_dict(self, state_dict):
+        """兼容 LoRA 注入前导出的 Qwen backbone checkpoint。"""
+        return load_pretrained_lora_compatible(self, state_dict)
 
     def generate(
         self,

@@ -1,0 +1,43 @@
+project_short_name: MoWA
+stage: hlc_gci
+task_id: M4-001
+experiment_id: E-004
+config_role: hlcgci_candidate
+
+launch_guard:
+  launch_ready: false
+  requires_human_confirmation: true
+  human_confirmed: false
+  policy_confirmed: false
+  reason: E-004 remains gated until E-003 evidence and HLC-GCI history contract are confirmed
+
+references:
+  interface_config: configs/mowa/mowa_hlc_gci_interface.yaml
+  shuffled_robot_plan: configs/mowa/mowa_shuffled_robot_sanity_plan.yaml
+  e003_future_latent_prior_config_preview: docs_zh/mowa/mowa_e003_future_latent_prior_config_preview.json
+  e003_future_latent_prior_train_dry_run: docs_zh/mowa/mowa_e003_future_latent_prior_train_dry_run.json
+
+interface:
+  history_latent_dim: 1024
+  condition_hidden_dim: 1024
+  history_steps: 10
+  compressed_history_dim: 512
+  gate_hidden_dim: 256
+  batch_size_smoke: 2
+  condition_token_count: 4
+  injection_policy: condition_path_only
+
+history_contract:
+  sampling_policy: train_inference_consistent_window_sampling
+  history_source: robot_history_latent_only
+  future_action_policy: target_only
+  leakage_guard: future_action_not_input
+
+status:
+  history_sampling_status: Data Gate
+  gate_init_status: Data Gate
+  shape_status: Data Gate
+
+unresolved_items:
+  - This candidate only documents the interface and history contract.
+  - Real shuffled-robot metrics and framework injection remain separately gated.

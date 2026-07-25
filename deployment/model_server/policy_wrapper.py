@@ -22,6 +22,7 @@ Exposed API:
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -42,31 +43,52 @@ class PolicyServerWrapper:
         device: str = "cuda",
         use_bf16: bool = False,
         unnorm_key: Optional[str] = None,
+        config_overrides: Optional[List[str]] = None,
     ) -> None:
         self._ckpt_path = str(ckpt_path)
+        self._config_overrides = list(config_overrides or [])
+        overall_start = time.perf_counter()
 
         logging.info("PolicyServerWrapper: loading framework from %s", self._ckpt_path)
-        framework = baseframework.from_pretrained(self._ckpt_path)
+        stage_start = time.perf_counter()
+        framework = baseframework.from_pretrained(
+            self._ckpt_path,
+            config_overrides=self._config_overrides,
+        )
+        logging.info(
+            "PolicyServerWrapper: baseframework.from_pretrained finished in %.2fs",
+            time.perf_counter() - stage_start,
+        )
         if use_bf16:
+            stage_start = time.perf_counter()
             framework = framework.to(torch.bfloat16)
+            logging.info(
+                "PolicyServerWrapper: cast to bfloat16 finished in %.2fs",
+                time.perf_counter() - stage_start,
+            )
+        stage_start = time.perf_counter()
         framework = framework.to(device).eval()
+        logging.info(
+            "PolicyServerWrapper: move to %s + eval finished in %.2fs",
+            device,
+            time.perf_counter() - stage_start,
+        )
         self._framework = framework
 
-        # Co-located metadata.
-        model_cfg, _ = read_mode_config(self._ckpt_path)
-        self._model_cfg = model_cfg
-
-        # action_chunk_size = future_action_window_size + 1 (matches old client).
-        action_model_cfg = model_cfg["framework"]["action_model"]
-        
-        if "action_horizon" in action_model_cfg:
-            self._action_chunk_size = int(action_model_cfg["action_horizon"])
-        elif "future_action_window_size" in action_model_cfg:
-            self._action_chunk_size = int(action_model_cfg["future_action_window_size"]) + 1
+        self._model_cfg = getattr(framework, "config", None)
+        if hasattr(framework, "action_horizon"):
+            self._action_chunk_size = int(framework.action_horizon)
         else:
-            raise ValueError(
-                f"PolicyServerWrapper: no action_horizon or future_action_window_size found in model config for {self._ckpt_path}"
-            )
+            action_model_cfg = self._model_cfg.framework.action_model
+            if hasattr(action_model_cfg, "action_horizon"):
+                self._action_chunk_size = int(action_model_cfg.action_horizon)
+            elif hasattr(action_model_cfg, "future_action_window_size"):
+                self._action_chunk_size = int(action_model_cfg.future_action_window_size) + 1
+            else:
+                raise ValueError(
+                    "PolicyServerWrapper: no action_horizon or future_action_window_size found "
+                    f"in override-applied model config for {self._ckpt_path}"
+                )
         # Cache of PolicyNormProcessor instances per unnorm_key.
         # For single-dataset ckpts unnorm_key is auto-selected; for multi-dataset
         # ckpts clients must pass unnorm_key per request.
@@ -76,10 +98,19 @@ class PolicyServerWrapper:
         # Peek at available keys without building a full processor.
         _, _ns = read_mode_config(self._ckpt_path)
         self._available_unnorm_keys: List[str] = list(_ns.keys())
+        logging.info(
+            "PolicyServerWrapper: discovered available_unnorm_keys=%s",
+            self._available_unnorm_keys,
+        )
 
         # Eagerly build when unambiguous; defer for multi-key / no explicit key.
         if unnorm_key is not None or len(self._available_unnorm_keys) == 1:
+            stage_start = time.perf_counter()
             default_proc = self._get_processor(unnorm_key)
+            logging.info(
+                "PolicyServerWrapper: PolicyNormProcessor init finished in %.2fs",
+                time.perf_counter() - stage_start,
+            )
             self._default_unnorm_key = default_proc.unnorm_key
             logging.info(
                 "PolicyServerWrapper ready: action_chunk_size=%d, default_unnorm_key=%s, "
@@ -97,6 +128,10 @@ class PolicyServerWrapper:
                 self._action_chunk_size,
                 self._available_unnorm_keys,
             )
+        logging.info(
+            "PolicyServerWrapper: fully initialized in %.2fs",
+            time.perf_counter() - overall_start,
+        )
 
     def _get_processor(self, unnorm_key: Optional[str]) -> PolicyNormProcessor:
         cache_key = unnorm_key if unnorm_key is not None else "__default__"
@@ -112,6 +147,7 @@ class PolicyServerWrapper:
         base = {
             "env": "starvla_policy_server",
             "ckpt_path": self._ckpt_path,
+            "config_overrides": self._config_overrides,
             "action_chunk_size": self._action_chunk_size,
             "available_unnorm_keys": self._available_unnorm_keys,
             "default_unnorm_key": self._default_unnorm_key,
@@ -150,13 +186,48 @@ class PolicyServerWrapper:
                     f"predict_action: unnorm_key not specified and no default set. "
                     f"Pass one of {self._available_unnorm_keys}."
                 )
+        overall_start = time.perf_counter()
         proc = self._get_processor(effective_key)
 
+        framework_start = time.perf_counter()
         out = self._framework.predict_action(examples=examples, **kwargs)
+        framework_done = time.perf_counter()
+
+        # Diagnostic log: helps verify GPU is being used and how long each request takes.
+        try:
+            device = next(self._framework.parameters()).device
+        except Exception:
+            device = "unknown"
+        try:
+            backbone_device = next(
+                getattr(self._framework, "backbone", self._framework).parameters()
+            ).device
+        except Exception:
+            backbone_device = "unknown"
+        logging.info(
+            "predict_action: batch=%d device=%s backbone_device=%s framework=%.3fs total=%.3fs",
+            len(examples),
+            device,
+            backbone_device,
+            framework_done - framework_start,
+            time.perf_counter() - overall_start,
+        )
+
         normalized = np.asarray(out["normalized_actions"])  # (B, T, D)
 
+        unnorm_start = time.perf_counter()
         unnorm = np.stack(
             [proc.unapply_actions(normalized[b]) for b in range(normalized.shape[0])],
             axis=0,
         )
-        return {"actions": unnorm}
+        unnorm_done = time.perf_counter()
+        framework_timings = out.get("timings", {}) if isinstance(out, dict) else {}
+        return {
+            "actions": unnorm,
+            "timings": {
+                "server_total_sec": unnorm_done - overall_start,
+                "framework_sec": framework_done - framework_start,
+                "unnorm_sec": unnorm_done - unnorm_start,
+                **framework_timings,
+            },
+        }

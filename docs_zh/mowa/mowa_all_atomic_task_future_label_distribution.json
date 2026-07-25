@@ -1,0 +1,1194 @@
+{
+  "data_root": "playground/Datasets/robocasa365",
+  "task_count": 18,
+  "tasks": [
+    {
+      "task": "CloseBlenderLid",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseBlenderLid/20250822/lerobot/mowa_future_labels/CloseBlenderLid",
+      "episode_count": 502,
+      "total_samples": 183099,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 183099,
+          "active_samples": 124543,
+          "masked_samples": 58556,
+          "mask_rate": 0.319805,
+          "positive_count": 11508,
+          "negative_count": 113035,
+          "positive_rate": 0.092402,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 183099,
+          "active_samples": 124395,
+          "masked_samples": 58704,
+          "mask_rate": 0.320613,
+          "positive_count": 28583,
+          "negative_count": 95812,
+          "positive_rate": 0.229776,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 183099,
+          "active_samples": 5020,
+          "masked_samples": 178079,
+          "mask_rate": 0.972583,
+          "positive_count": 0,
+          "negative_count": 5020,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 183099,
+          "active_samples": 124543,
+          "masked_samples": 58556,
+          "mask_rate": 0.319805,
+          "positive_count": 111155,
+          "negative_count": 13388,
+          "positive_rate": 0.892503,
+          "status": "candidate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 183099,
+          "active_samples": 124543,
+          "masked_samples": 58556,
+          "mask_rate": 0.319805,
+          "mean": 0.86705,
+          "std": 0.131173,
+          "min": 0.0,
+          "max": 0.964132,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "CloseFridge",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseFridge/20250816/lerobot/mowa_future_labels/CloseFridge",
+      "episode_count": 513,
+      "total_samples": 155443,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 155443,
+          "active_samples": 143964,
+          "masked_samples": 11479,
+          "mask_rate": 0.073847,
+          "positive_count": 10280,
+          "negative_count": 133684,
+          "positive_rate": 0.071407,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 155443,
+          "active_samples": 143964,
+          "masked_samples": 11479,
+          "mask_rate": 0.073847,
+          "positive_count": 41087,
+          "negative_count": 102877,
+          "positive_rate": 0.285398,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 155443,
+          "active_samples": 5130,
+          "masked_samples": 150313,
+          "mask_rate": 0.966998,
+          "positive_count": 0,
+          "negative_count": 5130,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 155443,
+          "active_samples": 143964,
+          "masked_samples": 11479,
+          "mask_rate": 0.073847,
+          "positive_count": 103449,
+          "negative_count": 40515,
+          "positive_rate": 0.718575,
+          "status": "candidate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 155443,
+          "active_samples": 143964,
+          "masked_samples": 11479,
+          "mask_rate": 0.073847,
+          "mean": 0.579845,
+          "std": 0.146098,
+          "min": 0.033459,
+          "max": 0.901159,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "CloseToasterOvenDoor",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/CloseToasterOvenDoor/20250818/lerobot/mowa_future_labels/CloseToasterOvenDoor",
+      "episode_count": 505,
+      "total_samples": 86401,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 86401,
+          "active_samples": 76502,
+          "masked_samples": 9899,
+          "mask_rate": 0.11457,
+          "positive_count": 10181,
+          "negative_count": 66321,
+          "positive_rate": 0.133081,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 86401,
+          "active_samples": 76502,
+          "masked_samples": 9899,
+          "mask_rate": 0.11457,
+          "positive_count": 25236,
+          "negative_count": 51266,
+          "positive_rate": 0.329874,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 86401,
+          "active_samples": 5050,
+          "masked_samples": 81351,
+          "mask_rate": 0.941552,
+          "positive_count": 0,
+          "negative_count": 5050,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 86401,
+          "active_samples": 76502,
+          "masked_samples": 9899,
+          "mask_rate": 0.11457,
+          "positive_count": 48012,
+          "negative_count": 28490,
+          "positive_rate": 0.627591,
+          "status": "candidate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 86401,
+          "active_samples": 76502,
+          "masked_samples": 9899,
+          "mask_rate": 0.11457,
+          "mean": 0.71939,
+          "std": 0.170274,
+          "min": 0.356931,
+          "max": 0.956423,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "CoffeeSetupMug",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/CoffeeSetupMug/20250813/lerobot/mowa_future_labels/CoffeeSetupMug",
+      "episode_count": 502,
+      "total_samples": 117168,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 117168,
+          "active_samples": 84736,
+          "masked_samples": 32432,
+          "mask_rate": 0.276799,
+          "positive_count": 10040,
+          "negative_count": 74696,
+          "positive_rate": 0.118486,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 117168,
+          "active_samples": 84736,
+          "masked_samples": 32432,
+          "mask_rate": 0.276799,
+          "positive_count": 25975,
+          "negative_count": 58761,
+          "positive_rate": 0.30654,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 117168,
+          "active_samples": 5020,
+          "masked_samples": 112148,
+          "mask_rate": 0.957156,
+          "positive_count": 0,
+          "negative_count": 5020,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 117168,
+          "active_samples": 84736,
+          "masked_samples": 32432,
+          "mask_rate": 0.276799,
+          "positive_count": 83822,
+          "negative_count": 914,
+          "positive_rate": 0.989214,
+          "status": "review_high_majority_rate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 117168,
+          "active_samples": 84736,
+          "masked_samples": 32432,
+          "mask_rate": 0.276799,
+          "mean": 0.89499,
+          "std": 0.06228,
+          "min": 0.429608,
+          "max": 0.955313,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "NavigateKitchen",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/NavigateKitchen/20250821/lerobot/mowa_future_labels/NavigateKitchen",
+      "episode_count": 500,
+      "total_samples": 72786,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 72786,
+          "active_samples": 64656,
+          "masked_samples": 8130,
+          "mask_rate": 0.111697,
+          "positive_count": 10000,
+          "negative_count": 54656,
+          "positive_rate": 0.154665,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 72786,
+          "active_samples": 64656,
+          "masked_samples": 8130,
+          "mask_rate": 0.111697,
+          "positive_count": 5000,
+          "negative_count": 59656,
+          "positive_rate": 0.077332,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 72786,
+          "active_samples": 5000,
+          "masked_samples": 67786,
+          "mask_rate": 0.931305,
+          "positive_count": 0,
+          "negative_count": 5000,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 72786,
+          "active_samples": 0,
+          "masked_samples": 72786,
+          "mask_rate": 1.0,
+          "positive_count": 0,
+          "negative_count": 0,
+          "positive_rate": 0.0,
+          "status": "blocked_all_masked"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 72786,
+          "active_samples": 0,
+          "masked_samples": 72786,
+          "mask_rate": 1.0,
+          "mean": 0.0,
+          "std": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "status": "blocked_all_masked"
+        }
+      }
+    },
+    {
+      "task": "OpenCabinet",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenCabinet/20250813/lerobot/mowa_future_labels/OpenCabinet",
+      "episode_count": 500,
+      "total_samples": 184024,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 184024,
+          "active_samples": 147557,
+          "masked_samples": 36467,
+          "mask_rate": 0.198164,
+          "positive_count": 6167,
+          "negative_count": 141390,
+          "positive_rate": 0.041794,
+          "status": "review_low_minority_rate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 184024,
+          "active_samples": 147167,
+          "masked_samples": 36857,
+          "mask_rate": 0.200284,
+          "positive_count": 21659,
+          "negative_count": 125508,
+          "positive_rate": 0.147173,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 184024,
+          "active_samples": 5000,
+          "masked_samples": 179024,
+          "mask_rate": 0.97283,
+          "positive_count": 0,
+          "negative_count": 5000,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 184024,
+          "active_samples": 147557,
+          "masked_samples": 36467,
+          "mask_rate": 0.198164,
+          "positive_count": 34297,
+          "negative_count": 113260,
+          "positive_rate": 0.232432,
+          "status": "candidate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 184024,
+          "active_samples": 147557,
+          "masked_samples": 36467,
+          "mask_rate": 0.198164,
+          "mean": 0.247481,
+          "std": 0.393015,
+          "min": 0.0,
+          "max": 0.967769,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "OpenDrawer",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot/mowa_future_labels/OpenDrawer",
+      "episode_count": 514,
+      "total_samples": 137431,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 137431,
+          "active_samples": 119459,
+          "masked_samples": 17972,
+          "mask_rate": 0.130771,
+          "positive_count": 10287,
+          "negative_count": 109172,
+          "positive_rate": 0.086113,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 137431,
+          "active_samples": 119459,
+          "masked_samples": 17972,
+          "mask_rate": 0.130771,
+          "positive_count": 32468,
+          "negative_count": 86991,
+          "positive_rate": 0.271792,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 137431,
+          "active_samples": 5140,
+          "masked_samples": 132291,
+          "mask_rate": 0.962599,
+          "positive_count": 0,
+          "negative_count": 5140,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 137431,
+          "active_samples": 119459,
+          "masked_samples": 17972,
+          "mask_rate": 0.130771,
+          "positive_count": 109304,
+          "negative_count": 10155,
+          "positive_rate": 0.914992,
+          "status": "candidate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 137431,
+          "active_samples": 119459,
+          "masked_samples": 17972,
+          "mask_rate": 0.130771,
+          "mean": 0.787367,
+          "std": 0.182848,
+          "min": 0.0,
+          "max": 0.975491,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "OpenStandMixerHead",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenStandMixerHead/20250818/lerobot/mowa_future_labels/OpenStandMixerHead",
+      "episode_count": 502,
+      "total_samples": 58100,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 58100,
+          "active_samples": 49285,
+          "masked_samples": 8815,
+          "mask_rate": 0.151721,
+          "positive_count": 10041,
+          "negative_count": 39244,
+          "positive_rate": 0.203733,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 58100,
+          "active_samples": 49285,
+          "masked_samples": 8815,
+          "mask_rate": 0.151721,
+          "positive_count": 22733,
+          "negative_count": 26552,
+          "positive_rate": 0.461256,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 58100,
+          "active_samples": 5020,
+          "masked_samples": 53080,
+          "mask_rate": 0.913597,
+          "positive_count": 0,
+          "negative_count": 5020,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 58100,
+          "active_samples": 49285,
+          "masked_samples": 8815,
+          "mask_rate": 0.151721,
+          "positive_count": 44734,
+          "negative_count": 4551,
+          "positive_rate": 0.90766,
+          "status": "candidate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 58100,
+          "active_samples": 49285,
+          "masked_samples": 8815,
+          "mask_rate": 0.151721,
+          "mean": 0.824977,
+          "std": 0.107461,
+          "min": 0.458396,
+          "max": 0.93405,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "PickPlaceCounterToCabinet",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceCounterToCabinet/20250811/lerobot/mowa_future_labels/PickPlaceCounterToCabinet",
+      "episode_count": 502,
+      "total_samples": 131904,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 131904,
+          "active_samples": 76769,
+          "masked_samples": 55135,
+          "mask_rate": 0.417993,
+          "positive_count": 10040,
+          "negative_count": 66729,
+          "positive_rate": 0.130782,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 131904,
+          "active_samples": 76769,
+          "masked_samples": 55135,
+          "mask_rate": 0.417993,
+          "positive_count": 26878,
+          "negative_count": 49891,
+          "positive_rate": 0.350115,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 131904,
+          "active_samples": 5020,
+          "masked_samples": 126884,
+          "mask_rate": 0.961942,
+          "positive_count": 0,
+          "negative_count": 5020,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 131904,
+          "active_samples": 76769,
+          "masked_samples": 55135,
+          "mask_rate": 0.417993,
+          "positive_count": 74060,
+          "negative_count": 2709,
+          "positive_rate": 0.964712,
+          "status": "review_high_majority_rate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 131904,
+          "active_samples": 76769,
+          "masked_samples": 55135,
+          "mask_rate": 0.417993,
+          "mean": 0.869189,
+          "std": 0.143992,
+          "min": 0.0,
+          "max": 0.96204,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "PickPlaceCounterToStove",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceCounterToStove/20250818/lerobot/mowa_future_labels/PickPlaceCounterToStove",
+      "episode_count": 501,
+      "total_samples": 129560,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 129560,
+          "active_samples": 90035,
+          "masked_samples": 39525,
+          "mask_rate": 0.305071,
+          "positive_count": 10020,
+          "negative_count": 80015,
+          "positive_rate": 0.11129,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 129560,
+          "active_samples": 90035,
+          "masked_samples": 39525,
+          "mask_rate": 0.305071,
+          "positive_count": 31031,
+          "negative_count": 59004,
+          "positive_rate": 0.344655,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 129560,
+          "active_samples": 5010,
+          "masked_samples": 124550,
+          "mask_rate": 0.961331,
+          "positive_count": 0,
+          "negative_count": 5010,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 129560,
+          "active_samples": 90035,
+          "masked_samples": 39525,
+          "mask_rate": 0.305071,
+          "positive_count": 88711,
+          "negative_count": 1324,
+          "positive_rate": 0.985295,
+          "status": "review_high_majority_rate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 129560,
+          "active_samples": 90035,
+          "masked_samples": 39525,
+          "mask_rate": 0.305071,
+          "mean": 0.83011,
+          "std": 0.176369,
+          "min": 0.0,
+          "max": 0.961724,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "PickPlaceDrawerToCounter",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceDrawerToCounter/20250820/lerobot/mowa_future_labels/PickPlaceDrawerToCounter",
+      "episode_count": 501,
+      "total_samples": 155749,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 155749,
+          "active_samples": 107285,
+          "masked_samples": 48464,
+          "mask_rate": 0.311167,
+          "positive_count": 10020,
+          "negative_count": 97265,
+          "positive_rate": 0.093396,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 155749,
+          "active_samples": 107285,
+          "masked_samples": 48464,
+          "mask_rate": 0.311167,
+          "positive_count": 23706,
+          "negative_count": 83579,
+          "positive_rate": 0.220963,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 155749,
+          "active_samples": 5010,
+          "masked_samples": 150739,
+          "mask_rate": 0.967833,
+          "positive_count": 0,
+          "negative_count": 5010,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 155749,
+          "active_samples": 107285,
+          "masked_samples": 48464,
+          "mask_rate": 0.311167,
+          "positive_count": 101264,
+          "negative_count": 6021,
+          "positive_rate": 0.943878,
+          "status": "candidate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 155749,
+          "active_samples": 107285,
+          "masked_samples": 48464,
+          "mask_rate": 0.311167,
+          "mean": 0.738257,
+          "std": 0.2144,
+          "min": 0.0,
+          "max": 0.971321,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "PickPlaceSinkToCounter",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceSinkToCounter/20250813/lerobot/mowa_future_labels/PickPlaceSinkToCounter",
+      "episode_count": 501,
+      "total_samples": 194952,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 194952,
+          "active_samples": 128909,
+          "masked_samples": 66043,
+          "mask_rate": 0.338765,
+          "positive_count": 10020,
+          "negative_count": 118889,
+          "positive_rate": 0.077729,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 194952,
+          "active_samples": 128909,
+          "masked_samples": 66043,
+          "mask_rate": 0.338765,
+          "positive_count": 36867,
+          "negative_count": 92042,
+          "positive_rate": 0.285992,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 194952,
+          "active_samples": 5010,
+          "masked_samples": 189942,
+          "mask_rate": 0.974301,
+          "positive_count": 0,
+          "negative_count": 5010,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 194952,
+          "active_samples": 128909,
+          "masked_samples": 66043,
+          "mask_rate": 0.338765,
+          "positive_count": 128909,
+          "negative_count": 0,
+          "positive_rate": 1.0,
+          "status": "blocked_single_class"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 194952,
+          "active_samples": 128909,
+          "masked_samples": 66043,
+          "mask_rate": 0.338765,
+          "mean": 0.824675,
+          "std": 0.1482,
+          "min": 0.268976,
+          "max": 0.961679,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "PickPlaceToasterToCounter",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/PickPlaceToasterToCounter/20250817/lerobot/mowa_future_labels/PickPlaceToasterToCounter",
+      "episode_count": 512,
+      "total_samples": 148353,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 148353,
+          "active_samples": 96413,
+          "masked_samples": 51940,
+          "mask_rate": 0.350111,
+          "positive_count": 10240,
+          "negative_count": 86173,
+          "positive_rate": 0.10621,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 148353,
+          "active_samples": 96413,
+          "masked_samples": 51940,
+          "mask_rate": 0.350111,
+          "positive_count": 28056,
+          "negative_count": 68357,
+          "positive_rate": 0.290998,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 148353,
+          "active_samples": 5120,
+          "masked_samples": 143233,
+          "mask_rate": 0.965488,
+          "positive_count": 0,
+          "negative_count": 5120,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 148353,
+          "active_samples": 96413,
+          "masked_samples": 51940,
+          "mask_rate": 0.350111,
+          "positive_count": 96408,
+          "negative_count": 5,
+          "positive_rate": 0.999948,
+          "status": "review_high_majority_rate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 148353,
+          "active_samples": 96413,
+          "masked_samples": 51940,
+          "mask_rate": 0.350111,
+          "mean": 0.86413,
+          "std": 0.088261,
+          "min": 0.335057,
+          "max": 0.936794,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "SlideDishwasherRack",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/SlideDishwasherRack/20250820/lerobot/mowa_future_labels/SlideDishwasherRack",
+      "episode_count": 502,
+      "total_samples": 83544,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 83544,
+          "active_samples": 80260,
+          "masked_samples": 3284,
+          "mask_rate": 0.039309,
+          "positive_count": 4120,
+          "negative_count": 76140,
+          "positive_rate": 0.051333,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 83544,
+          "active_samples": 79963,
+          "masked_samples": 3581,
+          "mask_rate": 0.042864,
+          "positive_count": 9816,
+          "negative_count": 70147,
+          "positive_rate": 0.122757,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 83544,
+          "active_samples": 5020,
+          "masked_samples": 78524,
+          "mask_rate": 0.939912,
+          "positive_count": 0,
+          "negative_count": 5020,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 83544,
+          "active_samples": 80001,
+          "masked_samples": 3543,
+          "mask_rate": 0.042409,
+          "positive_count": 79684,
+          "negative_count": 317,
+          "positive_rate": 0.996038,
+          "status": "review_high_majority_rate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 83544,
+          "active_samples": 80001,
+          "masked_samples": 3543,
+          "mask_rate": 0.042409,
+          "mean": 0.667151,
+          "std": 0.182134,
+          "min": 0.0,
+          "max": 0.899832,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "TurnOffStove",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOffStove/20250812/lerobot/mowa_future_labels/TurnOffStove",
+      "episode_count": 500,
+      "total_samples": 114027,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 114027,
+          "active_samples": 108310,
+          "masked_samples": 5717,
+          "mask_rate": 0.050137,
+          "positive_count": 9200,
+          "negative_count": 99110,
+          "positive_rate": 0.084941,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 114027,
+          "active_samples": 108264,
+          "masked_samples": 5763,
+          "mask_rate": 0.050541,
+          "positive_count": 18908,
+          "negative_count": 89356,
+          "positive_rate": 0.174647,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 114027,
+          "active_samples": 5000,
+          "masked_samples": 109027,
+          "mask_rate": 0.956151,
+          "positive_count": 0,
+          "negative_count": 5000,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 114027,
+          "active_samples": 108310,
+          "masked_samples": 5717,
+          "mask_rate": 0.050137,
+          "positive_count": 103402,
+          "negative_count": 4908,
+          "positive_rate": 0.954686,
+          "status": "review_high_majority_rate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 114027,
+          "active_samples": 108310,
+          "masked_samples": 5717,
+          "mask_rate": 0.050137,
+          "mean": 0.500315,
+          "std": 0.192639,
+          "min": 0.0,
+          "max": 0.893331,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "TurnOnElectricKettle",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnElectricKettle/20250817/lerobot/mowa_future_labels/TurnOnElectricKettle",
+      "episode_count": 520,
+      "total_samples": 84679,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 84679,
+          "active_samples": 76359,
+          "masked_samples": 8320,
+          "mask_rate": 0.098253,
+          "positive_count": 10400,
+          "negative_count": 65959,
+          "positive_rate": 0.136199,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 84679,
+          "active_samples": 76359,
+          "masked_samples": 8320,
+          "mask_rate": 0.098253,
+          "positive_count": 7250,
+          "negative_count": 69109,
+          "positive_rate": 0.094946,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 84679,
+          "active_samples": 5200,
+          "masked_samples": 79479,
+          "mask_rate": 0.938592,
+          "positive_count": 0,
+          "negative_count": 5200,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 84679,
+          "active_samples": 76025,
+          "masked_samples": 8654,
+          "mask_rate": 0.102198,
+          "positive_count": 76025,
+          "negative_count": 0,
+          "positive_rate": 1.0,
+          "status": "blocked_single_class"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 84679,
+          "active_samples": 76025,
+          "masked_samples": 8654,
+          "mask_rate": 0.102198,
+          "mean": 0.857922,
+          "std": 0.089559,
+          "min": 0.422899,
+          "max": 0.949974,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "TurnOnMicrowave",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnMicrowave/20250813/lerobot/mowa_future_labels/TurnOnMicrowave",
+      "episode_count": 543,
+      "total_samples": 80439,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 80439,
+          "active_samples": 71729,
+          "masked_samples": 8710,
+          "mask_rate": 0.108281,
+          "positive_count": 10860,
+          "negative_count": 60869,
+          "positive_rate": 0.151403,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 80439,
+          "active_samples": 71729,
+          "masked_samples": 8710,
+          "mask_rate": 0.108281,
+          "positive_count": 5430,
+          "negative_count": 66299,
+          "positive_rate": 0.075702,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 80439,
+          "active_samples": 5430,
+          "masked_samples": 75009,
+          "mask_rate": 0.932495,
+          "positive_count": 0,
+          "negative_count": 5430,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 80439,
+          "active_samples": 66201,
+          "masked_samples": 14238,
+          "mask_rate": 0.177004,
+          "positive_count": 66102,
+          "negative_count": 99,
+          "positive_rate": 0.998505,
+          "status": "review_high_majority_rate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 80439,
+          "active_samples": 66201,
+          "masked_samples": 14238,
+          "mask_rate": 0.177004,
+          "mean": 0.678663,
+          "std": 0.120591,
+          "min": 0.410212,
+          "max": 0.823118,
+          "status": "candidate"
+        }
+      }
+    },
+    {
+      "task": "TurnOnSinkFaucet",
+      "sidecar_dir": "playground/Datasets/robocasa365/v1.0/target/atomic/TurnOnSinkFaucet/20250812/lerobot/mowa_future_labels/TurnOnSinkFaucet",
+      "episode_count": 506,
+      "total_samples": 113688,
+      "heads": {
+        "subgoal_feasibility": {
+          "head": "subgoal_feasibility",
+          "total_samples": 113688,
+          "active_samples": 107241,
+          "masked_samples": 6447,
+          "mask_rate": 0.056708,
+          "positive_count": 9780,
+          "negative_count": 97461,
+          "positive_rate": 0.091196,
+          "status": "candidate"
+        },
+        "manipulation_readiness": {
+          "head": "manipulation_readiness",
+          "total_samples": 113688,
+          "active_samples": 107224,
+          "masked_samples": 6464,
+          "mask_rate": 0.056857,
+          "positive_count": 16867,
+          "negative_count": 90357,
+          "positive_rate": 0.157306,
+          "status": "candidate"
+        },
+        "failure_risk": {
+          "head": "failure_risk",
+          "total_samples": 113688,
+          "active_samples": 5060,
+          "masked_samples": 108628,
+          "mask_rate": 0.955492,
+          "positive_count": 0,
+          "negative_count": 5060,
+          "positive_rate": 0.0,
+          "status": "blocked_single_class"
+        },
+        "object_visibility_future": {
+          "head": "object_visibility_future",
+          "total_samples": 113688,
+          "active_samples": 106007,
+          "masked_samples": 7681,
+          "mask_rate": 0.067562,
+          "positive_count": 105247,
+          "negative_count": 760,
+          "positive_rate": 0.992831,
+          "status": "review_high_majority_rate"
+        },
+        "next_best_view_score": {
+          "head": "next_best_view_score",
+          "total_samples": 113688,
+          "active_samples": 106007,
+          "masked_samples": 7681,
+          "mask_rate": 0.067562,
+          "mean": 0.539202,
+          "std": 0.193667,
+          "min": 0.0,
+          "max": 0.906481,
+          "status": "candidate"
+        }
+      }
+    }
+  ],
+  "candidate_tasks": [
+    "CloseBlenderLid",
+    "CloseFridge",
+    "CloseToasterOvenDoor",
+    "OpenDrawer",
+    "OpenStandMixerHead",
+    "PickPlaceDrawerToCounter"
+  ],
+  "review_tasks": [
+    "CoffeeSetupMug",
+    "OpenCabinet",
+    "PickPlaceCounterToCabinet",
+    "PickPlaceCounterToStove",
+    "PickPlaceToasterToCounter",
+    "SlideDishwasherRack",
+    "TurnOffStove",
+    "TurnOnMicrowave",
+    "TurnOnSinkFaucet"
+  ],
+  "blocked_tasks": [
+    "NavigateKitchen",
+    "PickPlaceSinkToCounter",
+    "TurnOnElectricKettle"
+  ],
+  "go_no_go": "TBD: review per-task distributions before unmasking",
+  "notes": [
+    "Status 'candidate' means active samples have both classes and minority class >= 5% (binary) or non-trivial variance (continuous).",
+    "Status 'blocked_single_class' means all active labels are the same value.",
+    "Status 'review_low_minority_rate' means minority class < 5% of active samples.",
+    "Status 'review_high_majority_rate' means majority class > 95% of active samples.",
+    "Status 'review_high_mask_rate' means > 95% of samples are masked.",
+    "Status 'review_low_variance' means continuous head has near-zero variance.",
+    "failure_risk is expected to be blocked_single_class on pure human demo data.",
+    "object_visibility_future / next_best_view_score are MuJoCo projection proxies.",
+    "object_visibility_future checks occlusion via mj_ray for main cameras; next_best_view_score does not check occlusion to preserve a continuous signal."
+  ]
+}

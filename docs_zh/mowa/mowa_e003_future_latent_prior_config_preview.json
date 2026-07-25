@@ -1,0 +1,61 @@
+{
+  "stage": "future_latent_prior",
+  "task_id": "M3-002",
+  "experiment_id": "E-003",
+  "config_role": "future_latent_prior_candidate",
+  "launch_ready": false,
+  "config_path": "configs/mowa/mowa_e003_future_latent_prior_candidate.yaml",
+  "resolved_final_values": {
+    "project_short_name": "MoWA",
+    "stage": "future_latent_prior",
+    "experiment_id": "E-003",
+    "config_role": "future_latent_prior_candidate",
+    "launch_ready": false,
+    "requires_human_confirmation": true,
+    "human_confirmed": false,
+    "policy_confirmed": false,
+    "dataset_path": "playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot",
+    "cache_root": "playground/mowa_latent_cache/e003_future_latent_prior_candidate",
+    "encoder_name": "wan-fake-encoder",
+    "encoder_version": "fake-v1",
+    "latent_dim": 1024,
+    "episode_indices": [
+      0,
+      1,
+      4
+    ],
+    "video_keys": [
+      "observation.images.robot0_eye_in_hand",
+      "observation.images.robot0_agentview_left",
+      "observation.images.robot0_agentview_right"
+    ],
+    "current_window_steps": 1,
+    "future_window_steps": 8,
+    "history_window_steps": 8,
+    "input_policy": "current_latent_plus_text_only",
+    "target_policy": "future_latent_only",
+    "batch_size_smoke": 2,
+    "history_latent_status": "Data Gate",
+    "latent_shape_status": "Data Gate",
+    "encoder_status": "Data Gate",
+    "cache_artifact_status": "Data Gate"
+  },
+  "checks": {
+    "config_created": true,
+    "builder_design_config_referenced": true,
+    "interface_config_referenced": true,
+    "launch_guard_closed": true,
+    "uses_fake_encoder": true,
+    "current_latent_only_input_policy": true,
+    "future_latent_target_only_policy": true,
+    "history_latent_status_data_gate": true,
+    "latent_shape_status_data_gate": true,
+    "encoder_status_data_gate": true,
+    "cache_artifact_status_data_gate": true
+  },
+  "unresolved_items": [
+    "This preview validates E-003 config shape and input policy only.",
+    "Real Wan latent cache builder, cache parity and training launch are still gated."
+  ],
+  "go_no_go": "TBD: E-003 config preview passed; cache dry-run evidence still required"
+}

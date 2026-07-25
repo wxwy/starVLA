@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # RoboCasa365 — download all `target/human` LeRobot bundles (50 tasks: 18
-# atomic + 32 composite). Run from the repo root inside the `robocasa365`
-# conda env.
+# atomic + 32 composite). Run from the repo root inside the `.robocasa`
+# venv.
 #
 # Output goes to ${DATASET_BASE_PATH} configured in
 #   playground/Code/robocasa365/robocasa/macros_private.py
@@ -11,9 +11,10 @@
 # `yes` so it works under nohup.
 set -euo pipefail
 
-if [[ "${CONDA_DEFAULT_ENV:-}" != "robocasa365" ]]; then
-  source "$(conda info --base)/etc/profile.d/conda.sh"
-  conda activate robocasa365
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+if [[ "${VIRTUAL_ENV:-}" != "${REPO_ROOT}/.robocasa" ]]; then
+  # shellcheck source=/dev/null
+  source "${REPO_ROOT}/.robocasa/bin/activate"
 fi
 
 mkdir -p tmp/logs

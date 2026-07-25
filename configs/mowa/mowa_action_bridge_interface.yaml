@@ -1,0 +1,73 @@
+project_short_name: MoWA
+stage: M5
+task_id: M5-001
+config_role: interface_draft_not_launch
+bridge:
+  type: MoWAActionBridge
+  input_feature_source: MoWAFutureFeatures.hidden_features
+  interface_defaults:
+    wam_feature_dim: 32
+    action_hidden_dim: 2048
+    num_action_layers: 36
+    num_bridge_tokens: 4
+    source: heads_bridge_throughput_smoke_only
+  starflow_e001_candidate:
+    wam_feature_dim: 1024
+    action_hidden_dim: 1024
+    num_action_layers: 36
+    num_bridge_tokens: 2
+    source: configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml
+  output: layerwise_condition_features
+  attention_mask: generated_bool_mask
+integration_boundary:
+  adapter_type: MoWAActionHeadAdapter
+  target_action_head: configurable
+  supported_action_heads:
+    LayerwiseFM:
+      condition_kind: layerwise_condition_features
+      injection_mode: append_bridge_tokens_to_condition_side
+      adapter_helper_implemented: true
+      framework_forward_integrated: true
+    MLP:
+      condition_kind: action_hidden_features
+      injection_mode: add_bridge_summary_to_action_hidden_state
+      adapter_helper: fuse_mlp_bridge_features
+      adapter_helper_implemented: true
+      framework_forward_integrated: false
+    VLA_Adapter:
+      condition_kind: layerwise_task_action_hidden_features
+      injection_mode: insert_bridge_tokens_before_action_queries
+      adapter_helper: append_vla_adapter_bridge_tokens
+      adapter_helper_implemented: true
+      framework_forward_integrated: false
+    DiT-S:
+      condition_kind: single_condition_sequence
+      injection_mode: append_bridge_tokens_to_condition_side
+      adapter_helper: append_single_sequence_bridge_tokens
+      adapter_helper_implemented: true
+      framework_forward_integrated: false
+    DiT-B:
+      condition_kind: single_condition_sequence
+      injection_mode: append_bridge_tokens_to_condition_side
+      adapter_helper: append_single_sequence_bridge_tokens
+      adapter_helper_implemented: true
+      framework_forward_integrated: false
+    DiT-L:
+      condition_kind: single_condition_sequence
+      injection_mode: append_bridge_tokens_to_condition_side
+      adapter_helper: append_single_sequence_bridge_tokens
+      adapter_helper_implemented: true
+      framework_forward_integrated: false
+  modify_action_head_internal_logic: false
+  default_injection: adapter_selected_by_action_model_type
+  note: framework_forward_integrated means a concrete framework already calls the adapter in forward; adapter_helper availability alone does not start training or change existing action heads.
+data_gate:
+  full_heads_future_features: interface_ready
+  latent_prior_future_features: Data Gate
+  production_wam_hz: Data Gate
+  production_window: Data Gate
+  e001_preflight_target_wam_hz: 5
+  e001_preflight_target_window: 5hz_preflight_passed_not_production_frozen
+experiment:
+  e006_coupling_eval_required_before_claiming_action_gain: true
+  counted_in_experiment_budget: false

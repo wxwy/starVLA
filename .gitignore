@@ -1,6 +1,9 @@
 debug/
 ckpts/
 third_party/
+# LIBERO 环境
+.libero/
+LIBERO/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -108,6 +111,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.robocase/
 env/
 venv/
 ENV/
@@ -147,6 +151,7 @@ dmypy.json
 
 # Mac OS
 .DS_Store
+._*
 
 # Caches and Datasets
 cache/
@@ -211,6 +216,14 @@ starVLA/config/frameworks/*
 starVLA/model/modules/sam_model/*
 assets/SAMv2.txt
 playground/*
+!playground/nohup_eval*.sh
+!playground/eval_pool*.py
+!playground/.gitignore
+!playground/eval_results/
+playground/eval_results/*.mp4
+playground/eval_results/**/*.mp4
+!playground/eval_results/_sample_mp4s/*.mp4
+playground/eval_results/**/task_*/
 qwen_talk.md
 assets/R1Pro.py
 examples/SPVLA
@@ -227,6 +240,7 @@ temp/*
 
 tmp
 
+wandb/*
 
 **/*.pt
 **/*.mp4
@@ -237,6 +251,10 @@ tmp
 */*.md
 !examples/**/README.md
 !examples/LIBERO/train_files/*.md
+!docs_zh/starflow_vla/*.md
+!docs_zh/starflow_vla/bs32/*.md
+!docs_zh/mowa/*.md
+!docs_zh/mowa/**/*.md
 
 # Whitelist specific docs that should be tracked
 !.github/PULL_REQUEST_TEMPLATE.md
@@ -263,3 +281,8 @@ examples/SimplerEnv/eval_files/auto_eval_scripts/auto_collect_results/schedule_w
 examples/SimplerEnv/eval_files/auto_eval_scripts/auto_collect_results/summarize_widowx_all.sh
 examples/SimplerEnv/eval_files/auto_eval_scripts/auto_collect_results/schedule_widowx_eval.sh
 starVLA/model/framework/VLM4A/QwenGR00T_v2.py
+
+# Codex workspace & local config
+.codex/
+config/
+EOF

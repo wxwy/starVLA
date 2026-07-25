@@ -1,0 +1,31 @@
+project_short_name: MoWA
+stage: eval_tracking
+experiment_id: E-010
+experiment_name: multi-benchmark eval tracking
+config_role: eval_tracking_plan
+
+launch_guard:
+  launch_ready: true
+  requires_human_confirmation: true
+  human_confirmed: true
+  policy_confirmed: true
+  reason: E-010 is eval-only tracking over existing checkpoints; it does not consume a training experiment slot
+
+checkpoint:
+  checkpoint: latest_complete
+  checkpoint_root_policy: playground/mowa_ckpt
+
+eval:
+  report: docs_zh/mowa/mowa_e010_eval_tracking_report.json
+  benchmarks:
+    - robocasa365_open_drawer
+  interventions:
+    - baseline
+    - zero
+    - batch_shuffle
+    - head_mask_control
+
+constraints:
+  counts_as_training_experiment: false
+  no_checkpoint_mutation: true
+  no_training_started: true

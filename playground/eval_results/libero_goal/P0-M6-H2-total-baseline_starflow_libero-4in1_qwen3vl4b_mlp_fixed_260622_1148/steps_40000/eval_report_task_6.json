@@ -1,0 +1,119 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 10,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000",
+  "checkpoint_step": "steps_40000",
+  "checkpoint_hash": "86c984e2dce6b1efb8a8abb57abc77a1097c827612db8b957cb3d32b88fea15e",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/checkpoints/steps_40000/config.yaml",
+  "config_hash": "2dd9e51a1b6a2b92885b505e779205d9383a6067b06f7e66e6c8572d173d0eca",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "MLP",
+    "state_mode": "discretized_instruction",
+    "state_enters_instruction": true,
+    "state_enters_action_head": false,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 32,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "model": {
+    "framework_name": "QwenOFT",
+    "vlm": "Qwen3-VL-4B-Instruct",
+    "action_head": "MLP"
+  },
+  "total_episodes": 2,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "timeout_no_success": 2
+  },
+  "tasks": [
+    {
+      "task_description": "put the cream cheese in the bowl",
+      "episodes": 2,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "timeout_no_success": 2
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 6,
+      "task_description": "put the cream cheese in the bowl",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_put_the_cream_cheese_in_the_bowl_episode0_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.0020536528900265694,
+        "client_pack_and_queue_sec": 7.797707803547382e-05,
+        "client_server_roundtrip_sec": 0.7900660720188171,
+        "client_unpack_sec": 5.9240031987428665e-05,
+        "client_total_call_sec": 0.7902054751757532,
+        "server_total_sec": 0.10485889413394034,
+        "server_framework_sec": 0.10452869208529592,
+        "server_unnorm_sec": 0.0003283980768173933,
+        "framework_prepare_inputs_sec": 0.00034859287552535534,
+        "framework_build_qwen_inputs_sec": 0.003984848037362099,
+        "framework_qwen_forward_sec": 0.09783642506226897,
+        "framework_gather_action_tokens_sec": 0.0013882678467780352,
+        "framework_action_head_sec": 0.0004440050106495619,
+        "framework_to_numpy_sec": 0.0003717639483511448,
+        "framework_total_sec": 0.10437871189787984
+      }
+    },
+    {
+      "task_id": 6,
+      "task_description": "put the cream cheese in the bowl",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M6-H2-total-baseline_starflow_libero-4in1_qwen3vl4b_mlp_fixed_260622_1148/steps_40000/rollout_put_the_cream_cheese_in_the_bowl_episode1_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.0026802029460668564,
+        "client_pack_and_queue_sec": 0.00021289801225066185,
+        "client_server_roundtrip_sec": 0.9953899278771132,
+        "client_unpack_sec": 0.00010416307486593723,
+        "client_total_call_sec": 0.9957110469695181,
+        "server_total_sec": 0.12877014512196183,
+        "server_framework_sec": 0.12843386712484062,
+        "server_unnorm_sec": 0.00033425912261009216,
+        "framework_prepare_inputs_sec": 0.0003268420696258545,
+        "framework_build_qwen_inputs_sec": 0.011484548915177584,
+        "framework_qwen_forward_sec": 0.11424144497141242,
+        "framework_gather_action_tokens_sec": 0.001384135102853179,
+        "framework_action_head_sec": 0.0004887529648840427,
+        "framework_to_numpy_sec": 0.00035661086440086365,
+        "framework_total_sec": 0.1282859279308468
+      }
+    }
+  ]
+}

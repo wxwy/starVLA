@@ -1,0 +1,186 @@
+{
+  "stage": "full_heads",
+  "experiment_id": "E-001",
+  "training_started": false,
+  "launch_ready": true,
+  "checks": {
+    "launch_candidate_config_created": true,
+    "command_candidate_config_created": true,
+    "runtime_sweep_bs4_report_created": false,
+    "candidate_has_launch_guard": true,
+    "candidate_launch_state_consistent": true,
+    "command_has_launch_guard": true,
+    "command_launch_state_matches_candidate": true,
+    "command_requires_human_confirmation": true,
+    "command_points_to_candidate_config": true,
+    "candidate_uses_starflow_vla": true,
+    "candidate_uses_layerwisefm": true,
+    "candidate_enables_future_supervision_loss": true,
+    "candidate_uses_future_feature_heads_source": true,
+    "candidate_batch_size_4": true,
+    "candidate_grad_accum_1": true,
+    "candidate_max_steps_1000": true,
+    "candidate_save_interval_1000": true,
+    "candidate_wandb_mode_disabled": true,
+    "candidate_checkpoint_root_mowa_ckpt": true,
+    "runtime_policy_state_matches_candidate": true,
+    "final_parameter_alignment_passed": true,
+    "runtime_sweep_bs4_passed": false
+  },
+  "configs": {
+    "launch_candidate": "configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml",
+    "command_candidate": "configs/mowa/mowa_e001_training_command_candidate.yaml",
+    "runtime_policy": "configs/mowa/mowa_e001_runtime_policy_draft.yaml",
+    "runtime_sweep_bs4_report": "docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json"
+  },
+  "launch_guard": {
+    "present": true,
+    "launch_ready": true,
+    "policy_confirmed": true,
+    "requires_human_confirmation": true,
+    "human_confirmed": true
+  },
+  "command_launch_guard": {
+    "present": true,
+    "launch_ready": true,
+    "policy_confirmed": true,
+    "requires_human_confirmation": true,
+    "human_confirmed": true
+  },
+  "runtime_policy_status": {
+    "present": true,
+    "launch_ready": true,
+    "policy_confirmed": true,
+    "resource_policy_confirmed": true
+  },
+  "final_parameter_alignment": {
+    "passed": true,
+    "command_comparisons": {
+      "per_device_batch_size": {
+        "candidate": 4,
+        "command_candidate": 4
+      },
+      "gradient_accumulation_steps": {
+        "candidate": 1,
+        "command_candidate": 1
+      },
+      "effective_batch_size": {
+        "candidate": 4,
+        "command_candidate": 4
+      },
+      "max_train_steps": {
+        "candidate": 1000,
+        "command_candidate": 1000
+      },
+      "save_interval": {
+        "candidate": 1000,
+        "command_candidate": 1000
+      },
+      "run_root_dir": {
+        "candidate": "playground/mowa_ckpt",
+        "command_candidate": "playground/mowa_ckpt"
+      },
+      "checkpoint_format": {
+        "candidate": "lightweight",
+        "command_candidate": "lightweight"
+      },
+      "save_checkpoint_as_directory": {
+        "candidate": true,
+        "command_candidate": true
+      },
+      "wandb_mode": {
+        "candidate": "disabled_for_initial_training",
+        "command_candidate": "disabled_for_initial_training"
+      },
+      "logging_frequency": {
+        "candidate": 10,
+        "command_candidate": 10
+      }
+    },
+    "command_matches": {
+      "per_device_batch_size": true,
+      "gradient_accumulation_steps": true,
+      "effective_batch_size": true,
+      "max_train_steps": true,
+      "save_interval": true,
+      "run_root_dir": true,
+      "checkpoint_format": true,
+      "save_checkpoint_as_directory": true,
+      "wandb_mode": true,
+      "logging_frequency": true
+    },
+    "runtime_policy_traceability": {
+      "per_device_batch_size": {
+        "candidate": 4,
+        "runtime_policy": "bounded_full_vla_smoke_passed_4",
+        "match": true
+      },
+      "gradient_accumulation_steps": {
+        "candidate": 1,
+        "runtime_policy": "bounded_full_vla_smoke_1",
+        "match": true
+      },
+      "effective_batch_size": {
+        "candidate": 4,
+        "runtime_policy": "bounded_full_vla_smoke_4",
+        "match": true
+      },
+      "max_train_steps": {
+        "candidate": 1000,
+        "runtime_policy": 1000,
+        "match": true
+      },
+      "save_interval": {
+        "candidate": 1000,
+        "runtime_policy": "initial_target_1000",
+        "match": true
+      },
+      "run_root_dir": {
+        "candidate": "playground/mowa_ckpt",
+        "runtime_policy": "playground/mowa_ckpt",
+        "match": true
+      },
+      "checkpoint_format": {
+        "candidate": "lightweight",
+        "runtime_policy": "lightweight",
+        "match": true
+      },
+      "save_checkpoint_as_directory": {
+        "candidate": true,
+        "runtime_policy": true,
+        "match": true
+      },
+      "wandb_mode": {
+        "candidate": "disabled_for_initial_training",
+        "runtime_policy": "disabled_for_initial_training",
+        "match": true
+      },
+      "logging_frequency": {
+        "candidate": 10,
+        "runtime_policy": 10,
+        "match": true
+      }
+    },
+    "runtime_policy_trace_matches": {
+      "per_device_batch_size": true,
+      "gradient_accumulation_steps": true,
+      "effective_batch_size": true,
+      "max_train_steps": true,
+      "save_interval": true,
+      "run_root_dir": true,
+      "checkpoint_format": true,
+      "save_checkpoint_as_directory": true,
+      "wandb_mode": true,
+      "logging_frequency": true
+    },
+    "mismatched_fields": [],
+    "untraceable_runtime_policy_fields": []
+  },
+  "unresolved_items": [
+    "Candidate command is executable and launch-approved.",
+    "runtime_policy.policy_confirmed is true; monitor real training and checkpoint outputs.",
+    "launch_ready is true; keep checkpoint/save-resume evidence aligned with the approved config.",
+    "E-006 action-gain rollout evidence remains pending."
+  ],
+  "go_no_go": "No-Go: launch candidate wiring incomplete"
+}

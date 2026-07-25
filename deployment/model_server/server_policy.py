@@ -6,10 +6,7 @@ import argparse
 import logging
 import os
 import socket
-
-from deployment.model_server.policy_wrapper import PolicyServerWrapper
-from deployment.model_server.tools.websocket_policy_server import WebsocketPolicyServer
-
+import time
 
 def main(args) -> None:
     """Build the policy wrapper and start the websocket server.
@@ -18,10 +15,25 @@ def main(args) -> None:
     eval clients (LIBERO / SimplerEnv / etc.) just need to forward `examples`
     and consume already-unnormalized actions from the response.
     """
+    overall_start = time.perf_counter()
+    logging.info("server_policy.main: start ckpt=%s port=%s", args.ckpt_path, args.port)
+    stage_start = time.perf_counter()
+    from deployment.model_server.policy_wrapper import PolicyServerWrapper
+    from deployment.model_server.tools.websocket_policy_server import WebsocketPolicyServer
+    logging.info(
+        "server_policy.main: module imports finished in %.2fs",
+        time.perf_counter() - stage_start,
+    )
+    stage_start = time.perf_counter()
     wrapper = PolicyServerWrapper(
         ckpt_path=args.ckpt_path,
         device="cuda",
         use_bf16=args.use_bf16,
+        config_overrides=args.config_override,
+    )
+    logging.info(
+        "server_policy.main: PolicyServerWrapper init finished in %.2fs",
+        time.perf_counter() - stage_start,
     )
 
     hostname = socket.gethostname()
@@ -29,14 +41,25 @@ def main(args) -> None:
     logging.info("Creating server (host: %s, ip: %s)", hostname, local_ip)
 
     # start websocket server; wrapper.metadata is sent at handshake.
+    stage_start = time.perf_counter()
     server = WebsocketPolicyServer(
         policy=wrapper,
         host="0.0.0.0",
         port=args.port,
         idle_timeout=args.idle_timeout,
         metadata=wrapper.metadata,
+        max_batch_size=args.max_batch_size,
+        batch_timeout_ms=args.batch_timeout_ms,
+    )
+    logging.info(
+        "server_policy.main: WebsocketPolicyServer init finished in %.2fs",
+        time.perf_counter() - stage_start,
     )
     logging.info("server running ... metadata=%s", wrapper.metadata)
+    logging.info(
+        "server_policy.main: entering serve_forever after %.2fs",
+        time.perf_counter() - overall_start,
+    )
     server.serve_forever()
 
 
@@ -46,6 +69,24 @@ def build_argparser():
     parser.add_argument("--port", type=int, default=10093)
     parser.add_argument("--use_bf16", action="store_true")
     parser.add_argument("--idle_timeout", type=int, default=1800, help="Idle timeout in seconds, -1 means never close")
+    parser.add_argument(
+        "--max_batch_size",
+        type=int,
+        default=8,
+        help="Maximum number of infer requests to batch together.",
+    )
+    parser.add_argument(
+        "--batch_timeout_ms",
+        type=float,
+        default=30.0,
+        help="How long (ms) to wait for additional requests before running a batch.",
+    )
+    parser.add_argument(
+        "--config_override",
+        action="append",
+        default=[],
+        help="Optional OmegaConf dotlist override applied after loading checkpoint config. Repeat per key=value.",
+    )
     return parser
 
 

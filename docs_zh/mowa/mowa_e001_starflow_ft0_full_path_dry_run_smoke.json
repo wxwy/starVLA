@@ -1,0 +1,60 @@
+{
+  "stage": "full_heads",
+  "experiment_id": "E-001",
+  "training_started": false,
+  "checks": {
+    "dry_run_config_created": true,
+    "dry_run_report_created": false,
+    "entrypoint_is_train_starvla": false,
+    "full_path_dry_run_only": false,
+    "training_not_started": false,
+    "checkpoint_not_saved": false,
+    "wandb_not_started": false,
+    "framework_starflow": false,
+    "action_head_layerwisefm": false,
+    "starflow_ft_variant_configured": false,
+    "robocasa_data_mix": false,
+    "state_included": false,
+    "mowa_future_labels_enabled": false,
+    "batch_has_mowa_future_targets": false,
+    "batch_has_mowa_future_masks": false,
+    "forward_evaluated": false,
+    "forward_has_action_loss": false,
+    "forward_metric_scope_one_batch": false,
+    "forward_has_elapsed_sec": false,
+    "forward_has_samples_per_sec": false,
+    "forward_has_allocated_vram_field": false,
+    "forward_has_reserved_vram_field": false,
+    "forward_has_peak_vram_field": false,
+    "forward_has_peak_reserved_vram_field": false,
+    "forward_vram_metric_scope_recorded": false,
+    "mowa_layerwise_bridge_coupling_enabled": false,
+    "mowa_future_gated_heads_flag_recorded": false,
+    "mowa_layerwise_bridge_forward_coupled": false,
+    "forward_has_mowa_layerwise_bridge_coupled": false,
+    "mowa_layerwise_bridge_uses_future_feature_heads": false,
+    "mowa_layerwise_bridge_active_heads_are_p0": false,
+    "mowa_layerwise_bridge_not_probe_source": true,
+    "mowa_gated_heads_summary_is_structured_when_enabled": false
+  },
+  "reports": {
+    "dry_run_config": "configs/mowa/mowa_e001_starflow_ft0_full_path_dry_run.yaml",
+    "dry_run_report": "docs_zh/mowa/mowa_e001_starflow_ft0_full_path_dry_run.json"
+  },
+  "observed": {
+    "run_id": null,
+    "framework": {},
+    "data": {},
+    "forward": {},
+    "trainer": null
+  },
+  "unresolved_items": [
+    "This validates StarFlowVLA + RoboCasa one-batch no-backward forward smoke only.",
+    "Full training throughput, step time, and steady-state VRAM are still not measured.",
+    "VRAM fields use torch CUDA allocator state in the pre-prepare dry-run path.",
+    "MoWA bridge tokens are coupled only in the explicit MoWA gated dry-run config.",
+    "MoWA bridge feature source must be future feature heads before launch, not starflow_condition_probe.",
+    "No checkpoint/save/resume launch policy is confirmed."
+  ],
+  "go_no_go": "No-Go: StarFlow full-path dry-run smoke incomplete"
+}

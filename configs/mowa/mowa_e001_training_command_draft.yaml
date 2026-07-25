@@ -1,0 +1,69 @@
+project_short_name: MoWA
+stage: full_heads
+experiment_id: E-001
+config_role: training_command_draft_not_executable
+
+launch_guard:
+  launch_ready: false
+  training_started: false
+  dry_run_only: true
+  requires_human_confirmation: true
+
+command_template:
+  entrypoint: TBD_full_e001_training_entrypoint
+  launcher: accelerate_target
+  num_processes: 1
+  mixed_precision: bf16
+  config_yaml: configs/mowa/mowa_e001_training_smoke.yaml
+  command: >-
+    TBD .venv/bin/accelerate launch
+    --num_processes 1
+    --mixed_precision bf16
+    TBD_FULL_E001_ENTRYPOINT
+    --config_yaml configs/mowa/mowa_e001_training_smoke.yaml
+
+runtime_targets:
+  gpu_type: A100_80G
+  num_gpus: 1
+  raw_action_hz: 20
+  production_wam_hz: 5
+  history_steps: 10
+  future_steps: 5
+  action_chunk_steps: 10
+  per_device_batch_size: bounded_full_vla_smoke_observed_4
+  gradient_accumulation_steps: bounded_full_vla_smoke_observed_1
+  effective_batch_size: bounded_full_vla_smoke_observed_4
+  max_train_steps: TBD
+  bounded_runtime_sweep:
+    report: docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json
+    scope: 2_step_train_skip_final_checkpoint
+    last_step_time_sec: 1.5000371620990336
+    samples_per_sec: 2.666600602349555
+    peak_vram_gb: 46.816529750823975
+    peak_reserved_gb: 50.13671875
+
+bounded_smoke_command:
+  entrypoint: tools/mowa/e001_full_vla_runtime_sweep_smoke.py
+  executable: true
+  counted_as_full_launch: false
+  command: >-
+    .venv/bin/python tools/mowa/e001_full_vla_runtime_sweep_smoke.py
+    --execute
+    --batch-sizes 4
+    --max-train-steps 2
+    --gradient-accumulation-steps 1
+    --output docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json
+
+checkpoint_policy:
+  checkpoint_format: target_lightweight
+  save_interval: target_1000
+  save_checkpoint_as_directory: true
+  local_checkpoint_keep_count: target_1
+  resume_policy: target_resume_latest_complete_only
+  delete_or_overwrite_policy: no_delete_without_confirmation
+  checkpoint_logic_change_allowed: false
+
+notes:
+  - This is a command draft, not an executable launch config.
+  - The config_yaml path points to a training-config smoke, not a full training config.
+  - Batch size 4, VRAM and short-step runtime are observed by bounded full-VLA smoke only; full E-001 long-training command remains TBD.

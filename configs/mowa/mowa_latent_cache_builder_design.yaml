@@ -1,0 +1,31 @@
+project_short_name: MoWA
+stage: future_latent_prior
+task_id: M3-001
+experiment_id: E-003
+config_role: latent_cache_builder_design_smoke
+
+builder:
+  data_root: playground/Datasets/robocasa365
+  relative_path: target/atomic/OpenDrawer/20250816/lerobot
+  cache_root: playground/mowa_latent_cache/future_latent_cache_builder_design
+  encoder_name: wan2.2-ti2v-builder-design
+  episode_indices: [0, 1, 4]
+  video_keys:
+    - observation.images.robot0_eye_in_hand
+    - observation.images.robot0_agentview_left
+    - observation.images.robot0_agentview_right
+  input_policy:
+    current_rgb: allowed
+    future_rgb: target_only
+    history_rgb: allowed
+    future_action: forbidden
+
+status:
+  latent_shape_status: Data Gate
+  cache_hash_status: Data Gate
+  encoder_status: Data Gate
+  latency_status: Data Gate
+
+unresolved_items:
+  - Real Wan encoder, VAE and cache writer are not executed in this design smoke.
+  - Future frames may appear in cache targets only and are not evidence for WAM inputs.

@@ -1,0 +1,46 @@
+project_short_name: MoWA
+stage: full_heads
+experiment_id: E-001
+config_role: interface_draft_not_launch
+model:
+  type: MoWAFutureFullHeads
+  input_dim: 4
+  hidden_dim: 32
+heads:
+  full:
+    - task_progress
+    - manipulation_readiness
+    - failure_risk
+    - next_best_view_score
+    - subgoal_feasibility
+    - object_visibility_future
+    - action_outcome_class
+  currently_constructible:
+    - task_progress
+    - action_outcome_class
+  masked_until_data_gate:
+    - manipulation_readiness
+    - failure_risk
+    - next_best_view_score
+    - subgoal_feasibility
+    - object_visibility_future
+data:
+  recipe_name: mowa_robocasa365_target_human_atomic_core_v1
+  split: target
+  source: human
+  task_type: atomic
+  label_policy: mask_missing_heads
+training:
+  launch_ready: false
+  counted_in_experiment_budget: true
+  launch_blockers:
+    - E-001 launch draft not executable
+    - checkpoint/save/resume strategy not confirmed
+    - batch size, expected VRAM and runtime not confirmed
+data_gate:
+  full_heads_one_step_smoke: passed
+  production_preflight: passed
+  wam_hz: 5
+  history_window: 2.0s_10_steps
+  future_window: 1.0s_5_steps
+  class_mapping: confirmed_for_e001_initial_target

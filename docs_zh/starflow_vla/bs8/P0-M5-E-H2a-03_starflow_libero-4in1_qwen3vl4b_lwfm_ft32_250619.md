@@ -1,0 +1,133 @@
+# StarFlow VLA 实验记录
+
+## 实验标识
+
+| 字段 | 值 |
+| --- | --- |
+| 实验名称 | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 目标 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250618_r2` |
+| 实际运行 run_id | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619` |
+| 训练脚本 | `starVLA/training/train_starvla.py` |
+| 启动脚本 | `examples/LIBERO/train_files/run_starflow_train_ready.sh` |
+| 配置文件 | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` |
+| 框架 | `StarFlowVLA` |
+| 基础 VLM | `/disk/rl/starVLA/playground/Pretrained_models/Qwen3-VL-4B-Instruct` |
+| 数据集 | `LEROBOT_LIBERO_DATA`，mix `libero_all` |
+| 输出目录 | `/disk/rl/starVLA/playground/Checkpoints/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_250619/` |
+
+## 训练配置
+
+| 字段 | 值 |
+| --- | --- |
+| 最大训练步数 | 80000 |
+| per_device_batch_size | 8 |
+| gradient_accumulation_steps | 4 |
+| save_interval | 250 |
+| logging_frequency | 20 |
+| eval_interval | 500 |
+| checkpoint_format | lightweight |
+| save_format | safetensors |
+| 冻结模块 | `qwen_vl_interface` |
+| local_checkpoint_root | `/localdisk-tmp` |
+| local_checkpoint_keep_count | 1 |
+
+### 4090 适配配置（2026-07-02 起）
+
+| 字段 | 值 |
+| --- | --- |
+| per_device_batch_size | **1**（原 8，因 4090 24GB 显存限制） |
+| gradient_accumulation_steps | **32**（原 4，补偿 batch size 降低） |
+| 有效 batch size | **32**（1 × 32，不变） |
+| 设备 | NVIDIA GeForce RTX 4090（24 GB） |
+
+### 原始训练配置（变更前）
+
+| 字段 | 值 |
+| --- | --- |
+| per_device_batch_size | 4 |
+| gradient_accumulation_steps | 8 |
+| save_interval | 125 |
+| logging_frequency | 10 |
+| eval_interval | 250 |
+| local_checkpoint_root | `/root/temp` |
+
+## 最新监控状态（2026-06-22 22:37 CST）
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-06-22 22:37 CST |
+| 训练状态 | ✅ 正常运行中 |
+| 当前步数 | **27407 / 80000**（34%） |
+| 最新完整 checkpoint | `steps_27250`（普通格式，fused=True） |
+| 最新 Loss | `action_dit_loss: 0.0683`（Step 27400） |
+| 设备 | `NVIDIA A100-SXM4-80GB`（80 GB 显存） |
+| 计费 | 5.58 元/h |
+| GPU 利用率 | 100% |
+| GPU 显存 | 63,473 MiB / 81,920 MiB（77.5%） |
+| GPU 功耗 | 328.48 W / 400 W |
+| GPU 温度 | 60°C |
+| 训练速度 | 约 7.11–7.69 s/it |
+| 已运行时间 | 约 25 小时 49 分钟（自 6/21 resume） |
+| 累计费用 | 约 144.10 元 |
+| 备注 | 稳定推进至 34%，epoch 0.54；Loss 正常波动，checkpoint 每 250 步正常保存 |
+
+## 最新监控状态（2026-07-02 12:16 CST）🔄 切换至 RTX 4090
+
+| 字段 | 值 |
+| --- | --- |
+| 监控时间 | 2026-07-02 12:16 CST |
+| 训练状态 | ✅ 正常运行中 |
+| tmux 会话 | `train` |
+| 当前步数 | **28337 / 80000**（35%） |
+| 最新完整 checkpoint | `steps_28250`（普通格式） |
+| 最新 Loss | `action_dit_loss: ~0.03–0.08`（Step 28300–28320） |
+| 设备 | `NVIDIA GeForce RTX 4090`（24 GB 显存） |
+| GPU 利用率 | 47% |
+| GPU 显存 | 23,502 MiB / 24,564 MiB（95.7%） |
+| GPU 功耗 | 282.34 W |
+| GPU 温度 | 67°C |
+| 训练速度 | 约 7.73–8.59 s/it（平均 ~7.84 s/it） |
+| model_time | 0.23–0.53 s |
+| data_time | ~0.0004 s |
+| per_device_batch_size | **1**（从 8 调整为适配 4090 24GB 显存） |
+| gradient_accumulation_steps | **32**（从 4 调整，有效 batch 保持 32） |
+| 有效 batch size | **32**（1 × 32，不变） |
+| 内存 | 47 GiB used / 503 GiB total |
+| CPU | 11.5% us, load average ~15 |
+| 备注 | 设备从 A100(80G) 切换至 RTX 4090(24G)；因显存限制 per_device_batch_size 降为 1、grad_accum 升为 32，有效 batch size 保持 32；训练从 steps_28250 resume，WandB 因 step 回退有 skipped logging 警告（原 run 曾到 step 28381） |
+
+## 关键节点
+
+| 时间 | 步数 | checkpoint | 备注 |
+| --- | --- | --- | --- |
+| 2026-06-19 16:40 | 4000 | `steps_4000` | GPU 98%，本地暂存已清理 |
+| 2026-06-19 22:03 | 5250 | `steps_5125` | GPU 短暂降至 0%，root overlay 升至 30% |
+| 2026-06-19 22:07 | 5250 | `steps_5250` | GPU 恢复至 96%，root overlay 回落至 3% |
+| 2026-06-19 22:12 | 5250 | `steps_5250` | 5 分钟步数未推进，GPU 86% |
+| 2026-06-20 07:58 | 7375 | `steps_7375` | overnight 正常推进，GPU 100% |
+| 2026-06-21 12:45 | 11250 | `steps_11250` | 从 DeepSpeed checkpoint resume，设备切换为 A100(80G)，训练参数变更，计费 5.58 元/h；新 checkpoint 为普通格式 |
+| 2026-06-21 17:25 | 13248 | `steps_13250` | 当前正常运行，17% 完成；GPU 利用率瞬时 46%，功耗 99W，训练仍在推进 |
+| 2026-06-21 17:42 | 13380 | `steps_13375` | GPU 利用率恢复 100%，功耗 326W，训练速度 7.32 s/it |
+| 2026-06-21 18:12 | 13616 | `steps_13625` | 训练稳定，GPU 100%，功耗 337W，Loss 降至 0.0783 |
+| 2026-06-21 18:42 | 13856 | `steps_13875` | 训练稳定推进，GPU 100%，功耗 329W，速度 7.34 s/it |
+| 2026-06-21 19:12 | 14095 | `steps_14125` | 推进到 18%，GPU 利用率瞬时 59%，功耗 363W，Loss 0.0843 |
+| 2026-06-21 19:42 | 14336 | `steps_14375` | 持续推进，GPU 利用率瞬时 41%，功耗读数 451W，Loss 0.1017 |
+| 2026-06-21 20:12 | 14566 | `steps_14625` | GPU 利用率恢复 100%，功耗 385W，温度 61°C，速度波动 7.44–9.34 s/it |
+| 2026-06-21 20:42 | 14750 | `steps_14750` | 尝试 resume 恢复 fused=True，因 `state_steps` 在 CPU 导致 device mismatch crash；代码已修正，待重新启动 |
+| 2026-06-21 20:58 | 14835 | `steps_14875` | 用修正后的代码从 `steps_14750` resume 成功，fused AdamW 生效，Loss 约 0.075–0.085 |
+| 2026-06-22 19:09 | 25730 | `steps_25500` | overnight 稳定推进至 32%，已运行 ~22.4h，累计费用约 124.75 元；Loss 正常波动 0.05–0.15，含 mse_score；GPU 瞬时利用率 0%（采样间隙），功耗 208W，温度 54°C |
+| 2026-06-22 19:12 | 25757 | `steps_25750` | 持续推进，GPU 利用率 94%，功耗 374W，温度 57°C；最新 Loss 0.0723，累计费用约 125.05 元 |
+| 2026-06-22 20:37 | 26446 | `steps_26250` | 推进至 33%，epoch 0.52；GPU 100%，功耗 330W，温度 60°C；累计费用约 132.94 元 |
+| 2026-06-22 22:37 | 27407 | `steps_27250` | 推进至 34%，epoch 0.54；GPU 100%，功耗 328W，温度 60°C；Loss 0.0683；累计费用约 144.10 元 |
+| 2026-07-02 12:04 | 28337 | `steps_28250` | 🔄 **设备切换至 RTX 4090(24G)**，从 steps_28250 resume；per_device_batch_size 8→1，grad_accum 4→32，有效 batch 保持 32；GPU 显存几乎用满（23.5G/24G，95.7%）；速度 ~7.84 s/it 略慢于 A100 的 ~7.3 s/it；WandB 因 step 回退（原 run 曾到 step 28381）产生 skipped logging 警告；loss 正常波动 0.03–0.08 |
+
+## 注意事项
+
+1. 目标 run_id `250618_r2` 未找到对应进程或目录，实际运行的是 `250619`。
+2. 训练 overnight 期间从 step 5250 推进至 step 7375，状态稳定。
+3. 输出目录已增长至 1.1T，需关注存储空间。
+4. `/root/temp` 清理机制正常，本地暂存未堆积。
+5. 2026-06-21 从 `steps_11000` resume 时，原 checkpoint 为 DeepSpeed ZeRO-2 格式，已降级转换为普通单卡 optimizer state 继续训练；转换过程丢弃了 DeepSpeed 特有的 loss scaler 和 fp32 分区信息。
+6. resume 后设备切换为 `NVIDIA A100-SXM4-80GB`（80 GB 显存），计费 5.58 元/h，训练参数同步变更（见「训练配置」表）。
+7. 由于 DeepSpeed 转换后的 optimizer state 不满足 fused AdamW 的严格 tensor 要求，resume 后临时以 `fused=False` 运行；`steps_11250` 已保存为普通格式，可从该 checkpoint 重新 resume 以恢复 `fused=True` 高速模式。
+8. 2026-07-02：计算卡从 A100-SXM4-80GB 切换为 RTX 4090（24GB）。因显存限制，per_device_batch_size 从 8 降为 1，gradient_accumulation_steps 从 4 升为 32，有效 batch size 保持 32。训练速度从 A100 的 ~7.3 s/it 略降至 ~7.84 s/it。4090 显存几乎用满（23.5G/24G，95.7%）。从 steps_28250 checkpoint resume，WandB 因 step 回退（原 A100 run 曾推进到 step 28381）会产生 skipped logging 警告，不影响训练。

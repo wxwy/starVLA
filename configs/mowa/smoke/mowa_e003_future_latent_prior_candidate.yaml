@@ -1,0 +1,56 @@
+project_short_name: MoWA
+stage: future_latent_prior
+task_id: M3-002
+experiment_id: E-003
+config_role: future_latent_prior_candidate
+
+launch_guard:
+  launch_ready: false
+  requires_human_confirmation: true
+  human_confirmed: false
+  policy_confirmed: false
+  reason: E-003 remains gated until config preview and cache dry-run evidence are confirmed
+
+references:
+  builder_design_config: configs/mowa/mowa_latent_cache_builder_design.yaml
+  interface_config: configs/mowa/mowa_future_latent_prior_interface.yaml
+
+latent_cache:
+  dataset_path: playground/Datasets/robocasa365/v1.0/target/atomic/OpenDrawer/20250816/lerobot
+  cache_root: playground/mowa_latent_cache/e003_future_latent_prior_candidate
+  encoder_name: wan-fake-encoder
+  encoder_version: fake-v1
+  encoder_kind: fake
+  encoder_model_path: null
+  latent_dim: 1024
+  episode_indices: [0, 1, 4]
+  anchor_mode: smoke
+  current_window_steps: 1
+  future_window_steps: 8
+  history_window_steps: 8
+  allow_partial_windows: false
+  overwrite: false
+  materialize_cache_for_dry_run: true
+  video_keys:
+    - observation.images.robot0_eye_in_hand
+    - observation.images.robot0_agentview_left
+    - observation.images.robot0_agentview_right
+
+interface:
+  current_latent_dim: 1024
+  text_hidden_dim: 2560
+  hidden_dim: 2048
+  future_latent_dim: 1024
+  batch_size_smoke: 2
+  input_policy: current_latent_plus_text_only
+  target_policy: future_latent_only
+
+status:
+  history_latent_status: Data Gate
+  latent_shape_status: Data Gate
+  encoder_status: Data Gate
+  cache_artifact_status: Data Gate
+
+unresolved_items:
+  - Real Wan latent cache builder is still separately gated.
+  - Future latent remains target only and is not valid as model input evidence.

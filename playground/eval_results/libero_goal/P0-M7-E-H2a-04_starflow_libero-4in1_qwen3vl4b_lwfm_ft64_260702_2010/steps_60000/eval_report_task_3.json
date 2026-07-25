@@ -1,0 +1,553 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 50,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/checkpoints/steps_60000",
+  "checkpoint_hash": "113cd65199862a9580221fe15698fe27f6392a700d12a6c3ce16422a6efe17ff",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/checkpoints/steps_60000/config.yaml",
+  "config_hash": "5a678f6bbd675f7916737b637d709feac32aa0e28aeac25102f7df5440ce4372",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "LayerwiseFM",
+    "state_mode": "discretized_instruction",
+    "state_enters_instruction": true,
+    "state_enters_action_head": false,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 64,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "total_episodes": 50,
+  "total_successes": 39,
+  "success_rate": 0.78,
+  "failure_category": {
+    "timeout_no_success": 11
+  },
+  "tasks": [
+    {
+      "task_description": "open the top drawer and put the bowl inside",
+      "episodes": 50,
+      "successes": 39,
+      "success_rate": 0.78,
+      "failure_category": {
+        "timeout_no_success": 11
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 0,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 174,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode0_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 1,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 188,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode1_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 2,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 181,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode2_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 3,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 190,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode3_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 4,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode4_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 5,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 187,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode5_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 6,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 193,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode6_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 7,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode7_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 8,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 173,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode8_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 9,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 200,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode9_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 10,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode10_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 11,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 172,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode11_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 12,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 195,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode12_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 13,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 185,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode13_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 14,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 186,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode14_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 15,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 185,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode15_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 16,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode16_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 17,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 169,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode17_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 18,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode18_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 19,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode19_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 20,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 208,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode20_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 21,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 178,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode21_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 22,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 187,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode22_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 23,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode23_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 24,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 183,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode24_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 25,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 174,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode25_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 26,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 189,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode26_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 27,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 178,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode27_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 28,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode28_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 29,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 179,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode29_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 30,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 182,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode30_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 31,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 163,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode31_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 32,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 178,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode32_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 33,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode33_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 34,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 173,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode34_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 35,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode35_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 36,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 187,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode36_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 37,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 175,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode37_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 38,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 172,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode38_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 39,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 180,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode39_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 40,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 185,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode40_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 41,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 185,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode41_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 42,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 167,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode42_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 43,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 184,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode43_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 44,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 183,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode44_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 45,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode45_failure.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 46,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 193,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode46_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 47,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 184,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode47_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 48,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 193,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode48_success.mp4"
+    },
+    {
+      "task_id": 3,
+      "task_description": "open the top drawer and put the bowl inside",
+      "episode_idx": 49,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 185,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_3/rollout_open_the_top_drawer_and_put_the_bowl_inside_episode49_success.mp4"
+    }
+  ]
+}

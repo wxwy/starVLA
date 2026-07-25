@@ -1,0 +1,35 @@
+{
+  "stage": "future_latent_prior",
+  "task_id": "M3-001",
+  "experiment_id": "E-003",
+  "training_started": false,
+  "checks": {
+    "config_exists": true,
+    "contract_entries_exist": true,
+    "cache_keys_are_unique": true,
+    "future_action_input_forbidden": true,
+    "latent_shape_status_data_gate": true,
+    "cache_hash_status_data_gate": true,
+    "encoder_status_data_gate": true,
+    "latency_status_data_gate": true,
+    "input_policy_future_action_forbidden": true,
+    "input_policy_future_rgb_target_only": true
+  },
+  "config": "configs/mowa/mowa_latent_cache_builder_design.yaml",
+  "observed": {
+    "dataset_path": "playground/Datasets/robocasa365/target/atomic/OpenDrawer/20250816/lerobot",
+    "cache_root": "playground/mowa_latent_cache/future_latent_cache_builder_design",
+    "encoder_name": "wan2.2-ti2v-builder-design",
+    "entry_count": 9,
+    "missing_video_count": 9,
+    "missing_cache_count": 9,
+    "duplicate_cache_key_count": 0,
+    "future_action_input_status": "not_used_as_input"
+  },
+  "unresolved_items": [
+    "This design smoke plans cache artifacts only and does not execute Wan encoder or VAE.",
+    "Latency, latent shape and cache hash remain Data Gate until real builder approval.",
+    "Future RGB may exist as cache target only; it is not valid WAM input evidence."
+  ],
+  "go_no_go": "TBD: latent cache builder design smoke passed; real builder remains gated"
+}

@@ -1,0 +1,56 @@
+{
+  "stage": "full_heads",
+  "experiment_id": "E-001",
+  "training_started": false,
+  "launch_ready": false,
+  "checks": {
+    "training_smoke_config_created": true,
+    "training_command_draft_created": true,
+    "runtime_policy_created": true,
+    "a100_throughput_report_created": false,
+    "launch_ready_false": true,
+    "training_started_false": true,
+    "dry_run_only_true": true,
+    "checkpoint_save_disabled": true,
+    "checkpoint_root_is_mowa_ckpt": true,
+    "checkpoint_logic_unchanged": true,
+    "command_points_to_training_smoke_config": true,
+    "command_still_tbd_entrypoint": true,
+    "runtime_policy_unconfirmed": false,
+    "checkpoint_policy_confirmed": true,
+    "logging_policy_confirmed": true,
+    "resource_policy_unconfirmed": false,
+    "save_resume_smoke_recorded": true,
+    "eval_load_smoke_recorded": true,
+    "full_vla_runtime_sweep_recorded": true,
+    "bounded_smoke_command_not_full_launch": true,
+    "a100_smoke_passed": false,
+    "full_vla_runtime_sweep_bs4_passed": true,
+    "readiness_training_not_started": true
+  },
+  "configs": {
+    "training_smoke_config": "configs/mowa/mowa_e001_training_smoke.yaml",
+    "training_command_draft": "configs/mowa/mowa_e001_training_command_draft.yaml",
+    "runtime_policy": "configs/mowa/mowa_e001_runtime_policy_draft.yaml",
+    "a100_throughput_report": "docs_zh/mowa/mowa_e001_a100_throughput_smoke.json",
+    "full_vla_runtime_sweep_report": "docs_zh/mowa/mowa_e001_full_vla_runtime_sweep_bs4_smoke.json"
+  },
+  "observed": {
+    "stable_candidate": {},
+    "gpu": null,
+    "throughput_scope": null
+  },
+  "unresolved_items": [
+    "full E-001 training entrypoint remains TBD",
+    "runtime policy draft not confirmed",
+    "checkpoint/save/resume policy not confirmed for launch",
+    "MoWA checkpoint root is reserved as playground/mowa_ckpt and must not be mixed into playground/Checkpoints",
+    "full VLA E-001 throughput is bounded-smoke observed only, not long-training confirmed"
+  ],
+  "go_no_go": "No-Go: training config smoke prerequisites incomplete",
+  "notes": [
+    "This smoke validates config wiring only and does not start training.",
+    "The command draft intentionally keeps the full training entrypoint as TBD.",
+    "No checkpoint is saved and checkpoint/resume logic is not modified."
+  ]
+}

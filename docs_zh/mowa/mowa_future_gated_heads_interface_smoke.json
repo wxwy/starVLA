@@ -1,0 +1,46 @@
+{
+  "task_id": "M2-003",
+  "experiment_id": "E-002",
+  "training_started": false,
+  "checks": {
+    "gate_shape_matches_head_count": true,
+    "gate_values_in_range": true,
+    "gate_init_value_matches_config": true,
+    "forward_shape_ok": true,
+    "head_names_match_fullheads": true,
+    "single_fullheads_comparison_only": true,
+    "per_head_sweep_disabled": true
+  },
+  "observed": {
+    "gate_values": {
+      "task_progress": 0.5,
+      "manipulation_readiness": 0.5,
+      "failure_risk": 0.5,
+      "next_best_view_score": 0.5,
+      "subgoal_feasibility": 0.5,
+      "object_visibility_future": 0.5,
+      "action_outcome_class": 0.5
+    },
+    "gate_summary": {
+      "comparison_scope": "single_fullheads_control_only",
+      "allow_per_head_sweep": false,
+      "step": 0
+    },
+    "hidden_features_shape": [
+      4,
+      512
+    ],
+    "active_heads": [
+      "task_progress",
+      "action_outcome_class"
+    ],
+    "masked_heads": [
+      "manipulation_readiness",
+      "failure_risk",
+      "next_best_view_score",
+      "subgoal_feasibility",
+      "object_visibility_future"
+    ]
+  },
+  "go_no_go": "TBD: gated-heads interface smoke passed"
+}

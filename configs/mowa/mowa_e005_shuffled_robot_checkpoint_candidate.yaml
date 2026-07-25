@@ -1,0 +1,32 @@
+project_short_name: MoWA
+stage: hlc_gci
+task_id: M4-003
+experiment_id: E-005
+config_role: shuffled_robot_checkpoint_candidate
+
+launch_guard:
+  launch_ready: false
+  requires_human_confirmation: true
+  human_confirmed: false
+  policy_confirmed: false
+  reason: E-005 requires a meaningful E-004 checkpoint before rollout preflight can be launch-approved
+
+references:
+  plan_config: configs/mowa/mowa_shuffled_robot_sanity_plan.yaml
+  plan_smoke: docs_zh/mowa/mowa_shuffled_robot_sanity_plan_smoke.json
+  upstream_checkpoint_hint: latest_complete
+
+checkpoint:
+  checkpoint: latest_complete
+  checkpoint_root_policy: playground/mowa_ckpt
+  required_min_completed_steps: 1
+
+rollout:
+  env_name: robocasa/OpenDrawer
+  n_episodes: 2
+  n_envs: 2
+  max_episode_steps: 100
+  n_action_steps: 8
+  shuffle_policy: cyclic_non_self
+  future_action_policy: target_only
+

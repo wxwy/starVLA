@@ -1,0 +1,553 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 50,
+  "max_tasks": -1,
+  "checkpoint_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/checkpoints/steps_60000",
+  "checkpoint_hash": "113cd65199862a9580221fe15698fe27f6392a700d12a6c3ce16422a6efe17ff",
+  "config_path": "/disk/rl/starVLA/playground/Checkpoints/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/checkpoints/steps_60000/config.yaml",
+  "config_hash": "5a678f6bbd675f7916737b637d709feac32aa0e28aeac25102f7df5440ce4372",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA",
+    "config_schema": "0.21",
+    "dataset_statistics_hash": "555257fdd2946a3d72feb517979bfb1397aff8492c160b46532a6b920bce9455"
+  },
+  "starflow_mapping": {
+    "schema_version": "p0_m3_v1",
+    "framework_name": "StarFlowVLA",
+    "implementation_mode": "starvla_native",
+    "base_framework": "QwenPI_v3",
+    "action_head": "LayerwiseFM",
+    "state_mode": "discretized_instruction",
+    "state_enters_instruction": true,
+    "state_enters_action_head": false,
+    "adapter_mode": "future_token_cross_dit",
+    "flow_condition_runtime": false,
+    "perceiver_enabled": false,
+    "num_target_vision_tokens": 64,
+    "solver": "euler",
+    "num_inference_timesteps": 4,
+    "patch_manifest_hash": null,
+    "starvla_commit": null,
+    "config_schema": "0.21"
+  },
+  "total_episodes": 50,
+  "total_successes": 46,
+  "success_rate": 0.92,
+  "failure_category": {
+    "timeout_no_success": 4
+  },
+  "tasks": [
+    {
+      "task_description": "open the middle drawer of the cabinet",
+      "episodes": 50,
+      "successes": 46,
+      "success_rate": 0.92,
+      "failure_category": {
+        "timeout_no_success": 4
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 0,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 132,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode0_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 1,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 128,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode1_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 2,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 126,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode2_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 3,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode3_failure.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 4,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 125,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode4_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 5,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 131,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode5_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 6,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 120,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode6_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 7,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 153,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode7_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 8,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 123,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode8_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 9,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 118,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode9_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 10,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 158,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode10_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 11,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 141,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode11_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 12,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 164,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode12_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 13,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 148,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode13_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 14,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 110,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode14_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 15,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 163,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode15_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 16,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 184,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode16_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 17,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 130,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode17_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 18,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 120,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode18_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 19,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 103,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode19_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 20,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 141,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode20_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 21,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 126,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode21_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 22,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 123,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode22_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 23,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 121,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode23_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 24,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 138,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode24_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 25,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 135,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode25_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 26,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 117,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode26_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 27,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode27_failure.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 28,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode28_failure.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 29,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 119,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode29_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 30,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 119,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode30_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 31,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 152,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode31_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 32,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 129,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode32_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 33,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 152,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode33_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 34,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 122,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode34_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 35,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 127,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode35_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 36,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 143,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode36_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 37,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 120,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode37_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 38,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 188,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode38_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 39,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 121,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode39_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 40,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 126,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode40_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 41,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 137,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode41_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 42,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 120,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode42_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 43,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode43_failure.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 44,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 153,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode44_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 45,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 183,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode45_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 46,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 138,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode46_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 47,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 114,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode47_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 48,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 112,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode48_success.mp4"
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 49,
+      "success": true,
+      "failure_category": null,
+      "runtime_error": null,
+      "steps_executed": 127,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/P0-M7-E-H2a-04_starflow_libero-4in1_qwen3vl4b_lwfm_ft64_260702_2010/steps_60000/task_0/rollout_open_the_middle_drawer_of_the_cabinet_episode49_success.mp4"
+    }
+  ]
+}

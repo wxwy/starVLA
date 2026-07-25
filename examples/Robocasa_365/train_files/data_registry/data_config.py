@@ -62,7 +62,7 @@ class PandaOmronRoboCasa365DataConfig:
     language_keys = ["annotation.human.task_description"]
 
     observation_indices = [0]
-    action_indices = list(range(16))
+    action_indices = list(range(8))
 
     def modality_config(self):
         return {
@@ -79,7 +79,15 @@ class PandaOmronRoboCasa365DataConfig:
             StateActionToTensor(apply_to=self.action_keys),
             StateActionTransform(
                 apply_to=self.action_keys,
-                normalization_modes={key: "min_max" for key in self.action_keys},
+                normalization_modes={
+                    "action.end_effector_position": "min_max",
+                    "action.end_effector_rotation": "min_max",
+                    # RoboCasa gripper_close is a two-state command (-1/+1);
+                    # keep it discrete instead of fitting a continuous target.
+                    "action.gripper_close": "binary",
+                    "action.base_motion": "min_max",
+                    "action.control_mode": "min_max",
+                },
             ),
         ])
 
@@ -176,6 +184,12 @@ DATASET_NAMED_MIXTURES = {
     # ------- minimal walk-through mixture (1 atomic task) -------
     "robocasa365_open_drawer_target_human": [
         ("v1.0/target/atomic/OpenDrawer/20250816/lerobot", 1.0, _ROBOT_TAG),
+    ],
+    "robocasa365_close_blender_lid_target_human": [
+        ("v1.0/target/atomic/CloseBlenderLid/20250822/lerobot", 1.0, _ROBOT_TAG),
+    ],
+    "robocasa365_turn_on_electric_kettle_target_human": [
+        ("v1.0/target/atomic/TurnOnElectricKettle/20250817/lerobot", 1.0, _ROBOT_TAG),
     ],
     # ------- full mixtures (each task weighted 1.0; equal sampling per task) -------
     "robocasa365_atomic_target_human_all":    _entries(_TARGET_HUMAN_ATOMIC),

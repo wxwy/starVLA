@@ -1,0 +1,195 @@
+# P0-M5-E-H2a-03: StarFlow LIBERO 4-in-1 Qwen3VL-4B LayerwiseFM ft=32（bs32）
+
+> **实验代号**: E-H2a-03 / P0-M5
+> **状态**: 🟢 训练运行中
+> **run_id**: `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848`
+> **启动时间**: 2026-07-03 08:48 CST
+> **当前更新**: 2026-07-09 00:37 CST
+> **tmux 会话**: `train-0`
+> **配置来源**: `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml`
+
+---
+
+## 实验概述
+
+P0-M5 **Stage 1 StarFlowVLA 默认路径**：使用 LayerwiseFM (DiT) action model 在 LIBERO 4-in-1 数据集上从头训练。
+
+本 run 为 **从 scratch 全新训练**（`is_resume=False`），在 4090 上使用 bs32 配置（per_device_batch_size=1 × gradient_accumulation_steps=32）。这是 P0-M5-E-H2a-03 的第三个 run，前两个 run 在 A100 上训练至 step ~28000 后因设备切换废弃。
+
+---
+
+## 训练参数
+
+### 脚本级参数
+
+| 参数 | 值 |
+|------|-----|
+| `RUN_ID` | `P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848` |
+| `CONFIG_YAML` | `configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml` |
+| `DATA_MIX` | `libero_all` |
+| `MAX_TRAIN_STEPS` | 80,000 |
+| `SAVE_INTERVAL` | 250 |
+| `EVAL_INTERVAL` | 500 |
+| `LOGGING_FREQUENCY` | 20 |
+| `GRADIENT_ACCUMULATION_STEPS` | **32** |
+| `PER_DEVICE_BATCH_SIZE` | **1** |
+| `NUM_WORKERS` | 2 |
+| `BASE_VLM` | `/disk/rl/starVLA/playground/Pretrained_models/Qwen3-VL-4B-Instruct` |
+| `LIBERO_DATA_ROOT` | `/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA` |
+| `WANDB_PROJECT` | `starflow_vla` |
+| `WANDB_ENTITY` | `silencewx-harbin-institute-of-technology` |
+| `is_resume` | **`False`**（从 scratch） |
+| `eval_num_batches` | 8 |
+| 设备 | NVIDIA GeForce RTX 4090（24564 MiB） |
+| 单价 | 本地 4090，暂不记录 |
+
+### 模型 / 优化器参数
+
+| 参数 | 值 |
+|------|-----|
+| **框架** | StarFlowVLA |
+| **Base VLM** | Qwen3-VL-4B-Instruct |
+| **Action Model** | LayerwiseFM (DiT, 36 layers, 1024 hidden) |
+| **Action Dim** | 7 |
+| **State Dim** | 8 |
+| **Action Horizon** | 8 |
+| **Num Target Vision Tokens** | 32 |
+| **DiT Attention Heads** | 16 |
+| **Dropout** | 0.2 |
+| **Frozen Modules** | `qwen_vl_interface` |
+| **Learning Rate (action_model)** | 1.0e-4 |
+| **Learning Rate (base)** | 2.5e-5 |
+| **Learning Rate (qwen_vl_interface)** | 1.0e-5 |
+| **LR Scheduler** | cosine_with_min_lr |
+| **Min LR** | 1.0e-6 |
+| **Warmup Steps** | 0 |
+| **Optimizer** | AdamW (β=(0.9, 0.95), eps=1e-8, wd=1e-8) |
+| **Max Grad Norm** | 1.0 |
+| **Gradient Checkpointing** | true |
+| **Mixed Precision** | no |
+| **Effective Global Batch** | **32**（1 × 32） |
+| **Checkpoint Format** | lightweight |
+| **Save Format** | safetensors |
+| **local_checkpoint_root** | `/localdisk-tmp` |
+| **local_checkpoint_keep_count** | 1 |
+| **Seed** | 42 |
+
+### 数据集
+
+| 数据集 | 样本数 | embodiment |
+|--------|--------|------------|
+| `libero_object_no_noops_1.0.0_lerobot` | 66,984 | FRANKA |
+| `libero_goal_no_noops_1.0.0_lerobot` | 52,042 | FRANKA |
+| `libero_spatial_no_noops_1.0.0_lerobot` | 52,970 | FRANKA |
+| `libero_10_no_noops_1.0.0_lerobot` | 101,469 | FRANKA |
+| **合计** | **273,465** | — |
+
+---
+
+## 训练进度
+
+> 最后更新：2026-07-09 00:37 CST
+
+| 指标 | 值 |
+|------|-----|
+| **当前 Step** | **70000 / 80000**（87.5%） |
+| **完成比例** | 87.5% |
+| **单步耗时** | ~7.0 s/it |
+| **数据加载耗时** | ~0.000 s |
+| **模型前向/反向耗时** | ~0.230 s |
+| **已运行时间** | 约 135 小时 49 分钟 |
+| **预计剩余时间** | ~19.4 小时（约 0.8 天） |
+
+---
+
+## 成本估算
+
+| 项目 | 计算 |
+|------|------|
+| **每 step 耗时** | ~7.0 s/it |
+| **每 step 成本** | 本地 4090，暂不记录 |
+| **已运行时间** | 约 135 小时 49 分钟 |
+| **完整 80000 steps 预估** | 80000 × 7.0s ≈ 155.6h ≈ 6.5 天 |
+
+---
+
+## 输出目录
+
+```
+/disk/rl/starVLA/playground/Checkpoints/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/
+├── config.full.yaml          ✅
+├── config.yaml               ✅
+├── dataset_statistics.json   ✅
+├── summary.jsonl             ✅
+└── wandb/                    ✅
+```
+
+本地暂存：`/localdisk-tmp/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848/`
+
+---
+
+## 相关链接
+
+- **WandB Run**: [260703_0848](https://wandb.ai/silencewx-harbin-institute-of-technology/starflow_vla/runs/P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_260703_0848)
+- **tmux 会话**: `train-0`
+
+---
+
+## 启动命令
+
+```bash
+cd /disk/rl/starVLA
+RUN_ID="P0-M5-E-H2a-03_starflow_libero-4in1_qwen3vl4b_lwfm_ft32_$(date +%y%m%d_%H%M)" \
+CONFIG_YAML=configs/starflow_vla/stage1_starflow_qwenpi_v3_native.yaml \
+DATA_MIX=libero_all \
+MAX_TRAIN_STEPS=80000 \
+SAVE_INTERVAL=250 \
+LOGGING_FREQUENCY=20 \
+EVAL_INTERVAL=500 \
+GRADIENT_ACCUMULATION_STEPS=32 \
+PER_DEVICE_BATCH_SIZE=1 \
+NUM_WORKERS=2 \
+LOCAL_CHECKPOINT_KEEP_COUNT=1 \
+LOCAL_CHECKPOINT_ROOT=/localdisk-tmp \
+STARVLA_PYTHON=/opt/conda/envs/starVLA/bin/python \
+bash examples/LIBERO/train_files/run_starflow_train_ready.sh
+```
+
+---
+
+## 历史 run 参考
+
+| Run | 设备 | 最终 step | 状态 |
+|-----|------|----------|------|
+| `P0-M5-E-H2a-03_..._250619` | A100 (80G) | ~27407 | 已废弃，设备切换 |
+| `P0-M5-E-H2a-03_..._260702_...` | RTX 4090 | ~28381 | 已废弃，从 A100 resume 后 WandB step 回退 |
+| **`P0-M5-E-H2a-03_..._260703_0848`** | RTX 4090 | — | 🟢 当前，从 scratch 全新训练 |
+
+---
+
+## 备注
+
+- 本实验为 P0-M5 默认 StarFlowVLA 配置，使用 LayerwiseFM + Qwen3-VL-4B。
+- **从 scratch 全新训练**，不从旧 run resume，避免 WandB step 回退问题。
+- 显存使用率 96.3%（23.6G/24G），余量 ~924 MiB。
+- GPU 利用率 5%（瞬时采样），温度 44°C。
+- Docker 内存用量 36.9 GiB / 56.0 GiB（cgroup 实际用量）。
+- gradient accumulation fix（commit `abe1e46`）已应用。
+- 🏆🏆🏆 **再次突破** step 69860 loss **0.01865**，首次进入 0.01 区间！
+  - step 69900: 0.01868 | step 69800: 0.02018 | step 69960: 0.01972
+  - 旧纪录 0.02236 @ step 63740 → 0.01865，连续突破！
+- 🎉 70000/80000 里程碑达成（87.5%）！
+- Eval @ step 70000: mse=0.00638。
+- 预计明天下午完成全部 80000 steps。
+
+---
+
+*本文档将持续更新。*
+
+---
+
+## LIBERO 评估
+
+> 评估结果已移至统一汇总报告：[`LIBERO_EVAL_SUMMARY.md`](./LIBERO_EVAL_SUMMARY.md)
+>
+> 包含各实验在 libero_goal / libero_10 / libero_object / libero_spatial 四个子集上的完整对比结果与详细任务级数据。

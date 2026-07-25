@@ -1,0 +1,55 @@
+{
+  "stage": "full_heads",
+  "experiment_id": "E-001",
+  "training_started": false,
+  "launch_ready": true,
+  "checks": {
+    "launch_draft_created": true,
+    "runtime_policy_created": true,
+    "training_command_draft_created": true,
+    "training_command_candidate_created": true,
+    "launch_candidate_created": true,
+    "launch_candidate_smoke_report_created": true,
+    "starflow_comparison_report_created": true,
+    "a100_throughput_plan_created": true,
+    "launch_draft_state_recorded": true,
+    "runtime_policy_state_consistent": true,
+    "checkpoint_logic_unchanged": true,
+    "training_command_dry_run_only": true,
+    "training_command_entrypoint_tbd": true,
+    "training_command_candidate_state_consistent": true,
+    "launch_candidate_state_consistent": true,
+    "launch_candidate_smoke_passed": true,
+    "starflow_comparison_smoke_passed": true,
+    "executable_training_command_candidate_recorded": true,
+    "launch_draft_reason_current": true,
+    "launch_blocker_mentions_action_gain_not_feature_source": true,
+    "a100_smoke_no_longer_waiting_for_a100": true,
+    "a100_throughput_report_created": false,
+    "readiness_training_not_started": true,
+    "readiness_launch_candidate_smoke_passed": true,
+    "readiness_starflow_comparison_smoke_passed": true
+  },
+  "drafts": {
+    "launch_draft": "configs/mowa/mowa_e001_launch_draft.yaml",
+    "runtime_policy": "configs/mowa/mowa_e001_runtime_policy_draft.yaml",
+    "training_command_draft": "configs/mowa/mowa_e001_training_command_draft.yaml",
+    "training_command_candidate": "configs/mowa/mowa_e001_training_command_candidate.yaml",
+    "launch_candidate": "configs/mowa/mowa_e001_starflow_ft0_launch_candidate.yaml",
+    "launch_candidate_smoke_report": "docs_zh/mowa/mowa_e001_launch_candidate_smoke.json",
+    "starflow_comparison_report": "docs_zh/mowa/mowa_e001_starflow_ft0_comparison_smoke.json",
+    "a100_throughput_plan": "configs/mowa/mowa_e001_a100_throughput_smoke_plan.yaml",
+    "a100_throughput_report": "docs_zh/mowa/mowa_e001_a100_throughput_smoke.json"
+  },
+  "unresolved_items": [
+    "batch size 4, expected VRAM and runtime are bounded full-VLA smoke observed only, not long-training confirmed",
+    "runtime policy is approved only for current bounded E-001 scope, not for broader action-gain claims",
+    "executable training command candidate and launch candidate must remain synchronized with runtime policy",
+    "action-gain evidence remains unvalidated"
+  ],
+  "go_no_go": "No-Go: launch draft prerequisites incomplete",
+  "notes": [
+    "This smoke does not start training.",
+    "Training command draft remains dry-run-only; command candidate records the currently approved bounded launch state."
+  ]
+}

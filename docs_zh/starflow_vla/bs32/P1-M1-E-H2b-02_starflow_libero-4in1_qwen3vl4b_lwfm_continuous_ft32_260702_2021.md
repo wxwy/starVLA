@@ -1,0 +1,333 @@
+# P1-M1-E-H2b-02: StarFlow LIBERO 4-in-1 Qwen3VL-4B continuous_head ft=32（bs32）
+
+> **实验代号**: E-H2b-02 / P1-M1
+> **状态**: 🟢 训练中
+> **run_id**: `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021`
+> **启动时间**: 2026-07-02 20:24:19 CST
+> **当前更新**: 2026-07-08 00:40 CST
+> **tmux 会话**: `train`（attached）
+> **配置来源**: `configs/starflow_vla/state/continuous_head.yaml`
+
+---
+
+## 实验概述
+
+P1-M1 **state conditioning 对照**：在 StarFlowVLA 框架中启用 `state_mode=continuous_head`，将本体状态（8D state）通过连续向量直接注入 action head。
+
+本 run 为 **从 scratch 全新训练**（`is_resume=False`），使用 4090 bs32 配置（per_device_batch_size=1 × gradient_accumulation_steps=32）。对应旧 run `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260621_1901`（A100 阶段，已废弃）。
+
+---
+
+## 训练参数
+
+### 脚本级参数
+
+| 参数 | 值 |
+|------|-----|
+| `RUN_ID` | `P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021` |
+| `CONFIG_YAML` | `configs/starflow_vla/state/continuous_head.yaml` |
+| `DATA_MIX` | `libero_all` |
+| `MAX_TRAIN_STEPS` | 80,000 |
+| `SAVE_INTERVAL` | 250 |
+| `EVAL_INTERVAL` | 500 |
+| `LOGGING_FREQUENCY` | 20 |
+| `NUM_PROCESSES` | 1 |
+| `GRADIENT_ACCUMULATION_STEPS` | **32** |
+| `PER_DEVICE_BATCH_SIZE` | **1** |
+| `NUM_WORKERS` | 2 |
+| `BASE_VLM` | `/disk/rl/starVLA/playground/Pretrained_models/Qwen3-VL-4B-Instruct` |
+| `LIBERO_DATA_ROOT` | `/disk/rl/starVLA/playground/Datasets/LEROBOT_LIBERO_DATA` |
+| `WANDB_PROJECT` | `starflow_vla` |
+| `WANDB_ENTITY` | `silencewx-harbin-institute-of-technology` |
+| `is_resume` | **`False`**（从 scratch） |
+| 设备 | NVIDIA GeForce RTX 4090（24564 MiB） |
+| 单价 | 本地 4090，暂不记录 |
+
+### 模型 / 优化器参数
+
+| 参数 | 值 |
+|------|-----|
+| **框架** | StarFlowVLA |
+| **State Mode** | `continuous_head` |
+| **Base VLM** | Qwen3-VL-4B-Instruct |
+| **Action Model** | LayerwiseFM (DiT, 36 layers, 1024 hidden) |
+| **Action Dim** | 7 |
+| **State Dim** | 8 |
+| **Action Horizon** | 8 |
+| **Num Target Vision Tokens** | 32 |
+| **DiT Attention Heads** | 16 |
+| **DiT Params** | 532,326,426 |
+| **Dropout** | 0.2 |
+| **Total Params** | 5,071.088 M |
+| **Trainable Params** | 633.272 M |
+| **Frozen Modules** | `qwen_vl_interface` |
+| **Learning Rate (action_model)** | 1.0e-4 |
+| **Learning Rate (base)** | 2.5e-5 |
+| **Learning Rate (qwen_vl_interface)** | 1.0e-5 |
+| **LR Scheduler** | cosine_with_min_lr |
+| **Min LR** | 1.0e-6 |
+| **Warmup Steps** | 0 |
+| **Optimizer** | AdamW (β=(0.9, 0.95), eps=1e-8, wd=1e-8) |
+| **Max Grad Norm** | 1.0 |
+| **Gradient Checkpointing** | true |
+| **Mixed Precision** | no |
+| **Effective Global Batch** | **32**（1 × 32） |
+| **Checkpoint Format** | lightweight |
+| **Save Format** | safetensors |
+| **local_checkpoint_root** | `/localdisk-tmp` |
+| **local_checkpoint_keep_count** | 2 |
+| **Seed** | 42 |
+
+### 数据集
+
+| 数据集 | 样本数 | embodiment |
+|--------|--------|------------|
+| `libero_object_no_noops_1.0.0_lerobot` | 66,984 | FRANKA |
+| `libero_goal_no_noops_1.0.0_lerobot` | 52,042 | FRANKA |
+| `libero_spatial_no_noops_1.0.0_lerobot` | 52,970 | FRANKA |
+| `libero_10_no_noops_1.0.0_lerobot` | 101,469 | FRANKA |
+| **合计** | **273,465** | — |
+
+---
+
+## 训练进度
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 10:47 | 69160, | — | — | 93% | 23160/24564 MiB | 66°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 08:47 | 68120, | — | — | 41% | 23160/24564 MiB | 62°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 06:47 | 67080, | — | — | 78% | 23160/24564 MiB | 59°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 04:47 | 66040, | — | — | 18% | 23160/24564 MiB | 66°C | —/56 GiB |
+
+| 时间 | Step | Loss | LR | GPU util | GPU mem | GPU temp | Docker mem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-08 02:48 | 65020, | — | — | 31% | 23160/24564 MiB | 64°C | —/56 GiB |
+
+> 最后更新：2026-07-08 00:40:00 CST
+
+| 指标 | 值 |
+|------|-----|
+| **当前 Step** | **~63935 / 80000**（79.92%）🟢 训练中 |
+| **完成比例** | 79.92% |
+| **单步耗时** | ~7.12 s/it |
+| **数据加载耗时** | ~0.000 s |
+| **模型前向/反向耗时** | ~0.35 s |
+| **已运行时间** | 约 124 小时 |
+| **最新 checkpoint** | `steps_63750`（已持久化） |
+
+### Loss 记录（部分）
+
+| Step | action_dit_loss | last_micro_loss | 备注 |
+|------|----------------|-----------------|------|
+| 20 | 1.3252 | — | 初始 |
+| 160 | 0.2280 | — | |
+| 520 | 0.2500 | — | |
+| 1060 | 0.1847 | — | |
+| 1600 | 0.2709 | — | |
+| 11160 | 0.0975 | 0.0258 | |
+| 11180 | 0.0899 | 0.1355 | |
+| 11200 | 0.0953 | 0.1280 | |
+| 11700 | 0.0959 | 0.0393 | |
+| 12220 | 0.0962 | 0.1440 | |
+| 12700 | 0.0834 | 0.0657 | |
+| 13220 | 0.0919 | 0.0333 | |
+| 14250 | 0.1036 | 0.0419 | |
+| 14760 | 0.0837 | 0.1874 | |
+| 15260 | 0.0863 | 0.1821 | |
+| 16300 | 0.0891 | 0.0882 | |
+| 17320 | 0.0812 | 0.0848 | |
+| 23480 | 0.0634 | 0.0685 | |
+| 23980 | 0.0858 | 0.0534 | |
+| 24080 | 0.0756 | 0.0310 | |
+| 24500 | 0.0667 | 0.0879 | mse=0.0124 |
+| 25000 | 0.0724 | 0.0543 | mse=0.0154 |
+| 25520 | 0.0567 | 0.0537 | |
+| 26040 | 0.0522 | 0.0251 | |
+| 26560 | 0.0521 | 0.0698 | |
+| 27060 | 0.0528 | 0.0542 | |
+| 27580 | 0.0592 | 0.0981 | |
+| 28100 | 0.0609 | 0.0085 | |
+| 28620 | 0.0737 | 0.1349 | |
+| 29080 | 0.0640 | 0.0158 | |
+| 29640 | 0.0573 | 0.0964 | |
+| 30140 | 0.0557 | 0.1401 | |
+| 30660 | 0.0512 | 0.0530 | |
+| 30760 | 0.0459 | 0.0666 | |
+| 31140 | 0.0420 | 0.0419 | |
+| 31700 | 0.0551 | 0.1683 | |
+| 32200 | 0.0547 | 0.0398 | |
+| 32720 | 0.0528 | 0.0272 | |
+| 33260 | 0.0678 | 0.0606 | |
+| 33780 | 0.0451 | 0.0060 | |
+| 34300 | 0.0476 | 0.0291 | |
+| 34800 | 0.0568 | 0.1129 | |
+| 35300 | 0.0465 | 0.0863 | |
+| 35820 | 0.0655 | 0.0186 | |
+| 36340 | 0.0474 | 0.0204 | |
+| 36860 | 0.0463 | 0.0118 | |
+| 37380 | 0.0490 | 0.1615 | |
+| 37900 | 0.0525 | 0.0508 | |
+| 38400 | 0.0482 | 0.0201 | |
+| 38920 | 0.0358 | 0.0316 | |
+| 39020 | 0.0374 | 0.0494 | |
+| 39440 | 0.0366 | 0.0094 | |
+| 39960 | 0.0492 | 0.0721 | |
+| 40060 | 0.0444 | 0.0293 | |
+| 40480 | 0.0476 | 0.0431 | |
+| 41000 | 0.0444 | 0.0294 | |
+| 41520 | 0.0402 | 0.1052 | |
+| 42040 | 0.0400 | 0.0663 | |
+| 42540 | 0.0403 | 0.0535 | |
+| 43060 | 0.0407 | 0.0190 | |
+| 43580 | 0.0387 | 0.1625 | |
+| 44100 | 0.0388 | 0.0202 | |
+| 44600 | 0.0398 | 0.0682 | |
+| 45120 | 0.0479 | 0.0291 | |
+| 45620 | 0.0410 | 0.0962 | |
+| 46140 | 0.0426 | 0.0440 | |
+| 46660 | 0.0586 | 0.0405 | |
+| 47160 | 0.0349 | 0.0134 | |
+| 47680 | 0.0357 | 0.0399 | |
+| 48200 | 0.0402 | 0.0063 | |
+| 48720 | 0.0415 | 0.0335 | |
+| 49220 | 0.0369 | 0.0286 | |
+| 49740 | 0.0226 | 0.0064 | |
+| 50260 | 0.0461 | 0.0198 | |
+| 50780 | 0.0381 | 0.0732 |
+| 51300 | 0.0339 | 0.0445 |
+| 56500 | 0.0349 | 0.0235 | eval mse=0.00747 |
+| 56520 | 0.0271 | 0.0103 | |
+| 56540 | 0.0267 | 0.0388 | |
+| 56560 | 0.0275 | 0.0095 | |
+| 57500 | — | — | checkpoint saved |
+| 57660 | 0.0316 | — | |
+| 57680 | 0.0345 | — | |
+| 57700 | 0.0271 | 0.0137 | |
+| 57720 | 0.0342 | 0.0267 | |
+| 63750 | — | — | checkpoint saved |
+| 63880 | 0.0180 | 0.0391 | |
+| 63900 | 0.0261 | 0.0053 | |
+| 63920 | 0.0244 | 0.0100 | |
+
+### Loss 趋势
+
+- 初始 loss 1.33 → 快速下降至 0.18–0.27 区间
+- step 11000+ loss 在 0.09–0.13 震荡，整体缓慢下降
+- `last_micro_loss` 与 `action_dit_loss`（32 micro-step mean）差异显著，说明单 micro-batch 方差大
+- 学习率缓慢下降（cosine schedule）
+- 🟢 训练持续运行中（up > 124h），loss 稳定在 0.018-0.035 低位
+- 🎯🎯 step 63880 loss 降至 0.0180，再创训练新低！接近 80% 里程碑
+
+---
+
+## 系统资源占用
+
+> 最后更新：2026-07-08 00:40:00 CST
+
+### GPU（NVIDIA GeForce RTX 4090）
+
+| 指标 | 值 |
+|------|-----|
+| **状态** | 🟢 训练中 |
+| **GPU 利用率** | 31% |
+| **显存使用** | 23160 / 24564 MiB（94.3%） |
+| **GPU 温度** | 62°C |
+
+### Docker 内存（cgroup v2）
+
+| 指标 | 值 |
+|------|-----|
+| **Docker 内存上限** | 56 GiB（cgroup v2 memory.max） |
+| **Docker 内存已用** | ~37 GiB / 56 GiB（66%） |
+| **主机内存总量** | 1.0 Ti |
+| **主机内存已用** | ~72 Gi |
+
+### 存储
+
+| 挂载点 | 容量 | 已用 | 可用 | 使用率 |
+|--------|------|------|------|--------|
+| `/` (overlay) | 30G | 1.4G | 29G | 5% |
+| `/localdisk-tmp` | 100G | 16G | 85G | 16% |
+| `/disk/rl` | 700T | 541T | 160T | 78% |
+
+---
+
+## 输出目录
+
+```
+/disk/rl/starVLA/playground/Checkpoints/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/
+├── checkpoints/
+├── config.full.yaml          ✅
+├── config.yaml               ✅
+├── dataset_statistics.json   ✅
+├── summary.jsonl             ✅
+└── wandb/                    ✅
+```
+
+本地暂存：`/localdisk-tmp/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021/`
+
+---
+
+## 相关链接
+
+- **WandB Run**: [260702_2021](https://wandb.ai/silencewx-harbin-institute-of-technology/starflow_vla/runs/P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_260702_2021)
+- **tmux 会话**: `train`
+
+---
+
+## 启动命令
+
+```bash
+cd /disk/rl/starVLA
+RUN_ID="P1-M1-E-H2b-02_starflow_libero-4in1_qwen3vl4b_lwfm_continuous_ft32_$(date +%y%m%d_%H%M)" \
+CONFIG_YAML=configs/starflow_vla/state/continuous_head.yaml \
+DATA_MIX=libero_all \
+MAX_TRAIN_STEPS=80000 \
+SAVE_INTERVAL=250 \
+LOGGING_FREQUENCY=20 \
+EVAL_INTERVAL=500 \
+NUM_PROCESSES=1 \
+GRADIENT_ACCUMULATION_STEPS=32 \
+PER_DEVICE_BATCH_SIZE=1 \
+NUM_WORKERS=2 \
+LOCAL_CHECKPOINT_KEEP_COUNT=2 \
+LOCAL_CHECKPOINT_ROOT=/localdisk-tmp \
+STARVLA_PYTHON=/opt/conda/envs/starVLA/bin/python \
+bash examples/LIBERO/train_files/run_starflow_train_ready.sh
+```
+
+---
+
+## 备注
+
+- 本实验验证 `state_mode=continuous_head` 与默认路径的状态注入差异。
+- **当前 run 为 FRESH START**，从 step 0 开始全新训练。
+- 旧 run `260621_1901` 在 A100 上训练，已废弃。
+- 4090 显存使用率 94.3%（23.2G/24G），余量 ~1.4G，尚未 OOM。
+- 速度 ~6.9-7.0 s/it，预计完整训练约 1.9 天。
+- 🎯 step 38920 loss 降至 0.0358，创训练历史新低
+- 🎯🎯 step 49740 loss 降至 0.0226，再次大幅刷新纪录！
+- 🎉🎉 半程里程碑：40000/80000（50%）达成！用时 ~78h
+- 🎯 达成 30k steps 里程碑，loss 维持 0.056 低位
+- 🎯 突破 40% 完成（32000/80000），loss 维持 0.055 附近
+
+---
+
+*本 tracker 仅由本机（RTX 4090）维护；如发现状态被外部机器覆盖，会恢复为运行中状态。*
+
+---
+
+## LIBERO 评估
+
+> 评估结果已移至统一汇总报告：[`LIBERO_EVAL_SUMMARY.md`](./LIBERO_EVAL_SUMMARY.md)
+>
+> 包含各实验在 libero_goal / libero_10 / libero_object / libero_spatial 四个子集上的完整对比结果与详细任务级数据。

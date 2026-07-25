@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import time
+import gc
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -166,12 +167,19 @@ def _collect_unique_instructions(dataset_root: Path) -> list[str]:
     for task_dir in sorted(dataset_root.iterdir()):
         if not task_dir.is_dir():
             continue
+        # LeRobot LIBERO exports place ``meta/episodes.jsonl`` directly under
+        # each dataset directory, while RoboCasa atomic exports keep the
+        # historical task/date/lerobot nesting below.
+        direct_episodes_path = task_dir / "meta" / "episodes.jsonl"
+        episode_paths = [direct_episodes_path] if direct_episodes_path.is_file() else []
         for date_dir in sorted(task_dir.iterdir()):
             if not date_dir.is_dir():
                 continue
             episodes_path = date_dir / "lerobot" / "meta" / "episodes.jsonl"
             if not episodes_path.is_file():
                 continue
+            episode_paths.append(episodes_path)
+        for episodes_path in episode_paths:
             with episodes_path.open("r", encoding="utf-8") as file:
                 for line in file:
                     line = line.strip()
@@ -273,6 +281,14 @@ def build_mowa_instruction_text_latent_cache(
         progress_bar.update(1)
 
     progress_bar.close()
+
+    # 该 builder 只负责一次性生成 CPU 指令表。表完成后立即释放 UMT5 和
+    # tokenizer，避免训练模型随后迁移到 GPU 时仍保留文本编码器显存。
+    encoder._text_encoder = None
+    encoder._tokenizer = None
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     metadata: dict[str, Any] = {
         "text_encoder_name": "google/umt5-xxl",

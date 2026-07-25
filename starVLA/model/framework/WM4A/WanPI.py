@@ -115,6 +115,9 @@ class WanPIDefaultConfig:
         default_factory=lambda: {
             "base_wm": "./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers",
             "extract_layers": [-1],
+            # WanPI/MoWA 使用独立视角的 256x256、4n+1、VAE mode() latent cache
+            # 格式；不能隐式继承 WanOFT 官方 checkpoint 的 legacy 输入格式。
+            "legacy_vae_input": False,
         }
     )
 
@@ -674,6 +677,8 @@ class Wan_PI(baseframework):
             for example in examples
         ):
             return examples
+        if all(example.get("mowa_stream_id") for example in examples):
+            return self._populate_mowa_streaming_visual_latents(examples)
         raw_views = [example.get("mowa_multi_view_images") for example in examples]
         if not all(raw_views):
             raise ValueError(
@@ -718,6 +723,51 @@ class Wan_PI(baseframework):
             }
             for index, example in enumerate(examples)
         ]
+
+    def _populate_mowa_streaming_visual_latents(self, examples: List[dict]) -> List[dict]:
+        """用跨请求保留的因果 VAE cache 编码每个视角的新帧。"""
+        history_steps = int(getattr(getattr(self.config, "latent_cache", None), "history_window_steps", 0))
+        retained_steps = history_steps + 1
+        resolved = []
+        for batch_index, example in enumerate(examples):
+            views = example.get("mowa_multi_view_images")
+            if not isinstance(views, (list, tuple)) or len(views) != 2:
+                raise ValueError(
+                    "Streaming E003 inference requires mowa_multi_view_images="
+                    f"[main_new_frames,wrist_new_frames], got batch index {batch_index}."
+                )
+            stream_id = str(example["mowa_stream_id"])
+            reset = bool(example.get("mowa_stream_reset", False))
+            per_view_latents = []
+            for view_index, frames in enumerate(views):
+                if not isinstance(frames, (list, tuple)):
+                    raise ValueError(
+                        f"Streaming E003 view {view_index} frames must be a sequence, "
+                        f"got {type(frames).__name__}."
+                    )
+                latents = self.backbone.encode_streaming_vae_frames(
+                    f"{stream_id}:view{view_index}",
+                    list(frames),
+                    reset=reset,
+                    max_regular_latents=retained_steps,
+                )
+                if len(latents) < retained_steps:
+                    raise ValueError(
+                        f"Streaming E003 stream {stream_id!r} has {len(latents)} regular latents, "
+                        f"but history_steps={history_steps} requires {retained_steps}."
+                    )
+                per_view_latents.append(
+                    torch.cat(latents[-retained_steps:], dim=2).squeeze(0).permute(1, 0, 2, 3).cpu()
+                )
+            paired = torch.stack(per_view_latents, dim=0)
+            resolved.append(
+                {
+                    **example,
+                    "mowa_multi_view_history_latents": paired[:, :-1],
+                    "mowa_multi_view_current_latents": paired[:, -1],
+                }
+            )
+        return resolved
 
     def _prepare_mowa_multiview_inference_examples(self, examples: List[dict]) -> List[dict]:
         """补齐在线可观测条件，不允许 future target/action 参与推理输入。"""

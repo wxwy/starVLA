@@ -1,0 +1,98 @@
+{
+  "stage": "full_heads",
+  "experiment_id": "E-003-WanOFT-MV-Stage1",
+  "entrypoint": "starVLA/training/train_starvla.py",
+  "full_path_dry_run_only": true,
+  "training_started": false,
+  "checkpoint_saved": false,
+  "checkpoint_loaded": false,
+  "checkpoint_load": {
+    "requested": false,
+    "loaded": false,
+    "path": null
+  },
+  "wandb_started": false,
+  "config_yaml": "configs/mowa/mowa_e003_wanoft_multiview_residual_stage1.yaml",
+  "run_id": "MoWA-E-003-WanOFT-preload-text-smoke",
+  "output_dir": "playground/mowa_ckpt/MoWA-E-003-WanOFT-preload-text-smoke",
+  "framework": {
+    "name": "WanOFT",
+    "starflow_ft_variant": "config_defined",
+    "action_model_type": "MLP",
+    "num_target_vision_tokens": null,
+    "state_mode": null,
+    "total_params": 5893352163,
+    "trainable_params": 5188663495,
+    "mowa_action_bridge_probe_enabled": false,
+    "mowa_layerwise_bridge_coupling_enabled": false,
+    "mowa_layerwise_bridge_coupling_status": "not_coupled_in_full_path_dry_run",
+    "mowa_layerwise_bridge_feature_source": null,
+    "mowa_future_gated_heads_enabled": false,
+    "mowa_layerwise_bridge_gated_heads_summary": null,
+    "mowa_future_supervision_gated_heads_summary": null,
+    "mowa_future_supervision_probe_enabled": false,
+    "mowa_future_supervision_active_heads": [],
+    "mowa_future_supervision_label_status": "not_evaluated_in_full_path_dry_run"
+  },
+  "data": {
+    "dataset_py": "lerobot_datasets",
+    "data_mix": "libero_all",
+    "data_root_dir": "playground/Datasets/LEROBOT_LIBERO_DATA",
+    "per_device_batch_size": 2,
+    "dataloader_type": "DataLoader",
+    "dataloader_length": 202938,
+    "mowa_future_labels_enabled": false,
+    "batch_summary": {
+      "fetched": true,
+      "type": "list",
+      "length": 2,
+      "first_item_type": "dict",
+      "first_item_keys": [
+        "action",
+        "image",
+        "lang",
+        "robot_tag"
+      ],
+      "first_item_image": {
+        "type": "list",
+        "length": 2
+      },
+      "first_item_lang": {
+        "type": "str"
+      },
+      "first_item_action": {
+        "type": "ndarray",
+        "shape": [
+          8,
+          7
+        ]
+      }
+    }
+  },
+  "optimizer": {
+    "type": "AdamW",
+    "param_group_count": 1,
+    "param_group_names": [
+      "multi_view_fusion"
+    ]
+  },
+  "trainer": {
+    "max_train_steps": 3000,
+    "gradient_accumulation_steps": 2,
+    "total_batch_size": 4,
+    "checkpoint_format": "lightweight",
+    "save_interval": 500,
+    "eval_interval": 250
+  },
+  "forward": {
+    "evaluated": false
+  },
+  "go_no_go": "TBD: train_starvla full-path dry-run passed; training remains gated",
+  "notes": [
+    "This dry-run stops before prepare_training(), wandb, checkpoint saving, and train().",
+    "Checkpoint loading is optional and only runs when trainer.full_path_dry_run_load_checkpoint is true.",
+    "It validates StarVLA build/data/optimizer/trainer wiring only.",
+    "MoWA future supervision probe is reported as configuration wiring; forward loss is covered by unit tests.",
+    "MoWA bridge coupling into LayerwiseFM action generation is only active when the MoWA gated config enables it."
+  ]
+}

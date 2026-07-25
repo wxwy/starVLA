@@ -1,0 +1,19 @@
+{
+  "checkpoint": "/disk/rl/models/mowa_init_candidates/WM4A-Wan2d2-OFT-LIBERO-4in1/checkpoints/steps_60000_pytorch_model.pt",
+  "module_key_counts": {
+    "backbone": 1264,
+    "action_query_proj": 2,
+    "action_model": 16
+  },
+  "episode": 0,
+  "frame": 0,
+  "shape": [
+    1,
+    8,
+    7
+  ],
+  "max_abs_diff": 0.0,
+  "mean_abs_diff": 0.0,
+  "threshold": 1e-05,
+  "passed": true
+}

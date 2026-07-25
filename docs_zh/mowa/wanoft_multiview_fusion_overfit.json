@@ -1,0 +1,13 @@
+{
+  "episode": 0,
+  "samples": 32,
+  "steps": 1000,
+  "learning_rate": 0.001,
+  "initial_l1": 0.021029643714427948,
+  "final_l1": 0.0028860801830887794,
+  "gripper_accuracy": 1.0,
+  "fusion_parameter_l2": 87.9966049194336,
+  "predict_max_abs_diff": 0.0,
+  "train_loss_abs_diff": 0.0,
+  "passed": true
+}

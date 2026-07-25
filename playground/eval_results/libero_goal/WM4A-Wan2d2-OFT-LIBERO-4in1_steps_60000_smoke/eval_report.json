@@ -1,0 +1,107 @@
+{
+  "task_suite_name": "libero_goal",
+  "num_trials_per_task": 2,
+  "max_tasks": 1,
+  "checkpoint_path": "/disk/rl/models/mowa_init_candidates/WM4A-Wan2d2-OFT-LIBERO-4in1/checkpoints/steps_60000_pytorch_model.pt",
+  "checkpoint_step": "steps_60000_pytorch_model.pt",
+  "checkpoint_hash": "e7b6902e790ac21fc8c8500b918f71265b3752bc942ebbfeee3906d4991fe1ac",
+  "config_path": "/disk/rl/models/mowa_init_candidates/WM4A-Wan2d2-OFT-LIBERO-4in1/config.yaml",
+  "config_hash": "76f84477910a1eb6d27e8f43f4eb14cfccf7183e0022836152dd868fef9c8455",
+  "data_version": {
+    "data_mix": "libero_all",
+    "data_root_dir": "/home/jye624/Datasets/LIBERO",
+    "config_schema": null,
+    "dataset_statistics_hash": "680efdefdc8b87e7a62c5c45ca5336bdb3ed073378f9b05e506a632c9c53e49b"
+  },
+  "starflow_mapping": null,
+  "model": {
+    "framework_name": "WanOFT",
+    "vlm": "Qwen3-VL-4B-Instruct",
+    "action_head": "MLP"
+  },
+  "total_episodes": 2,
+  "total_successes": 0,
+  "success_rate": 0.0,
+  "failure_category": {
+    "timeout_no_success": 2
+  },
+  "tasks": [
+    {
+      "task_description": "open the middle drawer of the cabinet",
+      "episodes": 2,
+      "successes": 0,
+      "success_rate": 0.0,
+      "failure_category": {
+        "timeout_no_success": 2
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 0,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "model_calls": 300,
+      "total_infer_elapsed_sec": 9.0687,
+      "avg_infer_elapsed_sec": 0.0302,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/WM4A-Wan2d2-OFT-LIBERO-4in1_steps_60000_smoke/rollout_open_the_middle_drawer_of_the_cabinet_episode0_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.0017383419908583164,
+        "client_pack_and_queue_sec": 6.132293492555618e-05,
+        "client_server_roundtrip_sec": 0.17239280324429274,
+        "client_unpack_sec": 6.850017234683037e-05,
+        "client_total_call_sec": 0.1725237942300737,
+        "server_total_sec": 0.14106865087524056,
+        "server_framework_sec": 0.13844792498275638,
+        "server_unnorm_sec": 0.0005636801943182945,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    },
+    {
+      "task_id": 0,
+      "task_description": "open the middle drawer of the cabinet",
+      "episode_idx": 1,
+      "success": false,
+      "failure_category": "timeout_no_success",
+      "runtime_error": null,
+      "steps_executed": 300,
+      "model_calls": 300,
+      "total_infer_elapsed_sec": 6.3838,
+      "avg_infer_elapsed_sec": 0.0213,
+      "video_path": "/disk/rl/starVLA/playground/eval_results/libero_goal/WM4A-Wan2d2-OFT-LIBERO-4in1_steps_60000_smoke/rollout_open_the_middle_drawer_of_the_cabinet_episode1_failure.mp4",
+      "chunk_timings": {
+        "cache_refresh": true,
+        "chunk_step": 296,
+        "replan_interval": 8,
+        "resize_sec": 0.001734395045787096,
+        "client_pack_and_queue_sec": 0.0001852111890912056,
+        "client_server_roundtrip_sec": 0.1482892408967018,
+        "client_unpack_sec": 5.7087745517492294e-05,
+        "client_total_call_sec": 0.14853332797065377,
+        "server_total_sec": 0.1166301560588181,
+        "server_framework_sec": 0.11486153583973646,
+        "server_unnorm_sec": 0.00035370513796806335,
+        "framework_prepare_inputs_sec": null,
+        "framework_build_qwen_inputs_sec": null,
+        "framework_qwen_forward_sec": null,
+        "framework_gather_action_tokens_sec": null,
+        "framework_action_head_sec": null,
+        "framework_to_numpy_sec": null,
+        "framework_total_sec": null
+      }
+    }
+  ]
+}

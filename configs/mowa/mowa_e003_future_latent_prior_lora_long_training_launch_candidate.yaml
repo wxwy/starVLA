@@ -83,6 +83,7 @@ framework:
       cross_attention_dim: 1024
   world_model:
     base_wm: ./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+    legacy_vae_input: false
     use_text_cache: true
     use_visual_cache: true
     gradient_checkpointing: true

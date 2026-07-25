@@ -99,8 +99,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--video-backend",
         default="opencv",
-        choices=("opencv", "decord"),
-        help="Video decoding backend for Wan VAE encoder.",
+        choices=("opencv", "decord", "pyav"),
+        help="Video decoding backend for Wan VAE encoder. Use pyav for AV1 videos.",
     )
     parser.add_argument(
         "--vae-batch-size",

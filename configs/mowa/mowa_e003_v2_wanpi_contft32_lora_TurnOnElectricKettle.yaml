@@ -1,0 +1,173 @@
+launch_guard:
+  launch_ready: true
+  training_started: false
+  requires_human_confirmation: true
+  policy_confirmed: true
+  human_confirmed: true
+  reason: E-003-B1 approved for 8-GPU launch after bf16/Wan/action-head checkpointing/data-contract smokes
+
+run_id: MoWA-E-003-v2_WanPI-TurnOnElectricKettle_contft32_lora-r32_20260722_1326
+run_root_dir: playground/mowa_ckpt
+experiment_id: E-003-v2
+experiment_role: mowa_wanpi_libero_contft32_lora
+seed: 42
+wandb_entity: silencewx-harbin-institute-of-technology
+wandb_project: MoWA
+wandb_mode: online
+is_debug: false
+version_id: "0.21"
+
+latent_cache:
+  dataset_path: playground/Datasets/robocasa365/v1.0/target/atomic
+  cache_root: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic
+  encoder_name: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  encoder_version: wan2.2-vae-v1
+  encoder_kind: wan2.2-vae
+  encoder_model_path: playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  instruction_text_latent: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/instruction_text_latents.pt
+  latent_dim: 1024
+  episode_indices: null
+  anchor_mode: production
+  current_window_steps: 1
+  future_window_steps: 8
+  history_window_steps: 0
+  allow_partial_windows: false
+  overwrite: false
+  materialize_cache_for_dry_run: true
+  override_action_horizon_from_cache: true
+  video_keys:
+    - observation.images.robot0_agentview_left
+    - observation.images.robot0_eye_in_hand
+
+framework:
+  name: WanPI
+  starflow_ft_variant: ft0
+  state_mode: continuous_head
+  qwenvl:
+    base_vlm: /disk/rl/starVLA/playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+    attn_implementation: flash_attention_2
+    vl_hidden_dim: 3072
+    num_vl_layers: 30
+  action_model:
+    action_model_type: LayerwiseFM
+    action_dim: 12
+    state_dim: 32
+    action_horizon: 32
+    future_action_window_size: 31
+    past_action_window_size: 0
+    repeated_diffusion_steps: 1
+    num_inference_timesteps: 4
+    add_pos_embed: true
+    max_seq_len: 1024
+    num_target_vision_tokens: 0
+    noise_beta_alpha: 1.5
+    noise_beta_beta: 1.0
+    noise_s: 0.999
+    num_timestep_buckets: 1000
+    diffusion_model_cfg:
+      action_dit_hidden_dim: 1024
+      gradient_checkpointing: true
+      dropout: 0.2
+      final_dropout: true
+      interleave_self_attention: true
+      norm_type: ada_norm
+      positional_embeddings: null
+      attention_head_dim: 64
+      cross_attention_dim: 1024
+  world_model:
+    base_wm: /disk/rl/starVLA/playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+    legacy_vae_input: false
+    use_text_cache: true
+    use_visual_cache: true
+    gradient_checkpointing: true
+    extract_layers: [-1]
+    lora:
+      enabled: true
+      rank: 32
+      alpha: 64
+      dropout: 0.0
+      target_groups: [cross_attention, self_attention]
+      start_layer: 0
+      end_layer: null
+  mowa:
+    enable_future_supervision_loss: false
+    enable_future_latent_prior_loss: true
+    enable_layerwise_bridge_token_coupling: false
+    multi_view:
+      enabled: true
+      views: [main, wrist]
+      flatten_view_into_batch: true
+      shared_wan_backbone: true
+      view_embedding: true
+      dynamic_wrist_pose_embedding: false
+    cross_view:
+      gate_init: 1.0
+    done_head:
+      loss_weight: 0.1
+
+datasets:
+  vla_data:
+    dataset_py: lerobot_datasets
+    include_state: true
+    data_root_dir: playground/Datasets/robocasa365
+    data_mix: robocasa365_turn_on_electric_kettle_target_human
+    action_type: delta_ee
+    sequential_step_sampling: false
+    per_device_batch_size: 2
+    num_workers: 8
+    load_all_data_for_training: false
+    action_chunk_steps: 32
+    mowa_latent_cache:
+      dataset_path: playground/Datasets/robocasa365/v1.0/target/atomic
+      cache_root: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic
+      instruction_text_latent: playground/Datasets/robocasa365_wan2.2_latent/v1.0/target/atomic/instruction_text_latents.pt
+      future_window_steps: 8
+      history_window_steps: 0
+      video_keys:
+        - observation.images.robot0_agentview_left
+        - observation.images.robot0_eye_in_hand
+      override_action_horizon_from_cache: true
+      allow_partial_windows: false
+    obs_image_size: [256, 256]
+    delete_pause_frame: false
+    video_backend: torchvision_av
+    enable_mowa_future_labels: false
+
+trainer:
+  max_train_steps: 100000
+  mixed_precision: bf16
+  num_warmup_steps: 2000
+  save_interval: 500
+  eval_interval: 250
+  learning_rate:
+    base: 2.5e-5
+    wan_lora: 1.0e-5
+    action_model: 1.0e-4
+  lr_scheduler_type: cosine_with_min_lr
+  scheduler_specific_kwargs:
+    min_lr: 1.0e-6
+  freeze_modules: backbone
+  pretrained_checkpoint: /disk/rl/models/mowa_init_candidates/WM4A-Wan2d2-OFT-LIBERO-4in1/checkpoints/steps_60000_pytorch_model.pt
+  reload_modules: backbone
+  enable_mowa_future_latent_prior_loss: true
+  loss_scale:
+    vla: 1.0
+    vlm: 0.0
+    mowa_future_latent_prior: 0.05
+  max_grad_norm: 1.0
+  weight_decay: 1.0e-8
+  logging_frequency: 50
+  gradient_clipping: 1.0
+  gradient_accumulation_steps: 2
+  checkpoint_format: lightweight
+  is_resume: false
+  enable_local_checkpoint_staging: false
+  save_format: safetensors
+  save_checkpoint_as_directory: true
+  save_with_training_state: false
+  checkpoint_max_shard_size: 4GB
+  optimizer:
+    name: AdamW
+    betas: [0.9, 0.95]
+    eps: 1.0e-8
+    weight_decay: 1.0e-8

@@ -141,6 +141,26 @@ def run_simulation(model: PolicyWarper, config: SimulationConfig) -> Tuple[str, 
     obs, _ = env.reset(**reset_kwargs)
     if config.seed is not None:
         print(f"[robocasa365] env reset with base seed={config.seed}", flush=True)
+    if model.payload_style == "wanpi":
+        task_descriptions = obs["annotation.human.task_description"]
+        initial_task = (
+            task_descriptions[0]
+            if isinstance(task_descriptions, (tuple, list, np.ndarray))
+            else task_descriptions
+        )
+        model.reset(str(initial_task))
+        model.observe_wan_frames(obs, initial_only=True)
+        zero_actions = {
+            key: np.zeros(space.shape, dtype=space.dtype)
+            for key, space in env.action_space.spaces.items()
+        }
+        obs, _, warmup_terminations, warmup_truncations, _ = env.step(zero_actions)
+        if np.any(warmup_terminations) or np.any(warmup_truncations):
+            raise RuntimeError("RoboCasa episode terminated during Wan VAE causal warmup.")
+        print(
+            f"[robocasa365] Wan VAE warmed with 1 + {config.multistep.n_action_steps} real frames",
+            flush=True,
+        )
     t0 = time.time()
     pbar = EpisodeProgressBar(total=config.n_episodes, desc=config.env_name)
     while completed < config.n_episodes:
@@ -314,7 +334,7 @@ def main(args: Args) -> None:
             video_delta_indices=(
                 np.array([0])
                 if args.payload_style == "groot"
-                else np.arange(1 - args.wan_history_frames, 1)
+                else np.arange(1 - args.n_action_steps, 1)
             ),
             n_action_steps=args.n_action_steps,
             max_episode_steps=args.max_episode_steps,

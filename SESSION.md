@@ -1,5 +1,48 @@
 # MoWA 会话状态
 
+## 2026-07-25 Wan VAE 输入模式隔离
+- WanPI 默认配置及全部现有 WanPI YAML 已显式固定为 `world_model.legacy_vae_input: false`；WanOFT 默认和 Stage1 YAML 显式为 `true`。官方 WanOFT checkpoint 的 `480×832 / 无 4n+1 / sample()` 与 WanPI/MoWA 的 `256² / 4n+1 / mode()` 不再依赖共享默认值。
+- 新增回归检查两框架默认值相反、所有 WanPI YAML 均声明该字段；后续新增 Wan 配方必须明确写入对应模式。
+
+## 2026-07-23 功能保持双视角 WanOFT
+- 已在 `WanOFT.py` 增加默认关闭的 `multi_view_residual`：主路径保留官方 `[main,wrist]` 两帧联合编码，新增 wrist 独立编码残差；共享同一 Wan backbone。`fusion 6144→3072` 使用 `[I,0]`、bias=0 初始化，默认 WanOFT 行为不变。
+- Stage1 配置为 `configs/mowa/mowa_e003_wanoft_multiview_residual_stage1.yaml`：完整加载并冻结官方 60k 的 `backbone + action_query_proj + action_model`，只训练 18,877,440 参数的 fusion；launch 仍由单 batch 过拟合门禁阻止。
+- 真实 checkpoint 等价检查加载 key 数 1264+2+16，同一 LIBERO 专家观测 action `[1,8,7]` 的 `max_abs_diff=0`，报告为 `docs_zh/mowa/wanoft_multiview_equivalence.json`。
+- 零训练闭环使用 `libero_goal` 前3任务×3次、`replan_interval=1`，取得 9/9；报告和9个视频在 `playground/eval_results/libero_goal/E003_WanOFT_multiview_residual_zero_init_3tasks3eps/`。说明新框架已保留原生策略能力，下一门禁是固定 batch 过拟合和训练/预测/server 三路一致性。
+- 回归：`tests/mowa/test_multiview_wan.py` 27/27 通过，相关 Python `py_compile` 与目标文件 `git diff --check` 通过。
+
+## 2026-07-23 E003-B1 v2 后续优化验收入口
+- 已把此前讨论的训练/推理对齐、严格加载、LoRA、state/夹爪、功能保持双视角 WanOFT、分阶段解冻、future residual、memory/空间理解、训练工程与 Go/No-Go 条件整理到 `docs_zh/mowa/TODO.md` 的“2026-07-23 E003-B1 v2 优化与逐项验收清单”。
+- 清单使用 `[x]/[~]/[ ]` 区分“已有直接证据 / 已实现但待闭环 / 尚未实施”；后续逐项执行时必须补验证命令、结果路径和结论，不能仅按代码存在勾选。
+
+## 2026-07-23 WanPI 在线 VAE 流式编码对齐
+- 已将 WanPI 在线视觉编码从“每次取滑动 5 帧并重置 VAE cache”改为按 episode、按视角独立维护 Wan causal VAE `feature_cache`：首帧初始化，之后每收到连续 4 个真实新帧生成 1 个 regular latent；main/wrist 使用独立 stream id，策略请求只发送尚未编码的新帧。
+- LIBERO warmup 调整为 12 个真实环境步，首轮编码覆盖 frame 0..12；RoboCasa 首帧初始化后先执行 8 步零动作取得真实帧，首轮覆盖 frame 0..8，后续每次执行 8 个 action 后编码新增 8 帧（2 个 latent）。旧调用方未提供 stream id 时仍保留原 5 帧兼容路径。
+- 新增 `tools/mowa/wan_vae_streaming_alignment_check.py`，使用真实 LIBERO episode 视频、训练缓存和实际 Wan VAE 做逐元素对照。main/wrist 在 endpoint 4,8,...,40 的 latent shape 均为 `[10,48,16,16]`，MSE=0、max_abs=0；报告为 `docs_zh/mowa/mowa_wan_vae_streaming_alignment_main.json` 与 `docs_zh/mowa/mowa_wan_vae_streaming_alignment_wrist.json`。
+- 回归：`tests/mowa/test_multiview_wan.py` 24/24 通过；相关 Python 文件 `py_compile` 通过；`git diff --check` 通过。
+- 本阶段仅完成用户要求的 1–4；下一阶段再依次评测 LIBERO4in1 origWan steps_6500、RoboCasa365 multitask steps_18000、TurnOnElectricKettle steps_4000 checkpoint。
+
+## 2026-07-22 E003-v2 B1 训练审计
+- 已完成既有 run `MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260721_2150` 的完整 checklist，记录在 `docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260721_2150_checklist.md`。结论为不通过、不可直接与基线比较：设计100k步而日志止于2350、最后完整checkpoint为2000；尚无闭环评估。代码审计已确认 H10 文件名只是最大容量 manifest，`history_window_steps=0` 会裁切为无 history，旧 run data-flow `T=9=0+1+8` 证明实际为H0。LoRA r32 adapter 已实际更新（1000→2000共480/480 tensors变化），checkpoint训练状态组件齐全但尚未执行加载/续训smoke。
+- 新 run `MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024` 的训练前 checklist 已建立于 `docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO_contft32_lora-r32_20260722_0024_checklist.md`；静态配置可从 scratch 启动。注意其 `data_mix=robocasa365_atomic_target_human_all`，与旧 run 的单任务 OpenDrawer 不同。
+- LIBERO4in1 run `MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1727` 在 step266 因 `/dev/shm` 满而 DataLoader bus error 退出。根因是工作区未提交改动把 `instruction_text_latent` 重新交给 worker cache，导致 UMT5 text embedding 再次跨 worker/rank 传输。已在 `starVLA/dataloader/gr00t_lerobot/datasets.py` 恢复 `instruction_text_latent=None`，保留 LIBERO configurable anchor key；MoWA 数据路径集成测试5/5通过。记录：`docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1727.md`。
+
+## 2026-07-22 LIBERO4in1 训练（双实验并行）
+
+### origWan (1917) — 原始 Wan2.2 基线 ✅ 已完成
+- run `MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1917` 于 19:18 启动，~23:39 被 KeyboardInterrupt 手动停止
+- 最终 step：6650（6.65%），历次 eval mse_score ≈ 0.014-0.023，稳定收敛
+- 完整 checkpoints 保存：steps_500 → steps_6500（各 ~34 GiB）
+- 训练日志：`docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO4in1_origWan_contft32_lora-r32_20260722_1917.md`
+
+### OFT (2345) — OFT backbone 加速实验 🟢 运行中
+- run `MoWA-E-003-v2_WanPI-LIBERO4in1_OFT_contft32_lora-r32_20260722_2345` 于 23:46 启动
+- 配置：`configs/mowa/mowa_e003_v2_wanpi_libero4in1_oft_contft32_lora.yaml`
+- 使用预训练 OFT backbone（WM4A-Wan2d2-OFT-LIBERO-4in1，steps_60000）
+- 当前进度：10000/100000（10%），已运行约 9h，预计完成 ~7月25日
+- wrist_far: 0.668（突破 0.68 平台下行），mse_score: 0.012-0.020
+- 训练日志：`docs_zh/mowa/train_log/MoWA-E-003-v2_WanPI-LIBERO4in1_OFT_contft32_lora-r32_20260722_2345.md`
+
 ## 当前阶段
 - 2026-07-21 E-003-B1 future latent prior 开关对齐：`framework.mowa.enable_future_latent_prior_loss` 已改为 `true`，与 `trainer.enable_mowa_future_latent_prior_loss=true` 及 loss scale `0.05` 一致；当前双视角 future/done 辅助监督和旧 prior 配置语义统一。
 - 2026-07-21 E-001 main W&B 监控已打开：`configs/mowa/mowa_e001_v2_qwenpi_contft32_lora.yaml` 的 `wandb_mode` 从 `disabled` 改为 `online`，与 E-003-B1 对齐；项目/实体保持 `MoWA` / `silencewx-harbin-institute-of-technology`，既有训练指标代码不变。
@@ -349,6 +392,9 @@
 - 已重新跑 E-001 save/resume smoke，`MoWA-E-001_starflow_ft0_save_resume_smoke_20260705_codex_a100_v2` 的 first-train / resume 两阶段都成功，`steps_1`、`steps_2`、`final_model` 均已产出。
 
 ## 下一步
+
+- 2026-07-23 WanOFT 双视角 Stage1 已接入 LIBERO UMT5 指令缓存：`WanOFT` 在 `use_text_cache=true` 时从 `latent_cache.instruction_text_latent` 按 `lang` 查得 4096 维 embedding，训练与服务均不再加载 UMT5；cache miss fail-fast。现有 LIBERO 表含 40 条 fp16 指令。官方 checkpoint 中 UMT5 占 12.54 GiB，移除后轻量 `steps_1000` server 在 4090 占 11.67 GiB，真实 expert probe 成功返回 `[8,7]` 动作块；视觉仍在线经 VAE 编码，尚未切 visual cache。
+- 2026-07-23 无持久化 UMT5 表也已经真实 full-path dry-run 验证：`preload_text_cache=true` 从 LIBERO 数据根目录收集 40 条去重指令，临时编码后安装内存表并显式释放 UMT5/tokenizer；首个 batch 为 2 个样本、动作形状 `[8,7]`，未进入训练。
 - 若继续推进正式长训练，优先顺序已经明确：1）先确认是否允许新增/修改正式 long-training config（这一步会改配置，需人工确认）；2）把当前 bounded smoke 参数与正式 long-run 参数拆开；3）明确 checkpoint 保留与 resume_latest_complete_only 的长期策略；4）再启动正式长训练。当前不建议直接复用 `mowa_e001_starflow_ft0_launch_candidate.yaml` 作为长训练最终配置。
 - 已重刷 `docs_zh/mowa/mowa_e001_readiness_smoke.json` 与 `docs_zh/mowa/mowa_experiment_launch_readiness_matrix.json`；两者继续保持 `No-Go`，但阻断语义已回到正确口径：当前缺的是 full-launch 级证据，不是 bridge 是否接通。下一步不再围绕 `steps_1000` 的 `0%` 打转，而应继续推进正式长训练/后续实验准备，把 bounded smoke 与正式结论严格分开。
 - 2026-07-05 E-006 RoboCasa 渲染环境问题已修复：系统安装 `libegl1` 提供 `libEGL.so.1`（NVIDIA 驱动只有 `libEGL_nvidia.so.0`）；`simulation_env.py` 默认渲染后端从 `osmesa` 改为 `egl`。4 个 rollout intervention 全部 `returncode=0`，成功跑完 2 个 episode。成功率均为 0.0（checkpoint 来自 2-step save/resume smoke，模型几乎未学习），这是预期行为。
@@ -382,3 +428,9 @@
 - 2026-07-21 完成 E-001/E-003 v2 新配方 LoRA 重建收口：公共 `lora_utils.py` 负责旧 checkpoint 到 PEFT 包装 key 的对齐与严格 partial-load，Qwen/Wan 仅保留各自 target-module 解析；两条配置均为冻结具身 backbone + r32/alpha64 LoRA + 新 cont.ft32 头。补上 `action_chunk_steps=32`，避免 RoboCasa 默认 8-step 动作触发 LayerwiseFM 契约错误。
 - 2026-07-21 真实一阶 smoke 均通过：E-001 `action_dit_loss=1.6143`；E-003 使用缓存 UMT5/VAE 与双视角 Wan 路径，flow contract 1/1 通过，`action_dit_loss=1.8551`，LoRA 梯度非零并写出 `wan_lora.safetensors`。这两次只证明链路可训练，不代表收敛或仿真成功率；正式 20–40k 训练仍待人工确认 launch guard。
 - 2026-07-21 按统一 action-head 契约将 E-001 state 注入改为 continuous_head：修复 QwenPI `_prepare_state_condition()` 原先无条件离散化 state 的问题，continuous 模式保留实际 `[B,1,32]` state，交给 LayerwiseFM 内部 `state_encoder(32→1024)`；旧离散语言路径保持兼容。E-001 `state_dim` 同步改为32，一步真实 smoke 的 contract validation 1/1 通过，`action_dit_loss=1.6663`。
+- 2026-07-22 完成 E-003-B1 LIBERO 4-in-1 适配：新增 `libero_franka_wanpi` 数据注册与四套数据混合，按 7D delta-EF action、8D raw state→16D sin/cos state、binary gripper 和 32-step Wan cache 配方新增训练 YAML；新增四数据集 episode latent/window manifest/text cache 构建脚本。LIBERO 评测入口增加 WanPI 双视角 5 帧历史 payload；修复 latent cache anchor video 可配置及 LIBERO 直层级 instruction 收集。registry/config、instruction collector、WanPI payload 和 py_compile smoke 均通过；缓存构建和长训尚未启动。
+- 2026-07-22 LIBERO 缓存首次运行暴露 AV1 解码问题：decord/OpenCV 均无法读取本地 LIBERO MP4，新增 PyAV episode-store backend，并将 LIBERO 缓存脚本切换到 `video_backend=pyav`。单 episode 真实 Wan VAE 编码通过，两个视角均写入 37 个 temporal latent 帧；`vae_lib` 已重新启动全量缓存，当前 `libero_object` 已写入 34 个 episode，未再出现 video stream 错误。
+- 2026-07-22 LIBERO 四套 WanPI cache 完成：`object 454/454`、`spatial 432/432`、`libero_10 379/379`、`goal 427/428`；唯一缺失为 `libero_goal` episode 82，原因是 wrist AV1 MP4 截断（主视角 129 帧，腕部只能解出 105 帧）。现有 1692 个 `.h5` 均包含 image/wrist 两个 latent 且长度一致，四套 window manifest 已生成，instruction text cache 40/40。
+- 2026-07-22 E-003 LIBERO 真实训练联调通过：四数据集 mixture 长度 101644，缓存样本含双视角 latent/text cache、state `(1,16)`、action `(32,7)`；临时单卡 10-step WanPI 训练通过，E-003 flow validation 2/2，Wan backbone strict load 0 missing/0 unexpected，LoRA 480 tensors 写出，最终 checkpoint 落到 `/tmp/mowa_e003_libero_smoke/MoWA-E-003-LIBERO-smoke/final_model`。正式配置未改、长训未启动。
+- 2026-07-22 LIBERO 配方切换为 original Wan2.2-only：新 YAML 保留 `base_wm=Wan2.2-TI2V-5B-Diffusers`，移除 WM4A `pretrained_checkpoint` 覆盖并将 `reload_modules=null`；1-step 真实训练 smoke 通过，Wan strict load 0 missing/0 unexpected，E-003 flow validation 1/1，LoRA 480 tensors 写出到 `/tmp/mowa_e003_libero_origwan_smoke/MoWA-E-003-LIBERO-origWan-smoke/final_model`。
+- 2026-07-22 已生成 DP 专用 RoboCasa365 指令缓存：使用本地 `openai/clip-vit-large-patch14`，复用现有 UMT5 缓存中的 217 条任务文本，输出 217 个有限的 `[768]` float32 embedding 至 `playground/Datasets/robocasa365_dp_cache/instruction_clip_embeddings.pt`；训练/推理可直接读取该缓存，不再加载文本编码器。

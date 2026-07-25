@@ -7,6 +7,7 @@ Note: No device placement or optimizer concerns handled here (delegated to train
 """
 
 import importlib
+import os
 import pkgutil
 from pathlib import Path
 import time
@@ -259,8 +260,13 @@ class baseframework(PreTrainedModel):
 
         config = dict_to_namespace(model_config)
         model_config = config
+
+        # Save pretrained backbone info before clearing, so we can load it
+        # after build_framework (the checkpoint itself omits frozen backbone).
+        _pretrained_ckpt = getattr(model_config.trainer, "pretrained_checkpoint", None)
+        _reload_modules = getattr(model_config.trainer, "reload_modules", None)
         model_config.trainer.pretrained_checkpoint = None
-        
+
         stage_start = time.perf_counter()
         FrameworkModel = build_framework(cfg=model_config)
         logger.info(
@@ -270,6 +276,71 @@ class baseframework(PreTrainedModel):
         )
         # set for action un-norm
         FrameworkModel.norm_stats = norm_stats
+
+        # Load pretrained backbone (e.g. OFT-pretrained Wan2.2) on top of
+        # the original VLM/WM, so that the following load_model_weights
+        # (which omits frozen backbone) lands on the right weights.
+        # Aligned with TrainerUtils.load_pretrained_backbones (trainer_tools.py).
+        if _pretrained_ckpt and _reload_modules:
+            if not os.path.isfile(_pretrained_ckpt):
+                raise FileNotFoundError(
+                    f"[from_pretrained] pretrained_checkpoint not found: {_pretrained_ckpt}"
+                )
+            stage_start = time.perf_counter()
+            from safetensors.torch import load_file as _load_safe
+
+            _sd = _load_safe(_pretrained_ckpt) if _pretrained_ckpt.endswith(".safetensors") else torch.load(
+                _pretrained_ckpt, map_location="cpu", weights_only=True, mmap=True
+            )
+            for _mod_path in _reload_modules.split(","):
+                _mod_path = _mod_path.strip()
+                if not _mod_path:
+                    continue
+                _prefix = _mod_path + "."
+                _sub_sd = {k[len(_prefix):]: v for k, v in _sd.items() if k.startswith(_prefix)}
+                if not _sub_sd:
+                    raise RuntimeError(
+                        f"[from_pretrained] no keys matching `{_mod_path}` in {_pretrained_ckpt}"
+                    )
+                # Navigate to the sub-module (e.g. model.backbone)
+                _module = FrameworkModel
+                try:
+                    for _part in _mod_path.split("."):
+                        _module = getattr(_module, _part)
+                except AttributeError:
+                    raise AttributeError(
+                        f"[from_pretrained] cannot find module path `{_mod_path}` in {type(FrameworkModel).__name__}"
+                    )
+                # Use same loader as training: prefer custom
+                # load_pretrained_state_dict (handles LoRA-compatible key remapping).
+                _loader = getattr(_module, "load_pretrained_state_dict", None)
+                if callable(_loader):
+                    _result = _loader(_sub_sd)
+                    if _result is not None:
+                        _missing = [k for k in (_result.missing_keys or []) if "lora_" not in k]
+                        _unexpected = _result.unexpected_keys or []
+                        if _missing or _unexpected:
+                            logger.warning(
+                                "[from_pretrained] backbone `%s` load had mismatches: "
+                                "%d missing (non-LoRA), %d unexpected. "
+                                "Missing: %s, Unexpected: %s",
+                                _mod_path, len(_missing), len(_unexpected),
+                                _missing[:5], _unexpected[:5],
+                            )
+                        else:
+                            logger.info(
+                                "[from_pretrained] backbone `%s` all keys matched (no missing/unexpected)",
+                                _mod_path,
+                            )
+                else:
+                    _module.load_state_dict(_sub_sd, strict=True)
+                logger.info(
+                    "[from_pretrained] loaded pretrained backbone `%s` from %s in %.2fs",
+                    _mod_path, _pretrained_ckpt,
+                    time.perf_counter() - stage_start,
+                )
+            del _sd
+
         # Load from checkpoint through the shared loader used by training.
         try:
             stage_start = time.perf_counter()

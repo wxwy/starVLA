@@ -43,10 +43,15 @@ def build_dataloader(cfg, dataset_py="lerobot_datasets_oxe"): # TODO now here on
         if hasattr(cfg, "latent_cache") and cfg.latent_cache:
             latent_cache_cfg = OmegaConf.to_container(cfg.latent_cache, resolve=True)
             existing = vla_dataset_cfg.get("mowa_latent_cache", None)
-            if existing is not None:
+            # 顶层 latent_cache 也承载 Wan 的 instruction_text_latent；只有
+            # 具备视觉 cache 根目录（或数据集已显式声明）时才进入视觉 latent 路径。
+            uses_visual_latent_cache = existing is not None or bool(
+                latent_cache_cfg.get("cache_root") or latent_cache_cfg.get("manifest_path")
+            )
+            if uses_visual_latent_cache and existing is not None:
                 existing = OmegaConf.to_container(existing, resolve=True)
                 latent_cache_cfg = {**latent_cache_cfg, **existing}
-            if not latent_cache_cfg.get("manifest_path"):
+            if uses_visual_latent_cache and not latent_cache_cfg.get("manifest_path"):
                 cache_root = Path(latent_cache_cfg.get("cache_root", "."))
                 manifests = _find_mowa_window_manifests(
                     cache_root,
@@ -55,7 +60,8 @@ def build_dataloader(cfg, dataset_py="lerobot_datasets_oxe"): # TODO now here on
                 )
                 if manifests:
                     latent_cache_cfg["manifest_path"] = str(manifests[0])
-            vla_dataset_cfg.mowa_latent_cache = latent_cache_cfg
+            if uses_visual_latent_cache:
+                vla_dataset_cfg.mowa_latent_cache = latent_cache_cfg
 
         vla_dataset = get_vla_dataset(
             data_cfg=vla_dataset_cfg,

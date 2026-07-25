@@ -26,6 +26,8 @@ base_port=$4 # unique port for this eval instance
 
 num_trials_per_task=50
 host="127.0.0.1"
+payload_style="${PAYLOAD_STYLE:-standard}"
+wan_history_frames="${WAN_HISTORY_FRAMES:-5}"
 
 CUDA_VISIBLE_DEVICES=$gpu_id ${starVLA_python} deployment/model_server/server_policy.py \
     --ckpt_path ${your_ckpt} \
@@ -55,6 +57,8 @@ ${LIBERO_python} ./examples/LIBERO/eval_files/eval_libero.py \
     --args.task-suite-name "$task_suite_name" \
     --args.num-trials-per-task "$num_trials_per_task" \
     --args.video-out-path "$video_out_path"  \
+    --args.payload-style "$payload_style" \
+    --args.wan-history-frames "$wan_history_frames" \
     2>&1 | tee ${log_path}/${folder_name}.log
 
 echo "Evaluation completed. Videos saved to ${video_out_path}, logs saved to ${log_path}/${folder_name}.log"

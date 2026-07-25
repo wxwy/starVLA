@@ -27,6 +27,7 @@ Key differences from CosmoPredict2:
   - No condition_mask / padding_mask (those are Cosmos-specific)
 """
 
+import gc
 from pathlib import Path
 from typing import Optional
 
@@ -35,7 +36,9 @@ import torch.nn as nn
 
 from starVLA.training.trainer_utils import initialize_overwatch
 from starVLA.model.modules.world_model.wan_vae_utils import (
+    WanVAEStreamEncoder,
     encode_wan_vae_video,
+    normalize_wan_vae_latents,
     prepare_wan_vae_video_tensor,
     wan_padded_frame_count,
 )
@@ -121,7 +124,11 @@ class _Wan2_Interface(nn.Module):
         self.model_name = model_name
         self.config = config
         self.use_text_cache = bool(wm_cfg.get("use_text_cache", False))
+        self.preload_text_cache = bool(wm_cfg.get("preload_text_cache", False))
         self.use_visual_cache = bool(wm_cfg.get("use_visual_cache", False))
+        # Legacy WanOFT preprocessing: 480x832 resize, no 4n+1 temporal pad,
+        # VAE sample(). Released WanOFT checkpoints require this exact path.
+        self.legacy_vae_input = bool(wm_cfg.get("legacy_vae_input", False))
 
         from diffusers import (
             AutoencoderKLWan,
@@ -140,6 +147,7 @@ class _Wan2_Interface(nn.Module):
         # Cached text_embeds/attention_mask must be supplied to build_inputs().
         self.tokenizer = None
         self.text_encoder = None
+        self._instruction_text_cache = None
         if not self.use_text_cache:
             self.tokenizer = T5TokenizerFast.from_pretrained(
                 model_name, subfolder="tokenizer"
@@ -149,8 +157,29 @@ class _Wan2_Interface(nn.Module):
             )
 
         # --- DiT transformer ---
-        self.transformer = WanTransformer3DModel.from_pretrained(
-            model_name, subfolder="transformer", torch_dtype=torch.bfloat16
+        # Request Diffusers loading diagnostics and fail closed.  The
+        # lightweight MoWA checkpoint intentionally omits frozen base weights,
+        # so this load must succeed before that checkpoint is overlaid.
+        self.transformer, loading_info = WanTransformer3DModel.from_pretrained(
+            model_name,
+            subfolder="transformer",
+            torch_dtype=torch.bfloat16,
+            output_loading_info=True,
+        )
+        load_errors = {
+            key: list(value)
+            for key, value in loading_info.items()
+            if value
+        }
+        if load_errors:
+            details = "; ".join(
+                f"{key}={values[:8]}" for key, values in load_errors.items()
+            )
+            raise RuntimeError(
+                f"Wan2.2 transformer strict load failed for `{model_name}`: {details}"
+            )
+        logger.info(
+            "Wan2.2 transformer strict load passed: missing=0 unexpected=0 mismatched=0 errors=0"
         )
         self._configure_lora(wm_cfg.get("lora", {}))
         if bool(wm_cfg.get("gradient_checkpointing", False)):
@@ -160,6 +189,7 @@ class _Wan2_Interface(nn.Module):
         # --- VAE (image → latents for DiT input, z_dim=48) ---
         # Read VAE config to get scale factors without loading weights when visual cache is used.
         self.vae = None
+        self._vae_stream_encoder = None
         self._load_vae_config(model_name)
         if not self.use_visual_cache:
             self._load_vae_weights()
@@ -282,6 +312,25 @@ class _Wan2_Interface(nn.Module):
         device = next(self.transformer.parameters()).device
         self.vae.to(device=device)
         self.vae.eval()
+        if self._vae_stream_encoder is None:
+            self._vae_stream_encoder = WanVAEStreamEncoder(self.vae, self.video_processor)
+
+    def encode_streaming_vae_frames(
+        self,
+        stream_id: str,
+        frames: list,
+        *,
+        reset: bool = False,
+        max_regular_latents: int = 1,
+    ) -> tuple[torch.Tensor, ...]:
+        """按 episode 连续更新 Wan VAE 因果 cache，并返回最近 regular latent。"""
+        self.ensure_vae_for_inference()
+        return self._vae_stream_encoder.encode(
+            stream_id,
+            frames,
+            reset=reset,
+            max_regular_latents=max_regular_latents,
+        )
 
     def load_pretrained_state_dict(self, state_dict):
         """兼容 LoRA 注入前导出的 Wan backbone checkpoint。"""
@@ -373,6 +422,38 @@ class _Wan2_Interface(nn.Module):
 
         return text_embeds.to(dtype=torch.bfloat16), text_inputs.attention_mask.to(dtype=torch.bfloat16)
 
+    def set_instruction_text_cache(self, cache) -> None:
+        """安装预编码 UMT5 表；Wan2 后续不再需要文本编码器。"""
+        table = getattr(cache, "_table", cache)
+        if not isinstance(table, dict) or not table:
+            raise ValueError("Wan instruction text cache must be a non-empty instruction-to-latent mapping.")
+        self._instruction_text_cache = table
+        self.use_text_cache = True
+
+    def release_text_encoder(self) -> None:
+        """在文本表完成后显式释放 UMT5/tokenizer 的 CPU 与 GPU 内存。"""
+        self.text_encoder = None
+        self.tokenizer = None
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    def _lookup_cached_text(self, instructions) -> tuple[torch.Tensor, torch.Tensor]:
+        if self._instruction_text_cache is None:
+            raise ValueError(
+                "use_text_cache=True but no text_embeds/text_attention_mask were supplied and "
+                "no in-memory instruction cache is installed."
+            )
+        entries = []
+        for index, instruction in enumerate(instructions):
+            entry = self._instruction_text_cache.get(str(instruction))
+            if entry is None:
+                raise KeyError(f"Wan instruction text cache miss at batch index {index}: {instruction!r}.")
+            entries.append(entry)
+        text_embeds = torch.cat([torch.as_tensor(entry["text_embeds"]) for entry in entries], dim=0)
+        attention_mask = torch.cat([torch.as_tensor(entry["attention_mask"]) for entry in entries], dim=0)
+        return text_embeds, attention_mask
+
     def _encode_images_vae(self, images, num_frames=None):
         """Encode observation images through VAE to get latent tokens.
 
@@ -401,15 +482,26 @@ class _Wan2_Interface(nn.Module):
             if not isinstance(sample_imgs, (list, tuple)):
                 sample_imgs = [sample_imgs]
 
-            video_tensor = prepare_wan_vae_video_tensor(self.video_processor, list(sample_imgs))
+            if self.legacy_vae_input:
+                # Legacy WanOFT path (pre-MoWA): resize to Wan native 480x832,
+                # no 4n+1 temporal padding. Must match the released WanOFT
+                # checkpoints' training-time preprocessing exactly.
+                video_tensor = self.video_processor.preprocess_video(
+                    list(sample_imgs), height=480, width=832
+                )
+            else:
+                video_tensor = prepare_wan_vae_video_tensor(self.video_processor, list(sample_imgs))
             video_tensor = video_tensor.to(device=device, dtype=dtype)  # [1, C, n_imgs, H, W]
             preprocessed.append(video_tensor)
             frame_counts.append(video_tensor.shape[2])
 
         # Determine target frame count: use num_frames if specified, otherwise batch max
-        target_frames = wan_padded_frame_count(
-            num_frames if num_frames is not None else max(frame_counts)
-        )
+        if self.legacy_vae_input:
+            target_frames = num_frames if num_frames is not None else max(frame_counts)
+        else:
+            target_frames = wan_padded_frame_count(
+                num_frames if num_frames is not None else max(frame_counts)
+            )
 
         # Pass 2: truncate or pad each sample to target_frames
         batch_videos = []
@@ -427,6 +519,13 @@ class _Wan2_Interface(nn.Module):
         # Stack to [B, C, target_frames, H, W]
         video = torch.stack(batch_videos, dim=0)
 
+        if self.legacy_vae_input:
+            # Legacy WanOFT path: VAE sample() under no_grad (identical to the
+            # pre-MoWA implementation that released WanOFT ckpts were trained
+            # and evaluated with).
+            with torch.no_grad():
+                latents = self.vae.encode(video).latent_dist.sample()
+            return normalize_wan_vae_latents(self.vae, latents)
         return encode_wan_vae_video(self.vae, video)
 
     def _normalize_cached_vae_latents(self, latents: torch.Tensor) -> torch.Tensor:
@@ -477,10 +576,9 @@ class _Wan2_Interface(nn.Module):
             text_attention_mask = text_attention_mask.to(device=device, dtype=torch.bfloat16)
         elif instructions is not None:
             if self.use_text_cache:
-                raise ValueError(
-                    "use_text_cache=True but text_embeds/text_attention_mask not provided."
-                )
-            text_embeds, text_attention_mask = self._encode_text(instructions)
+                text_embeds, text_attention_mask = self._lookup_cached_text(instructions)
+            else:
+                text_embeds, text_attention_mask = self._encode_text(instructions)
         else:
             raise ValueError("Either instructions or text_embeds/text_attention_mask must be provided.")
 

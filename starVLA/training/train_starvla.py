@@ -874,6 +874,43 @@ def prepare_data(cfg, accelerator, output_dir) -> DataLoader:
     return vla_train_dataloader
 
 
+def _prepare_wan_instruction_text_cache(cfg, vla) -> None:
+    """可选地预编码去重指令，并在训练前释放临时 UMT5。"""
+    world_model_cfg = getattr(getattr(cfg, "framework", None), "world_model", None)
+    if world_model_cfg is None or not bool(getattr(world_model_cfg, "preload_text_cache", False)):
+        return
+    backbone = getattr(vla, "backbone", None)
+    if backbone is None or not hasattr(backbone, "set_instruction_text_cache"):
+        raise ValueError("preload_text_cache is only supported by the Wan2 backbone.")
+    if not bool(getattr(backbone, "use_text_cache", False)):
+        raise ValueError("preload_text_cache=True requires world_model.use_text_cache=True.")
+
+    from starVLA.dataloader.mowa.instruction_text_latent_cache import (
+        MoWAInstructionTextLatentCache,
+        build_mowa_instruction_text_latent_cache,
+    )
+
+    cache_path = getattr(getattr(cfg, "latent_cache", None), "instruction_text_latent", None)
+    if cache_path and Path(cache_path).is_file():
+        text_cache = MoWAInstructionTextLatentCache(cache_path)
+        source = str(cache_path)
+    else:
+        _, text_cache = build_mowa_instruction_text_latent_cache(
+            dataset_root=cfg.datasets.vla_data.data_root_dir,
+            output_path=None,
+            encoder_model_path=backbone.model_name,
+            dtype="float16",
+        )
+        source = "memory-only pre-encoding"
+    backbone.set_instruction_text_cache(text_cache)
+    backbone.release_text_encoder()
+    logger.info(
+        "Wan instruction cache ready: source=%s entries=%d; UMT5/tokenizer released.",
+        source,
+        len(text_cache),
+    )
+
+
 def _is_full_path_dry_run(cfg) -> bool:
     return bool(getattr(cfg.trainer, "full_path_dry_run_only", False))
 
@@ -2944,6 +2981,7 @@ def main(cfg) -> None:
     vla = build_framework(cfg)
     checkpoint_load_summary = _load_full_path_dry_run_checkpoint(cfg, vla)
     vla_train_dataloader = prepare_data(cfg=cfg, accelerator=accelerator, output_dir=output_dir)
+    _prepare_wan_instruction_text_cache(cfg, vla)
     optimizer, lr_scheduler = setup_optimizer_and_scheduler(model=vla, cfg=cfg)
 
     trainer = VLATrainer(

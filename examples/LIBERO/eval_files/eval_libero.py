@@ -65,6 +65,8 @@ class Args:
     max_tasks: int = -1  # If > 0, limit the number of tasks evaluated (smoke / quick check). -1 = run all.
     task_ids: str = ""  # Comma-separated task IDs to evaluate, e.g. "0,2,5". Empty = run all (bounded by max_tasks).
     replan_interval: int | None = None  # None = use full action chunk; 1/2/4/... = replan cadence in env steps
+    payload_style: str = "standard"  # standard LIBERO client or E-003 WanPI multi-view payload
+    wan_history_frames: int = 5  # Wan VAE temporal window: 1 + 4k frames
     resume_eval: bool = False  # If true, continue from an existing eval_report.json in video_out_path
     report_filename: str = ""  # Custom eval report filename (e.g. "eval_report_task_0.json"). Empty = default.
 
@@ -120,6 +122,9 @@ def eval_libero(args: Args) -> None:
         port=args.port,
         unnorm_key=args.unnorm_key,
         replan_interval=args.replan_interval,
+        payload_style=args.payload_style,
+        wan_history_frames=args.wan_history_frames,
+        image_size=(256, 256) if args.payload_style == "wanpi" else (224, 224),
     )
 
     # 手检：验证 server 服务的 ckpt 与预期一致
@@ -224,10 +229,26 @@ def eval_libero(args: Args) -> None:
 
             # full_actions = np.load("./debug/action.npy")
             try:
-                while t < max_steps + args.num_steps_wait:
+                effective_wait_steps = args.num_steps_wait
+                if args.payload_style == "wanpi":
+                    effective_wait_steps += (-effective_wait_steps) % 4
+                    if effective_wait_steps != args.num_steps_wait:
+                        logging.info(
+                            "WanPI warmup adjusted from %d to %d steps for causal VAE alignment.",
+                            args.num_steps_wait,
+                            effective_wait_steps,
+                        )
+                while t < max_steps + effective_wait_steps:
                     # IMPORTANT: Do nothing for the first few timesteps because the simulator drops objects
                     # and we need to wait for them to fall
-                    if t < args.num_steps_wait:
+                    if t < effective_wait_steps:
+                        if args.payload_style == "wanpi":
+                            client_model.observe_wan_images(
+                                [
+                                    np.ascontiguousarray(obs["agentview_image"][::-1, ::-1]),
+                                    np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1]),
+                                ]
+                            )
                         wait_step_start = time.perf_counter()
                         obs, reward, done, info = env.step(LIBERO_DUMMY_ACTION)
                         wait_step_elapsed = time.perf_counter() - wait_step_start
@@ -263,8 +284,12 @@ def eval_libero(args: Args) -> None:
                     example_dict = {
                         "image": [observation["observation.primary"][0], observation["observation.wrist_image"][0]],
                         "lang": observation["instruction"][0],
-                        "state": observation["observation.state"],  # (1, state_dim) matching training sample
                     }
+                    # wanpi payload 必须带 raw state（client 侧做 sin/cos）；
+                    # standard payload 默认不带 state（对齐官方 04/26 评测），
+                    # 对训练时 include_state 的模型用 LIBERO_SEND_STATE=1 打开。
+                    if args.payload_style == "wanpi" or os.environ.get("LIBERO_SEND_STATE", "0") == "1":
+                        example_dict["state"] = observation["observation.state"]
                     obs_prepare_elapsed = time.perf_counter() - obs_prepare_start
 
                     infer_start = time.perf_counter()

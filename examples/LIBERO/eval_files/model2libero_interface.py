@@ -17,6 +17,7 @@ ensembling, gripper sticky logic, and chunk-cache scheduling.
 from collections import deque
 import time
 from typing import Optional, Sequence
+import uuid
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -41,6 +42,8 @@ class ModelClient:
         host: str = "0.0.0.0",
         port: int = 10095,
         image_size: Sequence[int] = (224, 224),
+        payload_style: str = "standard",
+        wan_history_frames: int = 5,
     ) -> None:
         # Connect & receive handshake metadata (action_chunk_size, etc.)
         self.client = WebsocketClientPolicy(host, port)
@@ -52,12 +55,18 @@ class ModelClient:
         )
 
         self.image_size: tuple = tuple(image_size)
+        if payload_style not in ("standard", "wanpi"):
+            raise ValueError(f"payload_style must be standard/wanpi, got {payload_style!r}")
+        if payload_style == "wanpi" and (wan_history_frames < 5 or (wan_history_frames - 1) % 4):
+            raise ValueError("wan_history_frames must be 1 + 4k and at least 5.")
+        self.payload_style = payload_style
+        self.wan_history_frames = int(wan_history_frames)
         self.policy_setup = policy_setup
         self.unnorm_key = unnorm_key
         print(
             f"*** policy_setup: {policy_setup}, unnorm_key: {unnorm_key}, "
             f"action_chunk_size: {self.action_chunk_size}, replan_interval: {self.replan_interval}, "
-            f"server_meta: {meta} ***"
+            f"payload_style: {payload_style}, server_meta: {meta} ***"
         )
 
         self.use_ddim = use_ddim
@@ -76,6 +85,9 @@ class ModelClient:
 
         self.task_description = None
         self.image_history = deque(maxlen=self.horizon)
+        self._wan_stream_id = f"libero-{uuid.uuid4().hex}"
+        self._wan_pending_views = [[], []]
+        self._wan_stream_reset = True
         if self.action_ensemble:
             self.action_ensembler = AdaptiveEnsembler(
                 self.action_ensemble_horizon, self.adaptive_ensemble_alpha
@@ -96,6 +108,8 @@ class ModelClient:
     def reset(self, task_description: str) -> None:
         self.task_description = task_description
         self.image_history.clear()
+        self._wan_pending_views = [[], []]
+        self._wan_stream_reset = True
         if self.action_ensemble:
             self.action_ensembler.reset()
         self.num_image_history = 0
@@ -106,6 +120,23 @@ class ModelClient:
         self.raw_actions = None
         self._last_chunk_timings = None
         self._current_chunk_start_step = 0
+
+    def observe_wan_images(self, images: Sequence[np.ndarray]) -> None:
+        """缓存自上次策略请求以来的真实双视角新帧。"""
+        if self.payload_style != "wanpi":
+            return
+        if not isinstance(images, (list, tuple)) or len(images) != 2:
+            raise ValueError("LIBERO WanPI requires [main_image, wrist_image].")
+        target_hw = self.image_size
+        for view_index, image in enumerate(images):
+            array = np.asarray(image)
+            if target_hw and array.shape[:2] != target_hw:
+                array = np.asarray(
+                    Image.fromarray(array).resize(
+                        (target_hw[1], target_hw[0]), Image.BILINEAR
+                    )
+                )
+            self._wan_pending_views[view_index].append(array)
 
     def step(self, example: dict, step: int = 0, **kwargs) -> dict:
         """One env step.
@@ -138,7 +169,23 @@ class ModelClient:
             example = {**example, "image": resized}
         resize_elapsed = time.perf_counter() - resize_start
 
-        resized_example = example
+        if self.payload_style == "wanpi":
+            images = example.get("image")
+            self.observe_wan_images(images)
+            raw_state = np.asarray(example.get("state"), dtype=np.float32)
+            if raw_state.ndim == 1:
+                raw_state = raw_state[None, :]
+            if raw_state.ndim != 2 or raw_state.shape[-1] != 8:
+                raise ValueError(f"LIBERO WanPI expects raw state shape (1, 8), got {raw_state.shape}")
+            resized_example = {
+                "mowa_multi_view_images": [list(frames) for frames in self._wan_pending_views],
+                "mowa_stream_id": self._wan_stream_id,
+                "mowa_stream_reset": self._wan_stream_reset,
+                "lang": example.get("lang", ""),
+                "state": self._sin_cos_state(raw_state),
+            }
+        else:
+            resized_example = example
         # Refresh chunk if needed. `replan_interval=1` means re-run the model
         # every env step and only consume the latest chunk's first action.
         cache_refresh = self.raw_actions is None or (step - self._current_chunk_start_step) >= self.replan_interval
@@ -151,6 +198,9 @@ class ModelClient:
                 "num_ddim_steps": self.num_ddim_steps,
             }
             response = self.client.predict_action(vla_input)
+            if self.payload_style == "wanpi":
+                self._wan_pending_views = [[], []]
+                self._wan_stream_reset = False
             try:
                 actions_batch = response["data"]["actions"]  # (B, T, D), unnormalized server-side
             except KeyError:
@@ -199,6 +249,11 @@ class ModelClient:
                 "chunk_request": self._last_chunk_timings if cache_refresh else None,
             },
         }
+
+    @staticmethod
+    def _sin_cos_state(state: np.ndarray) -> np.ndarray:
+        state = np.asarray(state, dtype=np.float32)
+        return np.concatenate([np.sin(state), np.cos(state)], axis=-1)
 
     def visualize_epoch(
         self, predicted_raw_actions: Sequence[np.ndarray], images: Sequence[np.ndarray], save_path: str

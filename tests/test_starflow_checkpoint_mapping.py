@@ -147,7 +147,7 @@ class FrozenBackboneCheckpointTest(unittest.TestCase):
     def test_partial_checkpoint_allows_only_backbone_missing_keys(self):
         model = self._model()
         _validate_partial_frozen_backbone_load(model, {"head.weight", "head.bias"})
-        with self.assertRaisesRegex(RuntimeError, "missing non-backbone"):
+        with self.assertRaisesRegex(RuntimeError, "missing non-omitted"):
             _validate_partial_frozen_backbone_load(model, {"head.weight"})
         with self.assertRaisesRegex(RuntimeError, "Unexpected key"):
             _validate_partial_frozen_backbone_load(
@@ -173,6 +173,27 @@ class FrozenBackboneCheckpointTest(unittest.TestCase):
             target = self._model()
             target_backbone = target.backbone.weight.detach().clone()
             load_model_weights(target, checkpoint_dir, strict=False)
+            self.assertTrue(torch.equal(target.head.weight, source.head.weight))
+            self.assertTrue(torch.equal(target.backbone.weight, target_backbone))
+
+    def test_single_file_partial_checkpoint_directory_keeps_initialized_backbone(self):
+        from safetensors.torch import save_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = self._model()
+            checkpoint_dir = Path(tmpdir)
+            save_file(
+                {name: tensor.detach().contiguous() for name, tensor in source.state_dict().items()
+                 if not name.startswith("backbone.")},
+                str(checkpoint_dir / "model.safetensors"),
+            )
+            (checkpoint_dir / "trainer_state.json").write_text(
+                json.dumps({"omitted_model_state_prefixes": ["backbone."]}),
+                encoding="utf-8",
+            )
+            target = self._model()
+            target_backbone = target.backbone.weight.detach().clone()
+            load_model_weights(target, checkpoint_dir, strict=True)
             self.assertTrue(torch.equal(target.head.weight, source.head.weight))
             self.assertTrue(torch.equal(target.backbone.weight, target_backbone))
 
@@ -208,6 +229,16 @@ class FrozenBackboneCheckpointTest(unittest.TestCase):
             load_model_weights(target, checkpoint_dir, strict=False)
             self.assertTrue(torch.equal(target.backbone.lora_A, source.backbone.lora_A))
             self.assertTrue(torch.equal(target.backbone.lora_B, source.backbone.lora_B))
+
+    def test_partial_checkpoint_rejects_missing_backbone_lora_parameters(self):
+        model = self._model()
+        model.backbone.register_parameter("lora_A", torch.nn.Parameter(torch.zeros(2, 3)))
+        model.backbone.register_parameter("lora_B", torch.nn.Parameter(torch.zeros(4, 2)))
+        with self.assertRaisesRegex(RuntimeError, "missing non-omitted"):
+            _validate_partial_frozen_backbone_load(
+                model,
+                {"backbone.weight", "backbone.bias", "head.weight", "head.bias"},
+            )
 
     def test_partial_checkpoint_omits_nonpersistent_diagnostic_buffers(self):
         model = self._model()

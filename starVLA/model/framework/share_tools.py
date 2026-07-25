@@ -328,21 +328,29 @@ def _checkpoint_omits_frozen_backbone(checkpoint_path: Path) -> bool:
 def _validate_partial_frozen_backbone_load(model, checkpoint_keys: set[str]) -> None:
     model_keys = set(model.state_dict().keys())
     missing_keys, unexpected_keys = _filter_strict_key_mismatches(model_keys, checkpoint_keys)
-    initialized_frozen_backbone_keys = {key for key in model_keys if key.startswith("backbone.")}
+    # Lightweight checkpoints omit only the frozen backbone tensors.  LoRA
+    # tensors live under ``backbone.*`` too, but are trainable and must be
+    # present; otherwise inference would silently fall back to zero-init
+    # adapters.  Keep the omission rule identical to the saver.
+    initialized_frozen_backbone_keys = {
+        key
+        for key in model_keys
+        if key.startswith("backbone.") and "lora_" not in key
+    }
     covered_model_keys = (model_keys & checkpoint_keys) | initialized_frozen_backbone_keys
     uncovered_model_keys = model_keys - covered_model_keys
-    invalid_missing_keys = [key for key in missing_keys if not key.startswith("backbone.")]
+    invalid_missing_keys = [key for key in missing_keys if key not in initialized_frozen_backbone_keys]
     if uncovered_model_keys != set(invalid_missing_keys):
         raise RuntimeError(
             "Partial frozen-backbone checkpoint coverage mismatch: "
             f"uncovered={sorted(uncovered_model_keys)}, "
-            f"missing_non_backbone={sorted(invalid_missing_keys)}"
+            f"missing_non_omitted={sorted(invalid_missing_keys)}"
         )
     if invalid_missing_keys or unexpected_keys:
         raise RuntimeError(
             f"Error(s) in loading state_dict for {type(model).__name__}:\n\t"
-            "A partial frozen-backbone checkpoint may omit only `backbone.*`; "
-            f"missing non-backbone key(s): {invalid_missing_keys}\n\t"
+            "A partial frozen-backbone checkpoint may omit only frozen non-LoRA `backbone.*`; "
+            f"missing non-omitted key(s): {invalid_missing_keys}\n\t"
             f"Unexpected key(s) in state_dict: {unexpected_keys}"
         )
 
@@ -350,7 +358,11 @@ def _validate_partial_frozen_backbone_load(model, checkpoint_keys: set[str]) -> 
 def load_model_weights(model, pretrained_checkpoint, preferred_format=None, strict=False):
     resolved = _resolve_model_checkpoint_artifact(pretrained_checkpoint, preferred_format=preferred_format)
     checkpoint_path = resolved["path"]
-    omit_frozen_backbone = checkpoint_path.is_dir() and _checkpoint_omits_frozen_backbone(checkpoint_path)
+    # `resolved["path"]` is the inner model.safetensors for a single-file
+    # lightweight directory.  The omission manifest lives beside that file,
+    # so inspect the caller-provided checkpoint directory instead.
+    checkpoint_root = Path(pretrained_checkpoint)
+    omit_frozen_backbone = checkpoint_root.is_dir() and _checkpoint_omits_frozen_backbone(checkpoint_root)
 
     if resolved["kind"] == "deepspeed_model_states":
         checkpoint = torch.load(

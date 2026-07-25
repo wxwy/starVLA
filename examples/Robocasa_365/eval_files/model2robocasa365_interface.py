@@ -5,8 +5,8 @@ but adapted to the single-arm 12-d action / 16-d state layout produced by
 ``robocasa.wrappers.gym_wrapper.PandaOmronKeyConverter``.
 """
 
-from collections import deque
 from typing import Dict, Optional
+import uuid
 
 import cv2 as cv
 import numpy as np
@@ -71,9 +71,13 @@ class PolicyWarper:
             if wan_history_frames < 5 or (wan_history_frames - 1) % 4:
                 raise ValueError("wan_history_frames must be 1 + 4k and at least 5.")
             self.wan_history_frames = wan_history_frames
+            if payload_style == "wanpi" and n_action_steps % 4:
+                raise ValueError("WanPI n_action_steps must be divisible by 4 for causal VAE streaming.")
 
         self.task_description = None
-        self._wan_view_histories = None
+        self._wan_stream_namespace = f"robocasa-{uuid.uuid4().hex}"
+        self._wan_pending_views = None
+        self._wan_stream_reset = None
         self.action_ensemble = action_ensemble
         self.action_ensembler = (
             AdaptiveEnsembler(action_ensemble_horizon, adaptive_ensemble_alpha)
@@ -90,9 +94,33 @@ class PolicyWarper:
     # ------------------------------------------------------------------
     def reset(self, task_description) -> None:
         self.task_description = task_description
-        self._wan_view_histories = None
+        self._wan_pending_views = None
+        self._wan_stream_reset = None
         if self.action_ensemble:
             self.action_ensembler.reset()
+
+    def _ensure_wan_stream_batch(self, batch_size: int) -> None:
+        if self._wan_pending_views is None or len(self._wan_pending_views) != batch_size:
+            self._wan_pending_views = [[[], []] for _ in range(batch_size)]
+            self._wan_stream_reset = [True] * batch_size
+
+    def observe_wan_frames(self, observations: Dict, *, initial_only: bool = False) -> None:
+        """缓存每个环境自上次策略请求以来的真实双视角新帧。"""
+        if self.payload_style != "wanpi":
+            return
+        main_view = observations["video.robot0_agentview_left"]
+        wrist_view = observations["video.robot0_eye_in_hand"]
+        if len(main_view) != len(wrist_view):
+            raise ValueError("RoboCasa main/wrist batch sizes are not synchronized.")
+        self._ensure_wan_stream_batch(len(main_view))
+        for batch_index, (main_frames, wrist_frames) in enumerate(zip(main_view, wrist_view, strict=True)):
+            if len(main_frames) != len(wrist_frames):
+                raise ValueError("RoboCasa main/wrist frame counts are not synchronized.")
+            if initial_only:
+                main_frames = main_frames[-1:]
+                wrist_frames = wrist_frames[-1:]
+            self._wan_pending_views[batch_index][0].extend(list(main_frames))
+            self._wan_pending_views[batch_index][1].extend(list(wrist_frames))
 
     def step(self, observations: Dict, **_) -> Dict:
         # 0) data-flow contract check (mirrors StarFlow/E003 validation style)
@@ -158,31 +186,9 @@ class PolicyWarper:
                 for b in range(n_batch)
             ]
         else:
-            # 保持与 E003 训练一致的 main/wrist 同步帧历史。
-            main_view = observations["video.robot0_agentview_left"]
-            wrist_view = observations["video.robot0_eye_in_hand"]
-            if len(main_view) != len(wrist_view):
-                raise ValueError("RoboCasa main/wrist batch sizes are not synchronized.")
-            if self._wan_view_histories is None or len(self._wan_view_histories) != len(main_view):
-                self._wan_view_histories = [
-                    [deque(maxlen=self.wan_history_frames), deque(maxlen=self.wan_history_frames)]
-                    for _ in range(len(main_view))
-                ]
-            online_views = []
-            for batch_index, (main_frames, wrist_frames) in enumerate(zip(main_view, wrist_view, strict=True)):
-                if len(main_frames) != len(wrist_frames):
-                    raise ValueError("RoboCasa main/wrist frame counts are not synchronized.")
-                for main_frame, wrist_frame in zip(main_frames, wrist_frames, strict=True):
-                    # Wan VAE 在 server 侧以统一的 256x256 预处理编码，不能先按 VLM 的 224 尺寸缩放。
-                    self._wan_view_histories[batch_index][0].append(main_frame)
-                    self._wan_view_histories[batch_index][1].append(wrist_frame)
-                per_view = []
-                for history in self._wan_view_histories[batch_index]:
-                    if not history:
-                        raise ValueError("RoboCasa returned an empty camera observation.")
-                    padded = [history[0]] * (self.wan_history_frames - len(history)) + list(history)
-                    per_view.append(padded)
-                online_views.append(per_view)
+            # main/wrist 各自维持 episode 级因果 VAE stream；这里只发送新增帧。
+            self.observe_wan_frames(observations)
+            assert self._wan_pending_views is not None and self._wan_stream_reset is not None
 
             # 3) state — concatenate parts in the same order as in training
             state_parts = [observations[k] for k in STATE_KEY_ORDER]  # each (B, 1, d)
@@ -190,10 +196,15 @@ class PolicyWarper:
             input_state = self._sin_cos_state(input_state)
 
             examples = []
-            for b in range(len(online_views)):
+            for b in range(len(self._wan_pending_views)):
                 examples.append(
                     {
-                        "mowa_multi_view_images": online_views[b],
+                        "mowa_multi_view_images": [
+                            list(self._wan_pending_views[b][0]),
+                            list(self._wan_pending_views[b][1]),
+                        ],
+                        "mowa_stream_id": f"{self._wan_stream_namespace}:{b}",
+                        "mowa_stream_reset": self._wan_stream_reset[b],
                         "lang": instructions[b] if b < len(instructions) else instructions[0],
                         "state": input_state[b],
                     }
@@ -207,6 +218,9 @@ class PolicyWarper:
         }
         vla_input["unnorm_key"] = self.unnorm_key
         response = self.client.predict_action(vla_input)
+        if self.payload_style == "wanpi":
+            self._wan_pending_views = [[[], []] for _ in self._wan_pending_views]
+            self._wan_stream_reset = [False] * len(self._wan_stream_reset)
         # server already un-normalized via training-time transform
         raw_actions = np.array(response["data"]["actions"])  # (B, chunk, D)
         self._validate_action_response(raw_actions)
@@ -299,9 +313,9 @@ class PolicyWarper:
             raise ValueError(
                 f"Expected video shape (B, T, H, W, 3), got {main_view.shape}"
             )
-        if main_view.shape[1] != self.wan_history_frames:
+        if main_view.shape[1] != self.n_action_steps:
             raise ValueError(
-                f"Expected video time dim={self.wan_history_frames}, got {main_view.shape[1]}"
+                f"Expected video time dim={self.n_action_steps}, got {main_view.shape[1]}"
             )
         if not np.isfinite(main_view).all() or not np.isfinite(wrist_view).all():
             raise ValueError("Video observations contain NaN or Inf.")

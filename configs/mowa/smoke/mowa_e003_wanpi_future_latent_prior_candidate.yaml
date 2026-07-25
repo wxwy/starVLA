@@ -104,6 +104,7 @@ framework:
     num_bridge_tokens: 2
   world_model:
     base_wm: ./playground/Pretrained_models/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+    legacy_vae_input: false
     extract_layers:
     - -1
     use_text_cache: true

@@ -355,6 +355,35 @@ class _DummyDataset:
 
 
 class BuildDataloaderManifestWiringTest(unittest.TestCase):
+    def test_instruction_text_cache_does_not_enable_visual_latent_cache(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            cfg = OmegaConf.create(
+                {
+                    "output_dir": str(root / "out"),
+                    "run_root_dir": str(root / "run"),
+                    "run_id": "smoke",
+                    "datasets": {
+                        "vla_data": {
+                            "dataset_py": "lerobot_datasets",
+                            "per_device_batch_size": 1,
+                            "num_workers": 0,
+                        }
+                    },
+                    "latent_cache": {
+                        "instruction_text_latent": str(root / "instruction_text_latents.pt"),
+                    },
+                }
+            )
+
+            with patch(
+                "starVLA.dataloader.lerobot_datasets.get_vla_dataset"
+            ) as mock_get:
+                mock_get.return_value = _DummyDataset()
+                build_dataloader(cfg, dataset_py="lerobot_datasets")
+                passed_cfg = mock_get.call_args.kwargs["data_cfg"]
+                self.assertNotIn("mowa_latent_cache", passed_cfg)
+
     def test_build_dataloader_defaults_manifest_path_from_window_manifest(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

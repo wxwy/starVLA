@@ -147,9 +147,9 @@ class MoWAWanVaeEpisodeEncoderAdapter:
         video_key: str,
     ) -> np.ndarray:
         del video_key
-        if self.video_backend not in {"opencv", "decord"}:
+        if self.video_backend not in {"opencv", "decord", "pyav"}:
             raise NotImplementedError(
-                f"Unsupported video_backend={self.video_backend!r}; only 'opencv' and 'decord' are available."
+                f"Unsupported video_backend={self.video_backend!r}; only 'opencv', 'decord', and 'pyav' are available."
             )
         if not video_path.is_file():
             raise FileNotFoundError(f"Missing source video for Wan latent encoding: {video_path}")
@@ -167,6 +167,8 @@ class MoWAWanVaeEpisodeEncoderAdapter:
         """CPU-side video decode suitable for a prefetch worker."""
         if self.video_backend == "decord":
             return self._load_all_frames_decord(video_path, frame_indices)
+        if self.video_backend == "pyav":
+            return self._load_all_frames_pyav(video_path, frame_indices)
         return self._load_all_frames_opencv(video_path, frame_indices)
 
     def encode_frames(self, frames: list[Any]) -> np.ndarray:
@@ -221,6 +223,41 @@ class MoWAWanVaeEpisodeEncoderAdapter:
         except ImportError as exc:
             raise RuntimeError("MoWA Wan encoder requires decord for video_backend='decord'.") from exc
         return [frame for frame in frames]
+
+    def _load_all_frames_pyav(
+        self,
+        source_path: Path,
+        frame_indices: tuple[int, ...],
+    ) -> list[np.ndarray]:
+        """Decode AV1/other videos through PyAV without relying on decord."""
+        try:
+            import av
+        except ImportError as exc:
+            raise RuntimeError("MoWA Wan encoder requires PyAV for video_backend='pyav'.") from exc
+
+        target_indices = list(frame_indices)
+        frames: list[np.ndarray] = []
+        target_pointer = 0
+        try:
+            with av.open(str(source_path)) as container:
+                video_stream = next(iter(container.streams.video), None)
+                if video_stream is None:
+                    raise RuntimeError(f"No video stream found in {source_path}")
+                for frame_counter, frame in enumerate(container.decode(video_stream)):
+                    if target_pointer >= len(target_indices):
+                        break
+                    if frame_counter == target_indices[target_pointer]:
+                        frames.append(frame.to_ndarray(format="rgb24"))
+                        target_pointer += 1
+        except av.error.FFmpegError as exc:
+            raise RuntimeError(f"PyAV failed to decode {source_path}: {exc}") from exc
+
+        if target_pointer != len(target_indices):
+            raise ValueError(
+                f"Could not read all requested frames from {source_path}: "
+                f"got {target_pointer}/{len(target_indices)}"
+            )
+        return frames
 
     def latent_source_frame_indices(self, frame_count: int) -> np.ndarray:
         """Return the final source-frame index represented by each temporal latent."""

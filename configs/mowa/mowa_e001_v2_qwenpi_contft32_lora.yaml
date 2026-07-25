@@ -70,7 +70,7 @@ datasets:
     action_type: delta_ee
     sequential_step_sampling: false
     per_device_batch_size: 2
-    num_workers: 32
+    num_workers: 8
     load_all_data_for_training: false
     action_chunk_steps: 32
     obs_image_size: [224, 224]

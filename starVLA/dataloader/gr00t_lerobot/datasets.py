@@ -187,8 +187,13 @@ def _attach_mowa_latent_cache(sample: dict, dataset, trajectory_id: int, base_in
     cache_dataset = _get_mowa_latent_cache_dataset(dataset)
     # Manifest rows are view-independent.  The anchor view alone defines the
     # temporal grid; any additional configured views must not create duplicate
-    # action/state samples.
-    video_key = "observation.images.robot0_agentview_left"
+    # action/state samples.  Keep the anchor configurable so non-RoboCasa
+    # WanPI datasets (e.g. LIBERO primary_image) can reuse the same path.
+    configured_video_keys = tuple(cache_cfg.get("video_keys", ()))
+    video_key = str(
+        cache_cfg.get("anchor_video_key")
+        or (configured_video_keys[0] if configured_video_keys else "observation.images.robot0_agentview_left")
+    )
     cache_sample = cache_dataset.get_sample(
         episode_index=int(trajectory_id),
         anchor_index=int(base_index),
@@ -3277,5 +3282,5 @@ class LeRobotMixtureDataset(Dataset):
         for dataset in self.datasets:
             if dataset.tag in self.merged_metadata:
                 dataset.set_transforms_metadata(self.merged_metadata[dataset.tag])
-        
+
         print(f"Applied cached statistics for {len(self.merged_metadata)} embodiment tags.")

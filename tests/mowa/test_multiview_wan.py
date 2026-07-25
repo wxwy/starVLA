@@ -10,9 +10,10 @@ from unittest.mock import patch
 import torch
 from omegaconf import OmegaConf
 
-from starVLA.model.framework.WM4A.WanPI import Wan_PI, _prepare_action_state, _require_finite_tensor
+from starVLA.model.framework.WM4A.WanPI import WanPIDefaultConfig, Wan_PI, _prepare_action_state, _require_finite_tensor
+from starVLA.model.framework.WM4A.WanOFT import WanOFTDefaultConfig, Wan_OFT
 from starVLA.model.modules.action_model.LayerwiseFM_ActionHeader import MLP, masked_action_flow_loss
-from starVLA.model.modules.world_model.Wan2 import resolve_wan_lora_target_modules
+from starVLA.model.modules.world_model.Wan2 import _Wan2_Interface, resolve_wan_lora_target_modules
 from starVLA.model.modules.mowa.multiview_wan import (
     CrossViewAttentionAdapter,
     MultiViewDoneHead,
@@ -26,6 +27,107 @@ from starVLA.model.modules.mowa.multiview_wan import (
 
 
 class MultiViewWanTest(unittest.TestCase):
+    def test_wan_vae_input_modes_are_explicit_and_isolated(self):
+        self.assertTrue(WanOFTDefaultConfig().world_model["legacy_vae_input"])
+        self.assertFalse(WanPIDefaultConfig().world_model["legacy_vae_input"])
+
+        repo_root = Path(__file__).resolve().parents[2]
+        config_paths = sorted((repo_root / "configs" / "mowa").rglob("*.yaml"))
+        wanpi_configs = []
+        for config_path in config_paths:
+            config = OmegaConf.load(config_path)
+            framework = config.get("framework")
+            if framework is None or framework.get("name") != "WanPI":
+                continue
+            wanpi_configs.append(config_path)
+            self.assertIn("world_model", framework, config_path.as_posix())
+            self.assertFalse(framework.world_model.legacy_vae_input, config_path.as_posix())
+
+        self.assertTrue(wanpi_configs)
+
+    def test_wanoft_multiview_residual_initialization_preserves_base_feature(self):
+        hidden_dim = 8
+        owner = SimpleNamespace(
+            multi_view_residual_enabled=True,
+            multi_view_fusion=torch.nn.Linear(2 * hidden_dim, hidden_dim),
+        )
+        Wan_OFT._reset_multi_view_fusion(owner)
+        base = torch.randn(3, hidden_dim, dtype=torch.bfloat16)
+        wrist = torch.randn(3, hidden_dim, dtype=torch.bfloat16)
+
+        fused = Wan_OFT._fuse_action_features(owner, base, wrist)
+
+        self.assertTrue(torch.equal(fused, base.float()))
+        self.assertTrue(
+            torch.equal(
+                owner.multi_view_fusion.weight[:, :hidden_dim],
+                torch.eye(hidden_dim),
+            )
+        )
+        self.assertEqual(float(owner.multi_view_fusion.weight[:, hidden_dim:].abs().sum()), 0.0)
+        self.assertEqual(float(owner.multi_view_fusion.bias.abs().sum()), 0.0)
+
+    def test_wanoft_multiview_residual_requires_exactly_two_views(self):
+        with self.assertRaisesRegex(ValueError, "image=.main,wrist."):
+            Wan_OFT._wrist_only_images([[torch.zeros(2, 2, 3)]])
+
+        main = torch.zeros(2, 2, 3)
+        wrist = torch.ones(2, 2, 3)
+        self.assertIs(Wan_OFT._wrist_only_images([[main, wrist]])[0][0], wrist)
+
+    def test_wanoft_cached_text_inputs_squeeze_instruction_dimension(self):
+        examples = [
+            {
+                "text_embeds": torch.zeros(1, 4, 8, dtype=torch.float16),
+                "text_attention_mask": torch.ones(1, 4, dtype=torch.int64),
+            },
+            {
+                "text_embeds": torch.ones(1, 4, 8, dtype=torch.float16),
+                "text_attention_mask": torch.ones(1, 4, dtype=torch.int64),
+            },
+        ]
+        cached = Wan_OFT._collect_cached_text_inputs(examples)
+        self.assertEqual(tuple(cached["text_embeds"].shape), (2, 4, 8))
+        self.assertEqual(tuple(cached["text_attention_mask"].shape), (2, 4))
+
+        with self.assertRaisesRegex(ValueError, "every sample or none"):
+            Wan_OFT._collect_cached_text_inputs([examples[0], {}])
+
+    def test_wan_instruction_cache_lookup_and_encoder_release(self):
+        backbone = _Wan2_Interface.__new__(_Wan2_Interface)
+        torch.nn.Module.__init__(backbone)
+        backbone._instruction_text_cache = {
+            "pick up cup": {
+                "text_embeds": torch.ones(1, 3, 4, dtype=torch.float16),
+                "attention_mask": torch.tensor([[1, 1, 0]], dtype=torch.int64),
+            }
+        }
+        embeds, mask = backbone._lookup_cached_text(["pick up cup", "pick up cup"])
+        self.assertEqual(tuple(embeds.shape), (2, 3, 4))
+        self.assertEqual(tuple(mask.shape), (2, 3))
+        with self.assertRaisesRegex(KeyError, "cache miss"):
+            backbone._lookup_cached_text(["unknown instruction"])
+
+        backbone.text_encoder = torch.nn.Linear(2, 2)
+        backbone.tokenizer = object()
+        backbone.release_text_encoder()
+        self.assertIsNone(backbone.text_encoder)
+        self.assertIsNone(backbone.tokenizer)
+
+    def test_wanoft_old_checkpoint_only_allows_missing_residual_fusion(self):
+        owner = Wan_OFT.__new__(Wan_OFT)
+        torch.nn.Module.__init__(owner)
+        owner.multi_view_residual_enabled = True
+        owner.multi_view_fusion = torch.nn.Linear(4, 2)
+
+        result = owner.load_state_dict({}, strict=True)
+        self.assertEqual(
+            set(result.missing_keys),
+            {"multi_view_fusion.weight", "multi_view_fusion.bias"},
+        )
+        with self.assertRaisesRegex(RuntimeError, "unexpected"):
+            owner.load_state_dict({"wrong.weight": torch.zeros(1)}, strict=True)
+
     def test_wan_lora_targets_are_group_and_layer_configurable(self):
         class _Attention(torch.nn.Module):
             def __init__(self):
@@ -524,6 +626,101 @@ class MultiViewWanTest(unittest.TestCase):
         self.assertEqual(tuple(output[0]["mowa_multi_view_current_latents"].shape), (2, 4, 2, 2))
         self.assertTrue(torch.equal(output[0]["mowa_multi_view_history_latents"][:, 0], torch.ones(2, 4, 2, 2)))
         self.assertTrue(torch.equal(output[0]["mowa_multi_view_current_latents"], torch.full((2, 4, 2, 2), 2.0)))
+
+    def test_online_streaming_views_preserve_causal_state_across_requests(self):
+        class FakeBackbone:
+            def __init__(self):
+                self.counts = {}
+
+            def encode_streaming_vae_frames(
+                self,
+                stream_id,
+                frames,
+                *,
+                reset,
+                max_regular_latents,
+            ):
+                if reset:
+                    self.counts[stream_id] = 0
+                new_regular = len(frames) // 4
+                self.counts[stream_id] = self.counts.get(stream_id, 0) + new_regular
+                value = float(self.counts[stream_id])
+                return (
+                    torch.full((1, 4, 1, 2, 2), value),
+                )
+
+        owner = SimpleNamespace(
+            config=SimpleNamespace(latent_cache=SimpleNamespace(history_window_steps=0)),
+            backbone=FakeBackbone(),
+        )
+        initial_frames = [object() for _ in range(9)]
+        first = Wan_PI._populate_mowa_streaming_visual_latents(
+            owner,
+            [{
+                "mowa_multi_view_images": [initial_frames, initial_frames],
+                "mowa_stream_id": "episode-0",
+                "mowa_stream_reset": True,
+            }],
+        )
+        next_frames = [object() for _ in range(8)]
+        second = Wan_PI._populate_mowa_streaming_visual_latents(
+            owner,
+            [{
+                "mowa_multi_view_images": [next_frames, next_frames],
+                "mowa_stream_id": "episode-0",
+                "mowa_stream_reset": False,
+            }],
+        )
+
+        self.assertEqual(tuple(first[0]["mowa_multi_view_history_latents"].shape), (2, 0, 4, 2, 2))
+        self.assertTrue(torch.equal(first[0]["mowa_multi_view_current_latents"], torch.full((2, 4, 2, 2), 2.0)))
+        self.assertTrue(torch.equal(second[0]["mowa_multi_view_current_latents"], torch.full((2, 4, 2, 2), 4.0)))
+
+    def test_libero_wanpi_client_accumulates_only_new_frames(self):
+        import numpy as np
+
+        from examples.LIBERO.eval_files.model2libero_interface import ModelClient
+
+        client = object.__new__(ModelClient)
+        client.payload_style = "wanpi"
+        client.image_size = (2, 2)
+        client._wan_pending_views = [[], []]
+        frame = np.zeros((2, 2, 3), dtype=np.uint8)
+
+        client.observe_wan_images([frame, frame])
+        client.observe_wan_images([frame + 1, frame + 1])
+
+        self.assertEqual([len(frames) for frames in client._wan_pending_views], [2, 2])
+        self.assertTrue(np.array_equal(client._wan_pending_views[0][1], frame + 1))
+
+    def test_robocasa_wanpi_client_keeps_initial_and_executed_frames(self):
+        import numpy as np
+
+        from examples.Robocasa_365.eval_files.model2robocasa365_interface import PolicyWarper
+
+        client = object.__new__(PolicyWarper)
+        client.payload_style = "wanpi"
+        client._wan_pending_views = None
+        client._wan_stream_reset = None
+        initial = np.zeros((1, 8, 2, 2, 3), dtype=np.uint8)
+        executed = np.ones((1, 8, 2, 2, 3), dtype=np.uint8)
+
+        client.observe_wan_frames(
+            {
+                "video.robot0_agentview_left": initial,
+                "video.robot0_eye_in_hand": initial,
+            },
+            initial_only=True,
+        )
+        client.observe_wan_frames(
+            {
+                "video.robot0_agentview_left": executed,
+                "video.robot0_eye_in_hand": executed,
+            }
+        )
+
+        self.assertEqual([len(frames) for frames in client._wan_pending_views[0]], [9, 9])
+        self.assertTrue(client._wan_stream_reset[0])
 
     def test_strict_checkpoint_load_ignores_wan_runtime_buffers(self):
         from starVLA.model.framework.share_tools import _filter_strict_key_mismatches
